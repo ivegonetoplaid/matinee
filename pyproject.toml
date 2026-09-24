@@ -1,0 +1,40 @@
+[project]
+name = "matinee"
+version = "0.1.0"
+description = "Matinee: a film picker for a home media library, one conversation at a time."
+requires-python = ">=3.12"
+dependencies = [
+    "pandas>=2.2",
+    "numpy>=2.0",
+]
+
+[project.optional-dependencies]
+dev = ["ruff", "mypy", "pytest", "complexipy", "pre-commit", "pandas-stubs"]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = []
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+src = ["src", "tests", "tools", "scripts"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "BLE", "UP", "SIM", "C4", "C90"]
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.complexipy]
+max-complexity-allowed = 15
+
+[tool.mypy]
+strict = true
+files = ["tools"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src", "tests", "tools"]

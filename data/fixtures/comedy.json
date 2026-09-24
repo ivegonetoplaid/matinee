@@ -1,0 +1,288 @@
+{
+  "note": "Comedy fixture set. A register passes when the film is IN that register's pool, not when it is the top score. Overlap is expected: Airplane is both parody and broad. must_not names memberships that would be wrong, and those are the load-bearing half of this file.",
+  "genre": "Comedy",
+  "acceptance_pairs": [
+    [
+      "Step Brothers",
+      "Monty Python and the Holy Grail",
+      "both TMDB-tagged absurd"
+    ],
+    [
+      "Office Space",
+      "Dr. Strangelove or: How I Learned to Stop Worrying and Love the Bomb",
+      "both TMDB-tagged satire"
+    ],
+    [
+      "The Truman Show",
+      "In Bruges",
+      "both TMDB-tagged dark comedy"
+    ]
+  ],
+  "films": [
+    {
+      "title": "Step Brothers",
+      "expect": [
+        "broad"
+      ],
+      "must_not": [
+        "dry",
+        "parody"
+      ]
+    },
+    {
+      "title": "Dumb and Dumber",
+      "expect": [
+        "broad"
+      ],
+      "must_not": [
+        "dry",
+        "dark"
+      ]
+    },
+    {
+      "title": "Anchorman: The Legend of Ron Burgundy",
+      "expect": [
+        "broad"
+      ],
+      "must_not": [
+        "dry"
+      ]
+    },
+    {
+      "title": "Tommy Boy",
+      "expect": [
+        "broad"
+      ],
+      "must_not": [
+        "dry"
+      ]
+    },
+    {
+      "title": "Ace Ventura: Pet Detective",
+      "expect": [
+        "broad"
+      ],
+      "must_not": [
+        "dry"
+      ]
+    },
+    {
+      "title": "Monty Python and the Holy Grail",
+      "expect": [
+        "parody"
+      ],
+      "must_not": []
+    },
+    {
+      "title": "Airplane!",
+      "expect": [
+        "parody"
+      ],
+      "must_not": []
+    },
+    {
+      "title": "Young Frankenstein",
+      "expect": [
+        "parody"
+      ],
+      "must_not": []
+    },
+    {
+      "title": "Spaceballs",
+      "expect": [
+        "parody"
+      ],
+      "must_not": []
+    },
+    {
+      "title": "Life of Brian",
+      "expect": [
+        "parody"
+      ],
+      "must_not": []
+    },
+    {
+      "title": "The Big Lebowski",
+      "expect": [
+        "absurd"
+      ],
+      "must_not": [
+        "broad"
+      ]
+    },
+    {
+      "title": "Groundhog Day",
+      "expect": [
+        "warm"
+      ],
+      "must_not": [
+        "broad",
+        "dark"
+      ]
+    },
+    {
+      "title": "Up",
+      "expect": [
+        "warm"
+      ],
+      "must_not": [
+        "broad",
+        "dark"
+      ]
+    },
+    {
+      "title": "Klaus",
+      "expect": [
+        "warm"
+      ],
+      "must_not": [
+        "dark"
+      ]
+    },
+    {
+      "title": "The School of Rock",
+      "expect": [
+        "warm",
+        "teen"
+      ],
+      "must_not": [
+        "dark"
+      ],
+      "note": "warm 0.42 and teen 0.63. It is both, and the warm threshold had to come down to 0.40 to admit it."
+    },
+    {
+      "title": "Dr. Strangelove or: How I Learned to Stop Worrying and Love the Bomb",
+      "expect": [
+        "dark"
+      ],
+      "must_not": [
+        "broad",
+        "warm"
+      ]
+    },
+    {
+      "title": "In Bruges",
+      "expect": [
+        "dark"
+      ],
+      "must_not": [
+        "broad",
+        "warm"
+      ]
+    },
+    {
+      "title": "Jojo Rabbit",
+      "expect": [
+        "dark"
+      ],
+      "must_not": [
+        "broad"
+      ]
+    },
+    {
+      "title": "The Wolf of Wall Street",
+      "expect": [
+        "dark"
+      ],
+      "must_not": [
+        "warm"
+      ]
+    },
+    {
+      "title": "The Truman Show",
+      "expect": [
+        "absurd"
+      ],
+      "must_not": [
+        "broad",
+        "dark"
+      ]
+    },
+    {
+      "title": "Office Space",
+      "expect": [
+        "dry"
+      ],
+      "must_not": [
+        "broad"
+      ]
+    },
+    {
+      "title": "The Grand Budapest Hotel",
+      "expect": [
+        "dry"
+      ],
+      "must_not": [
+        "broad"
+      ]
+    },
+    {
+      "title": "Knives Out",
+      "expect": [
+        "dry"
+      ],
+      "must_not": [
+        "broad"
+      ]
+    },
+    {
+      "title": "Superbad",
+      "expect": [
+        "teen"
+      ],
+      "must_not": [
+        "dry",
+        "warm"
+      ],
+      "note": "teen 0.91. The register the operator called cringe turns out to be teen comedy for this film and not for the others in that group."
+    },
+    {
+      "title": "Horrible Bosses",
+      "expect": [],
+      "must_not": [
+        "dry",
+        "warm",
+        "broad"
+      ],
+      "note": "unreachable. The operator calls it cringe; the genome scores it teen 0.32, dark 0.41, nothing else above 0.35. Kept as a negative fixture: it must not land anywhere wrong."
+    },
+    {
+      "title": "Meet the Parents",
+      "expect": [],
+      "must_not": [
+        "dark",
+        "dry"
+      ],
+      "note": "unreachable, same as Horrible Bosses. teen 0.36, broad 0.47. Kept as a negative fixture."
+    },
+    {
+      "title": "Tucker and Dale vs. Evil",
+      "expect": [
+        "crossed_horror"
+      ],
+      "must_not": []
+    },
+    {
+      "title": "Shaun of the Dead",
+      "expect": [
+        "crossed_horror"
+      ],
+      "must_not": []
+    },
+    {
+      "title": "Eddie Murphy: Delirious",
+      "expect": [
+        "standup"
+      ],
+      "must_not": [
+        "broad",
+        "dry",
+        "warm"
+      ]
+    }
+  ],
+  "unreachable_register": {
+    "name": "cringe",
+    "note": "Comedy's equivalent of horror's slow burn. The operator's cringe group is Superbad, Horrible Bosses, Meet the Parents, Office Space and The 40 Year Old Virgin. The genome has no tag for it. The `teen` dimension separates Superbad and The 40 Year Old Virgin at 0.91 and 0.57 but leaves the other three at 0.28 to 0.36, because it is measuring teenagers rather than discomfort. The tags most raised across the whole group are `funniest movies` +0.66, `hilarious` +0.55 and `quotable` +0.47, which measure how much people like a comedy, not what kind it is. Named rather than faked."
+  }
+}

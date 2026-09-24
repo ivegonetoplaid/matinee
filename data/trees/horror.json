@@ -1,0 +1,326 @@
+{
+  "genre": "Horror",
+  "opening": "horror. good. let's find you something.",
+  "questions": [
+    {
+      "id": "attention",
+      "ask": "first though, how much of you is actually watching this?",
+      "options": [
+        {
+          "say": "honestly? it's just noise. I'm doing something else.",
+          "reply": "fair enough. easy company, nothing that needs following.",
+          "filter": {
+            "runtime_max": 100,
+            "spoken_english": true,
+            "allow_rewatch": true
+          }
+        },
+        {
+          "say": "I'll be half in. looking up when something happens.",
+          "reply": "the classic. half a film is still a film.",
+          "filter": {
+            "runtime_max": 125,
+            "spoken_english": true
+          }
+        },
+        {
+          "say": "I want to disappear into it and forget the world exists.",
+          "reply": "now we're talking. I'll bring you the good stuff.",
+          "filter": {
+            "runtime_min": 95,
+            "rating_min": 6.3,
+            "sort": "rating",
+            "prefer_unseen": true
+          },
+          "note": "a rating floor is defensible here and nowhere else: the viewer has explicitly asked for something worth disappearing into, so filtering on quality is answering them rather than overruling them."
+        }
+      ]
+    },
+    {
+      "id": "flavour",
+      "ask": "so what scares you the most?",
+      "options": [
+        {
+          "say": "I don't care. anything scary. I'm easy.",
+          "reply": "a person of simple tastes.",
+          "filter": {}
+        },
+        {
+          "say": "I'm not really scared unless it's supernatural.",
+          "reply": "ghosts and demons then. things that shouldn't be there.",
+          "filter": {
+            "flavour": "supernatural"
+          }
+        },
+        {
+          "say": "psycho killers. people are the scariest thing there is.",
+          "reply": "agreed, frankly. no ghost ever followed anyone home.",
+          "filter": {
+            "flavour": "human_killer"
+          }
+        },
+        {
+          "say": "something with teeth. a monster, a creature, a thing.",
+          "reply": "good. monsters are honest about what they want.",
+          "filter": {
+            "flavour": "creature"
+          }
+        },
+        {
+          "say": "the slow kind. the sort that gets under your skin and stays.",
+          "reply": "the ones that ruin the drive home. I know the type.",
+          "filter": {
+            "flavour": "creeping"
+          }
+        },
+        {
+          "say": "make me laugh while I'm scared.",
+          "reply": "nothing wrong with a film that knows it's ridiculous.",
+          "filter": {
+            "flavour": "funny"
+          }
+        },
+        {
+          "say": "shaky camera, someone found the tapes.",
+          "reply": "brave. half of these are terrible and you know it.",
+          "filter": {
+            "flavour": "found_footage"
+          }
+        }
+      ]
+    },
+    {
+      "id": "gore",
+      "ask": "alright. how much blood can you actually take?",
+      "presentation": "pails",
+      "options": [
+        {
+          "say": "none. I'm squeamish.",
+          "reply": "noted. nothing you'll have to look away from.",
+          "pail": "spotless, sparkling, not a mark on it",
+          "filter": {
+            "gore_max": 3
+          }
+        },
+        {
+          "say": "some. I'll look away when I need to.",
+          "reply": "some it is.",
+          "pail": "splattered down one side, blood pooling in the bottom",
+          "filter": {
+            "gore_max": 7
+          }
+        },
+        {
+          "say": "properly messy. I'm fine.",
+          "reply": "oh, good.",
+          "pail": "nearly full, first drops hitting the floor",
+          "filter": {
+            "gore_max": 12
+          }
+        },
+        {
+          "say": "RIP AND TEAR.",
+          "reply": "say no more.",
+          "pail": "a chum bucket standing in a spreading pool",
+          "filter": {
+            "gore_min": 12
+          }
+        }
+      ],
+      "note": "Four buckets, not five. The genome's independent gore cluster scored the old spotless and splatter pails at 0.25 and 0.28, barely apart, so that boundary was measuring nothing. Coverage is 585 of 599 horror films: DoesTheDogDie where it has the film, the genome gore cluster rescaled where it does not."
+    },
+    {
+      "id": "era",
+      "ask": "still plenty to choose from. does era matter?",
+      "only_if_pool_over": 40,
+      "options": [
+        {
+          "say": "give me something old. eighties, nineties.",
+          "reply": "practical effects and no phones. nice.",
+          "filter": {
+            "year_max": 1999
+          }
+        },
+        {
+          "say": "something from this century, please.",
+          "reply": "modern it is.",
+          "filter": {
+            "year_min": 2000
+          }
+        },
+        {
+          "say": "doesn't matter.",
+          "reply": "",
+          "filter": {}
+        }
+      ]
+    },
+    {
+      "id": "sequel",
+      "ask": "last one. do you mind walking into the middle of a franchise?",
+      "only_if_pool_over": 40,
+      "options": [
+        {
+          "say": "no sequels. I don't want homework.",
+          "reply": "standalone only.",
+          "filter": {
+            "sequel": false
+          }
+        },
+        {
+          "say": "I don't care, I'll work it out.",
+          "reply": "",
+          "filter": {}
+        }
+      ]
+    }
+  ],
+  "flavours": {
+    "supernatural": {
+      "keywords_any": [
+        "supernatural horror",
+        "supernatural",
+        "ghost",
+        "demon",
+        "demonic possession",
+        "possession",
+        "exorcism",
+        "haunted house",
+        "witch",
+        "curse",
+        "poltergeist",
+        "afterlife",
+        "supernatural power",
+        "paranormal",
+        "occult",
+        "seance"
+      ],
+      "genome_any": [
+        "supernatural",
+        "ghosts",
+        "demons",
+        "haunted house",
+        "witches"
+      ]
+    },
+    "human_killer": {
+      "keywords_any": [
+        "slasher",
+        "serial killer",
+        "psychopath",
+        "killer",
+        "stalker",
+        "masked killer",
+        "home invasion",
+        "kidnapping",
+        "sadism",
+        "death game"
+      ],
+      "note": "chainsaw, murder and mask were removed after Gremlins and Army of Darkness both matched on chainsaw alone. murder appears on 93 of 599 horror titles and names nothing useful.",
+      "genome_any": [
+        "slasher",
+        "serial killer"
+      ]
+    },
+    "creature": {
+      "keywords_any": [
+        "monster",
+        "creature",
+        "vampire",
+        "werewolf",
+        "zombie",
+        "alien",
+        "shark",
+        "giant monster",
+        "mutant",
+        "creature feature",
+        "survival horror"
+      ],
+      "genome_any": [
+        "monster",
+        "monsters",
+        "zombies",
+        "vampires",
+        "werewolf",
+        "aliens"
+      ]
+    },
+    "funny": {
+      "note": "the Comedy genre tag beats any keyword cluster here. Measured against 599 horror titles: the tag found 114, the keyword cluster 64, and the tag caught 80 the keywords missed including Tucker and Dale, Happy Death Day, Army of Darkness and Cabin in the Woods. Genre tags are reliable for co-membership and unreliable only as a primary label. See discussion log 17.",
+      "genres_any": [
+        "Comedy"
+      ]
+    },
+    "found_footage": {
+      "keywords_any": [
+        "found footage",
+        "mockumentary"
+      ],
+      "note": "no genome equivalent: 'found footage' is not in the 1,128-tag vocabulary"
+    },
+    "creeping": {
+      "note": "derived from what the target films share rather than from a word meaning dread. Half of them carry no dread keyword at all: Get Out, Poltergeist, 1408 and Oculus carry none. What they do share is a haunted place or a psychological frame. The gore ceiling was removed: blood is already its own question and gating creeping on it wrongly excluded Get Out, Weapons and The Babadook. See discussion log 11.",
+      "keywords_any": [
+        "haunted house",
+        "haunted",
+        "haunted hotel",
+        "paranormal phenomena",
+        "haunting",
+        "psychological thriller",
+        "psychological horror",
+        "psychological disintegration",
+        "paranoia",
+        "atmospheric",
+        "folk horror",
+        "cult",
+        "macabre",
+        "isolation",
+        "surrealism",
+        "nightmare",
+        "hallucination",
+        "dread",
+        "slow burn",
+        "seclusion"
+      ],
+      "genome_any": [
+        "atmospheric",
+        "psychological",
+        "paranoia",
+        "claustrophobic"
+      ]
+    }
+  },
+  "genome": {
+    "source": "MovieLens ml-latest, generated 2023-07-20, joined on TMDB id via its links.csv",
+    "threshold": 0.6,
+    "mode": "union",
+    "note": "A film joins a flavour when its genome relevance reaches the threshold OR its keywords match, not one as a fallback for the other. Measured across 27 fixtures: genome alone passes 21 to 25 depending on threshold; the union passes 27 at every threshold from 0.45 to 0.60, and cuts films matching no flavour from 73 to 44. The two signals fail on different films, so keeping both is strictly better than choosing between them.",
+    "clusters": {
+      "supernatural": [
+        "supernatural",
+        "ghosts",
+        "demons",
+        "haunted house",
+        "witches"
+      ],
+      "creature": [
+        "monster",
+        "monsters",
+        "zombies",
+        "vampires",
+        "werewolf",
+        "aliens"
+      ],
+      "human_killer": [
+        "slasher",
+        "serial killer"
+      ],
+      "creeping": [
+        "atmospheric",
+        "psychological",
+        "paranoia",
+        "claustrophobic"
+      ]
+    }
+  }
+}

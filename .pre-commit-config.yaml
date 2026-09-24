@@ -1,0 +1,38 @@
+minimum_pre_commit_version: "4.0.0"
+
+repos:
+  - repo: local
+    hooks:
+      # Runs first: the cheapest gate. Skips when the sibling checkout is absent
+      # (any clone but the operator's), and propagates the hook's exit code when
+      # present, never swallowing it.
+      - id: homelab-leak-check
+        name: homelab leak check
+        entry: >-
+          bash -lc 'if [ -x ../dotfiles/git-hooks/pre-commit ]; then
+          exec ../dotfiles/git-hooks/pre-commit; fi'
+        language: system
+        pass_filenames: false
+        always_run: true
+      - id: matinee-source-gates
+        name: matinee source gates
+        entry: >-
+          bash -lc '.venv/bin/python -m ruff format --check . &&
+          .venv/bin/python -m ruff check . &&
+          .venv/bin/python scripts/check_nested_ternaries.py tools scripts &&
+          .venv/bin/python scripts/check_file_size.py tools scripts'
+        language: system
+        pass_filenames: false
+        types: [python]
+      - id: matinee-cognitive-complexity
+        name: matinee cognitive complexity
+        entry: bash -lc '.venv/bin/complexipy tools scripts -f'
+        language: system
+        pass_filenames: false
+        types: [python]
+      - id: matinee-mypy
+        name: matinee mypy
+        entry: bash -lc '.venv/bin/python -m mypy'
+        language: system
+        pass_filenames: false
+        types: [python]

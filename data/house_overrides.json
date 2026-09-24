@@ -1,0 +1,17 @@
+{
+  "note": "House pins: single films the rules place wrong, fixed for everyone on this installation. A pattern of three or more films going wrong for one reason is a rule to fix, not a pin to add. Each pin is also a fixture in data/answer_key.json, so the checker guards it. Personal corrections (per profile) layer on top of these.",
+  "kids": [
+    {
+      "title": "The School of Rock",
+      "tmdb": 1584,
+      "band": "older",
+      "note": "PG-13 with foul language 0.64; the operator: adults watch it and older kids join in"
+    },
+    {
+      "title": "'Twas the Night Before Christmas",
+      "tmdb": 26547,
+      "band": "family",
+      "note": "1974 Rankin/Bass TV special, certificate NR; the gate fails closed on it and its only genres are Animation and Family, so without a pin nothing reaches it"
+    }
+  ]
+}

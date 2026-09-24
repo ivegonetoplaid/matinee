@@ -1,0 +1,477 @@
+{
+  "note": "The answer key the trees are checked against. A tree passes a film when the film is in its pool; overlap between trees is expected. must_reach names a tree a film must be in; must_not names a tree it must not be in. The lists are read from genome list tags at check time, so they need no copy of any published list.",
+  "list_tags": {
+    "threshold": 0.8,
+    "thresholds": {
+      "afi 100 (laughs)": 0.5
+    },
+    "tags": [
+      "afi 100",
+      "afi 100 (laughs)",
+      "imdb top 250",
+      "oscar (best picture)",
+      "criterion",
+      "golden palm",
+      "cult classic"
+    ]
+  },
+  "films": [
+    {
+      "title": "Hubie Halloween",
+      "tmdb": 617505,
+      "must_not": [
+        "horror"
+      ],
+      "must_reach": [
+        "comedy"
+      ],
+      "note": "the operator's standing example: technically horror, unwanted there"
+    },
+    {
+      "title": "Ernest Scared Stupid",
+      "tmdb": 32685,
+      "must_not": [
+        "horror"
+      ],
+      "must_reach": [
+        "comedy"
+      ],
+      "note": "the operator's standing example: technically horror, unwanted there"
+    },
+    {
+      "title": "Tucker and Dale vs. Evil",
+      "tmdb": 46838,
+      "must_reach": [
+        "horror",
+        "comedy"
+      ],
+      "note": "a horror comedy the horror tree's funny flavour is built for"
+    },
+    {
+      "title": "Shaun of the Dead",
+      "tmdb": 747,
+      "must_reach": [
+        "horror",
+        "comedy"
+      ]
+    },
+    {
+      "title": "Zombieland",
+      "tmdb": 19908,
+      "must_reach": [
+        "horror",
+        "comedy"
+      ]
+    },
+    {
+      "title": "Army of Darkness",
+      "tmdb": 766,
+      "must_reach": [
+        "horror",
+        "comedy"
+      ]
+    },
+    {
+      "title": "The Avengers",
+      "tmdb": 24428,
+      "must_reach": [
+        "action"
+      ],
+      "note": "rated funny by the genome (humor 0.97) but reaches for excitement first; fell through the flat laugh cut"
+    },
+    {
+      "title": "Avengers: Infinity War",
+      "tmdb": 299536,
+      "must_reach": [
+        "action"
+      ]
+    },
+    {
+      "title": "Avengers: Endgame",
+      "tmdb": 299534,
+      "must_reach": [
+        "action"
+      ]
+    },
+    {
+      "title": "Raiders of the Lost Ark",
+      "tmdb": 85,
+      "must_reach": [
+        "action"
+      ]
+    },
+    {
+      "title": "Pirates of the Caribbean: The Curse of the Black Pearl",
+      "tmdb": 22,
+      "must_reach": [
+        "action"
+      ]
+    },
+    {
+      "title": "Nacho Libre",
+      "tmdb": 9353,
+      "must_not": [
+        "action"
+      ],
+      "must_reach": [
+        "comedy"
+      ],
+      "note": "a comedy wearing an Action tag"
+    },
+    {
+      "title": "Hot Rod",
+      "tmdb": 10074,
+      "must_not": [
+        "action"
+      ],
+      "must_reach": [
+        "comedy"
+      ]
+    },
+    {
+      "title": "Kung Pow: Enter the Fist",
+      "tmdb": 11891,
+      "must_not": [
+        "action"
+      ],
+      "must_reach": [
+        "comedy"
+      ]
+    },
+    {
+      "title": "The Incredibles",
+      "tmdb": 9806,
+      "must_reach": [
+        "kids",
+        "action"
+      ],
+      "note": "kids films adults love stay in the adult trees (operator, on Harry Potter)"
+    },
+    {
+      "title": "Jurassic Park",
+      "tmdb": 329,
+      "must_reach": [
+        "action"
+      ]
+    },
+    {
+      "title": "Dune: Part Two",
+      "tmdb": 693134,
+      "must_reach": [
+        "action"
+      ],
+      "note": "adventure with no genome score: a missing score admits it (a comparison against a missing value is false, so this guards the rule)"
+    },
+    {
+      "title": "Cast Away",
+      "tmdb": 8358,
+      "must_reach": [
+        "drama"
+      ],
+      "must_not": [
+        "action"
+      ]
+    },
+    {
+      "title": "Se7en",
+      "tmdb": 807,
+      "must_reach": [
+        "drama"
+      ],
+      "note": "crime, mystery and thriller with no Drama tag; the drama tree takes in what no other tree claims"
+    },
+    {
+      "title": "Memento",
+      "tmdb": 77,
+      "must_reach": [
+        "drama"
+      ]
+    },
+    {
+      "title": "Vertigo",
+      "tmdb": 426,
+      "must_reach": [
+        "drama"
+      ]
+    },
+    {
+      "title": "The Silence of the Lambs",
+      "tmdb": 274,
+      "must_reach": [
+        "drama"
+      ]
+    },
+    {
+      "title": "GoodFellas",
+      "tmdb": 769,
+      "must_reach": [
+        "drama"
+      ]
+    },
+    {
+      "title": "Schindler's List",
+      "tmdb": 424,
+      "must_reach": [
+        "drama"
+      ]
+    },
+    {
+      "title": "The Notebook",
+      "tmdb": 11036,
+      "must_reach": [
+        "drama"
+      ]
+    },
+    {
+      "title": "PAW Patrol: The Movie",
+      "tmdb": 675445,
+      "kids_band": "little",
+      "note": "no genome score; a G certificate is enough"
+    },
+    {
+      "title": "Toy Story",
+      "tmdb": 862,
+      "kids_band": "little"
+    },
+    {
+      "title": "Frozen",
+      "tmdb": 109445,
+      "kids_band": "family"
+    },
+    {
+      "title": "E.T. the Extra-Terrestrial",
+      "tmdb": 601,
+      "kids_band": "family",
+      "note": "PG language is not a reason to leave the whole family"
+    },
+    {
+      "title": "Stuart Little",
+      "tmdb": 10137,
+      "kids_band": "family"
+    },
+    {
+      "title": "Baby Geniuses",
+      "tmdb": 22345,
+      "kids_band": "family"
+    },
+    {
+      "title": "Harry Potter and the Philosopher's Stone",
+      "tmdb": 671,
+      "must_reach": [
+        "kids",
+        "fantasy"
+      ],
+      "note": "no Family tag; enters kids on the genome's young score. Not in action: no Action tag, and its excitement is under the adventure bar (§35)"
+    },
+    {
+      "title": "Who Framed Roger Rabbit",
+      "tmdb": 856,
+      "kids_band": "older",
+      "note": "the operator watched it as a kid but finds it rough; fright 0.47"
+    },
+    {
+      "title": "The Nightmare Before Christmas",
+      "tmdb": 9479,
+      "kids_band": "older"
+    },
+    {
+      "title": "Coraline",
+      "tmdb": 14836,
+      "kids_band": "older"
+    },
+    {
+      "title": "Princess Mononoke",
+      "tmdb": 128,
+      "kids_band": "older",
+      "note": "PG-13 non-comedy animation; the most violent of that group (0.63)"
+    },
+    {
+      "title": "Batman: Hush",
+      "tmdb": 537056,
+      "kids_band": "older",
+      "note": "the operator: DC animated films are fine for about 8 and up"
+    },
+    {
+      "title": "The Simpsons Movie",
+      "tmdb": 35,
+      "kids_band": "older"
+    },
+    {
+      "title": "The School of Rock",
+      "tmdb": 1584,
+      "kids_band": "older",
+      "note": "house pin"
+    },
+    {
+      "title": "South Park: Bigger, Longer & Uncut",
+      "tmdb": 9473,
+      "must_not": [
+        "kids"
+      ],
+      "must_reach": [
+        "comedy"
+      ]
+    },
+    {
+      "title": "Sausage Party",
+      "tmdb": 223702,
+      "must_not": [
+        "kids"
+      ],
+      "must_reach": [
+        "comedy"
+      ]
+    },
+    {
+      "title": "Family Guy Presents: Blue Harvest",
+      "tmdb": 653528,
+      "must_not": [
+        "kids"
+      ],
+      "must_reach": [
+        "comedy"
+      ]
+    },
+    {
+      "title": "Beavis and Butt-Head Do America",
+      "tmdb": 3179,
+      "must_not": [
+        "kids"
+      ],
+      "must_reach": [
+        "comedy"
+      ]
+    },
+    {
+      "title": "Cool World",
+      "tmdb": 14239,
+      "must_not": [
+        "kids"
+      ],
+      "must_reach": [
+        "comedy"
+      ]
+    },
+    {
+      "title": "'Twas the Night Before Christmas",
+      "tmdb": 26547,
+      "kids_band": "family",
+      "note": "house pin"
+    },
+    {
+      "title": "The Transformers: The Movie",
+      "tmdb": 1857,
+      "must_reach": [
+        "kids",
+        "action"
+      ],
+      "note": "1986; nostalgic adults want it in action too"
+    },
+    {
+      "title": "Spider-Man: Into the Spider-Verse",
+      "tmdb": 324857,
+      "must_reach": [
+        "kids",
+        "action"
+      ]
+    },
+    {
+      "title": "PAW Patrol: The Movie",
+      "tmdb": 675445,
+      "must_not": [
+        "action",
+        "comedy"
+      ],
+      "note": "no genome entry: the kids-only tier"
+    },
+    {
+      "title": "Labyrinth",
+      "tmdb": 13597,
+      "must_reach": [
+        "fantasy"
+      ],
+      "note": "operator's example for the fantasy and adventure lens"
+    },
+    {
+      "title": "The NeverEnding Story",
+      "tmdb": 34584,
+      "must_reach": [
+        "fantasy"
+      ]
+    },
+    {
+      "title": "Jumanji",
+      "tmdb": 8844,
+      "must_reach": [
+        "fantasy"
+      ]
+    },
+    {
+      "title": "The Chronicles of Narnia: The Lion, the Witch and the Wardrobe",
+      "tmdb": 411,
+      "must_reach": [
+        "fantasy"
+      ]
+    },
+    {
+      "title": "The Golden Compass",
+      "tmdb": 2268,
+      "must_reach": [
+        "fantasy"
+      ],
+      "note": "the film where people's souls walk beside them as animals"
+    },
+    {
+      "title": "The Lord of the Rings: The Fellowship of the Ring",
+      "tmdb": 120,
+      "must_reach": [
+        "fantasy"
+      ]
+    },
+    {
+      "title": "The Princess Bride",
+      "tmdb": 2493,
+      "must_reach": [
+        "fantasy"
+      ]
+    },
+    {
+      "title": "Pan's Labyrinth",
+      "tmdb": 1417,
+      "must_reach": [
+        "fantasy"
+      ],
+      "must_not": [
+        "kids"
+      ]
+    },
+    {
+      "title": "Harry Potter and the Chamber of Secrets",
+      "tmdb": 672,
+      "must_reach": [
+        "kids",
+        "fantasy"
+      ],
+      "note": "franchise rule"
+    },
+    {
+      "title": "Harry Potter and the Goblet of Fire",
+      "tmdb": 674,
+      "must_reach": [
+        "kids",
+        "fantasy"
+      ],
+      "kids_band": "older",
+      "note": "franchise rule; PG-13"
+    },
+    {
+      "title": "Harry Potter and the Deathly Hallows: Part 2",
+      "tmdb": 12445,
+      "must_reach": [
+        "kids",
+        "fantasy"
+      ],
+      "kids_band": "older"
+    }
+  ]
+}

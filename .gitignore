@@ -1,0 +1,39 @@
+# Python / virtualenv / caches
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.complexipy_cache/
+*.egg-info/
+dist/
+build/
+
+# Local-only convenience links (scripts/dev-links.sh)
+/CLAUDE.md
+/.session-tracker.md
+/CODING_STANDARDS.md
+/STYLE.md
+
+# Third-party data is fetched, never committed (MovieLens, TMDB, DoesTheDogDie terms)
+/cache/
+ml-latest/
+*.jsonl
+
+# Secrets (keep local)
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Editor / OS cruft
+.claude/
+*~
+*.swp
+.DS_Store
+
+# Work artifacts belong in the workbench, never here
+codex-review-report*
+*-build-report.md
