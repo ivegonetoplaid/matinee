@@ -12,6 +12,83 @@
       "tmdb": 26547,
       "band": "family",
       "note": "1974 Rankin/Bass TV special, certificate NR; the gate fails closed on it and its only genres are Animation and Family, so without a pin nothing reaches it"
+    },
+    {
+      "title": "Muppet Sing Alongs: Treasure Island",
+      "tmdb": 698609,
+      "band": "family",
+      "note": "a Muppet sing-along video with no certificate; the gate fails closed on it and it fell to drama"
+    }
+  ],
+  "trees": [
+    {
+      "title": "Cube",
+      "tmdb": 431,
+      "tree": "horror",
+      "note": "Mystery, Science Fiction, Thriller with no Horror tag; the operator watches it as horror, Saw but smarter"
+    },
+    {
+      "title": "The Batman",
+      "tmdb": 414906,
+      "tree": "action",
+      "note": "Crime, Mystery, Thriller with no Action tag and excitement 0.42, under the 0.60 bar"
+    },
+    {
+      "title": "The Good Liar",
+      "tmdb": 511322,
+      "tree": "thriller",
+      "note": "a con-artist thriller tagged only Crime, so the Thriller and Mystery route never sees it"
+    },
+    {
+      "title": "The Thirteenth Floor",
+      "tmdb": 1090,
+      "tree": "thriller",
+      "note": "a virtual-reality mind-bender with tension 0.18, just under the thriller floor"
+    },
+    {
+      "title": "Project Almanac",
+      "tmdb": 227719,
+      "tree": "thriller",
+      "note": "a teen time-travel thriller with tension 0.17, just under the thriller floor"
+    },
+    {
+      "title": "Mortal Engines",
+      "tmdb": 428078,
+      "tree": "action",
+      "note": "Adventure and Science Fiction with excitement 0.44, under the 0.60 bar; a chase spectacle, not a drama"
+    },
+    {
+      "title": "The Animatrix",
+      "tmdb": 55931,
+      "tree": "action",
+      "note": "animated Matrix shorts with excitement 0.26 and no Action tag"
+    },
+    {
+      "title": "Trancers",
+      "tmdb": 5677,
+      "tree": "action",
+      "note": "a time-cop B movie tagged Crime and Science Fiction with excitement 0.28"
+    },
+    {
+      "title": "Kevin Smith: Silent but Deadly",
+      "tmdb": 517792,
+      "tree": "standup",
+      "note": "a standup special with no TMDB keywords, so the standup rule misses it"
+    },
+    {
+      "title": "Simulation Theory",
+      "tmdb": 731971,
+      "tree": "documentary",
+      "note": "a Muse concert film tagged only Music; it fell to drama"
+    }
+  ],
+  "payoffs": [
+    {
+      "title": "The Harder They Fall",
+      "tmdb": 618162,
+      "tree": "western",
+      "payoff": "showdown",
+      "note": "a stylish revenge shootout western whose thin genome profile reads as comedy"
     }
   ]
 }

@@ -12,9 +12,16 @@ each tree's pool by the inclusive rule, and reports three things:
 The inclusive rule: a tree takes every film carrying its genre tag. A film
 leaves a tree only when it barely reaches for that tree's own effect (its score
 is under the tree's floor) and it has another home to land in: the Comedy tag
-for horror, action and drama, the kids tree for family films. A film with no
-genome score is never removed for a missing score. Films no other tree claims
-fall to the drama tree, which is the home for serious films of any genre.
+for horror, action and drama, the kids tree for family films, and the stray
+route below for the thriller tree. A film with no genome score is never removed for a missing
+score. A film tagged Adventure, Thriller, Crime, Mystery, Science Fiction or War
+joins the action tree when its excitement reaches the Adventure bar. A film no
+tree claims joins every tree holding another film of its TMDB collection (the
+franchise rule for strays); the films still unclaimed fall to the drama tree,
+the home for serious films of any genre. Standup specials are held apart from
+the documentary tree. House pins in data/house_overrides.json add single films
+to a tree or a kids band; a film pinned to standup also leaves the documentary
+tree. Payoff pins in the same file are applied by the engine, not by this checker.
 
 The kids tree is the exception: it is gated and fails closed. A film enters only
 with a passing certificate, and sorts into three age bands. Films the gate
@@ -46,8 +53,13 @@ import pandas as pd
 
 HERE = Path(__file__).resolve().parent
 DATA = HERE.parent / "data"
-EFFECT_FLOOR = {"fear": 0.20, "excite": 0.30, "weight": 0.13}
-ADVENTURE_EXCITEMENT = 0.60
+EFFECT_FLOOR = {"fear": 0.20, "excite": 0.30, "weight": 0.13, "thrill": 0.20}
+ACTION_EXCITEMENT = 0.60
+ACTION_BY_EXCITEMENT = {"Adventure", "Thriller", "Crime", "Mystery", "Science Fiction", "War"}
+THRILLER_GENRES = {"Thriller", "Mystery"}
+STANDUP_KEYWORD = "stand-up comedy"
+CONCERT_KEYWORDS = {"concert", "concert film"}
+ADULT_TREES = ("horror", "comedy", "action", "fantasy", "thriller")
 SLEEP_ENCHANTMENT, SLEEP_EDGE = 0.55, 0.40
 KIDS_GENRES = {"Animation", "Family"}
 LITTLE_CERTS = {"G", "TV-Y", "TV-Y7", "TV-G", "E"}
@@ -75,6 +87,7 @@ SCORES = {
     "fear": ["scary", "frightening", "creepy", "horror"],
     "laugh": ["comedy", "funny", "silly fun"],
     "excite": ["action", "action packed", "good action"],
+    "thrill": ["tense", "suspense", "suspenseful", "intense"],
     "weight": ["drama", "dramatic", "emotional", "moving", "touching", "harsh"],
     "ench": ["fairy tale", "childhood", "fantasy", "whimsical", "magic", "fantasy world", "fairy tales"],
     "edge": ["violent", "gore", "disturbing", "tense", "brutal"],
@@ -87,24 +100,23 @@ SCORES = {
     "wonder": ["fantasy world", "magic", "fantasy", "mythology", "fairy tale", "imagination", "dragons", "wizards"],
     "explore": ["treasure", "treasure hunt", "pirates", "archaeology", "jungle", "island"],
 }
-# Trees a film's genre tag is expected to lead to. "western" and "documentary"
-# are decided shallow trees (§38) not yet designed; "kids" is the next tree.
+# Trees a film's genre tag is expected to lead to.
 EXPECTED = {
     "Horror": {"horror"},
     "Comedy": {"comedy"},
     "Action": {"action"},
     "Adventure": {"action", "drama", "kids", "sleep", "fantasy"},
     "Drama": {"drama"},
-    "Crime": {"drama", "action", "horror"},
-    "Mystery": {"drama", "action", "horror"},
-    "Thriller": {"drama", "action", "horror"},
+    "Crime": {"drama", "action", "horror", "thriller"},
+    "Mystery": {"thriller", "drama", "action", "horror"},
+    "Thriller": {"thriller", "drama", "action", "horror"},
     "Romance": {"drama", "comedy"},
     "Science Fiction": {"action", "drama", "horror", "kids"},
     "Fantasy": {"fantasy", "action", "sleep", "kids", "drama", "horror"},
     "War": {"drama", "action"},
     "History": {"drama", "action"},
     "Western": {"western"},
-    "Documentary": {"documentary"},
+    "Documentary": {"documentary", "standup"},
     "Animation": {"kids"},
     "Family": {"kids"},
     "Music": {"drama", "comedy", "documentary"},
@@ -249,35 +261,99 @@ def kids_bands(
     return {"little": little, "family": pool & ~rough, "older": pool, "tagged": tagged, "franchise": franchise}
 
 
-def build_pools(
-    lib: pd.DataFrame, s: pd.DataFrame, pins: dict[int, str], collections: dict[int, int]
-) -> dict[str, pd.Series]:
+@dataclass(frozen=True)
+class House:
+    """This installation's hand-set data: kids band pins, tree pins, and TMDB facts."""
+
+    kids_pins: dict[int, str]
+    tree_pins: dict[str, frozenset[int]]
+    collections: dict[int, int]
+    keywords: dict[int, frozenset[str]]
+
+
+def mask(lib: pd.DataFrame, ids: frozenset[int]) -> pd.Series:
+    return pd.Series(lib.index.isin(list(ids)), index=lib.index)
+
+
+def any_genre(lib: pd.DataFrame, names: set[str]) -> pd.Series:
+    return lib.genres.apply(lambda g: bool(names & g))
+
+
+def strays_follow_franchise(
+    lib: pd.DataFrame, pools: dict[str, pd.Series], strays: pd.Series, collections: dict[int, int]
+) -> None:
+    """Add each stray to every tree holding another film of its TMDB collection.
+
+    Trees are read before any stray is added, so membership never chains through strays.
+    """
+    held = {
+        name: {collections[t] for t in lib.index[pool & ~strays] if t in collections} for name, pool in pools.items()
+    }
+    coll = pd.Series([collections.get(t) for t in lib.index], index=lib.index)
+    for name, colls in held.items():
+        pools[name] = pools[name] | (strays & coll.isin(colls))
+
+
+def claimed_by_adult_trees(pools: dict[str, pd.Series]) -> pd.Series:
+    return pd.concat([pools[name] for name in ADULT_TREES], axis=1).any(axis=1)
+
+
+def standup_specials(lib: pd.DataFrame, keywords: dict[int, frozenset[str]]) -> pd.Series:
+    """Standup and comedy concert specials, which are not films.
+
+    TMDB marks many specials only as a comedian's TV special or a comedian's
+    concert, so the stand-up keyword alone misses them. A feature film with a
+    concert scene carries the concert keyword without the comedian one.
+    """
+
+    def special(tmdb: int, genres: frozenset[str]) -> bool:
+        kw = keywords.get(tmdb, frozenset())
+        concert, comedian = bool(CONCERT_KEYWORDS & kw), "comedian" in kw
+        tv_special = "TV Movie" in genres and (concert or comedian)
+        return STANDUP_KEYWORD in kw or ("Comedy" in genres and (tv_special or (concert and comedian)))
+
+    ids: list[int] = lib.index.to_list()
+    return pd.Series([special(t, g) for t, g in zip(ids, lib.genres, strict=True)], index=lib.index)
+
+
+def build_pools(lib: pd.DataFrame, s: pd.DataFrame, house: House) -> dict[str, pd.Series]:
     tagged = {name: lib.genres.apply(lambda g, n=name: n in g) for name in EXPECTED}
-    bands = kids_bands(lib, s, pins, collections)
+    bands = kids_bands(lib, s, house.kids_pins, house.collections)
     young_kids = bands["tagged"] & (bands["little"] | bands["family"])
     kids_only = young_kids & s["laugh"].reindex(lib.index).isna()
     excite = s["excite"].reindex(lib.index)
+    standup = standup_specials(lib, house.keywords) | mask(lib, house.tree_pins.get("standup", frozenset()))
+    exciting = (tagged["Adventure"] & excite.isna()) | (
+        any_genre(lib, ACTION_BY_EXCITEMENT) & over(excite, ACTION_EXCITEMENT)
+    )
     pools = {
         "horror": tagged["Horror"] & ~young_kids & ~leaves_for_comedy(lib, s, "fear"),
         "comedy": tagged["Comedy"] & ~kids_only,
-        "action": (tagged["Action"] | (tagged["Adventure"] & (excite.isna() | excite.ge(ADVENTURE_EXCITEMENT))))
-        & ~kids_only
-        & ~leaves_for_comedy(lib, s, "excite"),
+        "action": (tagged["Action"] | exciting) & ~kids_only & ~leaves_for_comedy(lib, s, "excite"),
         "kids": bands["older"],
         "kids:little": bands["little"],
         "kids:family": bands["family"],
         "western": tagged["Western"],
-        "documentary": tagged["Documentary"],
+        "documentary": tagged["Documentary"] & ~standup,
+        "standup": standup,
     }
     wonder, explore = s["wonder"].reindex(lib.index), s["explore"].reindex(lib.index)
     pools["fantasy"] = (
         ((tagged["Fantasy"] | tagged["Adventure"]) & (over(wonder, WONDER_BAR) | over(explore, EXPLORE_BAR)))
         | (tagged["Fantasy"] & wonder.isna())
     ) & ~kids_only
+    tense = ~s["thrill"].reindex(lib.index).lt(EFFECT_FLOOR["thrill"]).fillna(False)
+    pools["thriller"] = any_genre(lib, THRILLER_GENRES) & tense & ~young_kids & ~kids_only
     pools["kids:franchise"] = bands["franchise"]
-    claimed = pools["horror"] | pools["comedy"] | pools["action"] | pools["fantasy"]
-    strays = lib.genres.apply(lambda g: bool(DRAMA_STRAYS & g)) & ~claimed
+    pinned = mask(lib, frozenset().union(*house.tree_pins.values()))
+    strays = any_genre(lib, DRAMA_STRAYS) & ~claimed_by_adult_trees(pools) & ~pinned & ~kids_only
+    adult_pools = {name: pools[name] for name in ADULT_TREES}
+    strays_follow_franchise(lib, adult_pools, strays, house.collections)
+    pools.update(adult_pools)
+    strays &= ~claimed_by_adult_trees(pools)
     pools["drama"] = (tagged["Drama"] | strays) & ~kids_only & ~leaves_for_comedy(lib, s, "weight")
+    for tree, ids in house.tree_pins.items():
+        pools[tree] = pools[tree] | mask(lib, ids)
     ench, edge = s["ench"].reindex(lib.index), s["edge"].reindex(lib.index)
     pools["sleep"] = (ench.ge(SLEEP_ENCHANTMENT) & edge.lt(SLEEP_EDGE)).fillna(False)
     return pools
@@ -396,15 +472,26 @@ def check_fixtures(lib: pd.DataFrame, pools: dict[str, pd.Series], key: dict[str
     report.say(f"\n== fixtures: {failed} failures across {len(entries)} fixture films ==")
 
 
-def load_collections(path: Path) -> dict[int, int]:
-    """TMDB id to collection id, newest record per film; empty when the cache is absent."""
-    if not path.exists():
-        return {}
+def load_house(tmdb_cache: Path) -> House:
+    """House pins from data/house_overrides.json, with collections and standup ids from the TMDB cache.
+
+    The newest cache record per film wins; an absent cache gives no collections and no standup.
+    """
+    overrides = json.loads((DATA / "house_overrides.json").read_text())
+    tree_pins: dict[str, set[int]] = {}
+    for pin in overrides.get("trees", []):
+        tree_pins.setdefault(pin["tree"], set()).add(pin["tmdb"])
     latest: dict[int, dict[str, Any]] = {}
-    for line in path.read_text().splitlines():
-        rec = json.loads(line)
-        latest[rec["tmdb"]] = rec
-    return {t: r["collection_id"] for t, r in latest.items() if r["collection_id"] is not None}
+    if tmdb_cache.exists():
+        for line in tmdb_cache.read_text().splitlines():
+            rec = json.loads(line)
+            latest[rec["tmdb"]] = rec
+    return House(
+        kids_pins={p["tmdb"]: p["band"] for p in overrides["kids"]},
+        tree_pins={tree: frozenset(ids) for tree, ids in tree_pins.items()},
+        collections={t: r["collection_id"] for t, r in latest.items() if r["collection_id"] is not None},
+        keywords={t: frozenset(r.get("keywords", [])) for t, r in latest.items()},
+    )
 
 
 def main() -> int:
@@ -422,15 +509,21 @@ def main() -> int:
     if not api_key:
         parser.error("JELLYFIN_API_KEY is not set")
     key = json.loads((DATA / "answer_key.json").read_text())
-    pins = {p["tmdb"]: p["band"] for p in json.loads((DATA / "house_overrides.json").read_text())["kids"]}
-    collections = load_collections(args.tmdb)
+    house = load_house(args.tmdb)
     lib, no_id = load_library(args.jellyfin, api_key)
     s = load_scores(args.ml, lib, key["list_tags"]["tags"])
-    pools = build_pools(lib, s, pins, collections)
+    pools = build_pools(lib, s, house)
     report = Report()
     report.say(f"library {len(lib)} films with a TMDB id; {len(s)} with genome scores; floors {EFFECT_FLOOR}")
-    report.say(f"TMDB cache: {len(collections)} films in a collection, from {args.tmdb}")
-    if not collections:
+    report.say(f"TMDB cache: {len(house.collections)} films in a collection, from {args.tmdb}")
+    report.say("pool sizes: " + ", ".join(f"{name} {int(pool.sum())}" for name, pool in pools.items()))
+    uncached = sorted(f"{lib.loc[t, 'name']} ({lib.loc[t, 'year']})" for t in lib.index if t not in house.keywords)
+    if uncached:
+        report.fail(
+            f"{len(uncached)} films missing from the TMDB cache; the franchise and standup rules cannot see them."
+            " Run fetch_tmdb.py. First: " + "; ".join(uncached[:10])
+        )
+    if not house.collections:
         report.fail(f"no TMDB collections loaded from {args.tmdb}; the franchise rule did not run")
     added = lib.index[pools["kids:franchise"]]
     report.say(f"franchise rule added {len(added)} films to kids: " + "; ".join(sorted(lib.loc[added, "name"])))

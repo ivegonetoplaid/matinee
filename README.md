@@ -11,8 +11,9 @@ none of them.
 ## Status
 
 Design complete, build starting. The question trees for horror, comedy, action,
-drama, kids, and fantasy and adventure, plus a "something to fall asleep to"
-mode, are defined in `data/`. `tools/check_trees.py` tests them against a real
+drama, thriller, kids, fantasy and adventure, western and non-fiction, plus a
+"something to fall asleep to" mode, are designed; their pools are built by
+`tools/check_trees.py` and hand-set placements live in `data/`. `tools/check_trees.py` tests them against a real
 library: every film must be reachable, and every film in a set of famous lists
 must be reachable through its own genres.
 

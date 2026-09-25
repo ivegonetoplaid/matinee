@@ -20,7 +20,8 @@
       "title": "Hubie Halloween",
       "tmdb": 617505,
       "must_not": [
-        "horror"
+        "horror",
+        "thriller"
       ],
       "must_reach": [
         "comedy"
@@ -31,7 +32,8 @@
       "title": "Ernest Scared Stupid",
       "tmdb": 32685,
       "must_not": [
-        "horror"
+        "horror",
+        "thriller"
       ],
       "must_reach": [
         "comedy"
@@ -176,14 +178,20 @@
       "title": "Se7en",
       "tmdb": 807,
       "must_reach": [
-        "drama"
+        "thriller"
       ],
-      "note": "crime, mystery and thriller with no Drama tag; the drama tree takes in what no other tree claims"
+      "note": "crime, mystery and thriller with no Drama tag; its home is the thriller tree",
+      "must_not": [
+        "drama"
+      ]
     },
     {
       "title": "Memento",
       "tmdb": 77,
       "must_reach": [
+        "thriller"
+      ],
+      "must_not": [
         "drama"
       ]
     },
@@ -191,6 +199,9 @@
       "title": "Vertigo",
       "tmdb": 426,
       "must_reach": [
+        "thriller"
+      ],
+      "must_not": [
         "drama"
       ]
     },
@@ -472,6 +483,194 @@
         "fantasy"
       ],
       "kids_band": "older"
+    },
+    {
+      "title": "Cube",
+      "tmdb": 431,
+      "must_reach": [
+        "thriller",
+        "horror"
+      ],
+      "must_not": [
+        "drama"
+      ],
+      "note": "the operator: horror or thriller, kinda both; Saw but smarter. Thriller by rule, horror by house pin"
+    },
+    {
+      "title": "Dune",
+      "tmdb": 438631,
+      "must_reach": [
+        "action"
+      ],
+      "must_not": [
+        "drama"
+      ],
+      "note": "the operator: slow-burn action. Tagged Adventure and Science Fiction with excitement 0.37; follows Dune: Part Two into action by the franchise rule for strays"
+    },
+    {
+      "title": "The Batman",
+      "tmdb": 414906,
+      "must_reach": [
+        "action",
+        "thriller"
+      ],
+      "must_not": [
+        "drama"
+      ],
+      "note": "tagged Crime, Mystery, Thriller with excitement 0.42; a Batman film belongs in action, by house pin"
+    },
+    {
+      "title": "Chinatown",
+      "tmdb": 829,
+      "must_reach": [
+        "thriller"
+      ]
+    },
+    {
+      "title": "North by Northwest",
+      "tmdb": 213,
+      "must_reach": [
+        "thriller"
+      ]
+    },
+    {
+      "title": "Ocean's Twelve",
+      "tmdb": 163,
+      "must_reach": [
+        "action"
+      ],
+      "must_not": [
+        "drama"
+      ],
+      "note": "low excitement and low tension; follows Ocean's Eleven into action by the franchise rule for strays"
+    },
+    {
+      "title": "Tombstone",
+      "tmdb": 11969,
+      "must_reach": [
+        "western",
+        "action"
+      ]
+    },
+    {
+      "title": "Bone Tomahawk",
+      "tmdb": 294963,
+      "must_reach": [
+        "western",
+        "horror"
+      ]
+    },
+    {
+      "title": "The Hateful Eight",
+      "tmdb": 273248,
+      "must_reach": [
+        "western"
+      ]
+    },
+    {
+      "title": "The Good Liar",
+      "tmdb": 511322,
+      "must_reach": [
+        "thriller"
+      ],
+      "must_not": [
+        "drama"
+      ],
+      "note": "house pin"
+    },
+    {
+      "title": "The Thirteenth Floor",
+      "tmdb": 1090,
+      "must_reach": [
+        "thriller"
+      ],
+      "must_not": [
+        "drama"
+      ],
+      "note": "house pin"
+    },
+    {
+      "title": "Project Almanac",
+      "tmdb": 227719,
+      "must_reach": [
+        "thriller"
+      ],
+      "must_not": [
+        "drama"
+      ],
+      "note": "house pin"
+    },
+    {
+      "title": "Mortal Engines",
+      "tmdb": 428078,
+      "must_reach": [
+        "action"
+      ],
+      "must_not": [
+        "drama"
+      ],
+      "note": "house pin"
+    },
+    {
+      "title": "The Animatrix",
+      "tmdb": 55931,
+      "must_reach": [
+        "action"
+      ],
+      "must_not": [
+        "drama"
+      ],
+      "note": "house pin"
+    },
+    {
+      "title": "Trancers",
+      "tmdb": 5677,
+      "must_reach": [
+        "action"
+      ],
+      "must_not": [
+        "drama"
+      ],
+      "note": "house pin"
+    },
+    {
+      "title": "Muppet Sing Alongs: Treasure Island",
+      "tmdb": 698609,
+      "kids_band": "family",
+      "must_not": [
+        "drama"
+      ],
+      "note": "house pin"
+    },
+    {
+      "title": "Kevin Smith: Silent but Deadly",
+      "tmdb": 517792,
+      "must_reach": [
+        "standup"
+      ],
+      "must_not": [
+        "documentary"
+      ],
+      "note": "house pin"
+    },
+    {
+      "title": "Simulation Theory",
+      "tmdb": 731971,
+      "must_reach": [
+        "documentary"
+      ],
+      "must_not": [
+        "drama"
+      ],
+      "note": "house pin"
+    },
+    {
+      "title": "The Harder They Fall",
+      "tmdb": 618162,
+      "must_reach": [
+        "western"
+      ],
+      "note": "house payoff pin: showdown"
     }
   ]
 }
