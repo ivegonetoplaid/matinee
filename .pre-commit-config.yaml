@@ -19,14 +19,14 @@ repos:
         entry: >-
           bash -lc '.venv/bin/python -m ruff format --check . &&
           .venv/bin/python -m ruff check . &&
-          .venv/bin/python scripts/check_nested_ternaries.py tools scripts &&
-          .venv/bin/python scripts/check_file_size.py tools scripts'
+          .venv/bin/python scripts/check_nested_ternaries.py src tools scripts tests &&
+          .venv/bin/python scripts/check_file_size.py src tools scripts tests'
         language: system
         pass_filenames: false
         types: [python]
       - id: matinee-cognitive-complexity
         name: matinee cognitive complexity
-        entry: bash -lc '.venv/bin/complexipy tools scripts -f'
+        entry: bash -lc '.venv/bin/complexipy src tools scripts -f'
         language: system
         pass_filenames: false
         types: [python]

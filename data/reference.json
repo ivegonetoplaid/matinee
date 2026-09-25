@@ -1,0 +1,48 @@
+{
+  "licence": "Derived from the MovieLens ml-latest tag genome (F. Maxwell Harper and Joseph A. Konstan, 2015; Jesse Vig, Shilad Sen and John Riedl, 2012). Redistributed under the dataset's own licence conditions, which bind this file: research and non-commercial use only, no implied endorsement by the University of Minnesota or GroupLens, and any redistribution under these same conditions.",
+  "source": "MovieLens ml-latest, generated July 20, 2023",
+  "trees": {
+    "horror": {
+      "movielens_genres": [
+        "Horror"
+      ],
+      "floor_any": {
+        "fear": {
+          "tags": [
+            "scary",
+            "frightening",
+            "creepy",
+            "horror"
+          ],
+          "min": 0.2
+        }
+      },
+      "films": 1572,
+      "payoffs": {},
+      "scales": {
+        "gore": {
+          "tags": [
+            "gore",
+            "goretastic",
+            "gory",
+            "bloody",
+            "splatter",
+            "gruesome",
+            "gratuitous violence",
+            "torture"
+          ],
+          "percentiles": [
+            40.0,
+            70.0,
+            90.0
+          ],
+          "cuts": [
+            0.220412,
+            0.380262,
+            0.581994
+          ]
+        }
+      }
+    }
+  }
+}

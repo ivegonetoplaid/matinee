@@ -13,14 +13,14 @@ fi
 
 "$PYTHON_BIN" -m ruff format --check .
 "$PYTHON_BIN" -m ruff check .
-"$PYTHON_BIN" scripts/check_nested_ternaries.py tools scripts
-"$PYTHON_BIN" scripts/check_file_size.py tools scripts
+"$PYTHON_BIN" scripts/check_nested_ternaries.py src tools scripts tests
+"$PYTHON_BIN" scripts/check_file_size.py src tools scripts tests
 
 # Cognitive complexity: threshold lives in pyproject [tool.complexipy]; -f shows only breaches
-"$SCRIPT_DIR/.venv/bin/complexipy" tools scripts -f
+"$SCRIPT_DIR/.venv/bin/complexipy" src tools scripts -f
 
 # No silent exception swallowing: the BLE001 suppression is banned project-wide
-if grep -rn "noqa: BLE001" tools scripts; then
+if grep -rn "noqa: BLE001" src tools scripts tests; then
     echo "ERROR: noqa: BLE001 found; bare except Exception is banned" >&2
     exit 1
 fi

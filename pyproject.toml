@@ -15,8 +15,8 @@ dev = ["ruff", "mypy", "pytest", "complexipy", "pre-commit", "pandas-stubs"]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
-[tool.setuptools]
-packages = []
+[tool.setuptools.packages.find]
+where = ["src"]
 
 [tool.ruff]
 line-length = 120
@@ -34,7 +34,7 @@ max-complexity-allowed = 15
 
 [tool.mypy]
 strict = true
-files = ["tools"]
+files = ["src", "tools", "tests"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src", "tests", "tools"]

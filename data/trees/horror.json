@@ -1,6 +1,42 @@
 {
   "genre": "Horror",
   "opening": "horror. good. let's find you something.",
+  "scores": {
+    "fear": [
+      "scary",
+      "frightening",
+      "creepy",
+      "horror"
+    ],
+    "gore": [
+      "gore",
+      "goretastic",
+      "gory",
+      "bloody",
+      "splatter",
+      "gruesome",
+      "gratuitous violence",
+      "torture"
+    ]
+  },
+  "reference": {
+    "movielens_genres": [
+      "Horror"
+    ],
+    "floor_any": {
+      "fear": 0.2
+    }
+  },
+  "scales": {
+    "gore": {
+      "score": "gore",
+      "percentiles": [
+        40,
+        70,
+        90
+      ]
+    }
+  },
   "questions": [
     {
       "id": "attention",
