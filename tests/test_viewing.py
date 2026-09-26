@@ -15,7 +15,7 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-from matinee.dtdd import MIN_INTERVAL_S, USER_AGENT, Dtdd, DtddError, Topic
+from matinee.dtdd import RATE_PER_S, USER_AGENT, Dtdd, DtddError, Topic
 from matinee.engine import load_catalog
 from matinee.store import Store
 from matinee.table import FilmTable
@@ -61,12 +61,17 @@ class Clock:
 
 
 def test_requests_are_paced_named_and_keyed() -> None:
-    opener, clock = Answering([TOPICS, TOPICS]), Clock()
+    opener, clock = Answering([TOPICS] * 6), Clock()
     client = Dtdd("secret-key", opener=opener, clock=clock, sleep=clock.sleep)
     first = client.topics()
+    client.topics()  # a search and its item request may go back to back
+    assert clock.slept == []
     clock.now += 0.5
     client.topics()
-    assert clock.slept == [pytest.approx(MIN_INTERVAL_S - 0.5)]
+    assert clock.slept == [pytest.approx((1 - 0.5 * RATE_PER_S) / RATE_PER_S)]
+    for _ in range(3):
+        client.topics()
+    assert clock.slept[-1] == pytest.approx(1 / RATE_PER_S)
     assert [t.id for t in first] == [188, 153]
     assert first[0] == Topic(188, "there's blood/gore", "blood/gore", "blood", 4)
     req = opener.requests[0]
@@ -189,7 +194,18 @@ def test_first_question_greets_a_profile_by_name(site: Any) -> None:
 
 
 def test_the_pace_stays_under_thirty_a_minute() -> None:
-    assert 60 / MIN_INTERVAL_S < 30
+    opener, clock = Answering([TOPICS] * 100), Clock()
+    sent: list[float] = []
+
+    def record(req: urllib.request.Request, timeout: float) -> Any:
+        sent.append(clock.now)
+        return opener(req, timeout)
+
+    client = Dtdd("k", opener=record, clock=clock, sleep=clock.sleep)
+    for _ in range(100):
+        client.topics()
+    busiest = max(sum(1 for t in sent if start <= t < start + 60) for start in sent)
+    assert busiest < 30
 
 
 def test_the_real_opener_carries_the_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -275,3 +291,22 @@ def test_first_question_hides_a_tree_the_viewer_excluded_empty(tmp_path: Path) -
     assert client.post("/api/first", json={}).json()["options"] == [{"say": "Cowboys.", "tree": "west"}]
     both = {"viewer": {"exclusions": ["heroes", "superheroes"]}}
     assert client.post("/api/first", json=both).json()["options"] == []
+
+
+def test_the_allowance_holds_after_idle_hours_and_slow_answers() -> None:
+    clock = Clock()
+    sent: list[float] = []
+
+    def slow(req: urllib.request.Request, timeout: float) -> Any:
+        sent.append(clock.now)
+        clock.now += 0.5  # each answer takes half a second
+        return io.BytesIO(json.dumps(TOPICS).encode())
+
+    client = Dtdd("k", opener=slow, clock=clock, sleep=clock.sleep)
+    for burst in range(3):
+        clock.now += 3600  # an idle hour must not bank more than BURST
+        for _ in range(40):
+            client.topics()
+        del burst
+    busiest = max(sum(1 for t in sent if start <= t < start + 60) for start in sent)
+    assert busiest < 30

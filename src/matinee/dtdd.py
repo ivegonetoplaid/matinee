@@ -1,9 +1,11 @@
 """The one client all DoesTheDogDie traffic passes through.
 
-Requests are serialised and paced at least `MIN_INTERVAL_S` apart, which keeps
-them under the free tier's 30 a minute; the public page shares that allowance
-with everyone. A caller waits for its turn at most `wait` seconds and is then
-told DoesTheDogDie is busy, so a burst of callers never parks the whole server.
+Requests are serialised and paced by a small allowance: `BURST` requests may go
+back to back (one film lookup is a search and an item request), and the
+allowance refills at `RATE_PER_S`, which keeps the sustained rate under the free
+tier's 30 a minute; the public page shares that allowance with everyone. A
+caller waits for its turn at most `wait` seconds and is then told DoesTheDogDie
+is busy, so a burst of callers never parks the whole server.
 Nothing fetched is stored: the topic list is fetched when a page that offers
 topics opens, and a film is looked up only at the moment of a pick.
 DoesTheDogDie refuses Python's default user agent with a 403 that looks like a
@@ -23,9 +25,10 @@ from dataclasses import dataclass
 from typing import Any
 
 API = "https://www.doesthedogdie.com/api/v3"
-MIN_INTERVAL_S = 2.1
+RATE_PER_S = 0.45  # 27 a minute, so BURST + 27 keeps any single minute under 30
+BURST = 2
 TOPICS_TIMEOUT_S = 10.0
-TOPICS_WAIT_S = MIN_INTERVAL_S + 0.5  # two viewers opening the picker together both get the list
+TOPICS_WAIT_S = 1 / RATE_PER_S + 0.5  # two viewers opening the picker together both get the list
 USER_AGENT = "Matinee/0.1 (+https://www.doesthedogdie.com)"
 
 
@@ -62,7 +65,8 @@ class Dtdd:
         self._clock = clock
         self._sleep = sleep
         self._lock = threading.Lock()
-        self._last: float | None = None
+        self._tokens = float(BURST)
+        self._filled_at = clock()
 
     def get(self, path: str, timeout: float, wait: float) -> Any:
         """One paced GET; raises DtddError when no turn comes within `wait` seconds or no JSON within `timeout`."""
@@ -80,11 +84,14 @@ class Dtdd:
             self._lock.release()
 
     def _pace(self) -> None:
-        if self._last is not None:
-            gap = MIN_INTERVAL_S - (self._clock() - self._last)
-            if gap > 0:
-                self._sleep(gap)
-        self._last = self._clock()
+        """Spend one request from the allowance, sleeping until one has refilled when it is empty."""
+        now = self._clock()
+        self._tokens = min(float(BURST), self._tokens + (now - self._filled_at) * RATE_PER_S)
+        self._filled_at = now
+        if self._tokens < 1:
+            self._sleep((1 - self._tokens) / RATE_PER_S)
+            self._tokens, self._filled_at = 1.0, self._clock()
+        self._tokens -= 1
 
     def _fetch(self, req: urllib.request.Request, timeout: float) -> Any:
         try:

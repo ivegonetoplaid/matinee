@@ -21,6 +21,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from matinee.dtdd import Dtdd
 from matinee.engine import EngineError
 from matinee.library import ImageKind, LibraryError
+from matinee.pick import DeviceCap, Picker
 from matinee.store import Locked, Store, StoreError
 from matinee.table import TableError
 from matinee.web.common import (
@@ -32,6 +33,7 @@ from matinee.web.common import (
     Seat,
     Suggestion,
     device_tokens,
+    optional_int,
     problem,
     seat,
     set_tokens,
@@ -39,7 +41,7 @@ from matinee.web.common import (
 )
 from matinee.web.config import Config
 from matinee.web.theatre import LibraryUnavailable, Theatre
-from matinee.web.viewing import add_viewing_routes, check_exclusions
+from matinee.web.viewing import add_pick_routes, add_viewing_routes, check_exclusions
 
 log = logging.getLogger("matinee.web")
 IMAGE_WIDTHS: dict[ImageKind, dict[str, int]] = {
@@ -69,22 +71,13 @@ class Held:
     runtime_min: int | None
 
 
-def _optional_int(value: object) -> int | None:
-    """An integer, or None for a missing value (None, NaN or pandas' NA)."""
-    try:
-        number = float(str(value))
-    except ValueError:
-        return None
-    return None if number != number else round(number)
-
-
 def held(theatre: Theatre, tmdb: int) -> Held:
     """The film if it is in the current list; 404 for any other id."""
     films = theatre.showing().catalog.table.films
     if tmdb not in films.index:
         raise HTTPException(status_code=404, detail="not_found")
     row = films.loc[tmdb]
-    return Held(str(row.item_id), str(row["name"]), _optional_int(row.year), _optional_int(row.runtime_min))
+    return Held(str(row.item_id), str(row["name"]), optional_int(row.year), optional_int(row.runtime_min))
 
 
 def add_error_handlers(app: FastAPI, clock: Callable[[], float]) -> None:
@@ -178,12 +171,18 @@ def add_door_routes(app: FastAPI, theatre: Theatre, store: Store, clock: Callabl
 
 
 def create_app(
-    config: Config, theatre: Theatre, store: Store, dtdd: Dtdd, clock: Callable[[], float] = time.time
+    config: Config,
+    theatre: Theatre,
+    store: Store,
+    dtdd: Dtdd,
+    clock: Callable[[], float] = time.time,
+    picker: Picker | None = None,
 ) -> FastAPI:
     app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
     add_error_handlers(app, clock)
     add_film_routes(app, theatre)
     add_door_routes(app, theatre, store, clock)
     add_viewing_routes(app, theatre, store, dtdd)
+    add_pick_routes(app, theatre, store, picker or Picker(dtdd, DeviceCap()))
     app.state.config = config
     return app

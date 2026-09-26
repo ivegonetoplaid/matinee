@@ -108,3 +108,12 @@ class Problem(BaseModel):
 
 def problem(status: int, error: ErrorCode, message: str) -> JSONResponse:
     return JSONResponse(status_code=status, content=Problem(error=error, message=message).model_dump())
+
+
+def optional_int(value: object) -> int | None:
+    """An integer, or None for a missing value (None, NaN or pandas' NA)."""
+    try:
+        number = float(str(value))
+    except ValueError:
+        return None
+    return None if number != number else round(number)
