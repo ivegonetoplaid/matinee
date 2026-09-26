@@ -67,7 +67,7 @@ function nameTag() {
   );
 }
 
-// The answers so far, first to last. Each re-asks the question it answered.
+// The answers so far, first to last, at the foot of the screen. Each re-asks the question it answered.
 function trail() {
   if (!visit.tree) return null;
   const crumbs = [visit.firstSay, ...visit.says].map((say, i) =>
@@ -112,8 +112,8 @@ function frame({ count }) {
   );
   clear(stage).append(
     h("header", { class: "topbar" }, h("div", { class: "wordmark" }, "Matinee"), nameTag(), h("div", { class: "count" }, count)),
-    h("section", { class: "talk" }, trail(), line, answers, pick),
-    h("div", { class: "bottombar" }, h("span"), credits()),
+    h("section", { class: "talk" }, line, answers, pick),
+    h("div", { class: "bottombar" }, trail(), h("span"), credits()),
   );
   return { line, answers, pick };
 }

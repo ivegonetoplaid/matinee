@@ -193,8 +193,8 @@ film onto the pinned payoff and off every other.
   choice beneath each question's answers. It ends the questions and picks from
   the pool as it stands. Pressed at the first question,
   it picks from every film some first answer offers this viewer.
-- **The trail.** Above each question after the first, the page lists the
-  viewer's answers so far, first to last. Choosing one asks its question again
+- **The trail.** On each question after the first, the page lists the viewer's
+  answers so far, first to last, in gold at the bottom centre. Choosing one asks its question again
   and forgets every answer after it; choosing the first returns to the first
   question.
 
@@ -1124,7 +1124,7 @@ symbol when one does not match.
 | `src/matinee/web/static/js/dom.js::h` (text nodes only) | `src/matinee/web/static/js/dom.js:12` | 2026-09-26 |
 | `src/matinee/web/static/js/type.js::typeLine` | `src/matinee/web/static/js/type.js:10` | 2026-09-26 |
 | `src/matinee/web/static/manifest.webmanifest` | `src/matinee/web/static/manifest.webmanifest:1` | 2026-09-26 |
-| `src/matinee/web/static/css/matinee.css` reduced-motion rules | `src/matinee/web/static/css/matinee.css:839` | 2026-09-26 |
+| `src/matinee/web/static/css/matinee.css` reduced-motion rules | `src/matinee/web/static/css/matinee.css:848` | 2026-09-26 |
 
 ### Deployment
 

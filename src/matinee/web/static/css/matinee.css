@@ -237,16 +237,22 @@ button {
   }
 }
 
-/* The answers so far, above the question: small, dim, one crumb per answer. */
+/* The answers so far, bottom centre in the pinned bar: small, gold, one crumb per answer. */
 .trail ol {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
   align-items: center;
   margin: 0;
   padding: 0;
   list-style: none;
   font-size: 14px;
-  color: var(--dim);
+  color: var(--gold);
+}
+
+/* A row of its own across the pinned bottom bar, above the credits. */
+.bottombar > .trail {
+  flex-basis: 100%;
 }
 
 .trail li {
@@ -272,13 +278,13 @@ button {
   text-overflow: ellipsis;
   white-space: nowrap;
   text-decoration: underline;
-  text-decoration-color: var(--chip-line);
+  text-decoration-color: rgba(242, 179, 61, 0.4);
   cursor: pointer;
 }
 
 @media (hover: hover) {
   .crumb:hover {
-    color: var(--text);
+    color: var(--gold-hover);
     text-decoration-color: currentColor;
   }
 }
@@ -799,10 +805,13 @@ button {
   }
 }
 
+/* Pinned to the foot of the screen; what scrolls beneath it fades under a dark band instead of showing through. */
 .bottombar {
   position: sticky;
-  bottom: 0;
-  padding-top: 12px;
+  bottom: calc(-1 * var(--pad));
+  margin: 0 calc(-1 * var(--pad)) calc(-1 * var(--pad));
+  padding: 28px var(--pad) var(--pad);
+  background: linear-gradient(to top, rgba(7, 8, 13, 0.95) calc(100% - 28px), rgba(7, 8, 13, 0));
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
