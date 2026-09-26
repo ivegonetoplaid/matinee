@@ -1,7 +1,9 @@
 // Matinee's page: the questions on the poster wall, then the pick.
 
 import { post } from "./api.js";
+import { correctionLink } from "./correct.js";
 import { clear, h, sentenceCase } from "./dom.js";
+import { showPick } from "./pick.js";
 import { typeLine } from "./type.js";
 import { Wall } from "./wall.js";
 
@@ -14,9 +16,14 @@ const visit = {
   tree: null,
   answers: [],
   firstSay: null,
+  treeSay: null,
   seen: [],
   pool: [],
+  trees: [],
 };
+
+const CHECK_SHUFFLE_MS = 900;
+const CHECKING = "One moment. Let me check this one against your list.";
 
 function countText(n, first) {
   const films = `${n.toLocaleString("en")} ${n === 1 ? "film" : "films"}`;
@@ -95,7 +102,17 @@ function problem(data, again) {
 export async function start() {
   const res = await post("/api/first", { viewer: visit.viewer });
   if (!res.ok) return problem(res.data, start);
-  Object.assign(visit, { tree: null, answers: [], firstSay: null, seen: [], pool: res.data.pool });
+  Object.assign(visit, {
+    tree: null,
+    answers: [],
+    firstSay: null,
+    treeSay: null,
+    seen: [],
+    pool: res.data.pool,
+    trees: res.data.options,
+  });
+  stage.classList.remove("revealed");
+  wall.root.classList.remove("spotlit", "revealed");
   wall.show(visit.pool, { shuffle: false });
   const [greeting, question] = res.data.lines;
   const name = res.data.name;
@@ -105,7 +122,7 @@ export async function start() {
 }
 
 function chooseTree(option) {
-  Object.assign(visit, { tree: option.tree, answers: [], firstSay: option.say, seen: [] });
+  Object.assign(visit, { tree: option.tree, answers: [], firstSay: option.say, seen: [], treeSay: null });
   step();
 }
 
@@ -121,7 +138,7 @@ async function step() {
     say: o.say,
     image: o.image,
     go: () => {
-      if (!visit.answers.length) visit.firstSay = o.say;
+      if (!visit.answers.length) visit.treeSay = o.say;
       visit.answers.push({ question: q.id, option: o.index });
       step();
     },
@@ -129,24 +146,61 @@ async function step() {
   await ask({ ack: res.data.line, question: q.ask, options, count: countText(visit.pool.length, false), picture });
 }
 
+function pickFrame() {
+  const line = h("h1", { class: "line pick-line", "aria-live": "polite" });
+  const aside = h("div", { class: "aside" }, line);
+  const showing = h("section", { class: "showing" }, aside);
+  clear(stage).append(
+    h("header", { class: "topbar" }, h("div", { class: "wordmark" }, "Matinee"), h("span")),
+    showing,
+  );
+  return { line, aside, showing };
+}
+
+function hasTopics() {
+  return Boolean(visit.viewer.profile_id ? visit.profileTopics : visit.viewer.topics?.length);
+}
+
+async function checking(frame) {
+  wall.root.classList.remove("spotlit", "revealed");
+  await typeLine(frame.line, CHECKING, "");
+  const timer = setInterval(() => wall.move(), CHECK_SHUFFLE_MS);
+  return () => clearInterval(timer);
+}
+
 async function pickNow(opening = "") {
-  const res = await post("/api/pick", {
-    tree: visit.tree,
-    answers: visit.answers,
-    viewer: visit.viewer,
-    seen: visit.seen,
-  });
+  stage.classList.remove("revealed");
+  wall.root.classList.remove("spotlit", "revealed");
+  const frame = pickFrame();
+  if (opening) await typeLine(frame.line, opening, "");
+  // The check runs while the checking line types, not after it.
+  const request = post("/api/pick", { tree: visit.tree, answers: visit.answers, viewer: visit.viewer, seen: visit.seen });
+  const stopChecking = hasTopics() ? await checking(frame) : () => {};
+  const res = await request;
+  stopChecking();
   if (!res.ok) return problem(res.data, start);
-  const { line } = frame({ count: countText(1, false), justPick: false });
-  if (opening) await typeLine(line, opening, "");
-  const film = res.data.film;
-  if (!film) {
-    await typeLine(line, res.data.exhausted, "");
-    return;
-  }
-  visit.seen.push(film.tmdb);
-  wall.show([film.tmdb], { spotlight: true });
-  await typeLine(line, "Here. Watch this one.", `${film.title}${film.year ? ` (${film.year})` : ""}`);
+  // A film the check turned away is seen too, so "Not that one" never draws it again.
+  for (const f of [res.data.film, res.data.swapped?.film]) if (f) visit.seen.push(f.tmdb);
+  await showPick({
+    stage,
+    wall,
+    pool: visit.pool,
+    reminder: visit.treeSay || visit.firstSay,
+    result: res.data,
+    frame,
+    actions: {
+      notThatOne: () => {
+        lockStage();
+        pickNow();
+      },
+      startOver: () => {
+        lockStage();
+        start();
+      },
+      failed: (data) => problem(data, start),
+      correction: (film) => correctionLink({ visit, film, trees: visit.trees }),
+    },
+  });
 }
 
 start();

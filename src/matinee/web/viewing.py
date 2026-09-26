@@ -90,6 +90,8 @@ class StepOut(BaseModel):
 class FirstOptionOut(BaseModel):
     say: str
     tree: str
+    label: str
+    correctable: bool
 
 
 class FirstOut(BaseModel):
@@ -260,7 +262,10 @@ def add_viewing_routes(app: FastAPI, theatre: Theatre, store: Store, dtdd: Dtdd)
     def first(body: FirstIn, request: Request) -> FirstOut:
         cat = theatre.showing().catalog
         viewer, profile = resolve(request, store, body.viewer)
-        options = [FirstOptionOut(say=o.say, tree=o.tree) for o in first_question(cat, viewer)]
+        options = [
+            FirstOptionOut(say=o.say, tree=o.tree, label=o.label, correctable=not banded(cat.trees[o.tree]))
+            for o in first_question(cat, viewer)
+        ]
         return FirstOut(
             lines=list(cat.first_lines),
             name=profile.name if profile else None,

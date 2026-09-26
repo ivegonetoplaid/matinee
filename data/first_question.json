@@ -1,5 +1,5 @@
 {
-  "note": "Decision 57: the first question on the poster wall. Each answer leads to the tree or mode named by its file; an answer whose tree or mode holds no film for the viewer is not shown.",
+  "note": "Decision 57: the first question on the poster wall. Each answer leads to the tree or mode named by its file; an answer whose tree or mode holds no film for the viewer is not shown. Each answer's label names its tree where a short name is needed, such as the correction link.",
   "lines": [
     "Right this way.",
     "So, what are we in the mood for?"
@@ -7,47 +7,58 @@
   "options": [
     {
       "say": "I want to be scared.",
-      "tree": "horror"
+      "tree": "horror",
+      "label": "Horror"
     },
     {
       "say": "I need a laugh.",
-      "tree": "comedy"
+      "tree": "comedy",
+      "label": "Comedy"
     },
     {
       "say": "Get my heart pumping.",
-      "tree": "action"
+      "tree": "action",
+      "label": "Action"
     },
     {
       "say": "Keep me on the edge of my seat.",
-      "tree": "thriller"
+      "tree": "thriller",
+      "label": "Thriller"
     },
     {
       "say": "Give me a story that sticks with me.",
-      "tree": "drama"
+      "tree": "drama",
+      "label": "Drama"
     },
     {
       "say": "Take me somewhere else.",
-      "tree": "fantasy"
+      "tree": "fantasy",
+      "label": "Fantasy and adventure"
     },
     {
       "say": "I'm in a cowboy mood.",
-      "tree": "western"
+      "tree": "western",
+      "label": "Western"
     },
     {
       "say": "Tell me something true.",
-      "tree": "nonfiction"
+      "tree": "nonfiction",
+      "label": "Non-fiction"
     },
     {
       "say": "Just someone funny with a mic.",
-      "tree": "standup"
+      "tree": "standup",
+      "label": "Standup"
     },
     {
       "say": "Something for the kids.",
-      "tree": "kids"
+      "tree": "kids",
+      "label": "Kids"
     },
     {
       "say": "Something I can fall asleep to.",
-      "tree": "fall-asleep"
+      "tree": "fall-asleep",
+      "label": "Something to fall asleep to"
     }
   ]
 }

@@ -190,7 +190,7 @@ def test_first_question_greets_a_profile_by_name(site: Any) -> None:
     me = client.post("/api/profiles", json={"name": "Ada"}).json()
     first = client.post("/api/first", json={"viewer": {"profile_id": me["id"]}}).json()
     assert first["lines"] == ["Right this way."] and first["name"] == "Ada"
-    assert first["options"] == [{"say": "Cowboys.", "tree": "west"}]
+    assert first["options"] == [{"say": "Cowboys.", "tree": "west", "label": "Western", "correctable": True}]
     assert first["pool"] == list(range(1, 40)) + [99]  # every film the answers offer this viewer
     assert client.post("/api/first", json={}).json()["name"] is None
 
@@ -290,7 +290,9 @@ def test_first_question_hides_a_tree_the_viewer_excluded_empty(tmp_path: Path) -
     client = TestClient(
         create_app(config, theatre, Store(tmp_path / "s.sqlite"), FakeDtdd()), base_url="https://testserver"
     )
-    assert client.post("/api/first", json={}).json()["options"] == [{"say": "Cowboys.", "tree": "west"}]
+    assert client.post("/api/first", json={}).json()["options"] == [
+        {"say": "Cowboys.", "tree": "west", "label": "Western", "correctable": True}
+    ]
     both = {"viewer": {"exclusions": ["heroes", "superheroes"]}}
     assert client.post("/api/first", json=both).json()["options"] == []
     assert client.post("/api/first", json=both).json()["pool"] == []

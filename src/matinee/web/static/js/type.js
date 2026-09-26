@@ -15,12 +15,14 @@ export function typeLine(el, ack, ask) {
   const caret = h("span", { class: "caret", "aria-hidden": "true" });
   el.classList.remove("done");
   el.setAttribute("aria-label", [gold, white].filter(Boolean).join(" "));
-  el.replaceChildren(ackEl, askEl);
-  askEl.append(caret);
+  el.replaceChildren(ackEl, white ? askEl : "");
   const total = gold.length + white.length;
+  // With no question to follow, the caret stays on the acknowledgement's line.
+  const caretHome = white ? askEl : ackEl;
   const paint = (n) => {
-    ackEl.textContent = gold.slice(0, n);
-    askEl.replaceChildren(white.slice(0, Math.max(0, n - gold.length)), caret);
+    ackEl.replaceChildren(gold.slice(0, n));
+    askEl.replaceChildren(white.slice(0, Math.max(0, n - gold.length)));
+    caretHome.append(caret);
   };
   return new Promise((resolve) => {
     if (prefersLessMotion() || total === 0) {

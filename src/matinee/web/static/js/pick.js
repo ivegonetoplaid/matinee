@@ -1,0 +1,137 @@
+// The pick, in two beats. Land: a spotlight lands on one poster while "Here.
+// Watch this one." types out. Reveal: after about a second and a half the lit
+// poster and the wall fade nearly away, and the film's backdrop rises with its
+// title, year and synopsis. The film is tonight's showing, never a search result.
+
+import { get } from "./api.js";
+import { h, isPhone, sentenceCase, wait } from "./dom.js";
+import { typeLine } from "./type.js";
+
+const REVEAL_AFTER_MS = 1500;
+const HERE = "Here. Watch this one.";
+// Where the lit poster lands, as fractions of the screen: the right two-thirds on desktop, the upper half on a phone.
+const SPOTS = {
+  desktop: [
+    [0.625, 0.19],
+    [0.75, 0.33],
+    [0.47, 0.4],
+    [0.69, 0.14],
+  ],
+  phone: [
+    [0.3, 0.1],
+    [0.52, 0.16],
+    [0.22, 0.2],
+    [0.45, 0.08],
+  ],
+};
+
+let spotTurn = 0;
+
+function spotlight(tmdb, title) {
+  const at = (isPhone() ? SPOTS.phone : SPOTS.desktop)[spotTurn % 4];
+  spotTurn += 1;
+  const spot = h(
+    "div",
+    { class: "spot", "aria-hidden": "true" },
+    h("div", { class: "spot-glow" }),
+    h("img", { class: "spot-poster", src: `/img/poster/${tmdb}/l`, alt: `${title} poster` }),
+  );
+  spot.style.left = `${at[0] * 100}vw`;
+  spot.style.top = `${at[1] * 100}vh`;
+  return spot;
+}
+
+function heading(film) {
+  return h("h2", { class: "film-title" }, film.title, film.year ? h("span", { class: "film-year" }, ` ${film.year}`) : null);
+}
+
+function feature(card, film, result) {
+  const backdrop = h("img", {
+    class: "backdrop",
+    src: `/img/backdrop/${film.tmdb}/${isPhone() ? "m" : "l"}`,
+    alt: `${film.title}, a still from the film`,
+  });
+  backdrop.addEventListener("error", () => backdrop.remove());
+  const unchecked = result.unchecked ? h("p", { class: "note" }, result.unchecked, " ", credit(result)) : null;
+  return h(
+    "div",
+    { class: "feature" },
+    backdrop,
+    h("div", { class: "feature-text" }, heading(film), h("p", { class: "synopsis" }, card.synopsis || ""), unchecked),
+  );
+}
+
+// DoesTheDogDie's credit, shown wherever its data is.
+function credit(result) {
+  return h("a", { href: result.link, target: "_blank", rel: "noopener noreferrer" }, result.credit);
+}
+
+// Why the first pick was turned away, and "What were you going to show me?", which reveals it.
+function firstPickReveal(result) {
+  const swapped = result.swapped;
+  const shown = h("p", { class: "note", hidden: true });
+  shown.textContent = `${swapped.film.title}${swapped.film.year ? ` (${swapped.film.year})` : ""}: ${swapped.topics
+    .map((t) => sentenceCase(t))
+    .join(", ")}.`;
+  const ask = h(
+    "button",
+    {
+      class: "link-button",
+      type: "button",
+      onclick: () => {
+        shown.hidden = false;
+        ask.remove();
+      },
+    },
+    swapped.reveal,
+  );
+  return h("div", { class: "swap-note" }, h("p", { class: "note" }, swapped.line, " ", credit(result)), ask, shown);
+}
+
+// The page's pick screen. `actions` holds notThatOne, startOver, failed and the correction panel's builder.
+export async function showPick({ stage, wall, pool, reminder, result, frame, actions }) {
+  const film = result.film;
+  const { line, aside } = frame;
+  if (!film) {
+    await typeLine(line, result.exhausted, "");
+    aside.append(
+      h("button", { class: "pill gold", type: "button", onclick: actions.startOver }, "Start over"),
+      h("p", { class: "note" }, credit(result)),
+    );
+    return;
+  }
+  if (result.swapped) {
+    await typeLine(line, result.swapped.line, "");
+    await wait(900);
+  }
+  wall.show(pool, { spotlight: true });
+  wall.root.classList.add("spotlit");
+  const spot = spotlight(film.tmdb, film.title);
+  stage.append(spot);
+  const cardRequest = get(`/api/film/${film.tmdb}`);
+  await Promise.all([typeLine(line, HERE, ""), wait(REVEAL_AFTER_MS)]);
+  const card = await cardRequest;
+  if (!card.ok) {
+    spot.remove();
+    return actions.failed(card.data);
+  }
+  const info = card.data;
+  wall.root.classList.add("revealed");
+  spot.classList.add("faded");
+  stage.classList.add("revealed");
+  frame.showing.append(feature(info, film, result));
+  const buttons = h(
+    "div",
+    { class: "choices" },
+    h("button", { class: "pill velvet", type: "button", onclick: actions.notThatOne }, "Not that one"),
+    info.seerr ? h("a", { class: "seerr", href: info.seerr, target: "_blank", rel: "noopener noreferrer" }, "More on Seerr") : null,
+  );
+  const parts = [
+    reminder ? h("p", { class: "you-said" }, `You said: “${sentenceCase(reminder)}”`) : null,
+    buttons,
+    h("button", { class: "link-button", type: "button", onclick: actions.startOver }, "Start over"),
+    result.swapped ? firstPickReveal(result) : null,
+    actions.correction(film),
+  ];
+  aside.append(...parts.filter(Boolean));
+}

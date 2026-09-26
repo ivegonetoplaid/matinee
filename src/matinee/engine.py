@@ -98,6 +98,7 @@ class Step:
 class FirstOption:
     say: str
     tree: str
+    label: str
 
 
 @dataclass
@@ -296,6 +297,12 @@ def _exclusion(table: FilmTable, spec: Mapping[str, Any]) -> Mask:
     return hit
 
 
+def _first_option(o: dict[str, str]) -> FirstOption:
+    if not o.get("label"):
+        raise EngineError(f"first question: '{o.get('say')}' has no label naming its tree")
+    return FirstOption(o["say"], o["tree"], o["label"])
+
+
 def load_catalog(table: FilmTable, data: Path = DATA, reference: Reference | None = None) -> Catalog:
     """Prepare the engine for one film table; raises when the shipped statistics do not cover the trees."""
     ref = reference or load_reference(data / "reference.json")
@@ -312,7 +319,7 @@ def load_catalog(table: FilmTable, data: Path = DATA, reference: Reference | Non
         exclusions={name: _exclusion(table, spec) for name, spec in excl["exclusions"].items()},
         exclusion_names={name: str(spec.get("say", name)) for name, spec in excl["exclusions"].items()},
         first_lines=tuple(first["lines"]),
-        first_options=tuple(FirstOption(o["say"], o["tree"]) for o in first["options"]),
+        first_options=tuple(_first_option(o) for o in first["options"]),
     )
     cat.pools = {name: np.array(pool, dtype=bool) for name, pool in build_pools(table, cat.house).items()}
     for tree in cat.trees.values():

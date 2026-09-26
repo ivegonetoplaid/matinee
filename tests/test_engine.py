@@ -155,7 +155,10 @@ def write_data(root: Path, tree: dict[str, Any] | None = None) -> Path:
         json.dumps(
             {
                 "lines": ["Right this way."],
-                "options": [{"say": "Cowboys.", "tree": "west"}, {"say": "No.", "tree": "none"}],
+                "options": [
+                    {"say": "Cowboys.", "tree": "west", "label": "Western"},
+                    {"say": "No.", "tree": "none", "label": "None"},
+                ],
             }
         )
     )
@@ -399,3 +402,12 @@ def test_reachable_is_the_union_of_walk_ends(cat: Catalog, tmp_path: Path) -> No
     assert {int(t) for t in narrow.ids[reachable(narrow, "west")]} == set(range(1, 31))
     few = Viewer(corrections=tuple(Correction(t, "west", "remove") for t in range(1, 30)))
     assert {int(t) for t in narrow.ids[reachable(narrow, "west", few)]} == set(range(30, N + 1))
+
+
+def test_a_first_answer_without_a_label_refuses_to_load(tmp_path: Path) -> None:
+    data = write_data(tmp_path / "data")
+    first = json.loads((data / "first_question.json").read_text())
+    del first["options"][0]["label"]
+    (data / "first_question.json").write_text(json.dumps(first))
+    with pytest.raises(EngineError, match="no label"):
+        load_catalog(make_table(), data, reference())
