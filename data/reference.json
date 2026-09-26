@@ -205,6 +205,99 @@
       },
       "scales": {}
     },
+    "fantasy": {
+      "movielens_genres": [
+        "Fantasy",
+        "Adventure"
+      ],
+      "floor_any": {
+        "wonder": {
+          "tags": [
+            "fantasy world",
+            "magic",
+            "fantasy",
+            "mythology",
+            "fairy tale",
+            "imagination",
+            "dragons",
+            "wizards"
+          ],
+          "min": 0.45
+        },
+        "explore": {
+          "tags": [
+            "treasure",
+            "treasure hunt",
+            "pirates",
+            "archaeology",
+            "jungle",
+            "island"
+          ],
+          "min": 0.45
+        }
+      },
+      "films": 381,
+      "payoffs": {
+        "quest": {
+          "tags": [
+            "epic",
+            "medieval",
+            "sword fight",
+            "good versus evil",
+            "destiny",
+            "mythology"
+          ],
+          "mean": 0.399262,
+          "sd": 0.200512
+        },
+        "wonder": {
+          "tags": [
+            "whimsical",
+            "magic",
+            "fairy tale",
+            "imagination",
+            "childhood"
+          ],
+          "mean": 0.511803,
+          "sd": 0.197696
+        },
+        "teeth": {
+          "tags": [
+            "dark fantasy",
+            "dark",
+            "creepy",
+            "surreal",
+            "dreamlike"
+          ],
+          "mean": 0.277639,
+          "sd": 0.183102
+        },
+        "ruins": {
+          "tags": [
+            "treasure",
+            "treasure hunt",
+            "pirates",
+            "archaeology",
+            "jungle",
+            "island"
+          ],
+          "mean": 0.149034,
+          "sd": 0.155294
+        },
+        "elsewhere": {
+          "tags": [
+            "alternate universe",
+            "parallel universe",
+            "time travel",
+            "video games",
+            "fantasy world"
+          ],
+          "mean": 0.296631,
+          "sd": 0.084062
+        }
+      },
+      "scales": {}
+    },
     "horror": {
       "movielens_genres": [
         "Horror"
