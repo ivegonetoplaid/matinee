@@ -2,6 +2,7 @@
 
 import { get, post } from "./api.js";
 import { correctionLink } from "./correct.js";
+import { credits } from "./credits.js";
 import { Door } from "./door.js";
 import { closeIris, openIris } from "./iris.js";
 import { clear, h, sentenceCase } from "./dom.js";
@@ -82,7 +83,7 @@ function frame({ count, justPick = true }) {
   clear(stage).append(
     h("header", { class: "topbar" }, h("div", { class: "wordmark" }, "Matinee"), nameTag(), h("div", { class: "count" }, count)),
     h("section", { class: "talk" }, line, answers),
-    h("div", { class: "bottombar" }, justPick ? pick : h("span")),
+    h("div", { class: "bottombar" }, justPick ? pick : h("span"), credits()),
   );
   return { line, answers };
 }
@@ -205,6 +206,7 @@ function pickFrame() {
   clear(stage).append(
     h("header", { class: "topbar" }, h("div", { class: "wordmark" }, "Matinee"), nameTag() || h("span")),
     showing,
+    h("footer", { class: "bottombar" }, h("span"), credits()),
   );
   return { line, aside, showing };
 }

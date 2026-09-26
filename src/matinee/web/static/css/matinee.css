@@ -1116,7 +1116,8 @@ button {
 }
 
 .counter {
-  flex: 0 0 var(--counter-h);
+  flex: 0 0 auto;
+  min-height: var(--counter-h);
   margin: 0 -20px;
   display: flex;
   flex-direction: column;
@@ -1134,7 +1135,7 @@ button {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 12px;
+  padding: 8px 12px;
   background: linear-gradient(180deg, #15110e, #0b0907);
   border-left: 1px solid rgba(242, 179, 61, 0.25);
   border-right: 1px solid rgba(242, 179, 61, 0.25);
@@ -1149,6 +1150,25 @@ button {
 
 .credits a {
   color: rgba(242, 179, 61, 0.75);
+}
+
+/* TMDB's logo sits in the credit line at text height, well below Matinee's own mark. */
+.tmdb-logo {
+  height: 0.7em;
+  width: auto;
+  vertical-align: 0;
+}
+
+.credits-full {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.bottombar .credits {
+  max-width: 560px;
+  text-align: right;
+  color: var(--dim);
 }
 
 /* What is said at the door: the line, then its controls. */
@@ -1509,7 +1529,7 @@ button {
   }
 
   .credits {
-    font-size: 9px;
+    font-size: 10px;
   }
 
   .door-talk {
