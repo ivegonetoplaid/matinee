@@ -140,7 +140,8 @@ def mutate_all(copy, py, tests, env, mutations, also):
 def per_assertion(copy: Path, py: str, tests: str, env: dict[str, str], mutations: list[dict]) -> dict:
     """Rerun every mutation once per live assertion; print and return what each assertion caught."""
     per: dict[str, dict[str, str]] = {}
-    for test_file in sorted((copy / tests).rglob("test_*.py")):
+    root = copy / tests
+    for test_file in [root] if root.is_file() else sorted(root.rglob("test_*.py")):
         source = test_file.read_text()
         for line, fn in assertions(test_file):
             key = f"{test_file.relative_to(copy)}:{line} ({fn})"

@@ -1,7 +1,9 @@
 """Check Matinee's trees against the answer key and the reachability rule.
 
-Reads the offline film table the nightly rebuild writes, builds every tree's pool
-through `matinee.pools`, and reports:
+Reads the offline film table the nightly rebuild writes and builds every tree
+through the engine (the same module the web page uses). A tree with a file counts
+as a film's home only where some complete path of its answers reaches the film.
+It reports:
 
 1. Reachability: every film must have at least one home.
 2. Expected homes: every film must be reachable through a tree its own genre tags
@@ -13,6 +15,7 @@ through `matinee.pools`, and reports:
    squeamish." or "RIP AND TEAR.".
 5. The data: every film carries TMDB facts, and the shipped reference statistics
    cover every tree file.
+6. Answer coverage: every film a tree's pool holds is reachable through its answers.
 
 Reads nothing live. Usage: python3 tools/check_trees.py [--table FILE]
 """
@@ -28,9 +31,9 @@ from typing import Any
 
 import pandas as pd
 
-from matinee.pools import House, build_pools, load_house
-from matinee.reference import DATA, load_reference, load_specs, problems
-from matinee.scales import membership, scale_of
+from matinee.engine import Catalog, EngineError, load_catalog, reachable, scale_members
+from matinee.pools import House
+from matinee.reference import DATA
 from matinee.table import FilmTable, load_table
 
 DEFAULT_TABLE = Path.home() / ".local/share/matinee/films.sqlite"
@@ -96,13 +99,6 @@ def expected_for(genres: frozenset[str]) -> set[str]:
     for g in genres:
         out |= EXPECTED.get(g, set())
     return out
-
-
-def gore_members(table: FilmTable, house: House) -> pd.DataFrame:
-    doc = json.loads((DATA / "trees" / "horror.json").read_text(encoding="utf-8"))
-    scale = scale_of("horror", "gore", doc["scales"]["gore"], doc["scores"])
-    pins = {band: ids for (tree, name, band), ids in house.scale_pins.items() if (tree, name) == ("horror", "gore")}
-    return membership(table, scale, load_reference().scale("horror", "gore"), pins)
 
 
 def check_reachability(table: FilmTable, pools: Pools, report: Report) -> None:
@@ -236,6 +232,27 @@ def check_gore(table: FilmTable, pools: Pools, house: House, gore: pd.DataFrame,
             report.fail(f"gore: {_label(table, int(tmdb))} has no genome entry and no pin but is in {band}")
 
 
+def check_answer_coverage(cat: Catalog, pools: Pools, report: Report) -> dict[str, pd.Series]:
+    """Every film a tree's pool holds must be reachable through some complete path of its answers.
+
+    Returns each tree file's reachable films keyed by its pool name, which the other checks use as that
+    tree's home, so they judge what a viewer can actually be offered.
+    """
+    reached: dict[str, pd.Series] = {}
+    index = cat.table.films.index
+    report.say("\n== answer coverage: films in a tree's pool that no path of answers reaches ==")
+    for tree_id, tree in sorted(cat.trees.items()):
+        walked = pd.Series(reachable(cat, tree_id), index=index)
+        stranded = pools[tree.pool] & ~walked
+        report.say(f"  {tree_id:12s} {int(walked.sum()):5d} reachable of {int(pools[tree.pool].sum()):5d}")
+        for tmdb in index[stranded]:
+            report.fail(
+                f"answers: {_label(cat.table, int(tmdb))} is in the {tree_id} pool but no answer path reaches it"
+            )
+        reached[tree.pool] = walked
+    return reached
+
+
 def check_data(table: FilmTable, report: Report) -> None:
     unknown = table.films.index[~table.films.tmdb_known.astype(bool)]
     if len(unknown):
@@ -244,8 +261,6 @@ def check_data(table: FilmTable, report: Report) -> None:
             f"{len(unknown)} films have no usable TMDB facts; the franchise and standup rules cannot see them."
             f" Run tools/rebuild_table.py. First: {first}"
         )
-    for problem in problems(load_reference(), load_specs(DATA / "trees")):
-        report.fail(f"reference statistics: {problem}; run tools/build_reference.py")
 
 
 def main() -> int:
@@ -254,15 +269,21 @@ def main() -> int:
     args = parser.parse_args()
     key = json.loads((DATA / "answer_key.json").read_text())
     table = load_table(args.table)
-    house = load_house()
-    pools = build_pools(table, house)
-    gore = gore_members(table, house)
     report = Report()
+    try:
+        cat = load_catalog(table)
+    except EngineError as exc:
+        print(f"FAIL {exc}; run tools/build_reference.py if the statistics are stale")
+        return 1
+    house = cat.house
+    pools = {name: pd.Series(mask, index=table.films.index) for name, mask in cat.pools.items()}
+    gore = scale_members(cat, cat.trees["horror"], "gore")
     report.say(f"film table {args.table}: {len(table.films)} films, {int(table.has_genome().sum())} with genome scores")
     report.say(f"built {table.built_at:%Y-%m-%d %H:%M}, genome {table.release}")
     added = table.films.index[pools["kids:franchise"]]
     report.say(f"franchise rule added {len(added)} films to kids: " + "; ".join(sorted(table.films.loc[added, "name"])))
     check_data(table, report)
+    pools.update(check_answer_coverage(cat, pools, report))
     check_pins_in_key(house, key, report)
     check_fixtures(table, pools, gore, key, report)
     check_gore(table, pools, house, gore, report)

@@ -1,4 +1,5 @@
 {
+  "pool": "comedy",
   "genre": "Comedy",
   "opening": "comedy. good call. let's narrow it down.",
   "questions": [
@@ -6,7 +7,7 @@
       "id": "room",
       "ask": "first, who's watching this with you?",
       "presentation": "the room empties as you go right: family on the sofa, then two adults, then one person alone with the curtains shut",
-      "note": "the certificate. 99% coverage and the evenest split in the whole dataset: 558 family, 420 teens up, 463 adults. asked as who is in the room, never as how rude the film is.",
+      "note": "the certificate. 99% coverage and the evenest split in the whole dataset: 558 family, 420 teens up, 463 adults. asked as who is in the room, never as how rude the film is. A film with no usable certificate (none, NR, Not Rated, Unrated, Approved) is offered only to the room with nobody to explain to, because an unknown certificate must never reach the kids.",
       "options": [
         {
           "say": "the kids are up. keep it clean.",
@@ -39,7 +40,12 @@
             "certificate_in": [
               "R",
               "NC-17",
-              "TV-MA"
+              "TV-MA",
+              "NR",
+              "Not Rated",
+              "Unrated",
+              "Approved",
+              ""
             ]
           }
         }
@@ -53,47 +59,63 @@
         {
           "say": "big dumb chaos. I want to switch my brain off.",
           "reply": "no notes. chaos it is.",
-          "register": "broad"
+          "filter": {
+            "register": "broad"
+          }
         },
         {
           "say": "send something up. I want it taking the mickey.",
           "reply": "a film with a target. good.",
-          "register": "parody"
+          "filter": {
+            "register": "parody"
+          }
         },
         {
           "say": "make reality stop making sense.",
           "reply": "oh, the strange stuff. my favourite.",
-          "register": "absurd"
+          "filter": {
+            "register": "absurd"
+          }
         },
         {
           "say": "keep it dry. I'll catch the joke myself.",
           "reply": "understated. no laugh track.",
-          "register": "dry"
+          "filter": {
+            "register": "dry"
+          }
         },
         {
           "say": "let me laugh at things I probably shouldn't.",
           "reply": "I won't tell anyone.",
-          "register": "dark"
+          "filter": {
+            "register": "dark"
+          }
         },
         {
           "say": "I want to feel better when it's over.",
           "reply": "something kind, then.",
-          "register": "warm"
+          "filter": {
+            "register": "warm"
+          }
         },
         {
           "say": "something the kids will actually sit through.",
           "reply": "talking animals and a happy ending. on it.",
-          "register": "family"
+          "filter": {
+            "register": "family"
+          }
         },
         {
           "say": "teenage disaster energy.",
           "reply": "nothing but bad decisions. perfect.",
-          "register": "teen"
+          "filter": {
+            "register": "teen"
+          }
         },
         {
           "say": "I don't care. just make me laugh.",
           "reply": "a person of simple tastes.",
-          "register": null
+          "filter": {}
         }
       ]
     },
@@ -107,7 +129,12 @@
           "say": "the funny is the whole point.",
           "reply": "",
           "filter": {
-            "comedy_only": true
+            "genres_none": [
+              "Horror",
+              "Crime",
+              "Romance",
+              "Action"
+            ]
           }
         },
         {
@@ -210,14 +237,117 @@
       ]
     },
     "rules": {
-      "broad": "broad >= 0.45 and dry < 0.45",
-      "parody": "parody >= 0.50",
-      "absurd": "absurd >= 0.50 and broad < 0.50",
-      "dry": "dry >= 0.44 and broad < 0.45",
-      "dark": "dark >= 0.45 and warm < 0.45",
-      "warm": "warm >= 0.40 and dark < 0.55",
-      "teen": "teen >= 0.55",
-      "family": "family >= 0.50 or (family >= 0.33 and dark < 0.30)"
+      "broad": {
+        "all": [
+          [
+            "broad",
+            ">=",
+            0.45
+          ],
+          [
+            "dry",
+            "<",
+            0.45
+          ]
+        ]
+      },
+      "parody": {
+        "all": [
+          [
+            "parody",
+            ">=",
+            0.5
+          ]
+        ]
+      },
+      "absurd": {
+        "all": [
+          [
+            "absurd",
+            ">=",
+            0.5
+          ],
+          [
+            "broad",
+            "<",
+            0.5
+          ]
+        ]
+      },
+      "dry": {
+        "all": [
+          [
+            "dry",
+            ">=",
+            0.44
+          ],
+          [
+            "broad",
+            "<",
+            0.45
+          ]
+        ]
+      },
+      "dark": {
+        "all": [
+          [
+            "dark",
+            ">=",
+            0.45
+          ],
+          [
+            "warm",
+            "<",
+            0.45
+          ]
+        ]
+      },
+      "warm": {
+        "all": [
+          [
+            "warm",
+            ">=",
+            0.4
+          ],
+          [
+            "dark",
+            "<",
+            0.55
+          ]
+        ]
+      },
+      "teen": {
+        "all": [
+          [
+            "teen",
+            ">=",
+            0.55
+          ]
+        ]
+      },
+      "family": {
+        "any": [
+          [
+            "family",
+            ">=",
+            0.5
+          ],
+          {
+            "all": [
+              [
+                "family",
+                ">=",
+                0.33
+              ],
+              [
+                "dark",
+                "<",
+                0.3
+              ]
+            ]
+          }
+        ]
+      }
     },
     "_family_note": "Family animation is its own mode, not a shade of adult comedy. It was missed entirely in the first build: 56 per cent of the 456 unregistered comedies were Family films and 32 per cent Animation, against 18 and 8 per cent of the registered ones. Their profiles are flat on every adult dimension (Sing 2 peaks at 0.37, Abominable at 0.22) while scoring animation 0.82, cartoon 0.72, talking animals 0.60. The darkness contrast is what does the operator's original Paw Patrol against Sausage Party test: family alone scores Sausage Party 0.38 and The Super Mario Bros. Movie 0.35, nearly identical, and dark separates them at 0.35 against 0.15. The 0.50 shortcut exists so Shrek, family 0.86 but dark 0.39 from its own snark, is not lost."
   },

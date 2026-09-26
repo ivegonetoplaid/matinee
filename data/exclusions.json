@@ -1,0 +1,51 @@
+{
+  "note": "Matinee's own exclusions (decision 36). A viewer who holds one never sees a film it matches, in any tree or mode. A test on genome tags matches when their mean relevance reaches min; unknown data never matches, so these are best effort.",
+  "exclusions": {
+    "superheroes": {
+      "say": "Superheroes",
+      "any": [
+        {
+          "tags": [
+            "superhero",
+            "superheroes",
+            "super hero"
+          ],
+          "min": 0.8
+        },
+        {
+          "keywords_any": [
+            "superhero"
+          ]
+        }
+      ]
+    },
+    "scifi_magic": {
+      "say": "Sci-fi and magic",
+      "any": [
+        {
+          "tags": [
+            "sci-fi",
+            "science fiction"
+          ],
+          "min": 0.5
+        },
+        {
+          "tags": [
+            "mythology",
+            "magic"
+          ],
+          "min": 0.5
+        },
+        {
+          "tags": [
+            "mindfuck",
+            "surreal",
+            "dreamlike",
+            "alternate reality"
+          ],
+          "min": 0.5
+        }
+      ]
+    }
+  }
+}

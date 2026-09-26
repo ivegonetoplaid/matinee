@@ -1,0 +1,53 @@
+{
+  "note": "Decision 57: the first question on the poster wall. Each answer leads to the tree or mode named by its file; an answer whose tree or mode holds no film for the viewer is not shown.",
+  "lines": [
+    "Right this way.",
+    "So, what are we in the mood for?"
+  ],
+  "options": [
+    {
+      "say": "I want to be scared.",
+      "tree": "horror"
+    },
+    {
+      "say": "I need a laugh.",
+      "tree": "comedy"
+    },
+    {
+      "say": "Get my heart pumping.",
+      "tree": "action"
+    },
+    {
+      "say": "Keep me on the edge of my seat.",
+      "tree": "thriller"
+    },
+    {
+      "say": "Give me a story that sticks with me.",
+      "tree": "drama"
+    },
+    {
+      "say": "Take me somewhere else.",
+      "tree": "fantasy"
+    },
+    {
+      "say": "I'm in a cowboy mood.",
+      "tree": "western"
+    },
+    {
+      "say": "Tell me something true.",
+      "tree": "nonfiction"
+    },
+    {
+      "say": "Just someone funny with a mic.",
+      "tree": "standup"
+    },
+    {
+      "say": "Something for the kids.",
+      "tree": "kids"
+    },
+    {
+      "say": "Something I can fall asleep to.",
+      "tree": "fall-asleep"
+    }
+  ]
+}

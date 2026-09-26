@@ -1,8 +1,7 @@
 {
   "mode": "fall asleep to",
-  "ask": "what are we doing tonight?",
-  "say": "honestly? I want something to fall asleep to.",
-  "reply": "say no more. something to drift in.",
+  "pool": "sleep",
+  "opening": "say no more. something to drift in.",
   "note": "A MODE, not a genre or a register. It cuts across Animation, Fantasy, Family, Adventure and Musical, so it is answered at the top level and skips the genre question entirely. Derived from eleven films the operator named: the four Miyazakis, The Polar Express, the Carrey Grinch, The Nightmare Before Christmas, Chitty Chitty Bang Bang, Bedknobs and Broomsticks, Mary Poppins and the Wilder Willy Wonka.",
   "finding": "The signature is not slowness. Searching all 1,128 genome tags for what the eleven share returned fairy tale 0.81 against 0.12 for the rest of the library, childhood 0.84 against 0.24, fantasy 0.81 against 0.26, whimsical 0.78 against 0.21, magic 0.75 against 0.15, fantasy world 0.86 against 0.38. Every one of those has a standard deviation under 0.16 across the eleven, so they agree tightly. What makes a film something to fall asleep to is that it is a world to drift in rather than a plot to follow. That is why 'slow' was the wrong thing to look for, in horror as well as here.",
   "dimensions": {
@@ -24,7 +23,6 @@
     ]
   },
   "rule": "enchantment >= 0.55 and edge < 0.40",
-  "pool": 133,
   "validation": {
     "seeds_in_range": "all eleven, from Howl's Moving Castle at 0.88 down to the Grinch at 0.62",
     "surfaced_unprompted": [
@@ -53,5 +51,6 @@
       "The Chronicles of Narnia: The Lion, the Witch and the Wardrobe"
     ],
     "operator_note": "All of the above were surfaced by the rule without being named as seeds, and the operator confirmed every one belongs. Narnia was named separately after the results were seen; it had already come out sixteenth at enchantment 0.84, edge 0.06."
-  }
+  },
+  "measured_size": 133
 }
