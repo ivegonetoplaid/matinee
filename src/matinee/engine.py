@@ -5,8 +5,9 @@ tree checker are two callers of the same module, so they cannot disagree about a
 pool.
 
 A viewer's pool for a tree starts from the tree's pool (house pins already
-applied), drops films the viewer's own exclusions match, then applies the
-viewer's personal corrections. Each answer narrows it. Questioning stops when
+applied), applies the viewer's personal corrections, then drops films the
+viewer's own exclusions match, so a correction never brings back an excluded
+film. Each answer narrows it. Questioning stops when
 the tree has no more questions, or fewer than `STOP_UNDER` films remain. A
 question marked `only_if_pool_over` is skipped unless the pool is larger; one
 marked `skip_if_topics` is skipped for a viewer excluding any of those

@@ -19,9 +19,10 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from matinee.dtdd import Dtdd, DtddError
-from matinee.engine import Answer, Viewer, first_question, walk
+from matinee.engine import Answer, Correction, Viewer, first_question, walk
 from matinee.pick import Pick, Picker, candidates
 from matinee.store import Profile, Store
+from matinee.trees import Tree
 from matinee.web.common import COOKIE_AGE_S, Seat, device_tokens, optional_int, problem, seat
 from matinee.web.theatre import Theatre
 
@@ -103,6 +104,17 @@ class TopicsOut(BaseModel):
     link: str
 
 
+class CorrectionIn(BaseModel):
+    profile_id: int
+    tmdb: int
+    remove_from: str = Field(max_length=40)
+    add_to: list[str] = Field(default=[], max_length=12)
+
+
+class CorrectionOut(BaseModel):
+    line: str
+
+
 class ExclusionOut(BaseModel):
     id: str
     say: str
@@ -152,7 +164,8 @@ def resolve(request: Request, store: Store, v: ViewerIn) -> tuple[Viewer, Profil
     """The engine's viewer: a held profile's saved exclusions, or this visit's."""
     if v.profile_id is not None:
         profile = held_profile(request, store, v.profile_id)
-        return Viewer(exclusions=profile.exclusions, topics=profile.topics), profile
+        fixes = tuple(Correction(c.tmdb, c.tree, c.direction) for c in store.corrections(profile.id))
+        return Viewer(exclusions=profile.exclusions, topics=profile.topics, corrections=fixes), profile
     return Viewer(exclusions=frozenset(v.exclusions), topics=frozenset(v.topics)), None
 
 
@@ -248,6 +261,29 @@ def add_viewing_routes(app: FastAPI, theatre: Theatre, store: Store, dtdd: Dtdd)
             options = [OptionOut(index=o.index, say=o.say, image=o.image) for o in q.options]
             question = QuestionOut(id=q.id, ask=q.ask, options=options, presentation=q.presentation)
         return StepOut(tree=step.tree, line=step.line, question=question, pool=list(step.pool), prefer=step.prefer)
+
+
+CORRECTED = "Got it. I'll remember that for you."
+
+
+def banded(tree: Tree) -> bool:
+    """A tree whose answers re-apply a gated age band: a correction cannot add a film to it, so it is refused."""
+    return any(o.filter.kids_band is not None for q in tree.questions for o in q.options)
+
+
+def add_correction_routes(app: FastAPI, theatre: Theatre, store: Store) -> None:
+    @app.post("/api/corrections")
+    def correct(body: CorrectionIn, request: Request) -> CorrectionOut:
+        """One correction for a profile this device holds; a visitor is asked for a name first, by the page."""
+        held_profile(request, store, body.profile_id)
+        cat = theatre.showing().catalog
+        trees = {body.remove_from, *body.add_to}
+        if body.tmdb not in cat.table.films.index or trees - set(cat.trees):
+            raise HTTPException(status_code=400, detail="refused")
+        if any(banded(cat.trees[t]) for t in body.add_to):
+            raise HTTPException(status_code=400, detail="refused")
+        store.correct(body.profile_id, body.tmdb, body.remove_from, body.add_to)
+        return CorrectionOut(line=CORRECTED)
 
 
 def add_pick_routes(app: FastAPI, theatre: Theatre, store: Store, picker: Picker) -> None:
