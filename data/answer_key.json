@@ -671,6 +671,100 @@
         "western"
       ],
       "note": "house payoff pin: showdown"
+    },
+    {
+      "title": "Terrifier",
+      "tmdb": 420634,
+      "must_reach": [
+        "horror"
+      ],
+      "gore_band": "rip",
+      "note": "house pin"
+    },
+    {
+      "title": "Terrifier 2",
+      "tmdb": 663712,
+      "must_reach": [
+        "horror"
+      ],
+      "gore_band": "rip",
+      "note": "house pin"
+    },
+    {
+      "title": "Terrifier 3",
+      "tmdb": 1034541,
+      "must_reach": [
+        "horror"
+      ],
+      "gore_band": "rip",
+      "note": "house pin"
+    },
+    {
+      "title": "Saw",
+      "tmdb": 176,
+      "must_reach": [
+        "horror"
+      ],
+      "gore_band": "rip",
+      "note": "gore acceptance (decision 59)"
+    },
+    {
+      "title": "The Texas Chain Saw Massacre",
+      "tmdb": 30497,
+      "must_reach": [
+        "horror"
+      ],
+      "gore_band": "rip",
+      "note": "gore acceptance (decision 59)"
+    },
+    {
+      "title": "The Craft",
+      "tmdb": 9100,
+      "must_reach": [
+        "horror"
+      ],
+      "gore_band": "spotless",
+      "note": "gore acceptance (decision 59)"
+    },
+    {
+      "title": "Poltergeist",
+      "tmdb": 243688,
+      "must_reach": [
+        "horror"
+      ],
+      "gore_band": "spotless",
+      "note": "gore acceptance (decision 59); the 2015 remake"
+    },
+    {
+      "title": "Scream",
+      "tmdb": 4232,
+      "must_reach": [
+        "horror"
+      ],
+      "gore_not": [
+        "rip"
+      ],
+      "note": "gore acceptance (decision 59); the 1996 film"
+    },
+    {
+      "title": "Knock Knock",
+      "tmdb": 263472,
+      "must_reach": [
+        "horror"
+      ],
+      "gore_not": [
+        "spotless"
+      ],
+      "note": "leaves the spotless pail only through its torture keyword; guards the keyword bonus (decision 59)"
+    },
+    {
+      "title": "The Thing",
+      "tmdb": 1091,
+      "must_reach": [
+        "horror"
+      ],
+      "gore_band": "rip",
+      "note": "reaches the rip pail only through its body horror keyword; guards the keyword bonus (decision 59); the 1982 film"
     }
   ]
 }

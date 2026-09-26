@@ -113,12 +113,16 @@ def _tags(scores: Mapping[str, Any], name: str, tree: str) -> tuple[str, ...]:
 
 REFERENCE_KEYS = {"movielens_genres", "floor_any"}
 SCALE_KEYS = {"score", "percentiles"}
+SCALE_ENGINE_KEYS = {"bands", "unscored_bands", "keyword_bonus"}
 
 
-def _exact_keys(block: Mapping[str, Any], keys: set[str], what: str) -> None:
-    """Refuse a block whose keys differ from `keys`: a misspelt key must fail, never read as absent."""
-    if set(block) != keys:
-        raise ReferenceError(f"{what} must have exactly the keys {sorted(keys)}; it has {sorted(block)}")
+def _exact_keys(block: Mapping[str, Any], keys: set[str], what: str, optional: frozenset[str] = frozenset()) -> None:
+    """Refuse a block missing a key of `keys` or carrying any other: a misspelt key must fail, never read as absent."""
+    have = set(block)
+    if not keys <= have or have - keys - optional:
+        raise ReferenceError(
+            f"{what} must have the keys {sorted(keys)} (optionally {sorted(optional)}); it has {sorted(block)}"
+        )
 
 
 def spec_of(tree: str, doc: Mapping[str, Any]) -> TreeSpec | None:
@@ -134,7 +138,7 @@ def spec_of(tree: str, doc: Mapping[str, Any]) -> TreeSpec | None:
     floors = tuple(Floor(name, _tags(scores, name, tree), float(v)) for name, v in ref["floor_any"].items())
     scales = {}
     for name, s in doc.get("scales", {}).items():
-        _exact_keys(s, SCALE_KEYS, f"tree '{tree}' scale '{name}'")
+        _exact_keys(s, SCALE_KEYS, f"tree '{tree}' scale '{name}'", frozenset(SCALE_ENGINE_KEYS))
         scales[name] = ScaleSpec(s["score"], _tags(scores, s["score"], tree), tuple(float(p) for p in s["percentiles"]))
     payoffs = {name: tuple(tags) for name, tags in doc.get("payoffs", {}).items()}
     return TreeSpec(tree, tuple(ref["movielens_genres"]), floors, payoffs, scales)

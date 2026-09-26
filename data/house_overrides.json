@@ -90,5 +90,31 @@
       "payoff": "showdown",
       "note": "a stylish revenge shootout western whose thin genome profile reads as comedy"
     }
+  ],
+  "scales": [
+    {
+      "title": "Terrifier",
+      "tmdb": 420634,
+      "tree": "horror",
+      "scale": "gore",
+      "band": "rip",
+      "note": "recent extreme horror the genome reads too low; pinned to the goriest pail (decision 59)"
+    },
+    {
+      "title": "Terrifier 2",
+      "tmdb": 663712,
+      "tree": "horror",
+      "scale": "gore",
+      "band": "rip",
+      "note": "recent extreme horror the genome reads too low; pinned to the goriest pail (decision 59)"
+    },
+    {
+      "title": "Terrifier 3",
+      "tmdb": 1034541,
+      "tree": "horror",
+      "scale": "gore",
+      "band": "rip",
+      "note": "recent extreme horror the genome reads too low; pinned to the goriest pail (decision 59)"
+    }
   ]
 }

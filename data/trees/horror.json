@@ -34,7 +34,35 @@
         40,
         70,
         90
-      ]
+      ],
+      "bands": [
+        "spotless",
+        "some",
+        "messy",
+        "rip"
+      ],
+      "unscored_bands": [
+        "some",
+        "messy"
+      ],
+      "keyword_bonus": {
+        "each": 0.08,
+        "max_count": 3,
+        "keywords": [
+          "gore",
+          "splatter",
+          "extreme violence",
+          "torture",
+          "body horror",
+          "dismemberment",
+          "decapitation",
+          "cannibalism",
+          "brutality",
+          "graphic violence",
+          "blood",
+          "bloody"
+        ]
+      }
     }
   },
   "questions": [
@@ -133,7 +161,12 @@
           "reply": "noted. nothing you'll have to look away from.",
           "pail": "spotless, sparkling, not a mark on it",
           "filter": {
-            "gore_max": 3
+            "bands": {
+              "scale": "gore",
+              "in": [
+                "spotless"
+              ]
+            }
           }
         },
         {
@@ -141,7 +174,13 @@
           "reply": "some it is.",
           "pail": "splattered down one side, blood pooling in the bottom",
           "filter": {
-            "gore_max": 7
+            "bands": {
+              "scale": "gore",
+              "in": [
+                "spotless",
+                "some"
+              ]
+            }
           }
         },
         {
@@ -149,7 +188,13 @@
           "reply": "oh, good.",
           "pail": "nearly full, first drops hitting the floor",
           "filter": {
-            "gore_max": 12
+            "bands": {
+              "scale": "gore",
+              "in": [
+                "some",
+                "messy"
+              ]
+            }
           }
         },
         {
@@ -157,11 +202,31 @@
           "reply": "say no more.",
           "pail": "a chum bucket standing in a spreading pool",
           "filter": {
-            "gore_min": 12
+            "bands": {
+              "scale": "gore",
+              "in": [
+                "rip"
+              ]
+            }
           }
         }
       ],
-      "note": "Four buckets, not five. The genome's independent gore cluster scored the old spotless and splatter pails at 0.25 and 0.28, barely apart, so that boundary was measuring nothing. Coverage is 585 of 599 horror films: DoesTheDogDie where it has the film, the genome gore cluster rescaled where it does not."
+      "note": "Four pails on the genome gore scale plus TMDB gore keywords (decision 59), cut at the reference's 40th, 70th and 90th percentiles. A film with no genome entry appears only under 'some' and 'properly messy' unless a house pin places it. A viewer excluding any listed blood or gore topic is never asked and is treated as 'none'.",
+      "skip_if_topics": [
+        188,
+        296,
+        331,
+        203,
+        250,
+        200,
+        361,
+        171,
+        258,
+        223,
+        254,
+        255
+      ],
+      "treat_as": 0
     },
     {
       "id": "era",
