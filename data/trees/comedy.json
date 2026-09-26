@@ -2,6 +2,16 @@
   "pool": "comedy",
   "genre": "Comedy",
   "opening": "comedy. good call. let's narrow it down.",
+  "scores": {
+    "weight": [
+      "drama",
+      "dramatic",
+      "emotional",
+      "moving",
+      "touching",
+      "harsh"
+    ]
+  },
   "questions": [
     {
       "id": "room",
@@ -116,6 +126,36 @@
           "say": "I don't care. just make me laugh.",
           "reply": "a person of simple tastes.",
           "filter": {}
+        }
+      ]
+    },
+    {
+      "id": "weight",
+      "ask": "just laughs, or can it get real?",
+      "note": "Decision 42: the weight dial, fixed at 0.22 (heavy above). A comedy with no genome score passes all three answers. The replies were drafted in the build and approved by the operator on 2026-09-25.",
+      "options": [
+        {
+          "say": "just laughs, please.",
+          "reply": "Light and silly. Got it.",
+          "filter": {
+            "score_at_most": {
+              "weight": 0.22
+            }
+          }
+        },
+        {
+          "say": "a bit of heart is fine.",
+          "reply": "A little heart, then.",
+          "filter": {}
+        },
+        {
+          "say": "let it get real.",
+          "reply": "Laughs with a lump in the throat. Nice.",
+          "filter": {
+            "score_above": {
+              "weight": 0.22
+            }
+          }
         }
       ]
     },
