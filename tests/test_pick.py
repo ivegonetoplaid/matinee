@@ -9,15 +9,26 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-from matinee.dtdd import Dtdd, DtddError
+from matinee.dtdd import Dtdd, DtddCeiling, DtddError, DtddGone
 from matinee.engine import load_catalog
-from matinee.pick import LOOKUPS_PER_HOUR, DeviceCap, Hit, Picker, Unreadable, candidates, failing, look_up
+from matinee.pick import (
+    ID_KEEP_S,
+    LOOKUPS_PER_HOUR,
+    DeviceCap,
+    Hit,
+    ItemIds,
+    Picker,
+    Unreadable,
+    candidates,
+    failing,
+    look_up,
+)
 from matinee.store import Store
 from matinee.table import FilmTable
 from matinee.web.app import create_app
 from matinee.web.config import Config
 from matinee.web.theatre import Theatre
-from test_engine import reference, write_data
+from test_engine import gore_cut_tree, reference, write_data
 from test_web_library import SECRET_KEY, SECRET_URL, FakeLibrary, write_film_table
 
 
@@ -40,7 +51,7 @@ def test_a_topic_fails_on_five_votes_and_more_yes_than_no() -> None:
 def test_an_unreadable_vote_row_is_never_a_pass(row: Any) -> None:
     with pytest.raises(Unreadable):
         failing([stat(1, 0, 9), row], frozenset({153}))
-    verdict = look_up(ScriptedDtdd({7: [row]}), 7, frozenset({153}))
+    verdict = look_up(ScriptedDtdd({7: [row]}), 7, frozenset({153}), ItemIds())
     assert verdict.unchecked == "no_record" and verdict.hits == ()
 
 
@@ -59,9 +70,9 @@ def test_a_search_matching_twice_takes_the_movie_or_goes_unchecked() -> None:
     show = {"id": 1008, "tmdbId": 8, "itemTypeName": "TV Show"}
     movie = {"id": 1009, "tmdbId": 8, "itemTypeName": "Movie"}
     dtdd = Twice([show, movie], {9: [stat(153, 9, 0)]})
-    assert look_up(dtdd, 8, frozenset({153})).hits == (Hit(153, "topic 153"),)  # the Movie's votes
+    assert look_up(dtdd, 8, frozenset({153}), ItemIds()).hits == (Hit(153, "topic 153"),)  # the Movie's votes
     both_shows = Twice([show, {**show, "id": 1010}], {})
-    assert look_up(both_shows, 8, frozenset({153})).unchecked == "no_record"
+    assert look_up(both_shows, 8, frozenset({153}), ItemIds()).unchecked == "no_record"
 
 
 class ScriptedDtdd(Dtdd):
@@ -89,15 +100,15 @@ class ScriptedDtdd(Dtdd):
 
 def test_look_up_reads_the_votes_or_says_why_not() -> None:
     dtdd = ScriptedDtdd({1: [stat(153, 40, 2)], 2: None, 3: DtddError("slow")})
-    assert look_up(dtdd, 1, frozenset({153})).hits == (Hit(153, "topic 153"),)
-    assert look_up(dtdd, 1, frozenset({188})).hits == ()
-    assert look_up(dtdd, 2, frozenset({153})).unchecked == "no_record"
-    assert look_up(dtdd, 3, frozenset({153})).unchecked == "slow"
+    assert look_up(dtdd, 1, frozenset({153}), ItemIds()).hits == (Hit(153, "topic 153"),)
+    assert look_up(dtdd, 1, frozenset({188}), ItemIds()).hits == ()
+    assert look_up(dtdd, 2, frozenset({153}), ItemIds()).unchecked == "no_record"
+    assert look_up(dtdd, 3, frozenset({153}), ItemIds()).unchecked == "slow"
     assert dtdd.paths[:2] == ["/items?tmdb=1", "/items/1001"]
 
 
-def test_the_device_cap_is_twenty_an_hour() -> None:
-    assert LOOKUPS_PER_HOUR == 20
+def test_the_device_cap_is_sixty_an_hour() -> None:
+    assert LOOKUPS_PER_HOUR == 60
     now = [0.0]
     cap = DeviceCap(clock=lambda: now[0])
     assert all(cap.take("a") for _ in range(LOOKUPS_PER_HOUR))
@@ -248,7 +259,7 @@ def test_the_hour_is_a_sliding_window() -> None:
         cap.take("a")
     now[0] = 1800.0
     cap.take("a")
-    now[0] = 3600.0  # the first nineteen have just left the window; the one at 1800 has not
+    now[0] = 3600.0  # the first fifty-nine have just left the window; the one at 1800 has not
     assert cap.take("a")
 
 
@@ -264,8 +275,8 @@ def test_a_film_with_no_vote_list_or_another_films_record_is_unchecked() -> None
                 return {"topicItemStats": [stat(153, 9, 0)]}  # another film's votes must never be read as this one's
             return {"name": "no votes here"}
 
-    assert look_up(Odd({}), 7, frozenset({153})).unchecked == "no_record"
-    assert look_up(Odd({}), 8, frozenset({153})).unchecked == "no_record"
+    assert look_up(Odd({}), 7, frozenset({153}), ItemIds()).unchecked == "no_record"
+    assert look_up(Odd({}), 8, frozenset({153}), ItemIds()).unchecked == "no_record"
 
 
 class InOrder(random.Random):
@@ -310,3 +321,80 @@ def test_just_pick_one_before_any_answer_picks_from_the_viewers_whole_pool(tmp_p
     assert picked <= {1, 2} and picked  # film 3 carries the "heroes" exclusion
     refused = client.post("/api/pick", json={"answers": [{"question": "era", "option": 0}]})
     assert refused.status_code == 400
+
+
+def test_a_film_looked_up_again_skips_the_search_for_thirty_days() -> None:
+    now = [0.0]
+    ids = ItemIds(clock=lambda: now[0])
+    dtdd = ScriptedDtdd({1: [stat(153, 0, 9)], 2: None})
+    for _ in range(2):
+        assert look_up(dtdd, 1, frozenset({153}), ids).hits == ()
+        assert look_up(dtdd, 2, frozenset({153}), ids).unchecked == "no_record"
+    assert dtdd.paths == ["/items?tmdb=1", "/items/1001", "/items?tmdb=2", "/items/1001"]
+    now[0] = ID_KEEP_S
+    look_up(dtdd, 1, frozenset({153}), ids)
+    assert dtdd.paths[-2:] == ["/items?tmdb=1", "/items/1001"]  # thirty days on, it searches again
+
+
+def test_a_held_item_is_forgotten_only_when_doesthedogdie_says_it_is_gone() -> None:
+    class Detail(ScriptedDtdd):
+        def __init__(self, error: DtddError) -> None:
+            super().__init__({1: [stat(153, 0, 9)]})
+            self.error = error
+
+        def get(self, path: str, timeout: float, wait: float) -> Any:
+            if path.startswith("/items/"):
+                self.paths.append(path)
+                raise self.error
+            return super().get(path, timeout, wait)
+
+    for error, kept in [(DtddGone("404"), False), (DtddError("held"), True), (DtddError("HTTP 429"), True)]:
+        ids = ItemIds()
+        ids.put(1, 1001)
+        assert look_up(Detail(error), 1, frozenset({153}), ids).unchecked in {"slow", "no_record"}
+        assert ids.get(1) == ((True, 1001) if kept else (False, None))
+
+
+def test_an_unreadable_search_answer_is_never_remembered() -> None:
+    class Odd(ScriptedDtdd):
+        def get(self, path: str, timeout: float, wait: float) -> Any:
+            self.paths.append(path)
+            return {"error": "maintenance"} if path.endswith("=1") else []
+
+    ids = ItemIds()
+    assert look_up(Odd({}), 1, frozenset({153}), ids).unchecked == "slow"
+    assert ids.get(1) == (False, None)
+    assert look_up(Odd({}), 2, frozenset({153}), ids).unchecked == "no_record"
+    assert ids.get(2) == (True, None)  # a real "not found" is remembered
+
+
+def test_the_servers_own_ceiling_shows_the_film_unchecked_for_the_house() -> None:
+    dtdd = ScriptedDtdd({1: DtddCeiling("hour spent")})
+    result = Picker(dtdd, DeviceCap(), random.Random(0)).pick([1], frozenset({153}), "dev")
+    assert result.film == 1 and result.unchecked == "house"
+
+
+def test_films_in_first_are_drawn_before_the_rest() -> None:
+    dtdd = ScriptedDtdd({t: [stat(153, 9, 0)] for t in (1, 2, 3)} | {4: [stat(153, 0, 9)]})
+    result = Picker(dtdd, DeviceCap(), InOrder()).pick([1, 2, 3, 4], frozenset({153}), "dev", frozenset({3, 4}))
+    assert result.film == 4 and dtdd.looked_up() == [3, 4]
+
+
+def test_the_route_draws_the_least_gory_third_first_for_a_blood_topic(tmp_path: Path) -> None:
+    dtdd = ScriptedDtdd({t: [stat(188, 0, 9)] for t in range(1, 41)})
+    data = write_data(tmp_path / "data", gore_cut_tree())
+    write_film_table(tmp_path / "films.sqlite")
+
+    def catalog_of(table: FilmTable) -> Any:
+        return load_catalog(table, data, reference())
+
+    theatre = Theatre(FakeLibrary(), tmp_path / "films.sqlite", catalog_of=catalog_of)  # all forty films
+    config = Config(SECRET_URL, SECRET_KEY, tmp_path, "https://seerr.invalid", "d" * 16)
+    picker = Picker(dtdd, DeviceCap(), random.Random(0))
+    client = TestClient(
+        create_app(config, theatre, Store(tmp_path / "s.sqlite"), dtdd, clock=lambda: 0.0, picker=picker),
+        base_url="https://testserver",
+    )
+    visit = {"tree": "west", "answers": [{"question": "era", "option": 1}], "viewer": {"topics": [188]}}
+    picked = {client.post("/api/pick", json=visit).json()["film"]["tmdb"] for _ in range(20)}
+    assert picked and picked <= set(range(6, 31))  # never the goriest (1-5) or the unscored (31-40) first

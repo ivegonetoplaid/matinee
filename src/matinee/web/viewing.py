@@ -20,7 +20,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from matinee.dtdd import Dtdd, DtddError
-from matinee.engine import Answer, Catalog, Correction, Viewer, base_pool, first_question, walk
+from matinee.engine import Answer, Catalog, Correction, Viewer, base_pool, first_question, gentlest, walk
 from matinee.pick import Pick, Picker, candidates
 from matinee.store import Profile, Store
 from matinee.trees import Tree
@@ -191,6 +191,10 @@ UNCHECKED_LINES = {
     "slow": "I couldn't check this one against your list, so have a look before you press play.",
     "no_record": "I couldn't check this one against your list, so have a look before you press play.",
     "cap": "I've checked a lot of films for you this hour, so this one is unchecked. Have a look before you play.",
+    "house": (
+        "I've checked a lot of films for everyone here this hour, so this one is unchecked. "
+        "Have a look before you play."
+    ),
 }
 EXHAUSTED = "Every film left here trips something on your list. Want to start over?"
 
@@ -326,4 +330,4 @@ def add_pick_routes(app: FastAPI, theatre: Theatre, store: Store, picker: Picker
         ratings = dict(zip(films.index.tolist(), films.rating.fillna(0.0).tolist(), strict=True))
         pool = candidates(left, body.seen, ratings, prefer)
         device = device_id(request, response) if viewer.topics else ""
-        return pick_out(films, picker.pick(pool, viewer.topics, device))
+        return pick_out(films, picker.pick(pool, viewer.topics, device, gentlest(cat, viewer, pool)))

@@ -13,7 +13,9 @@ question marked `only_if_pool_over` is skipped unless the pool is larger; one
 marked `skip_if_topics` is skipped for a viewer excluding any of those
 DoesTheDogDie topics, and its `treat_as` answer is applied instead. An answer
 that would leave the pool empty is not shown. Pool counts do not include
-DoesTheDogDie exclusions, which are checked at the pick.
+DoesTheDogDie exclusions, which are checked at the pick. For a viewer whose topics
+skip a scale question (horror's gore pails), `gentlest` names the least-scoring
+third of a pool on that scale, which the pick draws from first.
 
 Unknown values are inclusive: a film with no runtime, rating, year, language,
 collection or score passes a filter on it, because a wrongly included film costs
@@ -23,6 +25,7 @@ one `Not that one` and a wrongly excluded one is invisible.
 from __future__ import annotations
 
 import json
+import math
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -34,7 +37,7 @@ import pandas as pd
 
 from matinee.pools import House, build_pools, load_house
 from matinee.reference import DATA, Reference, load_reference, load_specs, problems
-from matinee.scales import membership, offered, scale_of
+from matinee.scales import film_scores, membership, offered, scale_of
 from matinee.table import FilmTable
 from matinee.trees import Filter, Option, Question, Tree, TreeError, load_trees
 
@@ -212,6 +215,31 @@ def scale_members(cat: Catalog, tree: Tree, name: str) -> pd.DataFrame:
     scale = scale_of(tree.id, name, tree.scales[name], tree.scores)
     pins = {band: ids for (t, s, band), ids in cat.house.scale_pins.items() if (t, s) == (tree.id, name)}
     return membership(cat.table, scale, cat.reference.scale(tree.id, name), pins)
+
+
+def _skipped_scale(cat: Catalog, viewer: Viewer) -> tuple[Tree, str] | None:
+    """The first tree and scale cut by a question this viewer's topics skip, if any."""
+    for tree in cat.trees.values():
+        for q in tree.questions:
+            cuts = [o.filter.bands.scale for o in q.options if o.filter.bands is not None]
+            if cuts and q.skip_if_topics & viewer.topics:
+                return tree, cuts[0]
+    return None
+
+
+def gentlest(cat: Catalog, viewer: Viewer, pool: Sequence[int]) -> frozenset[int]:
+    """The third of `pool` scoring lowest on the scale a question this viewer's topics skip; empty when none does.
+
+    The scale scores every film, whichever tree the pool came from. A film it cannot
+    score is never in the third.
+    """
+    found = _skipped_scale(cat, viewer)
+    if found is None or not pool:
+        return frozenset()
+    tree, name = found
+    scores = film_scores(cat.table, scale_of(tree.id, name, tree.scales[name], tree.scores))
+    ranked = scores.reindex(list(pool)).dropna().sort_values(kind="stable")
+    return frozenset(int(t) for t in ranked.index[: math.ceil(len(pool) / 3)])
 
 
 def _score(table: FilmTable, tree: Tree, name: str) -> pd.Series:

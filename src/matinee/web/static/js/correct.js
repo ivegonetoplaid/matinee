@@ -1,9 +1,13 @@
 // The unobtrusive correction link on a result: "not really this kind of film".
 // It removes the film from the tree that offered it and adds it to the trees the
 // viewer names, for their profile only. A visitor is asked for a name first.
+// A tree gated by age (kids) is never offered; the panel says why.
 
 import { post } from "./api.js";
 import { h } from "./dom.js";
+
+const GATED_NOTE =
+  "Kids' films are picked for the whole house, so I can't add one just for you. Ask whoever runs Matinee to add it.";
 
 function treeChoices(trees, current) {
   return trees
@@ -93,9 +97,11 @@ export function correctionLink({ visit, film, trees }) {
     },
     "Save",
   );
+  const gated = trees.some((t) => !t.correctable && t.tree !== visit.tree);
   const parts = [
     h("p", { class: "note" }, `Not really ${here ? here.label.toLowerCase() : "this kind of film"}? Where does it belong?`),
     h("div", { class: "tree-choices" }, choices),
+    gated ? h("p", { class: "note small" }, GATED_NOTE) : null,
     nameInput ? h("p", { class: "note" }, "What should I call you? I keep corrections by name.") : null,
     nameInput,
     save,

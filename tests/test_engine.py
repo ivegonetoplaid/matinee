@@ -18,6 +18,7 @@ from matinee.engine import (
     EngineError,
     Viewer,
     first_question,
+    gentlest,
     load_catalog,
     option_mask,
     payoff_members,
@@ -411,3 +412,27 @@ def test_a_first_answer_without_a_label_refuses_to_load(tmp_path: Path) -> None:
     (data / "first_question.json").write_text(json.dumps(first))
     with pytest.raises(EngineError, match="no label"):
         load_catalog(make_table(), data, reference())
+
+
+def gore_cut_tree() -> dict[str, Any]:
+    """TREE with its gore question cutting the gore scale, as horror's pails do; skipping it keeps both bands."""
+    tree: dict[str, Any] = json.loads(json.dumps(TREE))
+    tree["questions"][1]["treat_as"] = 1
+    tree["questions"][1]["options"] = [
+        {"say": "clean.", "reply": "", "filter": {"bands": {"scale": "gore", "in": ["clean"]}}},
+        {"say": "any.", "reply": "", "filter": {"bands": {"scale": "gore", "in": ["clean", "messy"]}}},
+    ]
+    return tree
+
+
+def test_gentlest_is_the_least_gory_third_for_a_viewer_whose_topics_skip_the_gore_question(tmp_path: Path) -> None:
+    cat = load_catalog(make_table(), write_data(tmp_path, gore_cut_tree()), reference())
+    squeamish = Viewer(topics=frozenset({188}))  # 188 skips the gore question
+    assert gentlest(cat, squeamish, [1, 2, 3, 6, 7, 8]) == {6, 7}  # films 1-5 score 0.8, the rest 0.0
+    assert gentlest(cat, squeamish, [31, 1, 6]) == {6}  # 31 has no genome entry, so it ranks last
+    assert gentlest(cat, Viewer(topics=frozenset({153})), [1, 6]) == frozenset()
+    assert gentlest(cat, squeamish, []) == frozenset()
+
+
+def test_gentlest_needs_a_skipped_question_that_cuts_a_scale(cat: Catalog) -> None:
+    assert gentlest(cat, Viewer(topics=frozenset({188})), [1, 6]) == frozenset()  # TREE's gore question cuts runtime

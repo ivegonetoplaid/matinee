@@ -35,7 +35,8 @@ binding for every line of code here.
   store.
 - **Third-party data comes with terms, and they are part of the design.**
   - DoesTheDogDie: queried one film at a time at the moment of a pick, never
-    fetched ahead, never copied, never used to build a score. Free tier is
+    fetched ahead, never used to build a score; its votes are never kept, and
+    only a film's item id is remembered, for at most 30 days. Free tier is
     non-commercial. "Powered by DoesTheDogDie.com" must appear wherever its data
     does.
   - TMDB: cache at most six months; the TMDB logo and the notice "This product

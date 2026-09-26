@@ -5,9 +5,13 @@ film is looked up by TMDB id; it fails a topic that has at least five votes and
 more yes votes than no. A film that fails is replaced from the same pool, and a
 film that already failed in this pick is never looked up again. When
 DoesTheDogDie is slow (over three seconds), refuses, holds no record, or the
-device has spent its lookups for the hour, the film is shown with its topics
-named as unchecked. When every film in the pool fails, the pick says so.
-Nothing looked up is kept.
+device has spent its lookups or the server its requests for the hour, the film
+is shown marked unchecked, with the reason. When every film in the pool fails, the pick
+says so. Films in a pick's `first` set are drawn before the rest.
+
+The only thing kept from a lookup is which DoesTheDogDie item a TMDB film is, or
+that it has none, for at most `ID_KEEP_S`, so a later lookup of the same film
+skips the search. Votes are never kept.
 """
 
 from __future__ import annotations
@@ -18,18 +22,19 @@ import random
 import threading
 import time
 from collections import deque
-from collections.abc import Callable, Mapping, Sequence
+from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
-from matinee.dtdd import Dtdd, DtddError
+from matinee.dtdd import Dtdd, DtddCeiling, DtddError, DtddGone
 
 LOOKUP_S = 3.0
 MIN_VOTES = 5
-LOOKUPS_PER_HOUR = 20
+LOOKUPS_PER_HOUR = 60
 HOUR_S = 3600.0
 SWEEP_S = 60.0
-Unchecked = Literal["slow", "no_record", "cap"]
+ID_KEEP_S = 30 * 24 * HOUR_S
+Unchecked = Literal["slow", "no_record", "cap", "house"]
 log = logging.getLogger("matinee.pick")
 
 
@@ -84,8 +89,14 @@ def failing(stats: Sequence[Any], topics: frozenset[int]) -> tuple[Hit, ...]:
 
 
 def _the_film(found: Any, tmdb: int) -> int | None:
-    """The DoesTheDogDie item for this TMDB film: the one match, or the one Movie among several; else None."""
-    items = [i for i in found if isinstance(i, dict) and i.get("tmdbId") == tmdb] if isinstance(found, list) else []
+    """The DoesTheDogDie item for this TMDB film: the one match, or the one Movie among several; else None.
+
+    Raises DtddError when the search answer is not a list, so an unreadable answer
+    is never taken, or remembered, as "no record".
+    """
+    if not isinstance(found, list):
+        raise DtddError("DoesTheDogDie's search answer is not a list")
+    items = [i for i in found if isinstance(i, dict) and i.get("tmdbId") == tmdb]
     if len(items) > 1:
         items = [i for i in items if i.get("itemTypeName") == "Movie"]
     if len(items) != 1 or not isinstance(items[0].get("id"), int):
@@ -93,13 +104,58 @@ def _the_film(found: Any, tmdb: int) -> int | None:
     return int(items[0]["id"])
 
 
-def look_up(dtdd: Dtdd, tmdb: int, topics: frozenset[int]) -> Verdict:
-    """One film, by TMDB id: its search, then its topic votes, each within the three-second budget."""
+@dataclass
+class ItemIds:
+    """Which DoesTheDogDie item each looked-up TMDB film is (None: it has none), each kept ID_KEEP_S.
+
+    NOTE: held in memory, so a restart forgets it and each film's next lookup searches
+    again. Bounded by the films in the library; move it into the store if restarts
+    become frequent.
+    """
+
+    clock: Callable[[], float] = time.monotonic
+    known: dict[int, tuple[int | None, float]] = field(default_factory=dict)
+    lock: threading.Lock = field(default_factory=threading.Lock)
+
+    def get(self, tmdb: int) -> tuple[bool, int | None]:
+        """(True, item) while an answer younger than ID_KEEP_S is held; (False, None) otherwise."""
+        with self.lock:
+            held = self.known.get(tmdb)
+            if held is None or self.clock() - held[1] >= ID_KEEP_S:
+                return False, None
+            return True, held[0]
+
+    def put(self, tmdb: int, item: int | None) -> None:
+        with self.lock:
+            self.known[tmdb] = (item, self.clock())
+
+    def forget(self, tmdb: int) -> None:
+        with self.lock:
+            self.known.pop(tmdb, None)
+
+
+def look_up(dtdd: Dtdd, tmdb: int, topics: frozenset[int], ids: ItemIds) -> Verdict:
+    """One film, by TMDB id: its search (skipped when `ids` holds the answer), then its topic votes.
+
+    Each request has the three-second budget. A held item id DoesTheDogDie answers
+    404 for is forgotten, so a film it has moved is searched again next time; any
+    other failure keeps the id.
+    """
+    known, item = ids.get(tmdb)
     try:
-        item = _the_film(dtdd.get(f"/items?tmdb={int(tmdb)}", LOOKUP_S, LOOKUP_S), tmdb)
+        if not known:
+            item = _the_film(dtdd.get(f"/items?tmdb={int(tmdb)}", LOOKUP_S, LOOKUP_S), tmdb)
+            ids.put(tmdb, item)
         if item is None:
             return Verdict(unchecked="no_record")
         body = dtdd.get(f"/items/{item}", LOOKUP_S, LOOKUP_S)
+    except DtddCeiling as exc:
+        log.warning("DoesTheDogDie lookup for tmdb %s: %s", tmdb, exc)
+        return Verdict(unchecked="house")
+    except DtddGone as exc:
+        log.warning("DoesTheDogDie lookup for tmdb %s: %s", tmdb, exc)
+        ids.forget(tmdb)
+        return Verdict(unchecked="no_record")
     except DtddError as exc:
         log.warning("DoesTheDogDie lookup for tmdb %s: %s", tmdb, exc)
         return Verdict(unchecked="slow")
@@ -162,19 +218,26 @@ class Picker:
     dtdd: Dtdd
     cap: DeviceCap
     rng: random.Random = field(default_factory=random.SystemRandom)
+    ids: ItemIds = field(default_factory=ItemIds)
 
-    def pick(self, films: Sequence[int], topics: frozenset[int], device: str) -> Pick:
+    def _draws(self, films: Sequence[int], first: frozenset[int]) -> Iterator[int]:
+        """Every film once, in random order, those in `first` before the rest."""
+        for group in ([f for f in films if f in first], [f for f in films if f not in first]):
+            while group:
+                yield group.pop(self.rng.randrange(len(group)))
+
+    def pick(
+        self, films: Sequence[int], topics: frozenset[int], device: str, first: frozenset[int] = frozenset()
+    ) -> Pick:
         """Draw, check and replace until one film is clear or cannot be checked, or none is left."""
-        left = list(films)
         swapped: int | None = None
         swapped_hits: tuple[Hit, ...] = ()
-        while left:
-            film = left.pop(self.rng.randrange(len(left)))
+        for film in self._draws(films, first):
             if not topics:
                 return Pick(film)
             if not self.cap.take(device):
                 return Pick(film, swapped, swapped_hits, unchecked="cap")
-            verdict = look_up(self.dtdd, film, topics)
+            verdict = look_up(self.dtdd, film, topics, self.ids)
             if not verdict.hits:
                 return Pick(film, swapped, swapped_hits, unchecked=verdict.unchecked)
             if swapped is None:

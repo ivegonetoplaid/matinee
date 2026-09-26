@@ -6,8 +6,16 @@ allowance refills at `RATE_PER_S`, which keeps the sustained rate under the free
 tier's 30 a minute; the public page shares that allowance with everyone. A
 caller waits for its turn at most `wait` seconds and is then told DoesTheDogDie
 is busy, so a burst of callers never parks the whole server.
-Nothing fetched is stored: the topic list is fetched when a page that offers
-topics opens, and a film is looked up only at the moment of a pick.
+Beyond the pace, the client holds its own requests rather than press on:
+- at most `REQUESTS_PER_HOUR` in any hour for the whole server, whoever asks;
+- after a 429 or 503, until the `Retry-After` it was given has passed, or for a
+  backoff that doubles with each refusal when none was given;
+- while DoesTheDogDie reports fewer than `MONTH_RESERVE` requests left this
+  month, asking again only every `RESERVE_HOLD_S` to learn whether the allowance
+  has recovered.
+A held request raises without reaching DoesTheDogDie.
+Nothing fetched is stored here: the topic list is fetched when a page that
+offers topics opens, and a film is looked up only at the moment of a pick.
 DoesTheDogDie refuses Python's default user agent with a 403 that looks like a
 bad key, so every request names Matinee.
 """
@@ -20,6 +28,7 @@ import threading
 import time
 import urllib.error
 import urllib.request
+from collections import deque
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
@@ -30,10 +39,25 @@ BURST = 2
 TOPICS_TIMEOUT_S = 10.0
 TOPICS_WAIT_S = 1 / RATE_PER_S + 0.5  # two viewers opening the picker together both get the list
 USER_AGENT = "Matinee/0.1 (+https://www.doesthedogdie.com)"
+REQUESTS_PER_HOUR = 120  # the whole server's ceiling: twice one device's hourly lookups
+HOUR_S = 3600.0
+MONTH_RESERVE = 250  # 5 per cent of the free tier's 5,000 a month
+RESERVE_HOLD_S = 6 * HOUR_S
+BACKOFF_S = 60.0
+BACKOFF_MAX_S = HOUR_S
+REFUSALS = (429, 503)
 
 
 class DtddError(RuntimeError):
     """DoesTheDogDie was slow, refused, or answered in a shape this client does not read."""
+
+
+class DtddCeiling(DtddError):
+    """The server has made its REQUESTS_PER_HOUR requests this hour; nothing was sent."""
+
+
+class DtddGone(DtddError):
+    """DoesTheDogDie answered 404: the item asked for does not exist."""
 
 
 @dataclass(frozen=True)
@@ -67,6 +91,10 @@ class Dtdd:
         self._lock = threading.Lock()
         self._tokens = float(BURST)
         self._filled_at = clock()
+        self._sent: deque[float] = deque()
+        self._held_until = float("-inf")
+        self._held_why = ""
+        self._refusals = 0
 
     def get(self, path: str, timeout: float, wait: float) -> Any:
         """One paced GET; raises DtddError when no turn comes within `wait` seconds or no JSON within `timeout`."""
@@ -78,10 +106,39 @@ class Dtdd:
         if not self._lock.acquire(timeout=wait):
             raise DtddError("DoesTheDogDie is busy with other requests")
         try:
+            self._check_holds()
             self._pace()
+            self._sent.append(self._clock())
             return self._fetch(req, timeout)
         finally:
             self._lock.release()
+
+    def _check_holds(self) -> None:
+        """Raise, sending nothing, while a backoff or the month's reserve holds or the hour's ceiling is reached."""
+        now = self._clock()
+        if now < self._held_until:
+            raise DtddError(self._held_why)
+        while self._sent and now - self._sent[0] >= HOUR_S:
+            self._sent.popleft()
+        if len(self._sent) >= REQUESTS_PER_HOUR:
+            raise DtddCeiling(f"Matinee has made its {REQUESTS_PER_HOUR} DoesTheDogDie requests this hour")
+
+    def _hold(self, seconds: float, why: str) -> None:
+        self._held_until = self._clock() + seconds
+        self._held_why = why
+
+    def _refused(self, exc: urllib.error.HTTPError) -> None:
+        """Hold every request for the Retry-After DoesTheDogDie gave, or a doubling backoff without one."""
+        given = (exc.headers.get("Retry-After") or "").strip() if exc.headers else ""
+        wait = float(given) if given.isdigit() else min(BACKOFF_S * 2 ** min(self._refusals, 6), BACKOFF_MAX_S)
+        self._refusals += 1
+        self._hold(wait, f"DoesTheDogDie refused with HTTP {exc.code}; holding for {wait:.0f} s")
+
+    def _note_remaining(self, headers: Any) -> None:
+        """Hold when DoesTheDogDie reports fewer than MONTH_RESERVE requests left this month."""
+        left = (headers.get("X-RateLimit-Remaining-Month") or "").strip() if headers else ""
+        if left.isdigit() and int(left) < MONTH_RESERVE:
+            self._hold(RESERVE_HOLD_S, f"DoesTheDogDie reports {left} requests left this month")
 
     def _pace(self) -> None:
         """Spend one request from the allowance, sleeping until one has refilled when it is empty."""
@@ -96,8 +153,15 @@ class Dtdd:
     def _fetch(self, req: urllib.request.Request, timeout: float) -> Any:
         try:
             with self._opener(req, timeout) as resp:
-                return json.load(resp)
+                body = json.load(resp)
+                self._refusals = 0
+                self._note_remaining(getattr(resp, "headers", None))
+                return body
         except urllib.error.HTTPError as exc:
+            if exc.code in REFUSALS:
+                self._refused(exc)
+            if exc.code == 404:
+                raise DtddGone(f"DoesTheDogDie answered HTTP {exc.code}") from exc
             raise DtddError(f"DoesTheDogDie answered HTTP {exc.code}") from exc
         except (OSError, http.client.HTTPException) as exc:
             raise DtddError(f"DoesTheDogDie did not answer: {type(exc).__name__}") from exc

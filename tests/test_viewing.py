@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import contextlib
 import http.client
 import io
 import json
@@ -15,7 +16,19 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-from matinee.dtdd import RATE_PER_S, USER_AGENT, Dtdd, DtddError, Topic
+from matinee.dtdd import (
+    BACKOFF_S,
+    MONTH_RESERVE,
+    RATE_PER_S,
+    REQUESTS_PER_HOUR,
+    RESERVE_HOLD_S,
+    USER_AGENT,
+    Dtdd,
+    DtddCeiling,
+    DtddError,
+    DtddGone,
+    Topic,
+)
 from matinee.engine import load_catalog
 from matinee.store import Store
 from matinee.table import FilmTable
@@ -315,3 +328,83 @@ def test_the_allowance_holds_after_idle_hours_and_slow_answers() -> None:
         del burst
     busiest = max(sum(1 for t in sent if start <= t < start + 60) for start in sent)
     assert busiest < 30
+
+
+class Headed(io.BytesIO):
+    """A response body carrying headers, as urllib's responses do."""
+
+    def __init__(self, body: Any, headers: dict[str, str]) -> None:
+        super().__init__(json.dumps(body).encode())
+        self.headers = headers
+
+
+def refusal(code: int, headers: dict[str, str]) -> urllib.error.HTTPError:
+    return urllib.error.HTTPError("u", code, "refused", headers, None)  # type: ignore[arg-type]
+
+
+def test_the_server_makes_at_most_its_hourly_ceiling_of_requests() -> None:
+    assert REQUESTS_PER_HOUR == 120
+    opener, clock = Answering([TOPICS] * (REQUESTS_PER_HOUR + 1)), Clock()
+    client = Dtdd("k", opener=opener, clock=clock, sleep=clock.sleep)
+    for _ in range(REQUESTS_PER_HOUR):
+        client.topics()
+    with pytest.raises(DtddCeiling):
+        client.topics()
+    assert len(opener.requests) == REQUESTS_PER_HOUR  # the refused call never reached DoesTheDogDie
+    clock.now += 3600
+    assert client.topics()
+
+
+def test_a_refusal_holds_every_request_for_its_retry_after() -> None:
+    opener, clock = Answering([refusal(429, {"Retry-After": "30"}), TOPICS]), Clock()
+    client = Dtdd("k", opener=opener, clock=clock, sleep=clock.sleep)
+    with pytest.raises(DtddError):
+        client.topics()
+    clock.now += 29
+    with pytest.raises(DtddError, match="holding"):
+        client.topics()
+    assert len(opener.requests) == 1
+    clock.now += 1
+    assert client.topics()
+
+
+def test_a_refusal_without_retry_after_backs_off_doubling_until_an_answer() -> None:
+    clock = Clock()
+    answers = [refusal(503, {}), refusal(429, {}), TOPICS, refusal(429, {})]
+    client = Dtdd("k", opener=Answering(list(answers)), clock=clock, sleep=clock.sleep)
+    holds = []
+    for _ in answers:
+        with contextlib.suppress(DtddError):
+            client.topics()
+        holds.append(client._held_until - clock.now)
+        clock.now = max(clock.now, client._held_until)
+    assert holds[0] == BACKOFF_S and holds[1] == 2 * BACKOFF_S
+    assert holds[3] == BACKOFF_S  # the answer in between reset the doubling
+
+
+def test_the_months_reserve_holds_requests_for_hours() -> None:
+    answers = [
+        Headed(TOPICS, {"X-RateLimit-Remaining-Month": str(MONTH_RESERVE)}),  # at the reserve itself: no hold
+        Headed(TOPICS, {"X-RateLimit-Remaining-Month": str(MONTH_RESERVE - 1)}),
+        Headed(TOPICS, {}),
+    ]
+    clock = Clock()
+    client = Dtdd("k", opener=lambda req, timeout: answers.pop(0), clock=clock, sleep=clock.sleep)
+    client.topics()
+    client.topics()
+    with pytest.raises(DtddError, match="left this month"):
+        client.topics()
+    assert len(answers) == 1  # the held call sent nothing
+    clock.now += RESERVE_HOLD_S
+    assert client.topics()
+
+
+def test_a_404_is_gone_and_long_refusal_runs_stay_capped() -> None:
+    with pytest.raises(DtddGone):
+        Dtdd("k", opener=Answering([refusal(404, {})])).topics()
+    clock = Clock()
+    client = Dtdd("k", opener=Answering([refusal(429, {})]), clock=clock, sleep=clock.sleep)
+    client._refusals = 2000  # a long run of refusals must not overflow the backoff
+    with pytest.raises(DtddError):
+        client.topics()
+    assert client._held_until - clock.now == 3600.0
