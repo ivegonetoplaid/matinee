@@ -195,9 +195,59 @@ SELECT_FILMS = (
 )
 
 
+def with_live(table: FilmTable, films: Sequence[LibraryFilm]) -> tuple[FilmTable, list[str]]:
+    """The table narrowed to the films the library holds now, plus any it holds that the table lacks.
+
+    A film gone from the library is never offered. A film the table does not know
+    yet (added since the last rebuild) is offered by its media-server facts alone:
+    no genome scores and no TMDB facts. Returns the names of those films.
+    """
+    live: dict[int, LibraryFilm] = {}
+    for f in films:
+        if f.tmdb is not None:
+            live.setdefault(f.tmdb, f)
+    known = table.films.index.isin(list(live))
+    frame = table.films[known].copy()
+    frame["item_id"] = [live[int(str(t))].item_id for t in frame.index]
+    genome = table.genome[known]
+    in_table = set(table.films.index)
+    new = [f for t, f in live.items() if t not in in_table]
+    if new:
+        extra = pd.DataFrame.from_dict(
+            {
+                f.tmdb: {
+                    "item_id": f.item_id,
+                    "name": f.name,
+                    "year": f.year,
+                    "genres": f.genres,
+                    "certificate": f.certificate,
+                    "runtime_min": f.runtime_min,
+                    "rating": f.rating,
+                    **_tmdb_fields(None, False),
+                }
+                for f in new
+            },
+            orient="index",
+            columns=list(COLUMNS),
+        )
+        frame = pd.concat([frame, extra])
+        genome = np.vstack([genome, np.full((len(new), len(table.tags)), np.nan, dtype=np.float32)])
+    frame["year"] = frame.year.astype("Int64")
+    frame["collection_id"] = frame.collection_id.astype("Int64")
+    frame.index.name = "tmdb"
+    merged = FilmTable(frame, table.tags, genome, table.built_at, table.oldest_tmdb, table.release)
+    return merged, [_label(f) for f in new]
+
+
 def _optional(value: object) -> object:
-    """None for pandas' missing markers, the value otherwise."""
-    return None if value is None or (isinstance(value, float) and np.isnan(value)) else value
+    """None for any missing marker (None, NaN, pandas' NA), the value otherwise, as SQLite can bind it."""
+    if value is None or value is pd.NA or (isinstance(value, float) and np.isnan(value)):
+        return None
+    if isinstance(value, np.integer):
+        return int(value)
+    if isinstance(value, np.floating):
+        return float(value)
+    return value
 
 
 def write_table(table: FilmTable, path: Path) -> None:
@@ -237,6 +287,11 @@ def write_table(table: FilmTable, path: Path) -> None:
                 db.execute("INSERT INTO genome VALUES (?, ?)", (int(str(tmdb)), table.genome[i].tobytes()))
     db.close()
     os.replace(partial, path)
+
+
+def check_age(table: FilmTable, now: datetime | None = None) -> None:
+    """Raise TableError once the table's oldest TMDB fact is six months old; a running server calls this too."""
+    _check_age(table.oldest_tmdb, now or datetime.now(UTC), Path("the film table"))
 
 
 def _check_age(oldest: datetime | None, now: datetime, path: Path) -> None:

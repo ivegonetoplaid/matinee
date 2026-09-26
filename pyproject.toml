@@ -6,10 +6,12 @@ requires-python = ">=3.12"
 dependencies = [
     "pandas>=2.2",
     "numpy>=2.0",
+    "fastapi>=0.141",
+    "uvicorn>=0.54",
 ]
 
 [project.optional-dependencies]
-dev = ["ruff", "mypy", "pytest", "complexipy", "pre-commit", "pandas-stubs"]
+dev = ["ruff", "mypy", "pytest", "complexipy", "pre-commit", "pandas-stubs", "httpx"]
 
 [build-system]
 requires = ["setuptools>=68"]

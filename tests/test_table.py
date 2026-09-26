@@ -305,3 +305,13 @@ def test_empty_tag_list_is_refused() -> None:
     table, _ = build_table(LIBRARY, genome(), CACHE, NOW)
     with pytest.raises(TableError):
         table.mean_of([])
+
+
+def test_a_loaded_table_can_be_written_again(tmp_path: Path) -> None:
+    table, _ = build_table(LIBRARY, genome(), CACHE, NOW)
+    write_table(table, tmp_path / "a.sqlite")
+    again = load_table(tmp_path / "a.sqlite", NOW)
+    write_table(again, tmp_path / "b.sqlite")
+    back = load_table(tmp_path / "b.sqlite", NOW)
+    assert pd.isna(back.films.loc[33, "collection_id"]) and back.films.loc[11, "collection_id"] == 900
+    assert back.films.loc[22, "keywords"] is None

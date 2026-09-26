@@ -13,12 +13,16 @@ import urllib.request
 from collections.abc import Mapping
 from typing import Any
 
-from matinee.library import LibraryError, LibraryFilm
+from matinee.library import Image, ImageKind, LibraryError, LibraryFilm
 
 FIELDS = "Genres,ProviderIds,ProductionYear,OfficialRating,RunTimeTicks,CommunityRating,Path"
 TICKS_PER_MINUTE = 600_000_000
 PATH_TMDB = re.compile(r"\{tmdb-(\d+)\}")
 TIMEOUT_S = 60
+IMAGE_TIMEOUT_S = 10
+MAX_IMAGE_BYTES = 8 * 1024 * 1024
+ITEM_ID = re.compile(r"^[0-9a-f]{32}$")
+IMAGE_PATHS = {"poster": "Primary", "backdrop": "Backdrop/0"}
 
 
 def _int_or_none(value: object) -> int | None:
@@ -73,6 +77,36 @@ class JellyfinReader:
             raise LibraryError(f"Jellyfin could not be reached: {exc}") from exc
         except json.JSONDecodeError as exc:
             raise LibraryError(f"Jellyfin answered GET {path.split('?')[0]} with something that is not JSON") from exc
+
+    def _item(self, item_id: str) -> str:
+        """The item id, refused unless it has Jellyfin's shape, so nothing else is ever joined into a path."""
+        if not ITEM_ID.match(item_id):
+            raise LibraryError(f"not a Jellyfin item id: {item_id!r}")
+        return item_id
+
+    def synopsis(self, item_id: str) -> str | None:
+        body = self._get_json(f"/Items?Ids={self._item(item_id)}&Fields=Overview")
+        items = body.get("Items") if isinstance(body, dict) else None
+        if not isinstance(items, list) or not items:
+            return None
+        overview = items[0].get("Overview")
+        return overview if isinstance(overview, str) and overview.strip() else None
+
+    def image(self, item_id: str, kind: ImageKind, width: int) -> Image:
+        """Jellyfin serves images without a key, so the request carries none."""
+        url = f"{self._base}/Items/{self._item(item_id)}/Images/{IMAGE_PATHS[kind]}?maxWidth={int(width)}&quality=80"
+        req = urllib.request.Request(url, method="GET")
+        try:
+            with urllib.request.urlopen(req, timeout=IMAGE_TIMEOUT_S) as resp:
+                content_type = resp.headers.get("Content-Type", "")
+                body = resp.read(MAX_IMAGE_BYTES + 1)
+        except urllib.error.HTTPError as exc:
+            raise LibraryError(f"Jellyfin answered HTTP {exc.code} for a {kind} image") from exc
+        except (urllib.error.URLError, TimeoutError) as exc:
+            raise LibraryError(f"Jellyfin could not be reached for a {kind} image: {exc}") from exc
+        if not content_type.startswith("image/") or len(body) > MAX_IMAGE_BYTES:
+            raise LibraryError(f"Jellyfin answered a {kind} image request with {content_type or 'no type'}")
+        return Image(body, content_type)
 
     def films(self) -> list[LibraryFilm]:
         body = self._get_json(f"/Items?IncludeItemTypes=Movie&Recursive=true&Fields={FIELDS}")

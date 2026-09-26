@@ -7,7 +7,9 @@ Plex reader would sit behind the same `Library` protocol.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Protocol
+from typing import Literal, Protocol
+
+ImageKind = Literal["poster", "backdrop"]
 
 
 class LibraryError(RuntimeError):
@@ -33,7 +35,21 @@ class LibraryFilm:
     path_tmdb: int | None
 
 
+@dataclass(frozen=True)
+class Image:
+    body: bytes
+    content_type: str
+
+
 class Library(Protocol):
     def films(self) -> list[LibraryFilm]:
         """Every film the library holds, one entry per file."""
+        ...
+
+    def synopsis(self, item_id: str) -> str | None:
+        """The film's synopsis as the media server holds it, or None when it has none."""
+        ...
+
+    def image(self, item_id: str, kind: ImageKind, width: int) -> Image:
+        """The film's poster or backdrop, scaled by the server to `width` pixels."""
         ...
