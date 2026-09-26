@@ -2,6 +2,104 @@
   "licence": "Derived from the MovieLens ml-latest tag genome (F. Maxwell Harper and Joseph A. Konstan, 2015; Jesse Vig, Shilad Sen and John Riedl, 2012). Redistributed under the dataset's own licence conditions, which bind this file: research and non-commercial use only, no implied endorsement by the University of Minnesota or GroupLens, and any redistribution under these same conditions.",
   "source": "MovieLens ml-latest, generated July 20, 2023",
   "trees": {
+    "action": {
+      "movielens_genres": [
+        "Action"
+      ],
+      "floor_any": {
+        "excite": {
+          "tags": [
+            "action",
+            "action packed",
+            "good action"
+          ],
+          "min": 0.3
+        }
+      },
+      "films": 1958,
+      "payoffs": {
+        "payback": {
+          "tags": [
+            "revenge",
+            "vengeance",
+            "vigilante",
+            "justice"
+          ],
+          "mean": 0.387147,
+          "sd": 0.156298
+        },
+        "rush": {
+          "tags": [
+            "fun movie",
+            "entertaining",
+            "over the top",
+            "cool",
+            "fun"
+          ],
+          "mean": 0.330303,
+          "sd": 0.136689
+        },
+        "awe": {
+          "tags": [
+            "visually stunning",
+            "epic",
+            "visual",
+            "visually appealing"
+          ],
+          "mean": 0.287802,
+          "sd": 0.202582
+        },
+        "survival": {
+          "tags": [
+            "survival",
+            "stranded",
+            "wilderness",
+            "monster",
+            "monsters",
+            "dinosaurs",
+            "shark",
+            "disaster",
+            "natural disaster"
+          ],
+          "mean": 0.16375,
+          "sd": 0.094623
+        },
+        "pros": {
+          "tags": [
+            "heist",
+            "caper",
+            "espionage",
+            "spy",
+            "spies",
+            "cia",
+            "assassin",
+            "hitman",
+            "police investigation",
+            "clever"
+          ],
+          "mean": 0.191769,
+          "sd": 0.117921
+        }
+      },
+      "scales": {
+        "thrill": {
+          "tags": [
+            "tense",
+            "suspense",
+            "suspenseful",
+            "intense"
+          ],
+          "percentiles": [
+            33.3333,
+            66.6667
+          ],
+          "cuts": [
+            0.185583,
+            0.336979
+          ]
+        }
+      }
+    },
     "horror": {
       "movielens_genres": [
         "Horror"
