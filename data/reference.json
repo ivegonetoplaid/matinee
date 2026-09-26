@@ -340,6 +340,93 @@
         }
       }
     },
+    "kids": {
+      "movielens_genres": [
+        "Children",
+        "Animation"
+      ],
+      "floor_any": {},
+      "films": 1505,
+      "payoffs": {
+        "silly": {
+          "tags": [
+            "funny",
+            "very funny",
+            "silly fun",
+            "slapstick",
+            "silly"
+          ],
+          "mean": 0.249006,
+          "sd": 0.123729
+        },
+        "adventure": {
+          "tags": [
+            "adventure",
+            "exciting",
+            "treasure",
+            "treasure hunt",
+            "pirates"
+          ],
+          "mean": 0.141551,
+          "sd": 0.101957
+        },
+        "magic": {
+          "tags": [
+            "magic",
+            "fairy tale",
+            "fairy tales",
+            "witches",
+            "wizards",
+            "dragons"
+          ],
+          "mean": 0.158538,
+          "sd": 0.155049
+        },
+        "animals": {
+          "tags": [
+            "talking animals",
+            "animals",
+            "dogs"
+          ],
+          "mean": 0.273791,
+          "sd": 0.199865
+        },
+        "heroes": {
+          "tags": [
+            "superhero",
+            "superheroes",
+            "robot",
+            "robots",
+            "giant robots",
+            "space",
+            "aliens"
+          ],
+          "mean": 0.105773,
+          "sd": 0.105541
+        },
+        "songs": {
+          "tags": [
+            "musical",
+            "music",
+            "great music",
+            "good music"
+          ],
+          "mean": 0.141686,
+          "sd": 0.130048
+        },
+        "warm": {
+          "tags": [
+            "heartwarming",
+            "touching",
+            "friendship",
+            "family bonds"
+          ],
+          "mean": 0.223457,
+          "sd": 0.143739
+        }
+      },
+      "scales": {}
+    },
     "thriller": {
       "movielens_genres": [
         "Thriller",
