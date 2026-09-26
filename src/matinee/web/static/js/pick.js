@@ -88,18 +88,32 @@ function firstPickReveal(result) {
   return h("div", { class: "swap-note" }, h("p", { class: "note" }, swapped.line, " ", credit(result)), ask, shown);
 }
 
-// The page's pick screen. `actions` holds notThatOne, startOver, failed and the correction panel's builder.
+// No film: every film left tripped the list, or three in a row did and the viewer
+// may roll again or have one picked without the check turning any away.
+async function showNoFilm(result, { line, aside }, actions) {
+  await typeLine(line, result.tired || result.exhausted, "");
+  const startOver = h("button", { class: "pill gold", type: "button", onclick: actions.startOver }, "Start over");
+  if (!result.tired) {
+    aside.append(startOver, h("p", { class: "note" }, credit(result)));
+    return;
+  }
+  aside.append(
+    h(
+      "div",
+      { class: "choices" },
+      h("button", { class: "pill gold", type: "button", onclick: actions.notThatOne }, "Roll again"),
+      h("button", { class: "pill velvet", type: "button", onclick: actions.justPick }, "Just pick one"),
+    ),
+    h("button", { class: "link-button", type: "button", onclick: actions.startOver }, "Start over"),
+    h("p", { class: "note" }, credit(result)),
+  );
+}
+
+// The page's pick screen. `actions` holds notThatOne, justPick, startOver, failed and the correction panel's builder.
 export async function showPick({ stage, wall, pool, reminder, result, frame, actions }) {
   const film = result.film;
   const { line, aside } = frame;
-  if (!film) {
-    await typeLine(line, result.exhausted, "");
-    aside.append(
-      h("button", { class: "pill gold", type: "button", onclick: actions.startOver }, "Start over"),
-      h("p", { class: "note" }, credit(result)),
-    );
-    return;
-  }
+  if (!film) return showNoFilm(result, frame, actions);
   if (result.swapped) {
     await typeLine(line, result.swapped.line, "");
     await wait(900);

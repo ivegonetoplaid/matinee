@@ -222,19 +222,25 @@ async function checking(frame) {
   return () => clearInterval(timer);
 }
 
-async function pickNow(opening = "") {
+const SEEN_MAX = 200; // PickIn.seen's max_length on the server
+
+// `risk` is "Just pick one" after three films tripped the list: nothing is checked or turned away.
+async function pickNow(opening = "", risk = false) {
   stage.classList.remove("revealed");
   wall.root.classList.remove("spotlit", "revealed");
   const frame = pickFrame();
   if (opening) await typeLine(frame.line, opening, "");
   // The check runs while the checking line types, not after it.
-  const request = post("/api/pick", { tree: visit.tree, answers: visit.answers, viewer: visit.viewer, seen: visit.seen });
-  const stopChecking = hasTopics() ? await checking(frame) : () => {};
+  const seen = visit.seen.slice(-SEEN_MAX); // the server takes at most SEEN_MAX; the oldest may come round again
+  const body = { tree: visit.tree, answers: visit.answers, viewer: visit.viewer, seen, risk };
+  const request = post("/api/pick", body);
+  const stopChecking = hasTopics() && !risk ? await checking(frame) : () => {};
   const res = await request;
   stopChecking();
   if (!res.ok) return problem(res.data, start);
-  // A film the check turned away is seen too, so "Not that one" never draws it again.
-  for (const f of [res.data.film, res.data.swapped?.film]) if (f) visit.seen.push(f.tmdb);
+  // Every film the check turned away is seen too, so "Not that one" never draws it again.
+  if (res.data.film) visit.seen.push(res.data.film.tmdb);
+  visit.seen.push(...res.data.turned_away);
   await showPick({
     stage,
     wall,
@@ -246,6 +252,10 @@ async function pickNow(opening = "") {
       notThatOne: () => {
         lockStage();
         pickNow();
+      },
+      justPick: () => {
+        lockStage();
+        pickNow("", true);
       },
       startOver: () => {
         lockStage();

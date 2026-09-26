@@ -530,7 +530,9 @@ film fails a topic when the topic has **at least 5 votes and more yes votes
 than no.**
 
 - The topic list is fetched from DoesTheDogDie when a page that offers topics
-  opens, and is never stored.
+  opens and no list is kept. It is then kept in memory and fetched again once it
+  is **29 days** old. While a refresh fails, the kept list serves until it is
+  **30 days** old.
 - The trigger picker, which is also the preferences page, offers Matinee's own
   exclusions and the DoesTheDogDie topics. It says the check is best effort from
   crowd votes and carries "Powered by DoesTheDogDie.com", linked.
@@ -570,6 +572,15 @@ never kept. No tree, scale or score is built from DoesTheDogDie data.
   the first film turned away and the topics it failed.
 - **Every film fails.** The page says "Every film left here trips something on
   your list. Want to start over?" and offers `Start over`.
+- **Three in a row.** A pick looks up at most **3** films that fail. When three
+  have failed and others remain, it stops and the page says "Three in a row
+  trip your list, starting with one where <topic>. Roll again, or I can just
+  pick one without turning any away. It might have some of what you'd rather
+  skip." It offers `Roll again`, `Just pick one` and `Start over`. `Just pick
+  one` draws a film (least gory first, where that applies) and shows it without
+  looking it up, marked unchecked.
+- **Turned-away films.** Every film a pick turns away is reported to the page
+  and joins the visit's seen list. The page sends the 200 most recent.
 - **Unchecked.** The film is shown with a note, and the DoesTheDogDie credit
   beside it, when any of these holds:
   - DoesTheDogDie is slow (no turn, or no answer, within **3 seconds** per
@@ -578,12 +589,13 @@ never kept. No tree, scale or score is built from DoesTheDogDie data.
   - the device has spent its allowance for the hour;
   - the installation has reached its own hourly ceiling;
   - the client is holding its requests after a refusal, or because
-    DoesTheDogDie reports the month's allowance nearly spent.
+    DoesTheDogDie reports the month's allowance nearly spent;
+  - the viewer chose `Just pick one` after three films failed.
 
   An unreadable vote row never counts as a pass. The note reads "I couldn't
   check this one against your list, so have a look before you press play." A
-  spent device allowance and the installation's ceiling each have their own
-  line saying so (`UNCHECKED_LINES`). The note does not name the topics: an
+  spent device allowance, the installation's ceiling and `Just pick one` each
+  have their own line saying so (`UNCHECKED_LINES`). The note does not name the topics: an
   unchecked film was checked against none of them.
 - **Pacing.** All DoesTheDogDie traffic, from every viewer, passes through one
   client that serialises requests. It allows a burst of **2** and refills at
@@ -774,7 +786,7 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
 ## 13. Deployment
 
 - **One server process, one worker.** Every DoesTheDogDie limit, hold and
-  remembered item id lives in the process (known gap 9). A second worker would
+  remembered item id lives in the process (known gap 8). A second worker would
   double every limit.
 - **The image** (`Dockerfile`) runs on `python:3.13-slim`. It installs the
   package editable, so it finds `data/` beside `src/` as a checkout does. It
@@ -819,8 +831,8 @@ The terms of each source are part of the design.
   same conditions).
 - **DoesTheDogDie.** Queried one film at a time, at the moment of a pick. Never
   fetched ahead, never used to build a score. Votes are never kept. The search's
-  answer for a film is remembered for at most 30 days, the refresh period the
-  terms set for a performance cache (section 9). "Powered by
+  answer for a film, and the topic list, are remembered for at most 30 days, the
+  refresh period the terms set for a performance cache (sections 8 and 9). "Powered by
   DoesTheDogDie.com", linked to `https://www.doesthedogdie.com`, appears
   wherever its data does: the trigger picker, the swap reason, the unchecked
   note and the exhausted pool. The free tier is non-commercial.
@@ -873,31 +885,25 @@ as the code stood on 2026-09-26.
    which slows that profile's walks. (`src/matinee/store.py:257`)
 5. **The per-device allowance is per cookie.** A client that discards
    `matinee_device` is issued a new one with a fresh allowance. The
-   installation's hourly ceiling still bounds it. (`src/matinee/web/viewing.py:207`)
+   installation's hourly ceiling still bounds it. (`src/matinee/web/viewing.py:216`)
 6. **"Slow" is timed per request, not per film.** A film lookup is two
    requests. Each may wait up to 3 seconds for its turn, then pause for the
    pacing allowance, then allow 3 seconds for an answer. One check can therefore
    take longer than 3 seconds before it counts as slow.
-   (`src/matinee/dtdd.py:99`, `src/matinee/pick.py:137`)
-7. **Only the first film a pick turns away is reported to the page.** Other
-   films that failed in the same pick are not added to the visit's seen list,
-   so a later pick may look them up again. (`src/matinee/pick.py:243`)
-8. **Names are compared after NFKC normalisation and case folding only.**
+   (`src/matinee/dtdd.py:106`, `src/matinee/pick.py:142`)
+7. **Names are compared after NFKC normalisation and case folding only.**
    Look-alike letters from other scripts count as different names. The refusal
    message says names are "letters, numbers or spaces". The rule accepts any
    printable character. (`src/matinee/store.py:103`,
    `src/matinee/web/common.py:18`)
-9. **The allowances, holds, pacing and item ids live in memory.** A restart
-   forgets every device's spent lookups, the hour's ceiling, any hold and every
-   remembered item id, and a second worker would double every limit.
+8. **The allowances, holds, pacing, item ids and topic list live in memory.** A
+   restart forgets every device's spent lookups, the hour's ceiling, any hold,
+   every remembered item id and the kept topic list, and a second worker would
+   double every limit.
    (`Dockerfile:1`)
-10. **Validation failures use the framework's error shape.** A request body
-    that fails validation answers 422 with `{"detail": [...]}`, not Matinee's
-    `{"error", "message"}` shape. (`src/matinee/web/app.py:86`)
-11. **The topic list spends the installation's ceiling.** `/api/topics` is
-    open to any caller. Each call spends one of the 120 hourly requests, so a
-    caller outside the page can use up the ceiling and leave every pick
-    unchecked for the hour. (`src/matinee/web/viewing.py:239`)
+9. **Validation failures use the framework's error shape.** A request body
+   that fails validation answers 422 with `{"detail": [...]}`, not Matinee's
+   `{"error", "message"}` shape. (`src/matinee/web/app.py:86`)
 
 ---
 
@@ -1025,10 +1031,10 @@ symbol when one does not match.
 | `src/matinee/store.py::Store.correct` / `corrections` | `src/matinee/store.py:257` | 2026-09-26 |
 | `src/matinee/web/common.py::set_tokens` / `TOKENS_COOKIE` / `MAX_TOKENS` | `src/matinee/web/common.py:81` | 2026-09-26 |
 | `src/matinee/web/common.py::Suggestion` | `src/matinee/web/common.py:38` | 2026-09-26 |
-| `src/matinee/web/viewing.py::held_profile` | `src/matinee/web/viewing.py:164` | 2026-09-26 |
-| `src/matinee/web/viewing.py::resolve` | `src/matinee/web/viewing.py:178` | 2026-09-26 |
-| `src/matinee/web/viewing.py::add_correction_routes` | `src/matinee/web/viewing.py:301` | 2026-09-26 |
-| `src/matinee/web/viewing.py::banded` | `src/matinee/web/viewing.py:296` | 2026-09-26 |
+| `src/matinee/web/viewing.py::held_profile` | `src/matinee/web/viewing.py:168` | 2026-09-26 |
+| `src/matinee/web/viewing.py::resolve` | `src/matinee/web/viewing.py:182` | 2026-09-26 |
+| `src/matinee/web/viewing.py::add_correction_routes` | `src/matinee/web/viewing.py:312` | 2026-09-26 |
+| `src/matinee/web/viewing.py::banded` | `src/matinee/web/viewing.py:307` | 2026-09-26 |
 
 ### Exclusions and the DoesTheDogDie check
 
@@ -1036,20 +1042,21 @@ symbol when one does not match.
 |---|---|---|
 | `data/exclusions.json` | `data/exclusions.json:4` | 2026-09-26 |
 | `src/matinee/engine.py::_exclusion` | `src/matinee/engine.py:316` | 2026-09-26 |
-| `src/matinee/web/viewing.py::check_exclusions` | `src/matinee/web/viewing.py:172` | 2026-09-26 |
-| `src/matinee/dtdd.py::Dtdd.get` / `_pace` (`BURST`, `RATE_PER_S`) | `src/matinee/dtdd.py:99` | 2026-09-26 |
-| `src/matinee/dtdd.py::Dtdd._check_holds` / `_refused` / `_note_remaining` (`REQUESTS_PER_HOUR`, `MONTH_RESERVE`, `RESERVE_HOLD_S`, `BACKOFF_S`) | `src/matinee/dtdd.py:116` | 2026-09-26 |
-| `src/matinee/dtdd.py::Dtdd.topics` | `src/matinee/dtdd.py:171` | 2026-09-26 |
-| `src/matinee/pick.py::failing` (`MIN_VOTES`) | `src/matinee/pick.py:68` | 2026-09-26 |
-| `src/matinee/pick.py::ItemIds` (`ID_KEEP_S`) | `src/matinee/pick.py:108` | 2026-09-26 |
-| `src/matinee/pick.py::look_up` (`LOOKUP_S`) | `src/matinee/pick.py:137` | 2026-09-26 |
-| `src/matinee/pick.py::DeviceCap` (`LOOKUPS_PER_HOUR`) | `src/matinee/pick.py:173` | 2026-09-26 |
-| `src/matinee/pick.py::candidates` | `src/matinee/pick.py:206` | 2026-09-26 |
+| `src/matinee/web/viewing.py::check_exclusions` | `src/matinee/web/viewing.py:176` | 2026-09-26 |
+| `src/matinee/dtdd.py::Dtdd.get` / `_pace` (`BURST`, `RATE_PER_S`) | `src/matinee/dtdd.py:106` | 2026-09-26 |
+| `src/matinee/dtdd.py::Dtdd._check_holds` / `_refused` / `_note_remaining` (`REQUESTS_PER_HOUR`, `MONTH_RESERVE`, `RESERVE_HOLD_S`, `BACKOFF_S`) | `src/matinee/dtdd.py:123` | 2026-09-26 |
+| `src/matinee/dtdd.py::Dtdd.topics` (`TOPICS_REFRESH_S`, `TOPICS_KEEP_S`) | `src/matinee/dtdd.py:178` | 2026-09-26 |
+| `src/matinee/pick.py::failing` (`MIN_VOTES`) | `src/matinee/pick.py:73` | 2026-09-26 |
+| `src/matinee/pick.py::ItemIds` (`ID_KEEP_S`) | `src/matinee/pick.py:113` | 2026-09-26 |
+| `src/matinee/pick.py::look_up` (`LOOKUP_S`) | `src/matinee/pick.py:142` | 2026-09-26 |
+| `src/matinee/pick.py::DeviceCap` (`LOOKUPS_PER_HOUR`) | `src/matinee/pick.py:178` | 2026-09-26 |
+| `src/matinee/pick.py::candidates` | `src/matinee/pick.py:211` | 2026-09-26 |
 | `src/matinee/engine.py::gentlest` | `src/matinee/engine.py:230` | 2026-09-26 |
-| `src/matinee/pick.py::Picker.pick` | `src/matinee/pick.py:229` | 2026-09-26 |
-| `src/matinee/web/viewing.py::device_id` / `DEVICE_COOKIE` | `src/matinee/web/viewing.py:207` | 2026-09-26 |
-| `src/matinee/web/viewing.py::SWAP_LINE` / `UNCHECKED_LINES` / `EXHAUSTED` | `src/matinee/web/viewing.py:188` | 2026-09-26 |
-| `src/matinee/web/viewing.py::add_pick_routes` | `src/matinee/web/viewing.py:316` | 2026-09-26 |
+| `src/matinee/pick.py::Picker.pick` (`PICK_TRIES`) | `src/matinee/pick.py:234` | 2026-09-26 |
+| `src/matinee/web/viewing.py::device_id` / `DEVICE_COOKIE` | `src/matinee/web/viewing.py:216` | 2026-09-26 |
+| `src/matinee/web/viewing.py::SWAP_LINE` / `UNCHECKED_LINES` / `EXHAUSTED` / `TIRED` | `src/matinee/web/viewing.py:192` | 2026-09-26 |
+| `src/matinee/web/viewing.py::pick_pool` | `src/matinee/web/viewing.py:327` | 2026-09-26 |
+| `src/matinee/web/viewing.py::add_pick_routes` | `src/matinee/web/viewing.py:337` | 2026-09-26 |
 
 ### Web surface
 
@@ -1065,8 +1072,8 @@ symbol when one does not match.
 | `src/matinee/web/app.py::add_door_routes` | `src/matinee/web/app.py:149` | 2026-09-26 |
 | `src/matinee/web/app.py::add_error_handlers` | `src/matinee/web/app.py:86` | 2026-09-26 |
 | `src/matinee/web/common.py::Problem` | `src/matinee/web/common.py:102` | 2026-09-26 |
-| `src/matinee/web/viewing.py::add_viewing_routes` | `src/matinee/web/viewing.py:236` | 2026-09-26 |
-| `src/matinee/web/viewing.py::WalkIn` / `PickIn` (request caps) | `src/matinee/web/viewing.py:47` | 2026-09-26 |
+| `src/matinee/web/viewing.py::add_viewing_routes` | `src/matinee/web/viewing.py:247` | 2026-09-26 |
+| `src/matinee/web/viewing.py::WalkIn` / `PickIn` (request caps) | `src/matinee/web/viewing.py:48` | 2026-09-26 |
 
 ### The page
 
@@ -1081,9 +1088,10 @@ symbol when one does not match.
 | `src/matinee/web/static/js/wall.js::Wall` / `across` | `src/matinee/web/static/js/wall.js:34` | 2026-09-26 |
 | `src/matinee/web/static/js/main.js::start` | `src/matinee/web/static/js/main.js:155` | 2026-09-26 |
 | `src/matinee/web/static/js/main.js::step` | `src/matinee/web/static/js/main.js:182` | 2026-09-26 |
-| `src/matinee/web/static/js/main.js::pickNow` / `checking` | `src/matinee/web/static/js/main.js:225` | 2026-09-26 |
+| `src/matinee/web/static/js/main.js::pickNow` / `checking` | `src/matinee/web/static/js/main.js:228` | 2026-09-26 |
 | `src/matinee/web/static/js/main.js::lockStage` / `nameTag` | `src/matinee/web/static/js/main.js:40` | 2026-09-26 |
-| `src/matinee/web/static/js/pick.js::showPick` | `src/matinee/web/static/js/pick.js:92` | 2026-09-26 |
+| `src/matinee/web/static/js/pick.js::showNoFilm` | `src/matinee/web/static/js/pick.js:93` | 2026-09-26 |
+| `src/matinee/web/static/js/pick.js::showPick` | `src/matinee/web/static/js/pick.js:113` | 2026-09-26 |
 | `src/matinee/web/static/js/pick.js::firstPickReveal` | `src/matinee/web/static/js/pick.js:70` | 2026-09-26 |
 | `src/matinee/web/static/js/correct.js::GATED_NOTE` | `src/matinee/web/static/js/correct.js:9` | 2026-09-26 |
 | `src/matinee/web/static/js/correct.js::correctionLink` / `ensureProfile` | `src/matinee/web/static/js/correct.js:47` | 2026-09-26 |

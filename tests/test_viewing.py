@@ -22,6 +22,8 @@ from matinee.dtdd import (
     RATE_PER_S,
     REQUESTS_PER_HOUR,
     RESERVE_HOLD_S,
+    TOPICS_KEEP_S,
+    TOPICS_REFRESH_S,
     USER_AGENT,
     Dtdd,
     DtddCeiling,
@@ -77,13 +79,13 @@ def test_requests_are_paced_named_and_keyed() -> None:
     opener, clock = Answering([TOPICS] * 6), Clock()
     client = Dtdd("secret-key", opener=opener, clock=clock, sleep=clock.sleep)
     first = client.topics()
-    client.topics()  # a search and its item request may go back to back
+    client.get("/topics", 10.0, 10.0)  # a search and its item request may go back to back
     assert clock.slept == []
     clock.now += 0.5
-    client.topics()
+    client.get("/topics", 10.0, 10.0)
     assert clock.slept == [pytest.approx((1 - 0.5 * RATE_PER_S) / RATE_PER_S)]
     for _ in range(3):
-        client.topics()
+        client.get("/topics", 10.0, 10.0)
     assert clock.slept[-1] == pytest.approx(1 / RATE_PER_S)
     assert [t.id for t in first] == [188, 153]
     assert first[0] == Topic(188, "there's blood/gore", "blood/gore", "blood", 4)
@@ -218,7 +220,7 @@ def test_the_pace_stays_under_thirty_a_minute() -> None:
 
     client = Dtdd("k", opener=record, clock=clock, sleep=clock.sleep)
     for _ in range(100):
-        client.topics()
+        client.get("/topics", 10.0, 10.0)
     busiest = max(sum(1 for t in sent if start <= t < start + 60) for start in sent)
     assert busiest < 30
 
@@ -324,7 +326,7 @@ def test_the_allowance_holds_after_idle_hours_and_slow_answers() -> None:
     for burst in range(3):
         clock.now += 3600  # an idle hour must not bank more than BURST
         for _ in range(40):
-            client.topics()
+            client.get("/topics", 10.0, 10.0)
         del burst
     busiest = max(sum(1 for t in sent if start <= t < start + 60) for start in sent)
     assert busiest < 30
@@ -347,25 +349,25 @@ def test_the_server_makes_at_most_its_hourly_ceiling_of_requests() -> None:
     opener, clock = Answering([TOPICS] * (REQUESTS_PER_HOUR + 1)), Clock()
     client = Dtdd("k", opener=opener, clock=clock, sleep=clock.sleep)
     for _ in range(REQUESTS_PER_HOUR):
-        client.topics()
+        client.get("/topics", 10.0, 10.0)
     with pytest.raises(DtddCeiling):
-        client.topics()
+        client.get("/topics", 10.0, 10.0)
     assert len(opener.requests) == REQUESTS_PER_HOUR  # the refused call never reached DoesTheDogDie
     clock.now += 3600
-    assert client.topics()
+    assert client.get("/topics", 10.0, 10.0)
 
 
 def test_a_refusal_holds_every_request_for_its_retry_after() -> None:
     opener, clock = Answering([refusal(429, {"Retry-After": "30"}), TOPICS]), Clock()
     client = Dtdd("k", opener=opener, clock=clock, sleep=clock.sleep)
     with pytest.raises(DtddError):
-        client.topics()
+        client.get("/topics", 10.0, 10.0)
     clock.now += 29
     with pytest.raises(DtddError, match="holding"):
-        client.topics()
+        client.get("/topics", 10.0, 10.0)
     assert len(opener.requests) == 1
     clock.now += 1
-    assert client.topics()
+    assert client.get("/topics", 10.0, 10.0)
 
 
 def test_a_refusal_without_retry_after_backs_off_doubling_until_an_answer() -> None:
@@ -375,7 +377,7 @@ def test_a_refusal_without_retry_after_backs_off_doubling_until_an_answer() -> N
     holds = []
     for _ in answers:
         with contextlib.suppress(DtddError):
-            client.topics()
+            client.get("/topics", 10.0, 10.0)
         holds.append(client._held_until - clock.now)
         clock.now = max(clock.now, client._held_until)
     assert holds[0] == BACKOFF_S and holds[1] == 2 * BACKOFF_S
@@ -390,13 +392,13 @@ def test_the_months_reserve_holds_requests_for_hours() -> None:
     ]
     clock = Clock()
     client = Dtdd("k", opener=lambda req, timeout: answers.pop(0), clock=clock, sleep=clock.sleep)
-    client.topics()
-    client.topics()
+    client.get("/topics", 10.0, 10.0)
+    client.get("/topics", 10.0, 10.0)
     with pytest.raises(DtddError, match="left this month"):
-        client.topics()
+        client.get("/topics", 10.0, 10.0)
     assert len(answers) == 1  # the held call sent nothing
     clock.now += RESERVE_HOLD_S
-    assert client.topics()
+    assert client.get("/topics", 10.0, 10.0)
 
 
 def test_a_404_is_gone_and_long_refusal_runs_stay_capped() -> None:
@@ -406,5 +408,22 @@ def test_a_404_is_gone_and_long_refusal_runs_stay_capped() -> None:
     client = Dtdd("k", opener=Answering([refusal(429, {})]), clock=clock, sleep=clock.sleep)
     client._refusals = 2000  # a long run of refusals must not overflow the backoff
     with pytest.raises(DtddError):
-        client.topics()
+        client.get("/topics", 10.0, 10.0)
     assert client._held_until - clock.now == 3600.0
+
+
+def test_the_topic_list_is_kept_twenty_nine_days_and_served_stale_to_thirty() -> None:
+    clock = Clock()
+    opener = Answering([TOPICS, TOPICS, urllib.error.URLError("down"), urllib.error.URLError("down")])
+    client = Dtdd("k", opener=opener, clock=clock, sleep=clock.sleep)
+    assert [t.id for t in client.topics()] == [188, 153]
+    client.topics()
+    assert len(opener.requests) == 1  # kept
+    clock.now += TOPICS_REFRESH_S
+    client.topics()
+    assert len(opener.requests) == 2  # refreshed on day 29
+    clock.now += TOPICS_REFRESH_S
+    assert [t.id for t in client.topics()] == [188, 153]  # refresh failed; the kept copy is under 30 days
+    clock.now += TOPICS_KEEP_S - TOPICS_REFRESH_S
+    with pytest.raises(DtddError):
+        client.topics()  # past 30 days nothing is served

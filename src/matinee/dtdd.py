@@ -14,8 +14,10 @@ Beyond the pace, the client holds its own requests rather than press on:
   month, asking again only every `RESERVE_HOLD_S` to learn whether the allowance
   has recovered.
 A held request raises without reaching DoesTheDogDie.
-Nothing fetched is stored here: the topic list is fetched when a page that
-offers topics opens, and a film is looked up only at the moment of a pick.
+The topic list is kept in memory and fetched again once it is `TOPICS_REFRESH_S`
+old; while a refresh fails, the kept list serves until it is `TOPICS_KEEP_S` old.
+A film is looked up only at the moment of a pick, and nothing about it is kept
+here.
 DoesTheDogDie refuses Python's default user agent with a 403 that looks like a
 bad key, so every request names Matinee.
 """
@@ -24,6 +26,7 @@ from __future__ import annotations
 
 import http.client
 import json
+import logging
 import threading
 import time
 import urllib.error
@@ -46,6 +49,9 @@ RESERVE_HOLD_S = 6 * HOUR_S
 BACKOFF_S = 60.0
 BACKOFF_MAX_S = HOUR_S
 REFUSALS = (429, 503)
+TOPICS_REFRESH_S = 29 * 24 * HOUR_S
+TOPICS_KEEP_S = 30 * 24 * HOUR_S
+log = logging.getLogger("matinee.dtdd")
 
 
 class DtddError(RuntimeError):
@@ -95,6 +101,7 @@ class Dtdd:
         self._held_until = float("-inf")
         self._held_why = ""
         self._refusals = 0
+        self._topics: tuple[list[Topic], float] | None = None
 
     def get(self, path: str, timeout: float, wait: float) -> Any:
         """One paced GET; raises DtddError when no turn comes within `wait` seconds or no JSON within `timeout`."""
@@ -169,7 +176,26 @@ class Dtdd:
             raise DtddError("DoesTheDogDie answered with something that is not JSON") from exc
 
     def topics(self) -> list[Topic]:
-        """The topic list, fetched now and never stored."""
+        """The topic list: the kept copy while younger than TOPICS_REFRESH_S, else fetched and kept.
+
+        A failed refresh falls back to the kept copy while it is younger than
+        TOPICS_KEEP_S, and raises otherwise.
+        """
+        held = self._topics
+        age = self._clock() - held[1] if held else float("inf")
+        if held and age < TOPICS_REFRESH_S:
+            return list(held[0])
+        try:
+            fresh = self._fetch_topics()
+        except DtddError as exc:
+            if held and age < TOPICS_KEEP_S:
+                log.warning("topic list refresh failed, serving the kept copy: %s", exc)
+                return list(held[0])
+            raise
+        self._topics = (fresh, self._clock())
+        return list(fresh)
+
+    def _fetch_topics(self) -> list[Topic]:
         body = self.get("/topics", TOPICS_TIMEOUT_S, TOPICS_WAIT_S)
         if not isinstance(body, list):
             raise DtddError("DoesTheDogDie's topic list is not a list")

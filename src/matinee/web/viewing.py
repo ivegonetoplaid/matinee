@@ -12,6 +12,7 @@ from __future__ import annotations
 import logging
 import secrets
 from collections.abc import Sequence
+from dataclasses import replace
 from typing import Any
 
 import numpy as np
@@ -55,6 +56,7 @@ class PickIn(BaseModel):
     answers: list[AnswerIn] = Field(default=[], max_length=12)
     viewer: ViewerIn = ViewerIn()
     seen: list[int] = Field(default=[], max_length=200)
+    risk: bool = False  # "Just pick one" after a tired pick: nothing is checked or turned away
 
 
 class FirstIn(BaseModel):
@@ -149,6 +151,8 @@ class PickOut(BaseModel):
     swapped: SwapOut | None
     unchecked: str | None
     exhausted: str | None
+    tired: str | None
+    turned_away: list[int]
     credit: str
     link: str
 
@@ -191,12 +195,17 @@ UNCHECKED_LINES = {
     "slow": "I couldn't check this one against your list, so have a look before you press play.",
     "no_record": "I couldn't check this one against your list, so have a look before you press play.",
     "cap": "I've checked a lot of films for you this hour, so this one is unchecked. Have a look before you play.",
+    "waived": "I didn't check this one against your list, as you asked. Have a look before you press play.",
     "house": (
         "I've checked a lot of films for everyone here this hour, so this one is unchecked. "
         "Have a look before you play."
     ),
 }
 EXHAUSTED = "Every film left here trips something on your list. Want to start over?"
+TIRED = (
+    "Three in a row trip your list, starting with one where {topic}. Roll again, or I can just pick one "
+    "without turning any away. It might have some of what you'd rather skip."
+)
 
 
 def film_ref(table_films: Any, tmdb: int) -> FilmRef:
@@ -228,6 +237,8 @@ def pick_out(films: Any, result: Pick) -> PickOut:
         swapped=swapped,
         unchecked=None if result.unchecked is None else UNCHECKED_LINES[result.unchecked],
         exhausted=EXHAUSTED if result.exhausted else None,
+        tired=TIRED.format(topic=result.swapped_hits[0].name) if result.tired else None,
+        turned_away=list(result.turned),
         credit=DTDD_CREDIT,
         link=DTDD_LINK,
     )
@@ -313,21 +324,29 @@ def add_correction_routes(app: FastAPI, theatre: Theatre, store: Store) -> None:
         return CorrectionOut(line=CORRECTED)
 
 
+def pick_pool(cat: Catalog, viewer: Viewer, body: PickIn) -> tuple[list[int], str | None]:
+    """The pool a pick draws from and its preference: the walk's end, or before any answer the whole pool."""
+    if body.tree is None:
+        if body.answers:
+            raise HTTPException(status_code=400, detail="refused")
+        return everything(cat, viewer), None
+    step = walk(cat, body.tree, viewer, [Answer(a.question, a.option) for a in body.answers])
+    return list(step.pool), step.prefer
+
+
 def add_pick_routes(app: FastAPI, theatre: Theatre, store: Store, picker: Picker) -> None:
     @app.post("/api/pick")
     def pick(body: PickIn, request: Request, response: Response) -> PickOut:
         """One film from the pool the answers leave, checked against the viewer's topics before it is shown."""
         cat = theatre.showing().catalog
         viewer, _ = resolve(request, store, body.viewer)
-        if body.tree is None:
-            if body.answers:
-                raise HTTPException(status_code=400, detail="refused")
-            left, prefer = everything(cat, viewer), None
-        else:
-            step = walk(cat, body.tree, viewer, [Answer(a.question, a.option) for a in body.answers])
-            left, prefer = list(step.pool), step.prefer
+        left, prefer = pick_pool(cat, viewer, body)
         films = cat.table.films
         ratings = dict(zip(films.index.tolist(), films.rating.fillna(0.0).tolist(), strict=True))
         pool = candidates(left, body.seen, ratings, prefer)
-        device = device_id(request, response) if viewer.topics else ""
-        return pick_out(films, picker.pick(pool, viewer.topics, device, gentlest(cat, viewer, pool)))
+        topics = frozenset() if body.risk else viewer.topics
+        device = device_id(request, response) if topics else ""
+        result = picker.pick(pool, topics, device, gentlest(cat, viewer, pool))
+        if body.risk and viewer.topics and result.film is not None:
+            result = replace(result, unchecked="waived")
+        return pick_out(films, result)

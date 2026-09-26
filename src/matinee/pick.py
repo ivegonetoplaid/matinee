@@ -3,7 +3,9 @@
 A viewer without topics causes no lookup. For a viewer with topics, the drawn
 film is looked up by TMDB id; it fails a topic that has at least five votes and
 more yes votes than no. A film that fails is replaced from the same pool, and a
-film that already failed in this pick is never looked up again. When
+film that already failed in this pick is never looked up again. After
+`PICK_TRIES` films have failed with others still undrawn, the pick stops and
+says so. When
 DoesTheDogDie is slow (over three seconds), refuses, holds no record, or the
 device has spent its lookups or the server its requests for the hour, the film
 is shown marked unchecked, with the reason. When every film in the pool fails, the pick
@@ -34,7 +36,8 @@ LOOKUPS_PER_HOUR = 60
 HOUR_S = 3600.0
 SWEEP_S = 60.0
 ID_KEEP_S = 30 * 24 * HOUR_S
-Unchecked = Literal["slow", "no_record", "cap", "house"]
+PICK_TRIES = 3
+Unchecked = Literal["slow", "no_record", "cap", "house", "waived"]
 log = logging.getLogger("matinee.pick")
 
 
@@ -59,6 +62,8 @@ class Pick:
     swapped_hits: tuple[Hit, ...] = ()
     unchecked: Unchecked | None = None
     exhausted: bool = False
+    tired: bool = False
+    turned: tuple[int, ...] = ()
 
 
 class Unreadable(ValueError):
@@ -229,17 +234,21 @@ class Picker:
     def pick(
         self, films: Sequence[int], topics: frozenset[int], device: str, first: frozenset[int] = frozenset()
     ) -> Pick:
-        """Draw, check and replace until one film is clear or cannot be checked, or none is left."""
+        """Draw, check and replace until one film is clear or cannot be checked, PICK_TRIES fail, or none is left."""
         swapped: int | None = None
         swapped_hits: tuple[Hit, ...] = ()
+        turned: list[int] = []
         for film in self._draws(films, first):
             if not topics:
                 return Pick(film)
             if not self.cap.take(device):
-                return Pick(film, swapped, swapped_hits, unchecked="cap")
+                return Pick(film, swapped, swapped_hits, unchecked="cap", turned=tuple(turned))
             verdict = look_up(self.dtdd, film, topics, self.ids)
             if not verdict.hits:
-                return Pick(film, swapped, swapped_hits, unchecked=verdict.unchecked)
+                return Pick(film, swapped, swapped_hits, unchecked=verdict.unchecked, turned=tuple(turned))
             if swapped is None:
                 swapped, swapped_hits = film, verdict.hits
-        return Pick(None, swapped, swapped_hits, exhausted=True)
+            turned.append(film)
+            if len(turned) >= PICK_TRIES and len(turned) < len(films):
+                return Pick(None, swapped, swapped_hits, tired=True, turned=tuple(turned))
+        return Pick(None, swapped, swapped_hits, exhausted=True, turned=tuple(turned))

@@ -35,8 +35,8 @@ JELLYFIN_API_KEY=... DTDD_API_KEY=... \
 uvicorn --factory matinee.web.main:build --workers 1
 ```
 
-The `Dockerfile` builds the same server. Run exactly one worker: the
-DoesTheDogDie pacing and the per-device lookup allowance live in the process.
+The `Dockerfile` builds the same server. Run exactly one worker: every
+DoesTheDogDie limit, hold and remembered answer lives in the process.
 
 ## Development
 
