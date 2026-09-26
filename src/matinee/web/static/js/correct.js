@@ -93,13 +93,14 @@ export function correctionLink({ visit, film, trees }) {
     },
     "Save",
   );
-  panel.append(
+  const parts = [
     h("p", { class: "note" }, `Not really ${here ? here.label.toLowerCase() : "this kind of film"}? Where does it belong?`),
     h("div", { class: "tree-choices" }, choices),
     nameInput ? h("p", { class: "note" }, "What should I call you? I keep corrections by name.") : null,
     nameInput,
     save,
     status,
-  );
+  ];
+  panel.append(...parts.filter(Boolean)); // append() would print a null as "null"
   return h("div", { class: "correct" }, open, panel);
 }
