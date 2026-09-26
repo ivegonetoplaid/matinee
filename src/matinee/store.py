@@ -62,12 +62,36 @@ CREATE TABLE IF NOT EXISTS corrections (
     at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS corrections_by_profile ON corrections (profile_id);
+CREATE TABLE IF NOT EXISTS feedback (
+    id INTEGER PRIMARY KEY,
+    profile_id INTEGER NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+    tmdb INTEGER NOT NULL,
+    tree TEXT NOT NULL,
+    kind TEXT NOT NULL CHECK (kind IN ('genre', 'kind', 'quality')),
+    path TEXT NOT NULL,
+    rushed INTEGER NOT NULL,
+    comment TEXT NOT NULL,
+    at TEXT NOT NULL
+);
 CREATE TABLE IF NOT EXISTS tokens (
     token_hash TEXT PRIMARY KEY,
     profile_id INTEGER NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
     created_at TEXT NOT NULL
 );
 """
+
+
+@dataclass(frozen=True)
+class Note:
+    """A viewer's note on one pick: what was wrong with it, the answers that led there, and why."""
+
+    profile_id: int
+    tmdb: int
+    tree: str
+    kind: Literal["genre", "kind", "quality"]
+    path: tuple[str, ...]
+    rushed: bool
+    comment: str
 
 
 class StoreError(ValueError):
@@ -267,6 +291,17 @@ class Store:
                 "INSERT INTO corrections (override_id, profile_id, tmdb, tree, direction, at)"
                 " VALUES (?, ?, ?, ?, ?, ?)",
                 rows,
+            )
+
+    def note(self, n: Note) -> None:
+        """Keep one viewer's note on a pick for review: what was wrong, the answers that led to it, and why."""
+        with closing(self._connect()) as db, db:
+            if db.execute("SELECT 1 FROM profiles WHERE id = ?", (n.profile_id,)).fetchone() is None:
+                raise StoreError("no_profile", "no such profile")
+            db.execute(
+                "INSERT INTO feedback (profile_id, tmdb, tree, kind, path, rushed, comment, at)"
+                " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                (n.profile_id, n.tmdb, n.tree, n.kind, json.dumps(list(n.path)), int(n.rushed), n.comment, _now()),
             )
 
     def corrections(self, profile_id: int) -> list[SavedCorrection]:

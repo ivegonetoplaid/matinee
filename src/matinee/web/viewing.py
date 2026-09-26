@@ -13,7 +13,7 @@ import logging
 import secrets
 from collections.abc import Sequence
 from dataclasses import replace
-from typing import Any
+from typing import Any, Literal
 
 import numpy as np
 from fastapi import FastAPI, HTTPException, Request, Response
@@ -23,7 +23,7 @@ from pydantic import BaseModel, Field
 from matinee.dtdd import Dtdd, DtddError
 from matinee.engine import Answer, Catalog, Correction, Viewer, base_pool, first_question, gentlest, walk
 from matinee.pick import Pick, Picker, candidates
-from matinee.store import Profile, Store
+from matinee.store import Note, Profile, Store
 from matinee.trees import Tree
 from matinee.web.common import COOKIE_AGE_S, Seat, device_tokens, optional_int, problem, seat
 from matinee.web.theatre import Theatre
@@ -126,6 +126,16 @@ class CorrectionIn(BaseModel):
 
 class CorrectionOut(BaseModel):
     line: str
+
+
+class NoteIn(BaseModel):
+    profile_id: int
+    tmdb: int
+    tree: str = Field(max_length=40)
+    kind: Literal["genre", "kind", "quality"]
+    answers: list[AnswerIn] = Field(default=[], max_length=12)
+    rushed: bool = False
+    comment: str = Field(default="", max_length=500)
 
 
 class ExclusionOut(BaseModel):
@@ -322,6 +332,35 @@ def add_correction_routes(app: FastAPI, theatre: Theatre, store: Store) -> None:
             raise HTTPException(status_code=400, detail="refused")
         store.correct(body.profile_id, body.tmdb, body.remove_from, body.add_to)
         return CorrectionOut(line=CORRECTED)
+
+
+NOTED = "Thanks. I've kept that for whoever tunes Matinee."
+
+
+def answer_says(tree: Tree, answers: Sequence[AnswerIn]) -> list[str]:
+    """What each answer said, in order; an answer the tree does not have is refused."""
+    questions = {q.id: q for q in tree.questions}
+    says = []
+    for a in answers:
+        q = questions.get(a.question)
+        if q is None or a.option >= len(q.options):
+            raise HTTPException(status_code=400, detail="refused")
+        says.append(q.options[a.option].say)
+    return says
+
+
+def add_note_routes(app: FastAPI, theatre: Theatre, store: Store) -> None:
+    @app.post("/api/notes")
+    def note(body: NoteIn, request: Request) -> CorrectionOut:
+        """Keep a viewer's note on a pick for review; it changes nothing the viewer is shown."""
+        held_profile(request, store, body.profile_id)
+        cat = theatre.showing().catalog
+        tree = cat.trees.get(body.tree)
+        if tree is None or body.tmdb not in cat.table.films.index:
+            raise HTTPException(status_code=400, detail="refused")
+        path = tuple(answer_says(tree, body.answers))
+        store.note(Note(body.profile_id, body.tmdb, body.tree, body.kind, path, body.rushed, body.comment.strip()))
+        return CorrectionOut(line=NOTED)
 
 
 def pick_pool(cat: Catalog, viewer: Viewer, body: PickIn) -> tuple[list[int], str | None]:

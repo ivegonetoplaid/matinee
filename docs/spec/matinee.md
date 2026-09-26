@@ -660,10 +660,20 @@ A correction says a film is not really the kind of film the tree offered it as.
   films are picked for the whole house, so I can't add one just for you. Ask
   whoever runs Matinee to add it." Removing a film from the kids tree is allowed.
 - The correction link is offered only on a pick that came through a tree. It is
-  a small "Wrong kind of film?" link that opens a panel and never dominates the
-  result.
+  a small "Something wrong with this pick?" link that opens a panel and never
+  dominates the result.
 - The panel opens with "How you got here:" and the viewer's answers in order,
   ending with "Just pick one!" when that ended the questions.
+- The panel asks what is wrong, with three choices, and offers an optional "Why?"
+  box of at most 500 characters:
+  - "Not <genre> at all" asks where the film belongs and saves a correction.
+  - "<Genre>, but not the kind I asked for" changes nothing the viewer is shown.
+  - "The right kind, just not a good pick" changes nothing the viewer is shown.
+- Every choice is also kept as a note for whoever tunes Matinee: the profile,
+  the film, the tree, the choice, the answers that led to the pick in words,
+  whether "Just pick one!" ended the questions, the comment and a UTC timestamp.
+  A note needs a held profile. Its answers are resolved against the tree when it
+  is saved, and an answer the tree does not have is refused.
 
 ## 11. The web surface
 
@@ -689,6 +699,7 @@ documentation, ReDoc and the OpenAPI schema are all disabled.
 | POST | `/api/walk` | the next question and the pool, given a tree and answers |
 | POST | `/api/pick` | one checked film from the pool the answers leave |
 | POST | `/api/corrections` | save one correction for a held profile |
+| POST | `/api/notes` | keep one note on a pick for a held profile |
 
 ### 11.2 What the browser may name
 
@@ -896,18 +907,19 @@ as the code stood on 2026-09-26.
    and continue" refuses to send that request and asks the viewer to choose
    something or untick Remember me, so only a caller bypassing the page can
    create an empty profile. Any caller may still do this until the cap of 50
-   fills. (`src/matinee/web/app.py:164`, `src/matinee/store.py:183`)
+   fills. (`src/matinee/web/app.py:170`, `src/matinee/store.py:207`)
 3. **A film with no genres fails reachability.** It is not set apart as a
    metadata fault. (`tools/check_trees.py:118`)
 
 **Deliberately absent or open:**
 
-4. **No cap on corrections per profile.** Identical corrections are not
+4. **No cap on corrections or notes per profile.** Identical corrections are not
    deduplicated. One held profile can grow its correction rows without bound,
-   which slows that profile's walks. (`src/matinee/store.py:257`)
+   which slows that profile's walks, and its note rows likewise.
+   (`src/matinee/store.py:281`, `src/matinee/store.py:296`)
 5. **The per-device allowance is per cookie.** A client that discards
    `matinee_device` is issued a new one with a fresh allowance. The
-   installation's hourly ceiling still bounds it. (`src/matinee/web/viewing.py:216`)
+   installation's hourly ceiling still bounds it. (`src/matinee/web/viewing.py:226`)
 6. **"Slow" is timed per request, not per film.** A film lookup is two
    requests. Each may wait up to 3 seconds for its turn, then pause for the
    pacing allowance, then allow 3 seconds for an answer. One check can therefore
@@ -916,7 +928,7 @@ as the code stood on 2026-09-26.
 7. **Names are compared after NFKC normalisation and case folding only.**
    Look-alike letters from other scripts count as different names. The refusal
    message says names are "letters, numbers or spaces". The rule accepts any
-   printable character. (`src/matinee/store.py:103`,
+   printable character. (`src/matinee/store.py:127`,
    `src/matinee/web/common.py:18`)
 8. **The allowances, holds, pacing, item ids and topic list live in memory.** A
    restart forgets every device's spent lookups, the hour's ceiling, any hold,
@@ -1045,20 +1057,22 @@ symbol when one does not match.
 | Handle | Where | Verified |
 |---|---|---|
 | `src/matinee/store.py::MAX_PROFILES` and the other limits | `src/matinee/store.py:32` | 2026-09-26 |
-| `src/matinee/store.py::Store.create` | `src/matinee/store.py:183` | 2026-09-26 |
-| `src/matinee/store.py::Store.holding` | `src/matinee/store.py:214` | 2026-09-26 |
-| `src/matinee/store.py::Store.suggest` | `src/matinee/store.py:227` | 2026-09-26 |
-| `src/matinee/store.py::names_match` / `edits` | `src/matinee/store.py:133` | 2026-09-26 |
-| `src/matinee/store.py::clean_name` / `clean_pin` | `src/matinee/store.py:107` | 2026-09-26 |
-| `src/matinee/store.py::Store.open` / `_check_pin` (lockout) | `src/matinee/store.py:286` | 2026-09-26 |
-| `src/matinee/store.py::Store._issue` (token pruning) | `src/matinee/store.py:175` | 2026-09-26 |
-| `src/matinee/store.py::Store.correct` / `corrections` | `src/matinee/store.py:257` | 2026-09-26 |
+| `src/matinee/store.py::Store.create` | `src/matinee/store.py:207` | 2026-09-26 |
+| `src/matinee/store.py::Store.holding` | `src/matinee/store.py:238` | 2026-09-26 |
+| `src/matinee/store.py::Store.suggest` | `src/matinee/store.py:251` | 2026-09-26 |
+| `src/matinee/store.py::names_match` / `edits` | `src/matinee/store.py:157` | 2026-09-26 |
+| `src/matinee/store.py::clean_name` / `clean_pin` | `src/matinee/store.py:131` | 2026-09-26 |
+| `src/matinee/store.py::Store.open` / `_check_pin` (lockout) | `src/matinee/store.py:321` | 2026-09-26 |
+| `src/matinee/store.py::Store._issue` (token pruning) | `src/matinee/store.py:199` | 2026-09-26 |
+| `src/matinee/store.py::Store.note` / `Note` | `src/matinee/store.py:296` | 2026-09-26 |
+| `src/matinee/store.py::Store.correct` / `corrections` | `src/matinee/store.py:281` | 2026-09-26 |
 | `src/matinee/web/common.py::set_tokens` / `TOKENS_COOKIE` / `MAX_TOKENS` | `src/matinee/web/common.py:81` | 2026-09-26 |
 | `src/matinee/web/common.py::Suggestion` | `src/matinee/web/common.py:38` | 2026-09-26 |
-| `src/matinee/web/viewing.py::held_profile` | `src/matinee/web/viewing.py:168` | 2026-09-26 |
-| `src/matinee/web/viewing.py::resolve` | `src/matinee/web/viewing.py:182` | 2026-09-26 |
-| `src/matinee/web/viewing.py::add_correction_routes` | `src/matinee/web/viewing.py:312` | 2026-09-26 |
-| `src/matinee/web/viewing.py::banded` | `src/matinee/web/viewing.py:307` | 2026-09-26 |
+| `src/matinee/web/viewing.py::held_profile` | `src/matinee/web/viewing.py:178` | 2026-09-26 |
+| `src/matinee/web/viewing.py::resolve` | `src/matinee/web/viewing.py:192` | 2026-09-26 |
+| `src/matinee/web/viewing.py::add_note_routes` / `answer_says` | `src/matinee/web/viewing.py:352` | 2026-09-26 |
+| `src/matinee/web/viewing.py::add_correction_routes` | `src/matinee/web/viewing.py:322` | 2026-09-26 |
+| `src/matinee/web/viewing.py::banded` | `src/matinee/web/viewing.py:317` | 2026-09-26 |
 
 ### Exclusions and the DoesTheDogDie check
 
@@ -1066,7 +1080,7 @@ symbol when one does not match.
 |---|---|---|
 | `data/exclusions.json` | `data/exclusions.json:4` | 2026-09-26 |
 | `src/matinee/engine.py::_exclusion` | `src/matinee/engine.py:346` | 2026-09-26 |
-| `src/matinee/web/viewing.py::check_exclusions` | `src/matinee/web/viewing.py:176` | 2026-09-26 |
+| `src/matinee/web/viewing.py::check_exclusions` | `src/matinee/web/viewing.py:186` | 2026-09-26 |
 | `src/matinee/dtdd.py::Dtdd.get` / `_pace` (`BURST`, `RATE_PER_S`) | `src/matinee/dtdd.py:106` | 2026-09-26 |
 | `src/matinee/dtdd.py::Dtdd._check_holds` / `_refused` / `_note_remaining` (`REQUESTS_PER_HOUR`, `MONTH_RESERVE`, `RESERVE_HOLD_S`, `BACKOFF_S`) | `src/matinee/dtdd.py:123` | 2026-09-26 |
 | `src/matinee/dtdd.py::Dtdd.topics` (`TOPICS_REFRESH_S`, `TOPICS_KEEP_S`) | `src/matinee/dtdd.py:178` | 2026-09-26 |
@@ -1077,10 +1091,10 @@ symbol when one does not match.
 | `src/matinee/pick.py::candidates` | `src/matinee/pick.py:211` | 2026-09-26 |
 | `src/matinee/engine.py::gentlest` | `src/matinee/engine.py:258` | 2026-09-26 |
 | `src/matinee/pick.py::Picker.pick` (`PICK_TRIES`) | `src/matinee/pick.py:234` | 2026-09-26 |
-| `src/matinee/web/viewing.py::device_id` / `DEVICE_COOKIE` | `src/matinee/web/viewing.py:216` | 2026-09-26 |
-| `src/matinee/web/viewing.py::SWAP_LINE` / `UNCHECKED_LINES` / `EXHAUSTED` / `TIRED` | `src/matinee/web/viewing.py:192` | 2026-09-26 |
-| `src/matinee/web/viewing.py::pick_pool` | `src/matinee/web/viewing.py:327` | 2026-09-26 |
-| `src/matinee/web/viewing.py::add_pick_routes` | `src/matinee/web/viewing.py:337` | 2026-09-26 |
+| `src/matinee/web/viewing.py::device_id` / `DEVICE_COOKIE` | `src/matinee/web/viewing.py:226` | 2026-09-26 |
+| `src/matinee/web/viewing.py::SWAP_LINE` / `UNCHECKED_LINES` / `EXHAUSTED` / `TIRED` | `src/matinee/web/viewing.py:202` | 2026-09-26 |
+| `src/matinee/web/viewing.py::pick_pool` | `src/matinee/web/viewing.py:366` | 2026-09-26 |
+| `src/matinee/web/viewing.py::add_pick_routes` | `src/matinee/web/viewing.py:376` | 2026-09-26 |
 
 ### Web surface
 
@@ -1096,7 +1110,7 @@ symbol when one does not match.
 | `src/matinee/web/app.py::add_door_routes` | `src/matinee/web/app.py:149` | 2026-09-26 |
 | `src/matinee/web/app.py::add_error_handlers` | `src/matinee/web/app.py:86` | 2026-09-26 |
 | `src/matinee/web/common.py::Problem` | `src/matinee/web/common.py:102` | 2026-09-26 |
-| `src/matinee/web/viewing.py::add_viewing_routes` | `src/matinee/web/viewing.py:247` | 2026-09-26 |
+| `src/matinee/web/viewing.py::add_viewing_routes` | `src/matinee/web/viewing.py:257` | 2026-09-26 |
 | `src/matinee/web/viewing.py::WalkIn` / `PickIn` (request caps) | `src/matinee/web/viewing.py:48` | 2026-09-26 |
 
 ### The page
@@ -1118,8 +1132,8 @@ symbol when one does not match.
 | `src/matinee/web/static/js/pick.js::showNoFilm` | `src/matinee/web/static/js/pick.js:93` | 2026-09-26 |
 | `src/matinee/web/static/js/pick.js::showPick` | `src/matinee/web/static/js/pick.js:113` | 2026-09-26 |
 | `src/matinee/web/static/js/pick.js::firstPickReveal` | `src/matinee/web/static/js/pick.js:70` | 2026-09-26 |
-| `src/matinee/web/static/js/correct.js::GATED_NOTE` | `src/matinee/web/static/js/correct.js:9` | 2026-09-26 |
-| `src/matinee/web/static/js/correct.js::correctionLink` / `ensureProfile` | `src/matinee/web/static/js/correct.js:47` | 2026-09-26 |
+| `src/matinee/web/static/js/correct.js::GATED_NOTE` | `src/matinee/web/static/js/correct.js:10` | 2026-09-26 |
+| `src/matinee/web/static/js/correct.js::correctionLink` / `ensureProfile` | `src/matinee/web/static/js/correct.js:91` | 2026-09-26 |
 | `src/matinee/web/static/js/credits.js::credits` | `src/matinee/web/static/js/credits.js:23` | 2026-09-26 |
 | `src/matinee/web/static/js/dom.js::h` (text nodes only) | `src/matinee/web/static/js/dom.js:12` | 2026-09-26 |
 | `src/matinee/web/static/js/type.js::typeLine` | `src/matinee/web/static/js/type.js:10` | 2026-09-26 |

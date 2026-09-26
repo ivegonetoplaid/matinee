@@ -43,7 +43,13 @@ from matinee.web.common import (
 )
 from matinee.web.config import Config
 from matinee.web.theatre import LibraryUnavailable, Theatre
-from matinee.web.viewing import add_correction_routes, add_pick_routes, add_viewing_routes, check_exclusions
+from matinee.web.viewing import (
+    add_correction_routes,
+    add_note_routes,
+    add_pick_routes,
+    add_viewing_routes,
+    check_exclusions,
+)
 
 log = logging.getLogger("matinee.web")
 IMAGE_WIDTHS: dict[ImageKind, dict[str, int]] = {
@@ -231,5 +237,6 @@ def create_app(
     add_viewing_routes(app, theatre, store, dtdd)
     add_pick_routes(app, theatre, store, picker or Picker(dtdd, DeviceCap()))
     add_correction_routes(app, theatre, store)
+    add_note_routes(app, theatre, store)
     app.state.config = config
     return app
