@@ -59,3 +59,23 @@ Tag genome data from MovieLens:
 - Jesse Vig, Shilad Sen and John Riedl. 2012. The Tag Genome: Encoding Community
   Knowledge to Support Novel Interaction. ACM Transactions on Interactive
   Intelligent Systems 2, 3.
+
+## Licence
+
+Matinee is free software: you can redistribute it and modify it under the terms
+of the GNU Affero General Public License, version 3 or (at your option) any
+later version. The full text is in `LICENSE`. If you run a modified Matinee for
+other people over a network, the licence asks you to offer them its source.
+
+That covers everything in this repository except the third-party material,
+which stays under its owners' terms:
+
+- `data/reference.json` is derived from the MovieLens tag genome and carries
+  that dataset's conditions, stated in its `licence` field: research and
+  non-commercial use only, and redistribution only under the same conditions.
+- `src/matinee/web/static/credits/tmdb.svg` is TMDB's logo, used under TMDB's
+  terms.
+- Data fetched at run time from TMDB, DoesTheDogDie and your media server is
+  governed by those services' own terms. TMDB's default licence and
+  DoesTheDogDie's free tier are both non-commercial.
+- Dependencies keep their own licences.

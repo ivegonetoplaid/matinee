@@ -2,6 +2,7 @@
   "name": "matinee-page",
   "private": true,
   "description": "Development tools for Matinee's page scripts. The page itself has no build step.",
+  "license": "AGPL-3.0-or-later",
   "type": "module",
   "scripts": {
     "lint": "eslint src/matinee/web/static"
