@@ -14,12 +14,13 @@ import secrets
 from collections.abc import Sequence
 from typing import Any
 
+import numpy as np
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from matinee.dtdd import Dtdd, DtddError
-from matinee.engine import Answer, Correction, Viewer, first_question, walk
+from matinee.engine import Answer, Catalog, Correction, Viewer, base_pool, first_question, walk
 from matinee.pick import Pick, Picker, candidates
 from matinee.store import Profile, Store
 from matinee.trees import Tree
@@ -47,6 +48,13 @@ class WalkIn(BaseModel):
     tree: str = Field(max_length=40)
     answers: list[AnswerIn] = Field(default=[], max_length=12)
     viewer: ViewerIn = ViewerIn()
+
+
+class PickIn(BaseModel):
+    tree: str | None = Field(default=None, max_length=40)
+    answers: list[AnswerIn] = Field(default=[], max_length=12)
+    viewer: ViewerIn = ViewerIn()
+    seen: list[int] = Field(default=[], max_length=200)
 
 
 class FirstIn(BaseModel):
@@ -88,6 +96,7 @@ class FirstOut(BaseModel):
     lines: list[str]
     name: str | None
     options: list[FirstOptionOut]
+    pool: list[int]
 
 
 class TopicOut(BaseModel):
@@ -120,10 +129,6 @@ class ExclusionOut(BaseModel):
     say: str
 
 
-class PickIn(WalkIn):
-    seen: list[int] = Field(default=[], max_length=200)
-
-
 class FilmRef(BaseModel):
     tmdb: int
     title: str
@@ -144,6 +149,14 @@ class PickOut(BaseModel):
     exhausted: str | None
     credit: str
     link: str
+
+
+def everything(cat: Catalog, viewer: Viewer) -> list[int]:
+    """Every film some first-question answer offers this viewer: the pool before anything is chosen."""
+    every = np.zeros(len(cat.ids), dtype=bool)
+    for option in first_question(cat, viewer):
+        every |= base_pool(cat, option.tree, viewer)
+    return [int(t) for t in cat.ids[every]]
 
 
 def held_profile(request: Request, store: Store, profile_id: int) -> Profile:
@@ -248,7 +261,12 @@ def add_viewing_routes(app: FastAPI, theatre: Theatre, store: Store, dtdd: Dtdd)
         cat = theatre.showing().catalog
         viewer, profile = resolve(request, store, body.viewer)
         options = [FirstOptionOut(say=o.say, tree=o.tree) for o in first_question(cat, viewer)]
-        return FirstOut(lines=list(cat.first_lines), name=profile.name if profile else None, options=options)
+        return FirstOut(
+            lines=list(cat.first_lines),
+            name=profile.name if profile else None,
+            options=options,
+            pool=everything(cat, viewer),
+        )
 
     @app.post("/api/walk")
     def walk_tree(body: WalkIn, request: Request) -> StepOut:
@@ -292,9 +310,15 @@ def add_pick_routes(app: FastAPI, theatre: Theatre, store: Store, picker: Picker
         """One film from the pool the answers leave, checked against the viewer's topics before it is shown."""
         cat = theatre.showing().catalog
         viewer, _ = resolve(request, store, body.viewer)
-        step = walk(cat, body.tree, viewer, [Answer(a.question, a.option) for a in body.answers])
+        if body.tree is None:
+            if body.answers:
+                raise HTTPException(status_code=400, detail="refused")
+            left, prefer = everything(cat, viewer), None
+        else:
+            step = walk(cat, body.tree, viewer, [Answer(a.question, a.option) for a in body.answers])
+            left, prefer = list(step.pool), step.prefer
         films = cat.table.films
         ratings = dict(zip(films.index.tolist(), films.rating.fillna(0.0).tolist(), strict=True))
-        pool = candidates(step.pool, body.seen, ratings, step.prefer)
+        pool = candidates(left, body.seen, ratings, prefer)
         device = device_id(request, response) if viewer.topics else ""
         return pick_out(films, picker.pick(pool, viewer.topics, device))

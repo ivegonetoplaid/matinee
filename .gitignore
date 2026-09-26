@@ -37,3 +37,6 @@ ml-latest/
 # Work artifacts belong in the workbench, never here
 codex-review-report*
 *-build-report.md
+
+# Page development tools (npm)
+node_modules/

@@ -30,6 +30,12 @@ repos:
         language: system
         pass_filenames: false
         types: [python]
+      - id: matinee-eslint
+        name: matinee eslint
+        entry: bash -lc 'node_modules/.bin/eslint src/matinee/web/static'
+        language: system
+        pass_filenames: false
+        types: [javascript]
       - id: matinee-mypy
         name: matinee mypy
         entry: bash -lc '.venv/bin/python -m mypy'

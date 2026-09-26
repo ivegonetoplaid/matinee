@@ -189,7 +189,9 @@ def test_first_question_greets_a_profile_by_name(site: Any) -> None:
     client, _, _ = site
     me = client.post("/api/profiles", json={"name": "Ada"}).json()
     first = client.post("/api/first", json={"viewer": {"profile_id": me["id"]}}).json()
-    assert first == {"lines": ["Right this way."], "name": "Ada", "options": [{"say": "Cowboys.", "tree": "west"}]}
+    assert first["lines"] == ["Right this way."] and first["name"] == "Ada"
+    assert first["options"] == [{"say": "Cowboys.", "tree": "west"}]
+    assert first["pool"] == list(range(1, 40)) + [99]  # every film the answers offer this viewer
     assert client.post("/api/first", json={}).json()["name"] is None
 
 
@@ -291,6 +293,7 @@ def test_first_question_hides_a_tree_the_viewer_excluded_empty(tmp_path: Path) -
     assert client.post("/api/first", json={}).json()["options"] == [{"say": "Cowboys.", "tree": "west"}]
     both = {"viewer": {"exclusions": ["heroes", "superheroes"]}}
     assert client.post("/api/first", json=both).json()["options"] == []
+    assert client.post("/api/first", json=both).json()["pool"] == []
 
 
 def test_the_allowance_holds_after_idle_hours_and_slow_answers() -> None:

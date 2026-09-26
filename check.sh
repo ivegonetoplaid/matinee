@@ -25,6 +25,12 @@ if grep -rn "noqa: BLE001" src tools scripts tests; then
     exit 1
 fi
 
+if [[ ! -x "$SCRIPT_DIR/node_modules/.bin/eslint" ]]; then
+    echo "ESLint is not installed; run ./bootstrap.sh" >&2
+    exit 1
+fi
+"$SCRIPT_DIR/node_modules/.bin/eslint" src/matinee/web/static
+
 "$PYTHON_BIN" -m mypy
 if [[ -d tests ]]; then
     "$PYTHON_BIN" -m pytest -q

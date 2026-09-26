@@ -1,0 +1,14 @@
+{
+  "name": "matinee-page",
+  "private": true,
+  "description": "Development tools for Matinee's page scripts. The page itself has no build step.",
+  "type": "module",
+  "scripts": {
+    "lint": "eslint src/matinee/web/static"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.11.0",
+    "globals": "^17.12.0"
+  }
+}

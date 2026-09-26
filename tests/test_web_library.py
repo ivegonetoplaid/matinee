@@ -123,6 +123,7 @@ def test_film_card_reads_the_synopsis_live(world: Any) -> None:
         "year": 1975,
         "runtime_min": 85,
         "synopsis": "A stranger rides into town.",
+        "seerr": "https://seerr.invalid/movie/5",
     }
     assert ("synopsis", "f" * 32) in library.calls
     assert client.get("/api/film/40").status_code == 404  # gone from the library: never offered
@@ -280,3 +281,14 @@ def test_the_jellyfin_reader_refuses_odd_answers_and_ids(monkeypatch: pytest.Mon
             reader.image(item(5), "poster", 320)
     with pytest.raises(LibraryError):
         reader.synopsis("../Users")
+
+
+def test_every_response_carries_the_security_headers(world: Any) -> None:
+    client, _, _, _ = world
+    for path in ("/", "/static/css/matinee.css", "/api/film/5", "/api/film/12345", "/img/logo/5/m"):
+        resp = client.get(path)
+        policy = resp.headers["content-security-policy"]
+        assert "default-src 'self'" in policy and "frame-ancestors 'none'" in policy and "unsafe-inline" not in policy
+        assert resp.headers["x-content-type-options"] == "nosniff"
+        assert resp.headers["referrer-policy"] == "same-origin"
+    assert client.get("/").headers["content-type"].startswith("text/html")

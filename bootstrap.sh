@@ -23,4 +23,5 @@ VENV_PYTHON="$VENV_DIR/bin/python"
 
 "$VENV_PYTHON" -m pip install --upgrade pip
 "$VENV_PYTHON" -m pip install -e "$SCRIPT_DIR[dev]"
+(cd "$SCRIPT_DIR" && npm ci --no-fund --no-audit)
 "$VENV_PYTHON" -m pre_commit install --config "$REPO_ROOT/.pre-commit-config.yaml"

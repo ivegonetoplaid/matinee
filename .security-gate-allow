@@ -1,0 +1,6 @@
+# Files the markup gate does not read, each with the reason it cannot.
+# A file named here is a file for a person to review, never a file that passed.
+
+# The ESLint config names innerHTML and outerHTML only to forbid them in the page
+# scripts; it builds no markup and runs in no browser.
+eslint.config.js

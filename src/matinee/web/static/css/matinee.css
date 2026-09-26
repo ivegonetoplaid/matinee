@@ -1,0 +1,395 @@
+/* Matinee. One dark theme. The numbers below are the design canvas's, set once here. */
+
+@font-face {
+  font-family: "Big Shoulders Display";
+  src: url("/static/fonts/big-shoulders-display.woff2") format("woff2");
+  font-weight: 100 900;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "DM Sans";
+  src: url("/static/fonts/dm-sans.woff2") format("woff2");
+  font-weight: 100 1000;
+  font-display: swap;
+}
+
+:root {
+  --base: #07080d;
+  --text: #efe9dc;
+  --dim: rgba(239, 233, 220, 0.66);
+  --gold: #f2b33d;
+  --gold-hover: #ffd27a;
+  --velvet: #e0566b;
+  --chip: rgba(14, 16, 26, 0.8);
+  --chip-line: rgba(255, 255, 255, 0.16);
+  --strip: #f4efe2;
+  --strip-ink: #121212;
+  --strip-edge: #2a2622;
+  --display: "Big Shoulders Display", "Arial Narrow", sans-serif;
+  --body: "DM Sans", system-ui, sans-serif;
+  --pad: 48px;
+
+  /* the poster wall, desktop */
+  --wall-perspective: 1400px;
+  --plane-w: 4600px;
+  --plane-h: 3900px;
+  --plane-bottom: -300px;
+  --lay: 50deg;
+  --tilt: -12deg;
+  --blur: 6px;
+  --edge-blur: 14px;
+  --frost: 0.7;
+  --shuffle: 1.2s;
+  --settle: 0.7s;
+}
+
+@media (max-width: 600px) {
+  :root {
+    --pad: 20px;
+    --wall-perspective: 1100px;
+    --plane-w: 1100px;
+    --plane-h: 2700px;
+    --plane-bottom: -150px;
+    --lay: 40deg;
+    --tilt: -6deg;
+    --blur: 3px;
+    --edge-blur: 9px;
+    --frost: 0.64;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--base);
+  color: var(--text);
+  font-family: var(--body);
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  overflow: hidden;
+}
+
+a {
+  color: var(--gold);
+}
+
+a:hover {
+  color: var(--gold-hover);
+}
+
+:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+button {
+  font: inherit;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ---------- the poster wall ---------- */
+
+.wall {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: var(--base);
+}
+
+.floor {
+  position: absolute;
+  inset: 0;
+  perspective: var(--wall-perspective);
+  perspective-origin: 50% 40%;
+  filter: blur(var(--blur)) saturate(0.85);
+  transition: filter 0.32s ease;
+}
+
+.floor.edges {
+  filter: blur(calc(var(--blur) + var(--edge-blur))) saturate(0.85);
+  mask-image: linear-gradient(180deg, #000 0%, transparent 46%, transparent 70%, #000 100%);
+}
+
+.wall.moving .floor {
+  filter: blur(calc(var(--blur) + 3px)) saturate(0.85);
+}
+
+.wall.moving .floor.edges {
+  filter: blur(calc(var(--blur) + var(--edge-blur) + 3px)) saturate(0.85);
+}
+
+.plane {
+  position: absolute;
+  left: 50%;
+  bottom: var(--plane-bottom);
+  width: var(--plane-w);
+  height: var(--plane-h);
+  margin-left: calc(var(--plane-w) / -2);
+  transform-origin: 50% 100%;
+  transform: rotateX(var(--lay));
+}
+
+.grid {
+  position: absolute;
+  left: -20%;
+  top: -20%;
+  width: 140%;
+  height: 140%;
+  transform: rotate(calc(var(--tilt) + var(--turn, 0deg))) translate(var(--gx, 0px), var(--gy, 0px));
+  transition: transform var(--shuffle) cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.wall-fade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(7, 8, 13, 0.92) 0%, rgba(7, 8, 13, 0) 34%);
+}
+
+.wall-frost {
+  position: absolute;
+  inset: 0;
+  background: rgba(8, 10, 20, var(--frost));
+  transition: background 0.6s ease;
+}
+
+.wall-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    rgba(5, 6, 12, 0) 18%,
+    rgba(5, 6, 12, 0.62) 34%,
+    rgba(5, 6, 12, 0.62) 66%,
+    rgba(5, 6, 12, 0) 82%
+  );
+  transition: opacity 0.6s ease;
+}
+
+@media (max-width: 600px) {
+  .wall-scrim {
+    background: linear-gradient(180deg, rgba(5, 6, 12, 0.15) 0%, rgba(5, 6, 12, 0.55) 30%, rgba(5, 6, 12, 0.72) 100%);
+  }
+}
+
+/* ---------- the stage the questions sit on ---------- */
+
+.stage {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: var(--pad);
+  overflow-y: auto;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.wordmark {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 30px;
+  letter-spacing: 0.08em;
+  color: var(--gold);
+  text-transform: uppercase;
+}
+
+.count {
+  font-size: 15px;
+  color: var(--dim);
+}
+
+.talk {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 26px;
+  width: min(680px, 100%);
+  align-self: center;
+}
+
+@media (max-width: 600px) {
+  .talk {
+    justify-content: flex-end;
+  }
+}
+
+.line {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: clamp(32px, min(5.2vw, 8.5vh), 76px);
+  line-height: 0.98;
+  min-height: 2em;
+  margin: 0;
+}
+
+.line .ack {
+  display: block;
+  color: var(--gold);
+}
+
+.line .ask {
+  display: block;
+}
+
+.caret {
+  display: inline-block;
+  width: 0.42em;
+  height: 0.8em;
+  margin-left: 0.08em;
+  background: var(--gold);
+  vertical-align: -0.06em;
+}
+
+.line.done .caret {
+  animation: blink 1.1s steps(1) infinite;
+}
+
+@keyframes blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+.answers {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  animation: fade 0.5s ease both;
+}
+
+.answers[hidden] {
+  display: none;
+}
+
+.answer {
+  text-align: left;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 24px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--strip-ink);
+  background-color: var(--strip);
+  background-image: repeating-linear-gradient(180deg, transparent 0, transparent 26px, rgba(0, 0, 0, 0.1) 26px, rgba(0, 0, 0, 0.1) 28px);
+  border: 3px solid var(--strip-edge);
+  border-radius: 4px;
+  padding: 8px 18px;
+  cursor: pointer;
+  min-height: 44px;
+  box-shadow: 0 0 22px rgba(255, 236, 190, 0.35), inset 0 0 18px rgba(255, 255, 255, 0.8);
+}
+
+@media (hover: hover) {
+  .answer:hover {
+    box-shadow: 0 0 30px rgba(255, 236, 190, 0.6), inset 0 0 18px rgba(255, 255, 255, 0.9);
+  }
+}
+
+/* A long list of answers (the first question) wraps as a row of shorter strips. */
+.answers.many {
+  flex-direction: row;
+  flex-wrap: wrap;
+}
+
+.answers.many .answer {
+  font-size: 22px;
+  padding: 7px 16px;
+}
+
+@media (max-width: 600px) {
+  .answer {
+    font-family: var(--body);
+    font-weight: 500;
+    font-size: 17px;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--text);
+    background: var(--chip);
+    border: 1px solid var(--chip-line);
+    border-radius: 999px;
+    padding: 11px 20px;
+    box-shadow: none;
+  }
+
+  .answers.many .answer {
+    font-size: 16px;
+    padding: 10px 16px;
+  }
+}
+
+@media (max-width: 600px) and (hover: hover) {
+  .answer:hover {
+    box-shadow: none;
+    border-color: var(--gold);
+  }
+}
+
+.bottombar {
+  position: sticky;
+  bottom: 0;
+  padding-top: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.pill {
+  font-family: var(--body);
+  font-size: 18px;
+  font-weight: 600;
+  background: var(--chip);
+  border-radius: 999px;
+  padding: 12px 22px;
+  min-height: 44px;
+  cursor: pointer;
+}
+
+.pill.gold {
+  color: var(--gold);
+  border: 1.5px solid var(--gold);
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

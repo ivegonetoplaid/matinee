@@ -299,3 +299,14 @@ def test_the_route_honours_the_rating_half(tmp_path: Path) -> None:
     )
     long = [{"question": "era", "option": 1}, {"question": "gore", "option": 1}]  # "long." asks for the best rated
     assert client.post("/api/pick", json={"tree": "west", "answers": long}).json()["film"]["tmdb"] == 39
+
+
+def test_just_pick_one_before_any_answer_picks_from_the_viewers_whole_pool(tmp_path: Path) -> None:
+    dtdd = ScriptedDtdd({})
+    client = site_with(tmp_path, Picker(dtdd, DeviceCap(), random.Random(0)), dtdd)
+    picked = {
+        client.post("/api/pick", json={"viewer": {"exclusions": ["heroes"]}}).json()["film"]["tmdb"] for _ in range(30)
+    }
+    assert picked <= {1, 2} and picked  # film 3 carries the "heroes" exclusion
+    refused = client.post("/api/pick", json={"answers": [{"question": "era", "option": 0}]})
+    assert refused.status_code == 400

@@ -10,11 +10,13 @@ from __future__ import annotations
 
 import logging
 import time
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
+from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request, Response
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
@@ -59,6 +61,7 @@ class FilmCard(BaseModel):
     year: int | None
     runtime_min: int | None
     synopsis: str | None
+    seerr: str
 
 
 @dataclass(frozen=True)
@@ -111,7 +114,7 @@ def add_error_handlers(app: FastAPI, clock: Callable[[], float]) -> None:
         return JSONResponse(status_code=status, content=body)
 
 
-def add_film_routes(app: FastAPI, theatre: Theatre) -> None:
+def add_film_routes(app: FastAPI, theatre: Theatre, seerr: str) -> None:
     @app.get("/img/{kind}/{tmdb}/{size}")
     def image(kind: str, tmdb: int, size: str) -> Response:
         image_kind: ImageKind = "backdrop" if kind == "backdrop" else "poster"
@@ -133,7 +136,14 @@ def add_film_routes(app: FastAPI, theatre: Theatre) -> None:
         except LibraryError as exc:
             log.warning("synopsis for tmdb %s: %s", tmdb, exc)
             raise LibraryUnavailable("the library cannot be reached") from exc
-        return FilmCard(tmdb=tmdb, title=film.title, year=film.year, runtime_min=film.runtime_min, synopsis=synopsis)
+        return FilmCard(
+            tmdb=tmdb,
+            title=film.title,
+            year=film.year,
+            runtime_min=film.runtime_min,
+            synopsis=synopsis,
+            seerr=f"{seerr}/movie/{tmdb}",
+        )
 
 
 def add_door_routes(app: FastAPI, theatre: Theatre, store: Store, clock: Callable[[], float]) -> None:
@@ -170,6 +180,35 @@ def add_door_routes(app: FastAPI, theatre: Theatre, store: Store, clock: Callabl
         return seat(profile)
 
 
+STATIC = Path(__file__).resolve().parent / "static"
+SECURITY_HEADERS = {
+    "Content-Security-Policy": (
+        "default-src 'self'; img-src 'self'; style-src 'self'; font-src 'self'; script-src 'self'; "
+        "connect-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; "
+        "frame-ancestors 'none'; form-action 'self'"
+    ),
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "same-origin",
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+}
+
+
+def add_page(app: FastAPI) -> None:
+    """The page, its scripts, styles, fonts and images; every response carries the security headers."""
+    app.mount("/static", StaticFiles(directory=STATIC), name="static")
+
+    @app.get("/", include_in_schema=False)
+    def index() -> FileResponse:
+        return FileResponse(STATIC / "index.html", headers={"Cache-Control": "no-cache"})
+
+    @app.middleware("http")
+    async def headers(request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
+        response = await call_next(request)
+        for name, value in SECURITY_HEADERS.items():
+            response.headers.setdefault(name, value)
+        return response
+
+
 def create_app(
     config: Config,
     theatre: Theatre,
@@ -180,7 +219,8 @@ def create_app(
 ) -> FastAPI:
     app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
     add_error_handlers(app, clock)
-    add_film_routes(app, theatre)
+    add_film_routes(app, theatre, config.seerr_url)
+    add_page(app)
     add_door_routes(app, theatre, store, clock)
     add_viewing_routes(app, theatre, store, dtdd)
     add_pick_routes(app, theatre, store, picker or Picker(dtdd, DeviceCap()))
