@@ -52,23 +52,26 @@ function frame({ count, justPick = true }) {
   return { line, answers };
 }
 
-async function ask({ ack, question, options, count, many = false }) {
-  const { line, answers } = frame({ count });
-  const buttons = options.map((o) =>
-    h(
-      "button",
-      {
-        class: "answer",
-        type: "button",
-        onclick: () => {
-          lockStage();
-          o.go();
-        },
-      },
-      sentenceCase(o.say),
-    ),
+// A picture question (the gore pails) shows each answer as its image, with the answer's words beneath it.
+function answerButton(o, picture) {
+  const onclick = () => {
+    lockStage();
+    o.go();
+  };
+  if (!picture) return h("button", { class: "answer", type: "button", onclick }, sentenceCase(o.say));
+  return h(
+    "button",
+    { class: "pail", type: "button", onclick },
+    h("img", { src: o.image, alt: "", width: 512, height: 512, decoding: "async" }),
+    h("span", { class: "pail-say" }, sentenceCase(o.say)),
   );
+}
+
+async function ask({ ack, question, options, count, many = false, picture = false }) {
+  const { line, answers } = frame({ count });
+  const buttons = options.map((o) => answerButton(o, picture));
   answers.classList.toggle("many", many);
+  answers.classList.toggle("pails", picture);
   answers.append(...buttons);
   await typeLine(line, ack, question);
   answers.hidden = false;
@@ -113,15 +116,17 @@ async function step() {
   wall.show(visit.pool);
   const q = res.data.question;
   if (!q) return pickNow(res.data.line);
+  const picture = q.presentation === "pails" && q.options.every((o) => o.image);
   const options = q.options.map((o) => ({
     say: o.say,
+    image: o.image,
     go: () => {
       if (!visit.answers.length) visit.firstSay = o.say;
       visit.answers.push({ question: q.id, option: o.index });
       step();
     },
   }));
-  await ask({ ack: res.data.line, question: q.ask, options, count: countText(visit.pool.length, false) });
+  await ask({ ack: res.data.line, question: q.ask, options, count: countText(visit.pool.length, false), picture });
 }
 
 async function pickNow(opening = "") {

@@ -168,7 +168,8 @@
                 "spotless"
               ]
             }
-          }
+          },
+          "image": "/static/pails/spotless.webp"
         },
         {
           "say": "some. I'll look away when I need to.",
@@ -182,7 +183,8 @@
                 "some"
               ]
             }
-          }
+          },
+          "image": "/static/pails/some.webp"
         },
         {
           "say": "properly messy. I'm fine.",
@@ -196,7 +198,8 @@
                 "messy"
               ]
             }
-          }
+          },
+          "image": "/static/pails/messy.webp"
         },
         {
           "say": "RIP AND TEAR.",
@@ -209,7 +212,8 @@
                 "rip"
               ]
             }
-          }
+          },
+          "image": "/static/pails/rip.webp"
         }
       ],
       "note": "Four pails on the genome gore scale plus TMDB gore keywords (decision 59), cut at the reference's 40th, 70th and 90th percentiles. A film with no genome entry appears only under 'some' and 'properly messy' unless a house pin places it. A viewer excluding any listed blood or gore topic is never asked and is treated as 'none'.",

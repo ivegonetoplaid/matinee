@@ -347,6 +347,82 @@ button {
   }
 }
 
+/* The gore pails: four pictures standing in a row, each answer's words beneath its pail. */
+.answers.pails {
+  flex-direction: row;
+  gap: 28px;
+  width: min(1180px, calc(100vw - 2 * var(--pad)));
+  align-self: center;
+}
+
+.talk:has(.answers.pails) {
+  width: min(1180px, 100%);
+}
+
+.pail {
+  flex: 1 1 0;
+  min-width: 0;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  transition: transform 0.4s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+.pail img {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
+  object-fit: contain;
+}
+
+.pail-say {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 19px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--strip-ink);
+  background-color: var(--strip);
+  border: 3px solid var(--strip-edge);
+  border-radius: 4px;
+  padding: 6px 12px;
+  text-align: center;
+  box-shadow: 0 0 18px rgba(255, 236, 190, 0.28), inset 0 0 14px rgba(255, 255, 255, 0.8);
+}
+
+@media (hover: hover) {
+  .pail:hover {
+    transform: translateY(-6px);
+  }
+}
+
+@media (max-width: 600px) {
+  .answers.pails {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px 14px;
+    width: 100%;
+  }
+
+  .pail-say {
+    font-family: var(--body);
+    font-weight: 600;
+    font-size: 14px;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--text);
+    background: var(--chip);
+    border: 1px solid var(--chip-line);
+    border-radius: 999px;
+    box-shadow: none;
+  }
+}
+
 .bottombar {
   position: sticky;
   bottom: 0;
