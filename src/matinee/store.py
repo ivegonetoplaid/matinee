@@ -222,6 +222,18 @@ class Store:
 
         return sorted(found, key=rank)[:SUGGEST_AT_MOST]
 
+    def set_exclusions(self, profile_id: int, topics: Iterable[int], exclusions: Iterable[str]) -> Profile:
+        """Replace a profile's saved exclusions."""
+        with closing(self._connect()) as db, db:
+            db.execute(
+                "UPDATE profiles SET topics = ?, exclusions = ? WHERE id = ?",
+                (json.dumps(sorted(set(topics))), json.dumps(sorted(set(exclusions))), profile_id),
+            )
+            row = db.execute("SELECT * FROM profiles WHERE id = ?", (profile_id,)).fetchone()
+        if row is None:
+            raise StoreError("no_profile", "no such profile")
+        return self._profile(row)
+
     def open(self, profile_id: int, pin: str | None, now: float) -> tuple[Profile, str]:
         """A device token for a profile found by name: needs its PIN when it has one."""
         with closing(self._connect()) as db, db:

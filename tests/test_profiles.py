@@ -10,10 +10,12 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
+from matinee.dtdd import Dtdd
 from matinee.engine import load_catalog
 from matinee.store import LOCKOUT_S, MAX_PROFILES, Locked, Store, StoreError, edits, names_match
 from matinee.table import FilmTable
-from matinee.web.app import TOKENS_COOKIE, create_app
+from matinee.web.app import create_app
+from matinee.web.common import TOKENS_COOKIE
 from matinee.web.config import Config
 from matinee.web.theatre import Theatre
 from test_engine import reference, write_data
@@ -176,7 +178,9 @@ def door(tmp_path: Path) -> tuple[TestClient, Store]:
     theatre = Theatre(FakeLibrary(), tmp_path / "films.sqlite", catalog_of=catalog_of)
     store = Store(tmp_path / "matinee.sqlite")
     config = Config(SECRET_URL, SECRET_KEY, tmp_path, "https://seerr.invalid", "d" * 16)
-    return TestClient(create_app(config, theatre, store, clock=lambda: 0.0), base_url="https://testserver"), store
+    return TestClient(
+        create_app(config, theatre, store, Dtdd("k"), clock=lambda: 0.0), base_url="https://testserver"
+    ), store
 
 
 def test_a_new_device_holds_nothing(door: Any) -> None:

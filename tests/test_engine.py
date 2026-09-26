@@ -163,7 +163,7 @@ def write_data(root: Path, tree: dict[str, Any] | None = None) -> Path:
         json.dumps(
             {
                 "exclusions": {
-                    "superheroes": {"any": [{"keywords_any": ["superhero"]}]},
+                    "superheroes": {"say": "Superheroes", "any": [{"keywords_any": ["superhero"]}]},
                     "heroes": {"any": [{"tags": ["hero"], "min": 0.6}]},
                 }
             }

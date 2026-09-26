@@ -13,6 +13,7 @@ import numpy as np
 import pytest
 from fastapi.testclient import TestClient
 
+from matinee.dtdd import Dtdd
 from matinee.engine import load_catalog
 from matinee.library import Image, LibraryError, LibraryFilm
 from matinee.library.jellyfin import JellyfinReader
@@ -90,7 +91,7 @@ def world(tmp_path: Path) -> tuple[TestClient, FakeLibrary, Clock, Theatre]:
 
     theatre = Theatre(library, tmp_path / "films.sqlite", clock=clock, catalog_of=catalog_of)
     config = Config(SECRET_URL, SECRET_KEY, tmp_path, "https://seerr.invalid", "d" * 16)
-    return TestClient(create_app(config, theatre, Store(tmp_path / "store.sqlite"))), library, clock, theatre
+    return TestClient(create_app(config, theatre, Store(tmp_path / "store.sqlite"), Dtdd("k"))), library, clock, theatre
 
 
 def test_image_is_served_by_tmdb_id_at_a_fixed_size(world: Any) -> None:

@@ -108,6 +108,7 @@ class Catalog:
     trees: Mapping[str, Tree]
     house: House
     exclusions: Mapping[str, Mask]
+    exclusion_names: Mapping[str, str]
     first_lines: tuple[str, ...]
     first_options: tuple[FirstOption, ...]
     pools: dict[str, Mask] = field(default_factory=dict)
@@ -308,6 +309,7 @@ def load_catalog(table: FilmTable, data: Path = DATA, reference: Reference | Non
         trees=load_trees((data / "trees", data / "modes")),
         house=load_house(data / "house_overrides.json"),
         exclusions={name: _exclusion(table, spec) for name, spec in excl["exclusions"].items()},
+        exclusion_names={name: str(spec.get("say", name)) for name, spec in excl["exclusions"].items()},
         first_lines=tuple(first["lines"]),
         first_options=tuple(FirstOption(o["say"], o["tree"]) for o in first["options"]),
     )

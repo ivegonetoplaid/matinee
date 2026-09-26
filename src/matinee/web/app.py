@@ -12,18 +12,34 @@ import logging
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Literal
 
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from matinee.dtdd import Dtdd
+from matinee.engine import EngineError
 from matinee.library import ImageKind, LibraryError
-from matinee.store import Locked, Profile, Store, StoreError
+from matinee.store import Locked, Store, StoreError
 from matinee.table import TableError
+from matinee.web.common import (
+    PROFILE_LINES,
+    Door,
+    NameQuery,
+    NewProfile,
+    PinEntry,
+    Seat,
+    Suggestion,
+    device_tokens,
+    problem,
+    seat,
+    set_tokens,
+    with_token,
+)
 from matinee.web.config import Config
 from matinee.web.theatre import LibraryUnavailable, Theatre
+from matinee.web.viewing import add_viewing_routes, check_exclusions
 
 log = logging.getLogger("matinee.web")
 IMAGE_WIDTHS: dict[ImageKind, dict[str, int]] = {
@@ -41,106 +57,6 @@ class FilmCard(BaseModel):
     year: int | None
     runtime_min: int | None
     synopsis: str | None
-
-
-ErrorCode = Literal["library_unreachable", "not_ready", "not_found", "refused", "profile"]
-TOKENS_COOKIE = "matinee_tokens"
-MAX_TOKENS = 8
-COOKIE_AGE_S = 400 * 24 * 3600
-PROFILE_LINES = {
-    "bad_name": "Names are 1 to 40 letters, numbers or spaces.",
-    "bad_pin": "A PIN is four digits.",
-    "name_taken": "Someone already goes by that name here. Try another?",
-    "full": "The theatre's full up on regulars. Ask whoever runs this place to make room.",
-    "no_profile": "I can't find that one any more.",
-    "wrong_pin": "That PIN isn't right.",
-    "locked": "Too many wrong PINs. That profile is locked for {minutes} minutes.",
-}
-
-
-class Seat(BaseModel):
-    """A profile as the page sees it: never its PIN or its token."""
-
-    id: int
-    name: str
-    has_pin: bool
-    topics: list[int]
-    exclusions: list[str]
-
-
-class Suggestion(BaseModel):
-    """A name suggestion: never the profile's exclusions, which only its device or its PIN may see."""
-
-    id: int
-    name: str
-    has_pin: bool
-
-
-class Door(BaseModel):
-    now_showing: int
-    profiles: list[Seat]
-
-
-class NameQuery(BaseModel):
-    typed: str = Field(max_length=80)
-
-
-class NewProfile(BaseModel):
-    name: str = Field(max_length=80)
-    pin: str | None = Field(default=None, max_length=8)
-    topics: list[int] = Field(default=[], max_length=400)
-    exclusions: list[str] = Field(default=[], max_length=20)
-
-
-class PinEntry(BaseModel):
-    pin: str | None = Field(default=None, max_length=8)
-
-
-def seat(profile: Profile) -> Seat:
-    return Seat(
-        id=profile.id,
-        name=profile.name,
-        has_pin=profile.has_pin,
-        topics=sorted(profile.topics),
-        exclusions=sorted(profile.exclusions),
-    )
-
-
-def device_tokens(request: Request) -> list[str]:
-    raw = request.cookies.get(TOKENS_COOKIE, "")
-    return [t for t in raw.split(".") if t][:MAX_TOKENS]
-
-
-def set_tokens(response: Response, tokens: list[str]) -> None:
-    """The device's token list: random tokens only, never a name or a PIN; HttpOnly, Secure, SameSite=Lax."""
-    if not tokens:
-        response.delete_cookie(TOKENS_COOKIE, path="/", secure=True, httponly=True, samesite="lax")
-        return
-    response.set_cookie(
-        TOKENS_COOKIE,
-        ".".join(tokens[-MAX_TOKENS:]),
-        max_age=COOKIE_AGE_S,
-        path="/",
-        secure=True,
-        httponly=True,
-        samesite="lax",
-    )
-
-
-def with_token(request: Request, response: Response, token: str) -> None:
-    kept = [t for t in device_tokens(request) if t != token]
-    set_tokens(response, [*kept, token])
-
-
-class Problem(BaseModel):
-    """The one shape every error response takes."""
-
-    error: ErrorCode
-    message: str
-
-
-def problem(status: int, error: ErrorCode, message: str) -> JSONResponse:
-    return JSONResponse(status_code=status, content=Problem(error=error, message=message).model_dump())
 
 
 @dataclass(frozen=True)
@@ -182,6 +98,11 @@ def add_error_handlers(app: FastAPI, clock: Callable[[], float]) -> None:
     def not_ready(_request: Request, exc: TableError) -> JSONResponse:
         log.error("refusing to serve: %s", exc)
         return problem(503, "not_ready", NOT_READY)
+
+    @app.exception_handler(EngineError)
+    def misfit(_request: Request, exc: EngineError) -> JSONResponse:
+        log.info("refused a walk: %s", exc)
+        return problem(400, "refused", "Those answers don't fit that question any more. Let's start over.")
 
     @app.exception_handler(StarletteHTTPException)
     def http_error(_request: Request, exc: StarletteHTTPException) -> JSONResponse:
@@ -239,6 +160,7 @@ def add_door_routes(app: FastAPI, theatre: Theatre, store: Store, clock: Callabl
 
     @app.post("/api/profiles")
     def create_profile(body: NewProfile, request: Request, response: Response) -> Seat:
+        check_exclusions(theatre, body.exclusions)
         profile, token = store.create(body.name, body.pin, body.topics, body.exclusions)
         with_token(request, response, token)
         return seat(profile)
@@ -255,10 +177,13 @@ def add_door_routes(app: FastAPI, theatre: Theatre, store: Store, clock: Callabl
         return seat(profile)
 
 
-def create_app(config: Config, theatre: Theatre, store: Store, clock: Callable[[], float] = time.time) -> FastAPI:
+def create_app(
+    config: Config, theatre: Theatre, store: Store, dtdd: Dtdd, clock: Callable[[], float] = time.time
+) -> FastAPI:
     app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
     add_error_handlers(app, clock)
     add_film_routes(app, theatre)
     add_door_routes(app, theatre, store, clock)
+    add_viewing_routes(app, theatre, store, dtdd)
     app.state.config = config
     return app

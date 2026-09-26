@@ -1,0 +1,277 @@
+"""Exclusions set and applied: the paced DoesTheDogDie client, the topic list, and walks for a viewer."""
+
+from __future__ import annotations
+
+import http.client
+import io
+import json
+import sqlite3
+import threading
+import urllib.error
+import urllib.request
+from pathlib import Path
+from typing import Any
+
+import pytest
+from fastapi.testclient import TestClient
+
+from matinee.dtdd import MIN_INTERVAL_S, USER_AGENT, Dtdd, DtddError, Topic
+from matinee.engine import load_catalog
+from matinee.store import Store
+from matinee.table import FilmTable
+from matinee.web.app import create_app
+from matinee.web.config import Config
+from matinee.web.theatre import Theatre
+from test_engine import reference, write_data
+from test_web_library import SECRET_KEY, SECRET_URL, FakeLibrary, write_film_table
+
+TOPICS = [
+    {"id": 188, "name": "there's blood/gore", "minimalName": "blood/gore", "keywords": "blood", "topicCategoryId": 4},
+    {"id": 153, "name": "a dog dies", "minimalName": "dog death", "keywords": "dog", "topicCategoryId": 1},
+    {"name": "no id"},
+]
+
+
+class Answering:
+    """An opener that records requests and answers with the next queued body or error."""
+
+    def __init__(self, answers: list[Any]) -> None:
+        self.answers = answers
+        self.requests: list[urllib.request.Request] = []
+
+    def __call__(self, req: urllib.request.Request, timeout: float) -> Any:
+        self.requests.append(req)
+        answer = self.answers.pop(0)
+        if isinstance(answer, Exception):
+            raise answer
+        return io.BytesIO(json.dumps(answer).encode())
+
+
+class Clock:
+    def __init__(self) -> None:
+        self.now = 100.0
+        self.slept: list[float] = []
+
+    def __call__(self) -> float:
+        return self.now
+
+    def sleep(self, seconds: float) -> None:
+        self.slept.append(seconds)
+        self.now += seconds
+
+
+def test_requests_are_paced_named_and_keyed() -> None:
+    opener, clock = Answering([TOPICS, TOPICS]), Clock()
+    client = Dtdd("secret-key", opener=opener, clock=clock, sleep=clock.sleep)
+    first = client.topics()
+    clock.now += 0.5
+    client.topics()
+    assert clock.slept == [pytest.approx(MIN_INTERVAL_S - 0.5)]
+    assert [t.id for t in first] == [188, 153]
+    assert first[0] == Topic(188, "there's blood/gore", "blood/gore", "blood", 4)
+    req = opener.requests[0]
+    assert req.get_method() == "GET" and req.full_url == "https://www.doesthedogdie.com/api/v3/topics"
+    assert req.get_header("User-agent") == USER_AGENT and req.get_header("X-api-key") == "secret-key"
+
+
+@pytest.mark.parametrize(
+    "answer",
+    [
+        urllib.error.HTTPError("u", 429, "slow down", {}, None),  # type: ignore[arg-type]
+        urllib.error.URLError("down"),
+        TimeoutError(),
+        {"not": "a list"},
+    ],
+)
+def test_failures_are_one_error(answer: Any) -> None:
+    client = Dtdd("k", opener=Answering([answer]))
+    with pytest.raises(DtddError):
+        client.topics()
+
+
+class FakeDtdd(Dtdd):
+    def __init__(self, down: bool = False) -> None:
+        super().__init__("k")
+        self.down = down
+
+    def topics(self) -> list[Topic]:
+        if self.down:
+            raise DtddError("DoesTheDogDie did not answer")
+        return [Topic(188, "there's blood/gore", "blood/gore", "blood", 4), Topic(153, "a dog dies", "dog", "dog", 1)]
+
+
+@pytest.fixture
+def site(tmp_path: Path) -> tuple[TestClient, Store, FakeDtdd]:
+    data = write_data(tmp_path / "data")
+    write_film_table(tmp_path / "films.sqlite")
+
+    def catalog_of(table: FilmTable) -> Any:
+        return load_catalog(table, data, reference())
+
+    theatre = Theatre(FakeLibrary(), tmp_path / "films.sqlite", catalog_of=catalog_of)
+    store, dtdd = Store(tmp_path / "matinee.sqlite"), FakeDtdd()
+    config = Config(SECRET_URL, SECRET_KEY, tmp_path, "https://seerr.invalid", "d" * 16)
+    app = create_app(config, theatre, store, dtdd, clock=lambda: 0.0)
+    return TestClient(app, base_url="https://testserver"), store, dtdd
+
+
+def test_topics_carry_the_credit_and_fail_in_words(site: Any) -> None:
+    client, _, dtdd = site
+    body = client.get("/api/topics").json()
+    assert body["credit"] == "Powered by DoesTheDogDie.com" and body["link"] == "https://www.doesthedogdie.com"
+    assert [t["id"] for t in body["topics"]] == [188, 153]
+    dtdd.down = True
+    resp = client.get("/api/topics")
+    assert resp.status_code == 503
+    assert resp.json() == {"error": "topics_unavailable", "message": "I can't load the list of topics right now."}
+
+
+def test_matinee_exclusions_are_listed(site: Any) -> None:
+    client, _, _ = site
+    assert client.get("/api/exclusions").json() == [
+        {"id": "superheroes", "say": "Superheroes"},
+        {"id": "heroes", "say": "heroes"},
+    ]
+
+
+def test_a_saved_exclusion_applies_to_every_walk(site: Any) -> None:
+    client, _, _ = site
+    me = client.post("/api/profiles", json={"name": "Nell"}).json()
+    assert 7 in client.post("/api/walk", json={"tree": "west", "viewer": {"profile_id": me["id"]}}).json()["pool"]
+    saved = client.put(f"/api/profiles/{me['id']}/exclusions", json={"topics": [188], "exclusions": ["superheroes"]})
+    assert saved.status_code == 200 and saved.json()["exclusions"] == ["superheroes"]
+    step = client.post("/api/walk", json={"tree": "west", "viewer": {"profile_id": me["id"]}}).json()
+    assert 7 not in step["pool"]
+    after = client.post(
+        "/api/walk",
+        json={"tree": "west", "answers": [{"question": "era", "option": 1}], "viewer": {"profile_id": me["id"]}},
+    ).json()
+    assert after["question"]["id"] == "payoff"  # topic 188 skips the gore question
+
+
+def test_a_visitor_holds_exclusions_for_the_visit_only(site: Any, tmp_path: Path) -> None:
+    client, store, _ = site
+    visit = {"tree": "west", "viewer": {"exclusions": ["heroes"], "topics": []}}
+    assert 3 not in client.post("/api/walk", json=visit).json()["pool"]
+    assert 3 in client.post("/api/walk", json={"tree": "west"}).json()["pool"]
+    squeamish = {"tree": "west", "answers": [{"question": "era", "option": 1}], "viewer": {"topics": [188]}}
+    assert client.post("/api/walk", json=squeamish).json()["question"]["id"] == "payoff"
+    assert client.cookies.get("matinee_tokens") is None
+    assert store.suggest("anyone") == [] and store.holding([]) == {}
+    with sqlite3.connect(tmp_path / "matinee.sqlite") as db:
+        assert db.execute("SELECT COUNT(*) FROM profiles").fetchone() == (0,)  # nothing was saved
+
+
+def test_only_the_device_holding_a_profile_may_use_or_change_it(site: Any) -> None:
+    client, store, _ = site
+    other, _ = store.create("Owner", None, [153], ["superheroes"])
+    walk = client.post("/api/walk", json={"tree": "west", "viewer": {"profile_id": other.id}})
+    assert walk.status_code == 403 and "superheroes" not in walk.text
+    change = client.put(f"/api/profiles/{other.id}/exclusions", json={"topics": [], "exclusions": []})
+    assert change.status_code == 403
+    assert store.holding([]) == {} and store.suggest("owner")[0].exclusions == frozenset({"superheroes"})
+
+
+def test_unknown_exclusions_and_misfit_answers_are_refused(site: Any) -> None:
+    client, _, _ = site
+    assert client.post("/api/walk", json={"tree": "west", "viewer": {"exclusions": ["cats"]}}).status_code == 400
+    misfit = client.post("/api/walk", json={"tree": "west", "answers": [{"question": "gore", "option": 0}]})
+    assert misfit.status_code == 400 and misfit.json()["error"] == "refused"
+    assert client.post("/api/walk", json={"tree": "nope"}).status_code == 400
+
+
+def test_first_question_greets_a_profile_by_name(site: Any) -> None:
+    client, _, _ = site
+    me = client.post("/api/profiles", json={"name": "Ada"}).json()
+    first = client.post("/api/first", json={"viewer": {"profile_id": me["id"]}}).json()
+    assert first == {"lines": ["Right this way."], "name": "Ada", "options": [{"say": "Cowboys.", "tree": "west"}]}
+    assert client.post("/api/first", json={}).json()["name"] is None
+
+
+def test_the_pace_stays_under_thirty_a_minute() -> None:
+    assert 60 / MIN_INTERVAL_S < 30
+
+
+def test_the_real_opener_carries_the_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
+    seen: list[float] = []
+
+    def fake(req: urllib.request.Request, timeout: float) -> Any:
+        seen.append(timeout)
+        return io.BytesIO(b"[]")
+
+    monkeypatch.setattr("matinee.dtdd.urllib.request.urlopen", fake)
+    Dtdd("k").get("/topics", 3.0, 1.0)
+    assert seen == [3.0]
+
+
+def test_a_caller_waits_its_turn_only_so_long() -> None:
+    client = Dtdd("k", opener=Answering([TOPICS]))
+    client._lock.acquire()
+    try:
+        with pytest.raises(DtddError, match="busy"):
+            client.get("/topics", 3.0, 0.05)
+    finally:
+        client._lock.release()
+    assert client.get("/topics", 3.0, 0.05)  # the lock is one shared lock, and free again
+
+
+def test_calls_never_overlap() -> None:
+    active, peak = [0], [0]
+    guard = threading.Lock()
+
+    def slow(req: urllib.request.Request, timeout: float) -> Any:
+        with guard:
+            active[0] += 1
+            peak[0] = max(peak[0], active[0])
+        threading.Event().wait(0.02)
+        with guard:
+            active[0] -= 1
+        return io.BytesIO(b"[]")
+
+    client = Dtdd("k", opener=slow, sleep=lambda _s: None)
+    threads = [threading.Thread(target=client.get, args=("/topics", 3.0, 5.0)) for _ in range(4)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+    assert peak[0] == 1
+
+
+@pytest.mark.parametrize("answer", [http.client.RemoteDisconnected("gone"), ConnectionResetError(), ValueError()])
+def test_dropped_connections_are_one_error(answer: Exception) -> None:
+    with pytest.raises(DtddError):
+        Dtdd("k", opener=Answering([answer])).topics()
+
+
+def test_saving_one_profile_leaves_the_others(site: Any) -> None:
+    client, store, _ = site
+    other, _ = store.create("Other", None, [153], ["superheroes"])
+    me = client.post("/api/profiles", json={"name": "Me"}).json()
+    client.put(f"/api/profiles/{me['id']}/exclusions", json={"topics": [188], "exclusions": []})
+    assert store.suggest("other")[0].topics == frozenset({153})
+    assert store.suggest("other")[0].exclusions == frozenset({"superheroes"})
+
+
+def test_unknown_exclusion_names_are_never_saved(site: Any) -> None:
+    client, _, _ = site
+    assert client.post("/api/profiles", json={"name": "Typo", "exclusions": ["superhero"]}).status_code == 400
+    me = client.post("/api/profiles", json={"name": "Fine"}).json()
+    put = client.put(f"/api/profiles/{me['id']}/exclusions", json={"topics": [], "exclusions": ["cats"]})
+    assert put.status_code == 400
+
+
+def test_first_question_hides_a_tree_the_viewer_excluded_empty(tmp_path: Path) -> None:
+    data = write_data(tmp_path / "data")
+    write_film_table(tmp_path / "films.sqlite")
+
+    def catalog_of(table: FilmTable) -> Any:
+        return load_catalog(table, data, reference())
+
+    theatre = Theatre(FakeLibrary(held=[3, 7]), tmp_path / "films.sqlite", catalog_of=catalog_of)
+    config = Config(SECRET_URL, SECRET_KEY, tmp_path, "https://seerr.invalid", "d" * 16)
+    client = TestClient(
+        create_app(config, theatre, Store(tmp_path / "s.sqlite"), FakeDtdd()), base_url="https://testserver"
+    )
+    assert client.post("/api/first", json={}).json()["options"] == [{"say": "Cowboys.", "tree": "west"}]
+    both = {"viewer": {"exclusions": ["heroes", "superheroes"]}}
+    assert client.post("/api/first", json=both).json()["options"] == []
