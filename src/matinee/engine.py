@@ -143,6 +143,10 @@ def _any_genre(table: FilmTable, names: frozenset[str]) -> Mask:
 
 
 def _flavour(table: FilmTable, tree: Tree, name: str) -> Mask:
+    """Films matching any of the flavour's signals and reaching each of its `score_at_least` floors.
+
+    A film with no score passes a floor, as unknown values do everywhere.
+    """
     spec = tree.flavours.get(name)
     if spec is None:
         raise TreeError(f"tree '{tree.id}' has no flavour '{name}'")
@@ -150,7 +154,11 @@ def _flavour(table: FilmTable, tree: Tree, name: str) -> Mask:
     hit = np.array(_keywords(table).map(lambda k: bool(words & k)), dtype=bool)
     for tag in spec.get("genome_any", []):
         hit |= _bool(table.tag(tag) >= tree.genome_threshold)
-    return hit | _any_genre(table, frozenset(spec.get("genres_any", [])))
+    hit |= _any_genre(table, frozenset(spec.get("genres_any", [])))
+    for score, floor in spec.get("score_at_least", {}).items():
+        values = _score(table, tree, score)
+        hit &= _passes(values, values >= floor)
+    return hit
 
 
 OPS = {">=": np.greater_equal, ">": np.greater, "<": np.less, "<=": np.less_equal}
@@ -289,6 +297,8 @@ def _scored_mask(cat: Catalog, tree: Tree, f: Filter) -> Mask:
     mask = np.ones(len(table.films), dtype=bool)
     if f.flavour is not None:
         mask &= _flavour(table, tree, f.flavour)
+    if f.flavour_none is not None:
+        mask &= ~_flavour(table, tree, f.flavour_none)
     if f.register is not None:
         mask &= _register(table, tree, f.register)
     if f.payoff is not None:

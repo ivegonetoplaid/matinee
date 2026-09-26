@@ -6,9 +6,9 @@
       "title": "Tales from the Crypt: Demon Knight",
       "tmdb": "9059",
       "expect": [
-        "supernatural",
-        "funny"
-      ]
+        "supernatural"
+      ],
+      "note": "tagged Comedy but plays as horror (laugh 0.15), so it stays under supernatural and leaves \"make me laugh\" (decision 66, 2026-09-26)"
     },
     {
       "title": "Constantine",
@@ -117,9 +117,9 @@
       "title": "The Cabin in the Woods",
       "tmdb": "22970",
       "expect": [
-        "creature",
         "funny"
-      ]
+      ],
+      "note": "tagged Comedy, so offered only under \"make me laugh while I'm scared\" (decision 66, 2026-09-26)"
     },
     {
       "title": "10 Cloverfield Lane",
@@ -140,9 +140,9 @@
       "title": "An American Werewolf in London",
       "tmdb": "814",
       "expect": [
-        "creature",
         "funny"
-      ]
+      ],
+      "note": "tagged Comedy, so offered only under \"make me laugh while I'm scared\" (decision 66, 2026-09-26)"
     },
     {
       "title": "Sweeney Todd: The Demon Barber of Fleet Street",
@@ -188,39 +188,41 @@
       "title": "Happy Death Day",
       "tmdb": "440021",
       "expect": [
-        "human_killer",
         "funny"
-      ]
+      ],
+      "note": "tagged Comedy, so offered only under \"make me laugh while I'm scared\" (decision 66, 2026-09-26)"
     },
     {
       "title": "Tucker and Dale vs. Evil",
       "tmdb": "46838",
       "expect": [
-        "funny",
-        "human_killer"
+        "funny"
       ],
-      "note": "operator's key case: comedy and gore together. gore is a separate axis and the comedy question must not touch it"
+      "note": "tagged Comedy, so offered only under \"make me laugh while I'm scared\" (decision 66, 2026-09-26)"
     },
     {
       "title": "Army of Darkness",
       "tmdb": "766",
       "expect": [
-        "funny",
-        "supernatural"
-      ]
+        "funny"
+      ],
+      "note": "tagged Comedy, so offered only under \"make me laugh while I'm scared\" (decision 66, 2026-09-26)"
     },
     {
       "title": "Gremlins",
       "tmdb": "927",
       "expect": [
-        "creature",
         "funny"
       ],
-      "must_not": [
-        "human_killer",
-        "creeping"
+      "note": "tagged Comedy, so offered only under \"make me laugh while I'm scared\" (decision 66, 2026-09-26)"
+    },
+    {
+      "title": "Knights of Badassdom",
+      "tmdb": "74461",
+      "expect": [
+        "funny"
       ],
-      "note": "the over-matching fixture: passes when it stops matching five of six flavours"
+      "note": "a stoner comedy summoning a succubus: supernatural, but a comedy first, so only under \"make me laugh while I'm scared\" (decision 66, 2026-09-26)"
     }
   ],
   "absent_from_library": [

@@ -436,3 +436,38 @@ def test_gentlest_is_the_least_gory_third_for_a_viewer_whose_topics_skip_the_gor
 
 def test_gentlest_needs_a_skipped_question_that_cuts_a_scale(cat: Catalog) -> None:
     assert gentlest(cat, Viewer(topics=frozenset({188})), [1, 6]) == frozenset()  # TREE's gore question cuts runtime
+
+
+def comedy_gate_tree() -> dict[str, Any]:
+    """TREE with a flavour of Comedy films that must also score 'fast' at 0.5, and an answer leaving it out."""
+    tree: dict[str, Any] = json.loads(json.dumps(TREE))
+    tree["flavours"]["laughs"] = {"genres_any": ["Comedy"], "score_at_least": {"fast": 0.5}}
+    tree["questions"][0]["options"] = [
+        {"say": "laughs.", "reply": "", "filter": {"flavour": "laughs"}},
+        {"say": "no laughs.", "reply": "", "filter": {"flavour_none": "laughs"}},
+    ]
+    return tree
+
+
+def test_a_flavour_floor_keeps_only_films_reaching_it_and_films_with_no_score(tmp_path: Path) -> None:
+    cat = load_catalog(make_table(), write_data(tmp_path, comedy_gate_tree()), reference())
+    laughs = set(walk(cat, "west", Viewer(), [Answer("era", 0)]).pool)
+    # odd films are Comedy; 'fast' is 0.9 up to film 10, 0.6 for 13, 0.1 otherwise; 31-40 have no genome entry
+    assert laughs == {1, 3, 5, 7, 9, 13, 31, 33, 35, 37, 39}
+    rest = set(walk(cat, "west", Viewer(), [Answer("era", 1)]).pool)
+    assert rest == set(range(1, 41)) - laughs  # leaving the flavour out is its exact complement
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        lambda t: t["flavours"]["heroic"].update({"score_at_least": {"fast": "high"}}),
+        lambda t: t["flavours"]["heroic"].update({"score_at_least": {"nope": 0.5}}),
+        lambda t: t["questions"][0]["options"][0]["filter"].update({"flavour_none": "nope"}),
+    ],
+)
+def test_a_bad_flavour_floor_or_unknown_flavour_none_refuses_to_load(tmp_path: Path, change: Any) -> None:
+    tree: dict[str, Any] = json.loads(json.dumps(TREE))
+    change(tree)
+    with pytest.raises(ValueError):  # TreeError and EngineError are both ValueErrors
+        load_catalog(make_table(), write_data(tmp_path, tree), reference())

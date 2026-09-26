@@ -43,6 +43,7 @@ class Filter:
     genres_any: frozenset[str] | None = None
     genres_none: frozenset[str] | None = None
     flavour: str | None = None
+    flavour_none: str | None = None
     register: str | None = None
     payoff: str | None = None
     bands: Bands | None = None
@@ -119,6 +120,7 @@ FILTER_KEYS = {
     "genre_also",
     "genres_none",
     "flavour",
+    "flavour_none",
     "register",
     "payoff",
     "bands",
@@ -179,6 +181,7 @@ def parse_filter(raw: Mapping[str, Any], what: str) -> Filter:
         genres_any=_genres_any(raw),
         genres_none=_opt_set(raw, "genres_none"),
         flavour=raw.get("flavour"),
+        flavour_none=raw.get("flavour_none"),
         register=raw.get("register"),
         payoff=raw.get("payoff"),
         bands=None if bands is None else Bands(str(bands["scale"]), frozenset(bands["in"])),
@@ -243,9 +246,15 @@ def _payoffs(doc: Mapping[str, Any], tree: str) -> Payoffs | None:
     )
 
 
-def _check_flavours(tree: str, flavours: Mapping[str, Any]) -> None:
+def _check_flavours(tree: str, flavours: Mapping[str, Any], scores: Mapping[str, Any]) -> None:
     for name, spec in flavours.items():
-        _check_keys(spec, FLAVOUR_SIGNALS | {"note"}, f"tree '{tree}' flavour '{name}'")
+        _check_keys(spec, FLAVOUR_SIGNALS | {"note", "score_at_least"}, f"tree '{tree}' flavour '{name}'")
+        floors = spec.get("score_at_least", {})
+        if not isinstance(floors, dict) or not all(isinstance(v, int | float) for v in floors.values()):
+            raise TreeError(f"tree '{tree}' flavour '{name}' score_at_least must map score names to numbers")
+        unknown = set(floors) - set(scores)
+        if unknown:
+            raise TreeError(f"tree '{tree}' flavour '{name}' score_at_least names undefined scores {sorted(unknown)}")
         if not FLAVOUR_SIGNALS & set(spec):
             raise TreeError(f"tree '{tree}' flavour '{name}' names no keywords, genome tags or genres")
 
@@ -254,7 +263,7 @@ def parse_tree(tree: str, doc: Mapping[str, Any]) -> Tree:
     for key in ("pool", "opening"):
         if key not in doc:
             raise TreeError(f"tree '{tree}' has no '{key}'")
-    _check_flavours(tree, doc.get("flavours", {}))
+    _check_flavours(tree, doc.get("flavours", {}), doc.get("scores", {}))
     registers = doc.get("registers", {})
     return Tree(
         id=tree,

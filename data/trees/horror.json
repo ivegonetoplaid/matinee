@@ -18,6 +18,13 @@
       "gruesome",
       "gratuitous violence",
       "torture"
+    ],
+    "laugh": [
+      "comedy",
+      "funny",
+      "humorous",
+      "hilarious",
+      "humor"
     ]
   },
   "reference": {
@@ -102,38 +109,45 @@
     {
       "id": "flavour",
       "ask": "so what scares you the most?",
+      "note": "Every answer except \"make me laugh while I'm scared\" leaves out the funny flavour, \"anything scary\" included: a viewer who did not ask to laugh is not handed a comedy, however supernatural or scary it is (decision 66).",
       "options": [
         {
           "say": "I don't care. anything scary. I'm easy.",
           "reply": "a person of simple tastes.",
-          "filter": {}
+          "filter": {
+            "flavour_none": "funny"
+          }
         },
         {
           "say": "I'm not really scared unless it's supernatural.",
           "reply": "ghosts and demons then. things that shouldn't be there.",
           "filter": {
-            "flavour": "supernatural"
+            "flavour": "supernatural",
+            "flavour_none": "funny"
           }
         },
         {
           "say": "psycho killers. people are the scariest thing there is.",
           "reply": "agreed, frankly. no ghost ever followed anyone home.",
           "filter": {
-            "flavour": "human_killer"
+            "flavour": "human_killer",
+            "flavour_none": "funny"
           }
         },
         {
           "say": "something with teeth. a monster, a creature, a thing.",
           "reply": "good. monsters are honest about what they want.",
           "filter": {
-            "flavour": "creature"
+            "flavour": "creature",
+            "flavour_none": "funny"
           }
         },
         {
           "say": "the slow kind. the sort that gets under your skin and stays.",
           "reply": "the ones that ruin the drive home. I know the type.",
           "filter": {
-            "flavour": "creeping"
+            "flavour": "creeping",
+            "flavour_none": "funny"
           }
         },
         {
@@ -147,7 +161,8 @@
           "say": "shaky camera, someone found the tapes.",
           "reply": "brave. half of these are terrible and you know it.",
           "filter": {
-            "flavour": "found_footage"
+            "flavour": "found_footage",
+            "flavour_none": "funny"
           }
         }
       ]
@@ -297,14 +312,18 @@
         "supernatural power",
         "paranormal",
         "occult",
-        "seance"
+        "seance",
+        "vampire",
+        "angel"
       ],
       "genome_any": [
         "supernatural",
         "ghosts",
         "demons",
         "haunted house",
-        "witches"
+        "witches",
+        "vampire",
+        "vampires"
       ]
     },
     "human_killer": {
@@ -350,10 +369,13 @@
       ]
     },
     "funny": {
-      "note": "the Comedy genre tag beats any keyword cluster here. Measured against 599 horror titles: the tag found 114, the keyword cluster 64, and the tag caught 80 the keywords missed including Tucker and Dale, Happy Death Day, Army of Darkness and Cabin in the Woods. Genre tags are reliable for co-membership and unreliable only as a primary label. See discussion log 17.",
+      "note": "the Comedy genre tag beats any keyword cluster here. Measured against 599 horror titles: the tag found 114, the keyword cluster 64, and the tag caught 80 the keywords missed including Tucker and Dale, Happy Death Day, Army of Darkness and Cabin in the Woods. Genre tags are reliable for co-membership and unreliable only as a primary label. See discussion log 17. A film tagged Comedy counts only when viewers find it funny: its laugh score (comedy, funny, humorous, hilarious, humor) is at least 0.25, or it has no genome entry. Demon Knight (0.15) and Trick 'r Treat (0.16) are tagged Comedy and play as horror; Knights of Badassdom (0.27) and The 'Burbs (0.61) play as comedies. Decision 66; the line is expected to be tuned.",
       "genres_any": [
         "Comedy"
-      ]
+      ],
+      "score_at_least": {
+        "laugh": 0.25
+      }
     },
     "found_footage": {
       "keywords_any": [
