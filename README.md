@@ -1,30 +1,42 @@
 # Matinee
 
 A film picker for a home media library. Instead of a grid of posters, Matinee
-asks two or three questions in plain language (what are we doing tonight, what
-do you want it to do to you, how much do you want to sweat) and hands you one
-film to watch, with a way to roll again.
+asks two or three questions in plain language (what are we in the mood for,
+then a question or two about that mood) and hands you one film to watch, with a
+way to roll again.
 
 It reads your Jellyfin library, the MovieLens tag genome and TMDB, and writes to
 none of them.
 
 ## Status
 
-Design complete, build starting. The question trees for horror, comedy, action,
-drama, thriller, kids, fantasy and adventure, western and non-fiction, plus a
-"something to fall asleep to" mode, are designed; their pools are built by
-`tools/check_trees.py` and hand-set placements live in `data/`. `tools/check_trees.py` tests them against a real
-library: every film must be reachable, and every film in a set of famous lists
-must be reachable through its own genres.
+First build complete. A viewer passes the box office, answers a few questions on
+a wall of the library's posters, and is handed one film. The behaviour Matinee
+promises is written down in `docs/spec/matinee.md`.
 
 ## Layout
 
+- `src/matinee/`: the engine, the offline film table, profiles, the
+  DoesTheDogDie check and the web server; `src/matinee/web/static/` is the page.
 - `data/trees/`, `data/modes/`: the question trees and modes.
 - `data/answer_key.json`, `data/fixtures/`, `data/house_overrides.json`: what
   the trees are checked against, and single films pinned by hand.
-- `tools/check_trees.py`: builds each tree's pool and checks reachability and
-  the answer key.
-- `tools/fetch_tmdb.py`: caches TMDB collection membership and keywords.
+- `tools/rebuild_table.py`: builds the offline film table from the library,
+  TMDB and the tag genome; `--daily HH:MM` rebuilds it every night.
+- `tools/check_trees.py`: checks every tree against the film table:
+  reachability, the answer key and the famous-film lists, at three library sizes.
+- `docs/spec/`: the specification.
+
+## Running
+
+```sh
+MATINEE_STATE=... MATINEE_JELLYFIN_URL=... MATINEE_SEERR_URL=... \
+JELLYFIN_API_KEY=... DTDD_API_KEY=... \
+uvicorn --factory matinee.web.main:build --workers 1
+```
+
+The `Dockerfile` builds the same server. Run exactly one worker: the
+DoesTheDogDie pacing and the per-device lookup allowance live in the process.
 
 ## Development
 
