@@ -1,0 +1,111 @@
+{
+  "genre": "Western",
+  "pool": "western",
+  "opening": "saddle up, cowpoke.",
+  "note": "Decision 53. The only tree that may say 'saddle up'. One question, then a roll. Payoffs are standardised against the western reference and overlap at 0.75. A film with no genome score takes its answer from its genre tags: Horror to the spooky answer, Comedy to laugh, Action to showdown, and any other to big sky.",
+  "reference": {
+    "movielens_genres": [
+      "Western"
+    ],
+    "floor_any": {}
+  },
+  "payoffs": {
+    "showdown": [
+      "gunfight",
+      "action",
+      "good action",
+      "action packed",
+      "fun movie"
+    ],
+    "dust": [
+      "moral ambiguity",
+      "bleak",
+      "brutality",
+      "violent",
+      "anti-hero",
+      "dark",
+      "spaghetti western"
+    ],
+    "spooky": [
+      "horror",
+      "scary",
+      "creepy",
+      "supernatural",
+      "gory"
+    ],
+    "laugh": [
+      "comedy",
+      "funny",
+      "hilarious",
+      "spoof",
+      "parody",
+      "silly fun"
+    ],
+    "big_sky": [
+      "epic",
+      "scenic",
+      "beautiful scenery",
+      "love story",
+      "cinematography",
+      "melancholic"
+    ]
+  },
+  "payoff_rule": {
+    "overlap": 0.75,
+    "no_genome": {
+      "by_genre": [
+        [
+          "Horror",
+          "spooky"
+        ],
+        [
+          "Comedy",
+          "laugh"
+        ],
+        [
+          "Action",
+          "showdown"
+        ]
+      ],
+      "default": "big_sky"
+    }
+  },
+  "questions": [
+    {
+      "id": "payoff",
+      "ask": "what kind of trouble are we riding into?",
+      "options": [
+        {
+          "say": "good guys, bad guys, and a showdown at high noon.",
+          "filter": {
+            "payoff": "showdown"
+          }
+        },
+        {
+          "say": "nobody's a hero out here. just dust and bad men.",
+          "filter": {
+            "payoff": "dust"
+          }
+        },
+        {
+          "say": "somethin' out there in the dark, and it ain't coyotes.",
+          "filter": {
+            "payoff": "spooky"
+          }
+        },
+        {
+          "say": "make me laugh, partner.",
+          "filter": {
+            "payoff": "laugh"
+          }
+        },
+        {
+          "say": "big sky, long ride. take your time.",
+          "filter": {
+            "payoff": "big_sky"
+          }
+        }
+      ]
+    }
+  ]
+}

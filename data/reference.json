@@ -419,6 +419,75 @@
         }
       },
       "scales": {}
+    },
+    "western": {
+      "movielens_genres": [
+        "Western"
+      ],
+      "floor_any": {},
+      "films": 302,
+      "payoffs": {
+        "showdown": {
+          "tags": [
+            "gunfight",
+            "action",
+            "good action",
+            "action packed",
+            "fun movie"
+          ],
+          "mean": 0.373502,
+          "sd": 0.174646
+        },
+        "dust": {
+          "tags": [
+            "moral ambiguity",
+            "bleak",
+            "brutality",
+            "violent",
+            "anti-hero",
+            "dark",
+            "spaghetti western"
+          ],
+          "mean": 0.276839,
+          "sd": 0.178892
+        },
+        "spooky": {
+          "tags": [
+            "horror",
+            "scary",
+            "creepy",
+            "supernatural",
+            "gory"
+          ],
+          "mean": 0.112983,
+          "sd": 0.096254
+        },
+        "laugh": {
+          "tags": [
+            "comedy",
+            "funny",
+            "hilarious",
+            "spoof",
+            "parody",
+            "silly fun"
+          ],
+          "mean": 0.157637,
+          "sd": 0.171505
+        },
+        "big_sky": {
+          "tags": [
+            "epic",
+            "scenic",
+            "beautiful scenery",
+            "love story",
+            "cinematography",
+            "melancholic"
+          ],
+          "mean": 0.329268,
+          "sd": 0.157788
+        }
+      },
+      "scales": {}
     }
   }
 }
