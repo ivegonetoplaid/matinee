@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import urllib.request
 from dataclasses import dataclass, field, replace
@@ -20,7 +21,7 @@ from matinee.library.jellyfin import JellyfinReader
 from matinee.reference import ReferenceError
 from matinee.store import Store
 from matinee.table import FilmTable, write_table
-from matinee.web.app import create_app
+from matinee.web.app import STATIC, create_app
 from matinee.web.config import Config, ConfigError, from_env
 from matinee.web.theatre import LIVE_TTL, RETRY_AFTER, Theatre
 from test_engine import make_table, reference, write_data
@@ -292,3 +293,10 @@ def test_every_response_carries_the_security_headers(world: Any) -> None:
         assert resp.headers["x-content-type-options"] == "nosniff"
         assert resp.headers["referrer-policy"] == "same-origin"
     assert client.get("/").headers["content-type"].startswith("text/html")
+
+
+def test_the_install_manifest_names_icons_that_exist() -> None:
+    manifest = json.loads((STATIC / "manifest.webmanifest").read_text())
+    assert manifest["start_url"] == "/" and manifest["icons"]
+    for icon in manifest["icons"]:
+        assert (STATIC / icon["src"].removeprefix("/static/")).is_file(), icon["src"]
