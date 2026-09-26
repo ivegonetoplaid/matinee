@@ -1,0 +1,109 @@
+{
+  "genre": "Thriller",
+  "pool": "thriller",
+  "opening": "a thriller. lock the doors.",
+  "note": "Decision 51. Thriller aims at anxiety about the outcome. One question, then a roll. Each answer is a payoff standardised against the thriller reference; a film belongs to its strongest payoff and to any other reaching 0.75. One-question trees roll straight to the pick, so the answers carry no reply of their own (decision 57).",
+  "scores": {
+    "thrill": [
+      "tense",
+      "suspense",
+      "suspenseful",
+      "intense"
+    ]
+  },
+  "reference": {
+    "movielens_genres": [
+      "Thriller",
+      "Mystery"
+    ],
+    "floor_any": {
+      "thrill": 0.2
+    }
+  },
+  "payoffs": {
+    "guessing": [
+      "twist ending",
+      "plot twist",
+      "twists & turns",
+      "surprise ending",
+      "murder mystery",
+      "mystery"
+    ],
+    "hunt": [
+      "serial killer",
+      "police investigation",
+      "detective",
+      "investigation"
+    ],
+    "trapped": [
+      "claustrophobic",
+      "kidnapping",
+      "hostage",
+      "survival",
+      "stranded"
+    ],
+    "trust": [
+      "conspiracy",
+      "paranoia",
+      "espionage",
+      "political",
+      "corruption",
+      "conspiracy theory",
+      "spies"
+    ],
+    "bend": [
+      "psychological",
+      "mindfuck",
+      "cerebral",
+      "enigmatic",
+      "surreal",
+      "time travel",
+      "alternate reality"
+    ]
+  },
+  "payoff_rule": {
+    "overlap": 0.75,
+    "no_genome": {
+      "default": "all"
+    },
+    "note": "a film with no genome score is offered under every answer: no decision gives it one, and a missing score never removes a film"
+  },
+  "questions": [
+    {
+      "id": "payoff",
+      "ask": "what's got you on edge?",
+      "options": [
+        {
+          "say": "keep me guessing.",
+          "filter": {
+            "payoff": "guessing"
+          }
+        },
+        {
+          "say": "hunt down a killer.",
+          "filter": {
+            "payoff": "hunt"
+          }
+        },
+        {
+          "say": "trap me in there with them.",
+          "filter": {
+            "payoff": "trapped"
+          }
+        },
+        {
+          "say": "trust no one.",
+          "filter": {
+            "payoff": "trust"
+          }
+        },
+        {
+          "say": "bend my brain.",
+          "filter": {
+            "payoff": "bend"
+          }
+        }
+      ]
+    }
+  ]
+}
