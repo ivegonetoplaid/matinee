@@ -360,6 +360,15 @@ button {
   width: min(1180px, 100%);
 }
 
+/* "Just pick one!" stands last, beneath the answers: under the strips on the left, under the pails in the middle. */
+.talk > .just-pick {
+  align-self: flex-start;
+}
+
+.talk:has(.answers.pails) > .just-pick {
+  align-self: center;
+}
+
 .pail {
   flex: 1 1 0;
   min-width: 0;

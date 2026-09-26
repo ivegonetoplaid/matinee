@@ -295,6 +295,12 @@ def test_every_response_carries_the_security_headers(world: Any) -> None:
     assert client.get("/").headers["content-type"].startswith("text/html")
 
 
+def test_the_page_and_its_static_files_revalidate_so_a_deploy_is_never_half_seen(world: Any) -> None:
+    client, _, _, _ = world
+    for path in ("/", "/static/css/matinee.css", "/static/js/main.js"):
+        assert client.get(path).headers["cache-control"] == "no-cache", path
+
+
 def test_the_install_manifest_names_icons_that_exist() -> None:
     manifest = json.loads((STATIC / "manifest.webmanifest").read_text())
     assert manifest["start_url"] == "/" and manifest["icons"]

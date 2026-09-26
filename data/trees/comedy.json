@@ -113,7 +113,14 @@
           "reply": "talking animals and a happy ending. on it.",
           "filter": {
             "register": "family"
-          }
+          },
+          "not_after": {
+            "room": [
+              1,
+              2
+            ]
+          },
+          "note": "offered only after \"the kids are up\": the other two rooms have said there are no kids (2026-09-26)"
         },
         {
           "say": "teenage disaster energy.",
@@ -131,11 +138,11 @@
     },
     {
       "id": "weight",
-      "ask": "just laughs, or can it get real?",
-      "note": "Decision 42: the weight dial, fixed at 0.22 (heavy above). A comedy with no genome score passes all three answers. The replies were drafted in the build and approved by the operator on 2026-09-25.",
+      "ask": "light and silly, or can it tug at you a bit?",
+      "note": "Decision 42: the weight dial, fixed at 0.22 (heavy above). A comedy with no genome score passes all three answers. The replies were drafted in the build and approved by the operator on 2026-09-25. Reworded 2026-09-26: the question asks how heavy the comedy may be; the no-filter answer is said plainly as \"either's fine.\" and stands last.",
       "options": [
         {
-          "say": "just laughs, please.",
+          "say": "light and silly, please.",
           "reply": "Light and silly. Got it.",
           "filter": {
             "score_at_most": {
@@ -144,66 +151,18 @@
           }
         },
         {
-          "say": "a bit of heart is fine.",
-          "reply": "A little heart, then.",
-          "filter": {}
-        },
-        {
-          "say": "let it get real.",
+          "say": "I'd like some heart in it.",
           "reply": "Laughs with a lump in the throat. Nice.",
           "filter": {
             "score_above": {
               "weight": 0.22
             }
           }
-        }
-      ]
-    },
-    {
-      "id": "crossed",
-      "ask": "and is the funny the main event, or is it adding to something else?",
-      "only_if_pool_over": 40,
-      "note": "pure genre co-membership, free and complete. this is what puts Tucker and Dale next to Shaun of the Dead rather than next to Airplane.",
-      "options": [
-        {
-          "say": "the funny is the whole point.",
-          "reply": "",
-          "filter": {
-            "genres_none": [
-              "Horror",
-              "Crime",
-              "Romance",
-              "Action"
-            ]
-          }
         },
         {
-          "say": "funny and frightening at once.",
-          "reply": "the best of both, done right.",
-          "filter": {
-            "genre_also": "Horror"
-          }
-        },
-        {
-          "say": "funny with someone getting robbed.",
-          "reply": "a caper. lovely.",
-          "filter": {
-            "genre_also": "Crime"
-          }
-        },
-        {
-          "say": "funny and someone falls in love.",
-          "reply": "fine. I won't judge.",
-          "filter": {
-            "genre_also": "Romance"
-          }
-        },
-        {
-          "say": "funny with things blowing up.",
-          "reply": "noise and jokes. good combination.",
-          "filter": {
-            "genre_also": "Action"
-          }
+          "say": "either's fine.",
+          "reply": "Either way, then.",
+          "filter": {}
         }
       ]
     }

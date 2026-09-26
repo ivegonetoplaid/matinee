@@ -194,7 +194,11 @@ SECURITY_HEADERS = {
 
 
 def add_page(app: FastAPI) -> None:
-    """The page, its scripts, styles, fonts and images; every response carries the security headers."""
+    """The page, its scripts, styles, fonts and images; every response carries the security headers.
+
+    The page and its static files are served `no-cache`: a browser or an edge cache may keep a copy but must
+    revalidate it, so a deploy reaches every viewer on the next load and a page never mixes old and new files.
+    """
     app.mount("/static", StaticFiles(directory=STATIC), name="static")
 
     @app.get("/", include_in_schema=False)
@@ -206,6 +210,8 @@ def add_page(app: FastAPI) -> None:
         response = await call_next(request)
         for name, value in SECURITY_HEADERS.items():
             response.headers.setdefault(name, value)
+        if request.url.path.startswith("/static/"):
+            response.headers.setdefault("Cache-Control", "no-cache")
         return response
 
 

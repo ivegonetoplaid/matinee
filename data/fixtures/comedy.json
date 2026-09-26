@@ -258,16 +258,22 @@
     {
       "title": "Tucker and Dale vs. Evil",
       "expect": [
-        "crossed_horror"
+        "parody",
+        "dark",
+        "warm"
       ],
-      "must_not": []
+      "must_not": [],
+      "note": "the crossed question was removed 2026-09-26 (comedy asks at most three questions); a horror-comedy's horror home is horror's \"make me laugh while I'm scared\""
     },
     {
       "title": "Shaun of the Dead",
       "expect": [
-        "crossed_horror"
+        "parody",
+        "dry",
+        "dark"
       ],
-      "must_not": []
+      "must_not": [],
+      "note": "the crossed question was removed 2026-09-26 (comedy asks at most three questions); a horror-comedy's horror home is horror's \"make me laugh while I'm scared\""
     },
     {
       "title": "Eddie Murphy: Delirious",

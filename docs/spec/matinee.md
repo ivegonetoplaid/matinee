@@ -189,8 +189,9 @@ film onto the pinned payoff and off every other.
   told to start over.
 - Pool counts never include DoesTheDogDie exclusions. Those are checked only at
   the pick (section 9).
-- **`Just pick one!`** is on screen from the first question onward. It ends the
-  questions and picks from the pool as it stands. Pressed at the first question,
+- **`Just pick one!`** is on screen from the first question onward, as the last
+  choice beneath each question's answers. It ends the questions and picks from
+  the pool as it stands. Pressed at the first question,
   it picks from every film some first answer offers this viewer.
 
 ### 2.5 Every film stays reachable
@@ -663,7 +664,7 @@ documentation, ReDoc and the OpenAPI schema are all disabled.
 | Method | Path | Does |
 |---|---|---|
 | GET | `/` | the page (`Cache-Control: no-cache`) |
-| GET | `/static/…` | scripts, styles, self-hosted fonts, icons, pails, manifest |
+| GET | `/static/…` | scripts, styles, self-hosted fonts, icons, pails, manifest (`Cache-Control: no-cache`, so a deploy is never seen half-applied) |
 | GET | `/img/{kind}/{tmdb}/{size}` | a poster or backdrop, read from the media server |
 | GET | `/api/film/{tmdb}` | title, year, runtime, synopsis and the Seerr link for one film |
 | GET | `/api/door` | the film count and the profiles this device holds |
@@ -1075,7 +1076,7 @@ symbol when one does not match.
 |---|---|---|
 | `src/matinee/web/main.py::build` | `src/matinee/web/main.py:21` | 2026-09-26 |
 | `src/matinee/web/config.py::from_env` | `src/matinee/web/config.py:43` | 2026-09-26 |
-| `src/matinee/web/app.py::create_app` (docs disabled) | `src/matinee/web/app.py:212` | 2026-09-26 |
+| `src/matinee/web/app.py::create_app` (docs disabled) | `src/matinee/web/app.py:218` | 2026-09-26 |
 | `src/matinee/web/app.py::SECURITY_HEADERS` | `src/matinee/web/app.py:184` | 2026-09-26 |
 | `src/matinee/web/app.py::add_page` | `src/matinee/web/app.py:196` | 2026-09-26 |
 | `src/matinee/web/app.py::add_film_routes` / `IMAGE_WIDTHS` | `src/matinee/web/app.py:117` | 2026-09-26 |
@@ -1097,9 +1098,9 @@ symbol when one does not match.
 | `src/matinee/web/static/js/door.js::BULBS` | `src/matinee/web/static/js/door.js:12` | 2026-09-26 |
 | `src/matinee/web/static/js/iris.js::closeIris` / `openIris` | `src/matinee/web/static/js/iris.js:14` | 2026-09-26 |
 | `src/matinee/web/static/js/wall.js::Wall` / `across` | `src/matinee/web/static/js/wall.js:34` | 2026-09-26 |
-| `src/matinee/web/static/js/main.js::start` | `src/matinee/web/static/js/main.js:155` | 2026-09-26 |
-| `src/matinee/web/static/js/main.js::step` | `src/matinee/web/static/js/main.js:182` | 2026-09-26 |
-| `src/matinee/web/static/js/main.js::pickNow` / `checking` | `src/matinee/web/static/js/main.js:228` | 2026-09-26 |
+| `src/matinee/web/static/js/main.js::start` | `src/matinee/web/static/js/main.js:158` | 2026-09-26 |
+| `src/matinee/web/static/js/main.js::step` | `src/matinee/web/static/js/main.js:185` | 2026-09-26 |
+| `src/matinee/web/static/js/main.js::pickNow` / `checking` | `src/matinee/web/static/js/main.js:231` | 2026-09-26 |
 | `src/matinee/web/static/js/main.js::lockStage` / `nameTag` | `src/matinee/web/static/js/main.js:40` | 2026-09-26 |
 | `src/matinee/web/static/js/pick.js::showNoFilm` | `src/matinee/web/static/js/pick.js:93` | 2026-09-26 |
 | `src/matinee/web/static/js/pick.js::showPick` | `src/matinee/web/static/js/pick.js:113` | 2026-09-26 |

@@ -65,14 +65,16 @@ function nameTag() {
   );
 }
 
-function frame({ count, justPick = true }) {
+// A question screen. "Just pick one!" stands last, beneath the answers, and shows with them.
+function frame({ count }) {
   const line = h("h1", { class: "line", "aria-live": "polite" });
   const answers = h("div", { class: "answers", role: "group", "aria-label": "Your answers", hidden: true });
   const pick = h(
     "button",
     {
-      class: "pill gold",
+      class: "pill gold just-pick",
       type: "button",
+      hidden: true,
       onclick: () => {
         lockStage();
         pickNow();
@@ -82,10 +84,10 @@ function frame({ count, justPick = true }) {
   );
   clear(stage).append(
     h("header", { class: "topbar" }, h("div", { class: "wordmark" }, "Matinee"), nameTag(), h("div", { class: "count" }, count)),
-    h("section", { class: "talk" }, line, answers),
-    h("div", { class: "bottombar" }, justPick ? pick : h("span"), credits()),
+    h("section", { class: "talk" }, line, answers, pick),
+    h("div", { class: "bottombar" }, h("span"), credits()),
   );
-  return { line, answers };
+  return { line, answers, pick };
 }
 
 // A picture question (the gore pails) shows each answer as its image, with the answer's words beneath it.
@@ -105,7 +107,7 @@ function answerButton(o, picture) {
 
 // `reveal` runs once the screen is built and before the line types (the iris opening onto the wall).
 async function ask({ ack, question, options, count, many = false, picture = false, reveal = null }) {
-  const { line, answers } = frame({ count });
+  const { line, answers, pick } = frame({ count });
   const buttons = options.map((o) => answerButton(o, picture));
   answers.classList.toggle("many", many);
   answers.classList.toggle("pails", picture);
@@ -113,6 +115,7 @@ async function ask({ ack, question, options, count, many = false, picture = fals
   if (reveal) await reveal();
   await typeLine(line, ack, question);
   answers.hidden = false;
+  pick.hidden = false;
 }
 
 function problem(data, again) {
