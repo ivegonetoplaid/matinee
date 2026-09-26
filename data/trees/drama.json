@@ -1,0 +1,138 @@
+{
+  "genre": "Drama",
+  "pool": "drama",
+  "opening": "drama. okay, let's feel something.",
+  "note": "Decisions 41, 42 and 44. One question, then a roll. Each answer is a payoff standardised against the drama reference; a film belongs to its highest payoff and to any other reaching 0.75. No thrill question, and nothing about quality, acclaim or awards.",
+  "scores": {
+    "weight": [
+      "drama",
+      "dramatic",
+      "emotional",
+      "moving",
+      "touching",
+      "harsh"
+    ]
+  },
+  "reference": {
+    "movielens_genres": [
+      "Drama"
+    ],
+    "floor_any": {
+      "weight": 0.13
+    }
+  },
+  "payoffs": {
+    "root": [
+      "inspirational",
+      "inspiring",
+      "feel-good",
+      "feel good movie",
+      "heartwarming",
+      "courage",
+      "underdog"
+    ],
+    "cry": [
+      "heartbreaking",
+      "poignant",
+      "sad",
+      "depressing",
+      "emotional",
+      "sad but good"
+    ],
+    "love": [
+      "romance",
+      "love story",
+      "romantic",
+      "love"
+    ],
+    "dark": [
+      "dark",
+      "bleak",
+      "disturbing",
+      "grim"
+    ],
+    "apart": [
+      "crime gone awry",
+      "mafia",
+      "organized crime",
+      "gangsters",
+      "mob",
+      "corruption"
+    ],
+    "head": [
+      "twist",
+      "plot twist",
+      "twists & turns",
+      "twist ending",
+      "psychological",
+      "enigmatic",
+      "mystery"
+    ],
+    "quiet": [
+      "melancholic",
+      "melancholy",
+      "loneliness",
+      "reflective",
+      "meditative",
+      "thought-provoking",
+      "philosophical"
+    ]
+  },
+  "payoff_rule": {
+    "overlap": 0.75,
+    "no_genome": {
+      "default": "all"
+    },
+    "note": "a film with no genome score is offered under every answer: no decision gives it one, and a missing score never removes a film"
+  },
+  "questions": [
+    {
+      "id": "payoff",
+      "ask": "what do you want it to do to you?",
+      "options": [
+        {
+          "say": "give me someone to root for.",
+          "filter": {
+            "payoff": "root"
+          }
+        },
+        {
+          "say": "I want a good cry.",
+          "filter": {
+            "payoff": "cry"
+          }
+        },
+        {
+          "say": "make me believe in love.",
+          "filter": {
+            "payoff": "love"
+          }
+        },
+        {
+          "say": "take me somewhere dark.",
+          "filter": {
+            "payoff": "dark"
+          }
+        },
+        {
+          "say": "let me watch it all fall apart.",
+          "filter": {
+            "payoff": "apart"
+          }
+        },
+        {
+          "say": "mess with my head.",
+          "filter": {
+            "payoff": "head"
+          }
+        },
+        {
+          "say": "something quiet to sit with.",
+          "filter": {
+            "payoff": "quiet"
+          }
+        }
+      ]
+    }
+  ]
+}

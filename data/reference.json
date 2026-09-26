@@ -100,6 +100,111 @@
         }
       }
     },
+    "drama": {
+      "movielens_genres": [
+        "Drama"
+      ],
+      "floor_any": {
+        "weight": {
+          "tags": [
+            "drama",
+            "dramatic",
+            "emotional",
+            "moving",
+            "touching",
+            "harsh"
+          ],
+          "min": 0.13
+        }
+      },
+      "films": 6901,
+      "payoffs": {
+        "root": {
+          "tags": [
+            "inspirational",
+            "inspiring",
+            "feel-good",
+            "feel good movie",
+            "heartwarming",
+            "courage",
+            "underdog"
+          ],
+          "mean": 0.187252,
+          "sd": 0.130668
+        },
+        "cry": {
+          "tags": [
+            "heartbreaking",
+            "poignant",
+            "sad",
+            "depressing",
+            "emotional",
+            "sad but good"
+          ],
+          "mean": 0.189888,
+          "sd": 0.146003
+        },
+        "love": {
+          "tags": [
+            "romance",
+            "love story",
+            "romantic",
+            "love"
+          ],
+          "mean": 0.248957,
+          "sd": 0.19991
+        },
+        "dark": {
+          "tags": [
+            "dark",
+            "bleak",
+            "disturbing",
+            "grim"
+          ],
+          "mean": 0.219834,
+          "sd": 0.17238
+        },
+        "apart": {
+          "tags": [
+            "crime gone awry",
+            "mafia",
+            "organized crime",
+            "gangsters",
+            "mob",
+            "corruption"
+          ],
+          "mean": 0.188132,
+          "sd": 0.131648
+        },
+        "head": {
+          "tags": [
+            "twist",
+            "plot twist",
+            "twists & turns",
+            "twist ending",
+            "psychological",
+            "enigmatic",
+            "mystery"
+          ],
+          "mean": 0.233232,
+          "sd": 0.137191
+        },
+        "quiet": {
+          "tags": [
+            "melancholic",
+            "melancholy",
+            "loneliness",
+            "reflective",
+            "meditative",
+            "thought-provoking",
+            "philosophical"
+          ],
+          "mean": 0.299367,
+          "sd": 0.161936
+        }
+      },
+      "scales": {}
+    },
     "horror": {
       "movielens_genres": [
         "Horror"
