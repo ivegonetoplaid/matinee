@@ -20,14 +20,12 @@ import logging
 import os
 import sys
 import time
-import urllib.error
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-from matinee.genome import GenomeError, load_genome
-from matinee.library import LibraryError
+from matinee.genome import load_genome
 from matinee.library.jellyfin import JellyfinReader
-from matinee.table import TableError, build_table, write_table
+from matinee.table import build_table, write_table
 from matinee.tmdb import load_cache, refresh
 
 log = logging.getLogger("rebuild_table")
@@ -90,7 +88,7 @@ def main() -> int:
     while True:
         try:
             rebuild(args.jellyfin, args.state, ml, jf_key, token)
-        except (LibraryError, GenomeError, TableError, OSError, urllib.error.URLError) as exc:
+        except Exception as exc:  # any failure waits for the next night, never a restart loop
             log.warning("rebuild failed; the previous table stays in place: %s", exc, exc_info=True)
         time.sleep(seconds_until(args.daily, datetime.now()))
 
