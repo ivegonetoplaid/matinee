@@ -1683,3 +1683,21 @@ button {
     row-gap: 10px;
   }
 }
+
+/* ---------- the iris ---------- */
+
+body[data-iris] > .wall,
+body[data-iris] > .stage {
+  clip-path: circle(72vmax at 50% 45%);
+}
+
+body[data-iris="closed"] > .wall,
+body[data-iris="closed"] > .stage {
+  clip-path: circle(0 at 50% 45%);
+  transition: clip-path 0.6s cubic-bezier(0.6, 0, 0.9, 0.4);
+}
+
+body[data-iris="opening"] > .wall,
+body[data-iris="opening"] > .stage {
+  transition: clip-path 0.75s cubic-bezier(0.1, 0.6, 0.3, 1);
+}

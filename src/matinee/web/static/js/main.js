@@ -3,6 +3,7 @@
 import { get, post } from "./api.js";
 import { correctionLink } from "./correct.js";
 import { Door } from "./door.js";
+import { closeIris, openIris } from "./iris.js";
 import { clear, h, sentenceCase } from "./dom.js";
 import { showPick } from "./pick.js";
 import { typeLine } from "./type.js";
@@ -101,12 +102,14 @@ function answerButton(o, picture) {
   );
 }
 
-async function ask({ ack, question, options, count, many = false, picture = false }) {
+// `reveal` runs once the screen is built and before the line types (the iris opening onto the wall).
+async function ask({ ack, question, options, count, many = false, picture = false, reveal = null }) {
   const { line, answers } = frame({ count });
   const buttons = options.map((o) => answerButton(o, picture));
   answers.classList.toggle("many", many);
   answers.classList.toggle("pails", picture);
   answers.append(...buttons);
+  if (reveal) await reveal();
   await typeLine(line, ack, question);
   answers.hidden = false;
 }
@@ -138,14 +141,17 @@ async function boot(opts = {}) {
   await new Door({ stage, onEnter: enter }).open({ door: door.data, ...opts });
 }
 
-function enter({ viewer, name, profileTopics }) {
+async function enter({ viewer, name, profileTopics }) {
   Object.assign(visit, { viewer, name, profileTopics });
+  await closeIris();
+  clear(stage);
   stage.classList.remove("at-door");
   wall.root.classList.remove("at-door");
-  start();
+  await start({ reveal: openIris });
+  openIris(); // a start that ended on a problem screen still opens
 }
 
-async function start() {
+async function start({ reveal = null } = {}) {
   const res = await post("/api/first", { viewer: visit.viewer });
   if (!res.ok) return problem(res.data, start);
   Object.assign(visit, {
@@ -164,7 +170,7 @@ async function start() {
   const name = res.data.name;
   const ack = name ? greeting.replace(/\.$/, `, ${name}.`) : greeting;
   const options = res.data.options.map((o) => ({ say: o.say, go: () => chooseTree(o) }));
-  await ask({ ack, question, options, count: countText(visit.pool.length, true), many: true });
+  await ask({ ack, question, options, count: countText(visit.pool.length, true), many: true, reveal });
 }
 
 function chooseTree(option) {
