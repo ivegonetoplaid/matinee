@@ -86,7 +86,7 @@ TREES = (
     "action",
     "kids",
     "western",
-    "documentary",
+    "nonfiction",
     "standup",
     "fantasy",
     "thriller",
@@ -239,7 +239,7 @@ def build_pools(table: FilmTable, house: House) -> dict[str, Mask]:
         "kids:little": bands["little"],
         "kids:family": bands["family"],
         "western": tag["Western"],
-        "documentary": tag["Documentary"] & ~standup,
+        "nonfiction": tag["Documentary"] & ~standup,
         "standup": standup,
     }
     pools["fantasy"] = (

@@ -649,7 +649,7 @@
         "standup"
       ],
       "must_not": [
-        "documentary"
+        "nonfiction"
       ],
       "note": "house pin"
     },
@@ -657,7 +657,7 @@
       "title": "Simulation Theory",
       "tmdb": 731971,
       "must_reach": [
-        "documentary"
+        "nonfiction"
       ],
       "must_not": [
         "drama"

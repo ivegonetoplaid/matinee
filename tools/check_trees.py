@@ -62,10 +62,10 @@ EXPECTED = {
     "War": {"drama", "action"},
     "History": {"drama", "action"},
     "Western": {"western"},
-    "Documentary": {"documentary", "standup"},
+    "Documentary": {"nonfiction", "standup"},
     "Animation": {"kids"},
     "Family": {"kids"},
-    "Music": {"drama", "comedy", "documentary"},
+    "Music": {"drama", "comedy", "nonfiction"},
     "TV Movie": {"horror", "comedy", "action", "drama", "kids"},
 }
 Pools = dict[str, pd.Series]
