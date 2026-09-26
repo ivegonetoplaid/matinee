@@ -239,8 +239,8 @@ def build_pools(table: FilmTable, house: House) -> dict[str, Mask]:
         "kids": bands["older"],
         "kids:little": bands["little"],
         "kids:family": bands["family"],
-        "western": tag["Western"],
-        "nonfiction": tag["Documentary"] & ~standup,
+        "western": tag["Western"] & ~kids_only,
+        "nonfiction": tag["Documentary"] & ~standup & ~kids_only,
         "standup": standup,
     }
     pools["fantasy"] = (

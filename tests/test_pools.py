@@ -64,3 +64,13 @@ def test_missing_score_never_removes_a_film_from_horror() -> None:
     pools = build_pools(table, NO_PINS)
     assert pools["horror"].to_dict() == {1: False, 2: True, 3: True}
     assert pools["comedy"][1]
+
+
+def test_a_kids_only_film_stays_out_of_western_and_nonfiction() -> None:
+    table = make_table(
+        [film(1, "Animation|Family|Western", "G", None), film(2, "Animation|Family|Documentary", "G", None)],
+        {},
+    )
+    pools = build_pools(table, NO_PINS)
+    assert pools["kids"][1] and pools["kids"][2]
+    assert not pools["western"][1] and not pools["nonfiction"][2]
