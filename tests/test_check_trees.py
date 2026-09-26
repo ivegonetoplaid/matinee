@@ -17,6 +17,7 @@ from check_trees import (
     Report,
     _check_gore,
     check_answer_coverage,
+    check_first_question,
     check_gore,
     check_pins_in_key,
     check_same_answers,
@@ -173,3 +174,10 @@ def test_a_sample_runs_reachability_and_expected_homes(tmp_path: Path, monkeypat
     monkeypatch.setattr("check_trees.check_expected", record("expect"))
     check_sample(full, "a half", 0.5, 1, mine, tmp_path)
     assert sorted(seen) == [("expect", 20, True), ("reach", 20, True)]
+
+
+def test_first_question_answers_must_name_a_tree(tmp_path: Path) -> None:
+    cat = load_catalog(make_table(), write_data(tmp_path), reference())
+    report = Report()
+    check_first_question(cat, report)
+    assert report.failures == ["first question: 'No.' leads to 'none', which names no tree or mode file"]

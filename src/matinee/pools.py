@@ -9,7 +9,8 @@ for a missing score. A film tagged Adventure, Thriller, Crime, Mystery, Science
 Fiction or War joins the action tree when its excitement reaches the Adventure
 bar. A film no tree claims joins every tree holding another film of its TMDB
 collection (the franchise rule for strays); the films still unclaimed fall to
-the drama tree. Standup specials are held apart from the non-fiction tree. House
+the drama tree. Standup specials are held apart from the comedy and non-fiction
+trees, and reached on their own path. House
 pins add single films to a tree or a kids band; a film pinned to standup also
 leaves the non-fiction tree.
 
@@ -233,7 +234,7 @@ def build_pools(table: FilmTable, house: House) -> dict[str, Mask]:
     )
     pools = {
         "horror": tag["Horror"] & ~young_kids & ~leaves_for_comedy(table, s, "fear"),
-        "comedy": tag["Comedy"] & ~kids_only,
+        "comedy": tag["Comedy"] & ~kids_only & ~standup,
         "action": (tag["Action"] | exciting) & ~kids_only & ~leaves_for_comedy(table, s, "excite"),
         "kids": bands["older"],
         "kids:little": bands["little"],

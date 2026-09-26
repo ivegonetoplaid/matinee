@@ -49,7 +49,7 @@ GORE_PROMISES = ("spotless", "rip")  # pails an unknown film could break the pro
 # Trees a film's genre tag is expected to lead to.
 EXPECTED = {
     "Horror": {"horror"},
-    "Comedy": {"comedy"},
+    "Comedy": {"comedy", "standup"},
     "Action": {"action"},
     "Adventure": {"action", "drama", "kids", "sleep", "fantasy"},
     "Drama": {"drama"},
@@ -195,13 +195,18 @@ def tmdb_by_title(title: str, table: FilmTable, report: Report) -> int | None:
 
 
 def tree_fixture_entries(table: FilmTable, report: Report) -> list[dict[str, Any]]:
-    """The horror and comedy fixture films as must_reach entries for their own tree."""
+    """The horror and comedy fixture films as must_reach entries for their own tree.
+
+    A comedy fixture expecting standup must reach the standup path instead, since standup specials are
+    held out of the comedy tree (decision 26).
+    """
     entries = []
     for fname, tree in (("horror.json", "horror"), ("comedy.json", "comedy")):
         for f in json.loads((DATA / "fixtures" / fname).read_text())["films"]:
             tmdb = int(f["tmdb"]) if "tmdb" in f else tmdb_by_title(f["title"], table, report)
+            home = "standup" if "standup" in f.get("expect", []) else tree
             if tmdb is not None:
-                entries.append({"title": f["title"], "tmdb": tmdb, "must_reach": [tree]})
+                entries.append({"title": f["title"], "tmdb": tmdb, "must_reach": [home]})
     return entries
 
 
@@ -305,6 +310,13 @@ def check_sample(full: Catalog, name: str, share: float, seed: int, report: Repo
     report.prefix = ""
 
 
+def check_first_question(cat: Catalog, report: Report) -> None:
+    """Every answer of the first question must name a tree or mode file, or it would be silently hidden."""
+    for option in cat.first_options:
+        if option.tree not in cat.trees:
+            report.fail(f"first question: '{option.say}' leads to '{option.tree}', which names no tree or mode file")
+
+
 def check_data(table: FilmTable, report: Report) -> None:
     unknown = table.films.index[~table.films.tmdb_known.astype(bool)]
     if len(unknown):
@@ -335,6 +347,7 @@ def main() -> int:
     added = table.films.index[pools["kids:franchise"]]
     report.say(f"franchise rule added {len(added)} films to kids: " + "; ".join(sorted(table.films.loc[added, "name"])))
     check_data(table, report)
+    check_first_question(cat, report)
     pools.update(check_answer_coverage(cat, pools, report))
     check_pins_in_key(house, key, report)
     check_fixtures(table, pools, gore, key, report)
