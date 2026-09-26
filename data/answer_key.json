@@ -765,6 +765,71 @@
       ],
       "gore_band": "rip",
       "note": "reaches the rip pail only through its body horror keyword; guards the keyword bonus (decision 59); the 1982 film"
+    },
+    {
+      "title": "The Cabin in the Woods",
+      "tmdb": 22970,
+      "must_reach": [
+        "horror"
+      ],
+      "flavour_out": {
+        "horror": [
+          "funny"
+        ]
+      },
+      "note": "house flavour pin"
+    },
+    {
+      "title": "Ready or Not",
+      "tmdb": 567609,
+      "must_reach": [
+        "horror"
+      ],
+      "flavour_out": {
+        "horror": [
+          "funny"
+        ]
+      },
+      "note": "house flavour pin"
+    },
+    {
+      "title": "Tremors",
+      "tmdb": 9362,
+      "must_reach": [
+        "horror"
+      ],
+      "flavour_in": {
+        "horror": [
+          "creature"
+        ]
+      },
+      "note": "house flavour pin"
+    },
+    {
+      "title": "Arachnophobia",
+      "tmdb": 6488,
+      "must_reach": [
+        "horror"
+      ],
+      "flavour_in": {
+        "horror": [
+          "creature"
+        ]
+      },
+      "note": "house flavour pin"
+    },
+    {
+      "title": "An American Werewolf in London",
+      "tmdb": 814,
+      "must_reach": [
+        "horror"
+      ],
+      "flavour_in": {
+        "horror": [
+          "creature"
+        ]
+      },
+      "note": "house flavour pin"
     }
   ]
 }

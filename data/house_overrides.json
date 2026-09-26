@@ -1,5 +1,5 @@
 {
-  "note": "House pins: single films the rules place wrong, fixed for everyone on this installation. A pattern of three or more films going wrong for one reason is a rule to fix, not a pin to add. Each pin is also a fixture in data/answer_key.json, so the checker guards it. Personal corrections (per profile) layer on top of these.",
+  "note": "House pins: single films the rules place wrong, fixed for everyone on this installation. A pattern of three or more films going wrong for one reason is a rule to fix, not a pin to add. Each pin is also a fixture in data/answer_key.json, so the checker guards it. A flavour pin puts a film in one flavour of a tree (member true) or takes it out (member false); a film pinned into a flavour stays in answers that leave another flavour out, so a funny film pinned into creature is offered under the scary answers too. Personal corrections (per profile) layer on top of these.",
   "kids": [
     {
       "title": "The School of Rock",
@@ -115,6 +115,48 @@
       "scale": "gore",
       "band": "rip",
       "note": "recent extreme horror the genome reads too low; pinned to the goriest pail (decision 59)"
+    }
+  ],
+  "flavours": [
+    {
+      "title": "The Cabin in the Woods",
+      "tmdb": 22970,
+      "tree": "horror",
+      "flavour": "funny",
+      "member": false,
+      "note": "tagged Comedy with laugh 0.48, but the operator: a horror film with some comedic elements, not one for someone sitting down to Shaun of the Dead"
+    },
+    {
+      "title": "Ready or Not",
+      "tmdb": 567609,
+      "tree": "horror",
+      "flavour": "funny",
+      "member": false,
+      "note": "tagged Comedy with laugh 0.38; the operator: a horror thriller with comedic elements"
+    },
+    {
+      "title": "Tremors",
+      "tmdb": 9362,
+      "tree": "horror",
+      "flavour": "creature",
+      "member": true,
+      "note": "a comedy by every gauge (laugh 0.50, fear 0.51) that the operator also wants under the scary answers: in his creature examples"
+    },
+    {
+      "title": "Arachnophobia",
+      "tmdb": 6488,
+      "tree": "horror",
+      "flavour": "creature",
+      "member": true,
+      "note": "a comedy by the Comedy tag and laugh 0.33 that the operator also wants under the scary answers: in his creature examples"
+    },
+    {
+      "title": "An American Werewolf in London",
+      "tmdb": 814,
+      "tree": "horror",
+      "flavour": "creature",
+      "member": true,
+      "note": "a comedy by the Comedy tag and laugh 0.65 that the operator also wants under the scary answers: in his creature examples"
     }
   ]
 }

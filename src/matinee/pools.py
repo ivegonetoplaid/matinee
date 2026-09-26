@@ -26,7 +26,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import pandas as pd
@@ -104,6 +104,7 @@ class House:
     tree_pins: Mapping[str, frozenset[int]]
     payoff_pins: Mapping[tuple[str, str], frozenset[int]]
     scale_pins: Mapping[tuple[str, str, str], frozenset[int]]
+    flavour_pins: Mapping[tuple[str, str], Mapping[int, bool]] = field(default_factory=dict)
 
 
 def load_house(path: Path = DATA / "house_overrides.json") -> House:
@@ -117,11 +118,15 @@ def load_house(path: Path = DATA / "house_overrides.json") -> House:
     scales: dict[tuple[str, str, str], set[int]] = {}
     for pin in doc.get("scales", []):
         scales.setdefault((pin["tree"], pin["scale"], pin["band"]), set()).add(int(pin["tmdb"]))
+    flavours: dict[tuple[str, str], dict[int, bool]] = {}
+    for pin in doc.get("flavours", []):
+        flavours.setdefault((pin["tree"], pin["flavour"]), {})[int(pin["tmdb"])] = bool(pin["member"])
     return House(
         kids_pins={int(p["tmdb"]): p["band"] for p in doc.get("kids", [])},
         tree_pins={t: frozenset(ids) for t, ids in tree_pins.items()},
         payoff_pins={k: frozenset(ids) for k, ids in payoffs.items()},
         scale_pins={k: frozenset(ids) for k, ids in scales.items()},
+        flavour_pins=flavours,
     )
 
 

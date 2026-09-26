@@ -38,7 +38,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from matinee.engine import Catalog, EngineError, load_catalog, reachable, scale_members, walk_ends
+from matinee.engine import Catalog, EngineError, house_flavour, load_catalog, reachable, scale_members, walk_ends
 from matinee.pools import House
 from matinee.reference import DATA
 from matinee.table import FilmTable, load_table
@@ -219,6 +219,16 @@ def check_fixtures(table: FilmTable, pools: Pools, gore: pd.DataFrame, key: dict
     report.say(f"\n== fixtures: {failed} failures across {len(entries)} fixture films ==")
 
 
+def _flavour_pin_wants(house: House, fixture: dict[int, Any]) -> list[tuple[int, str, bool]]:
+    """Each flavour pin with whether its fixture asserts it through flavour_in or flavour_out."""
+    wants = []
+    for (tree, flavour), pins in house.flavour_pins.items():
+        for t, member in pins.items():
+            side = "flavour_in" if member else "flavour_out"
+            wants.append((t, f"{side} {tree} {flavour}", flavour in fixture.get(t, {}).get(side, {}).get(tree, [])))
+    return wants
+
+
 def check_pins_in_key(house: House, key: dict[str, Any], report: Report) -> None:
     """Every house pin must be an answer-key fixture asserting the pinned placement (decision 46)."""
     fixture = {int(e["tmdb"]): e for e in key["films"]}
@@ -230,9 +240,27 @@ def check_pins_in_key(house: House, key: dict[str, Any], report: Report) -> None
         wants += [(t, f"must_reach {tree}", tree in fixture.get(t, {}).get("must_reach", [])) for t in ids]
     for (_, _, band), ids in house.scale_pins.items():
         wants += [(t, f"gore_band {band}", fixture.get(t, {}).get("gore_band") == band) for t in ids]
+    wants += _flavour_pin_wants(house, fixture)
     for tmdb, want, held in sorted(wants):
         if not held:
             report.fail(f"house pin tmdb {tmdb} needs an answer-key fixture asserting {want}")
+
+
+def check_flavour_fixtures(cat: Catalog, key: dict[str, Any], report: Report) -> None:
+    """Fixtures with flavour_in or flavour_out must be in, or out of, those flavours after house pins."""
+    index = cat.table.films.index
+    wants = [
+        (entry, tree_id, flavour, member)
+        for entry in key["films"]
+        for side, member in (("flavour_in", True), ("flavour_out", False))
+        for tree_id, flavours in entry.get(side, {}).items()
+        for flavour in flavours
+    ]
+    for entry, tree_id, flavour, member in wants:
+        held = house_flavour(cat, cat.trees[tree_id], flavour)[index == entry["tmdb"]]
+        if held.size and bool(held[0]) != member:
+            side = "in" if member else "out of"
+            report.fail(f"'{entry['title']}' must be {side} {tree_id} flavour {flavour}")
 
 
 def check_gore(table: FilmTable, pools: Pools, house: House, gore: pd.DataFrame, report: Report) -> None:
@@ -351,6 +379,7 @@ def main() -> int:
     pools.update(check_answer_coverage(cat, pools, report))
     check_pins_in_key(house, key, report)
     check_fixtures(table, pools, gore, key, report)
+    check_flavour_fixtures(cat, key, report)
     check_gore(table, pools, house, gore, report)
     check_lists(table, pools, key, report)
     check_expected(table, pools, report)

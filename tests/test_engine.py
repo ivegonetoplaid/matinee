@@ -458,6 +458,34 @@ def test_a_flavour_floor_keeps_only_films_reaching_it_and_films_with_no_score(tm
     assert rest == set(range(1, 41)) - laughs  # leaving the flavour out is its exact complement
 
 
+def pin_flavours(root: Path, pins: list[dict[str, Any]]) -> Path:
+    house = json.loads((root / "house_overrides.json").read_text())
+    (root / "house_overrides.json").write_text(json.dumps({**house, "flavours": pins}))
+    return root
+
+
+def test_flavour_pins_move_a_film_in_or_out_and_a_film_pinned_elsewhere_survives_leaving_one_out(
+    tmp_path: Path,
+) -> None:
+    pins = [
+        {"tmdb": 3, "tree": "west", "flavour": "laughs", "member": False},
+        {"tmdb": 2, "tree": "west", "flavour": "laughs", "member": True},
+        {"tmdb": 5, "tree": "west", "flavour": "heroic", "member": True},
+    ]
+    cat = load_catalog(make_table(), pin_flavours(write_data(tmp_path, comedy_gate_tree()), pins), reference())
+    laughs = set(walk(cat, "west", Viewer(), [Answer("era", 0)]).pool)
+    rest = set(walk(cat, "west", Viewer(), [Answer("era", 1)]).pool)
+    assert 3 in rest and 3 not in laughs
+    assert 2 in laughs and 2 not in rest
+    assert 5 in laughs and 5 in rest  # a funny film pinned into another flavour is offered both ways
+
+
+def test_a_flavour_pin_naming_an_unknown_flavour_refuses_to_load(tmp_path: Path) -> None:
+    pins = [{"tmdb": 3, "tree": "west", "flavour": "nope", "member": True}]
+    with pytest.raises(ValueError):
+        load_catalog(make_table(), pin_flavours(write_data(tmp_path, comedy_gate_tree()), pins), reference())
+
+
 @pytest.mark.parametrize(
     "change",
     [

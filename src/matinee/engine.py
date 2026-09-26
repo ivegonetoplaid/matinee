@@ -161,6 +161,26 @@ def _flavour(table: FilmTable, tree: Tree, name: str) -> Mask:
     return hit
 
 
+def house_flavour(cat: Catalog, tree: Tree, name: str) -> Mask:
+    """The flavour's films after house pins: a film pinned in joins it, a film pinned out leaves it."""
+    hit = _flavour(cat.table, tree, name)
+    for tmdb, member in cat.house.flavour_pins.get((tree.id, name), {}).items():
+        hit[cat.table.films.index == tmdb] = member
+    return hit
+
+
+def _pinned_into_other(cat: Catalog, tree: Tree, name: str) -> Mask:
+    """Films pinned into any flavour of the tree but `name`; they stay in answers that leave `name` out."""
+    ids = {
+        t
+        for (tid, fl), pins in cat.house.flavour_pins.items()
+        if tid == tree.id and fl != name
+        for t, member in pins.items()
+        if member
+    }
+    return np.asarray(cat.table.films.index.isin(list(ids)), dtype=bool)
+
+
 OPS = {">=": np.greater_equal, ">": np.greater, "<": np.less, "<=": np.less_equal}
 
 
@@ -296,9 +316,9 @@ def _scored_mask(cat: Catalog, tree: Tree, f: Filter) -> Mask:
     table = cat.table
     mask = np.ones(len(table.films), dtype=bool)
     if f.flavour is not None:
-        mask &= _flavour(table, tree, f.flavour)
+        mask &= house_flavour(cat, tree, f.flavour)
     if f.flavour_none is not None:
-        mask &= ~_flavour(table, tree, f.flavour_none)
+        mask &= ~house_flavour(cat, tree, f.flavour_none) | _pinned_into_other(cat, tree, f.flavour_none)
     if f.register is not None:
         mask &= _register(table, tree, f.register)
     if f.payoff is not None:
@@ -359,6 +379,9 @@ def load_catalog(table: FilmTable, data: Path = DATA, reference: Reference | Non
         first_lines=tuple(first["lines"]),
         first_options=tuple(_first_option(o) for o in first["options"]),
     )
+    for tree_id, flavour in cat.house.flavour_pins:
+        if flavour not in getattr(cat.trees.get(tree_id), "flavours", {}):
+            raise EngineError(f"house flavour pin names tree '{tree_id}' flavour '{flavour}', which no tree defines")
     cat.pools = {name: np.array(pool, dtype=bool) for name, pool in build_pools(table, cat.house).items()}
     for tree in cat.trees.values():
         if tree.pool not in cat.pools:
