@@ -4,7 +4,7 @@
 // A tree gated by age (kids) is never offered; the panel says why.
 
 import { post } from "./api.js";
-import { h } from "./dom.js";
+import { h, sentenceCase } from "./dom.js";
 
 const GATED_NOTE =
   "Kids' films are picked for the whole house, so I can't add one just for you. Ask whoever runs Matinee to add it.";
@@ -98,7 +98,11 @@ export function correctionLink({ visit, film, trees }) {
     "Save",
   );
   const gated = trees.some((t) => !t.correctable && t.tree !== visit.tree);
+  const said = [visit.firstSay, ...visit.says, visit.rushed ? "Just pick one!" : null].filter(Boolean);
+  const path = said.map((say) => h("li", {}, sentenceCase(say)));
   const parts = [
+    h("p", { class: "note" }, "How you got here:"),
+    h("ol", { class: "path" }, path),
     h("p", { class: "note" }, `Not really ${here ? here.label.toLowerCase() : "this kind of film"}? Where does it belong?`),
     h("div", { class: "tree-choices" }, choices),
     gated ? h("p", { class: "note small" }, GATED_NOTE) : null,

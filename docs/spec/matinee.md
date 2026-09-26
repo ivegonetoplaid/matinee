@@ -193,6 +193,10 @@ film onto the pinned payoff and off every other.
   choice beneath each question's answers. It ends the questions and picks from
   the pool as it stands. Pressed at the first question,
   it picks from every film some first answer offers this viewer.
+- **The trail.** Above each question after the first, the page lists the
+  viewer's answers so far, first to last. Choosing one asks its question again
+  and forgets every answer after it; choosing the first returns to the first
+  question.
 
 ### 2.5 Every film stays reachable
 
@@ -658,6 +662,8 @@ A correction says a film is not really the kind of film the tree offered it as.
 - The correction link is offered only on a pick that came through a tree. It is
   a small "Wrong kind of film?" link that opens a panel and never dominates the
   result.
+- The panel opens with "How you got here:" and the viewer's answers in order,
+  ending with "Just pick one!" when that ended the questions.
 
 ## 11. The web surface
 
@@ -1104,10 +1110,11 @@ symbol when one does not match.
 | `src/matinee/web/static/js/door.js::BULBS` | `src/matinee/web/static/js/door.js:12` | 2026-09-26 |
 | `src/matinee/web/static/js/iris.js::closeIris` / `openIris` | `src/matinee/web/static/js/iris.js:14` | 2026-09-26 |
 | `src/matinee/web/static/js/wall.js::Wall` / `across` | `src/matinee/web/static/js/wall.js:34` | 2026-09-26 |
-| `src/matinee/web/static/js/main.js::start` | `src/matinee/web/static/js/main.js:158` | 2026-09-26 |
-| `src/matinee/web/static/js/main.js::step` | `src/matinee/web/static/js/main.js:185` | 2026-09-26 |
-| `src/matinee/web/static/js/main.js::pickNow` / `checking` | `src/matinee/web/static/js/main.js:231` | 2026-09-26 |
-| `src/matinee/web/static/js/main.js::lockStage` / `nameTag` | `src/matinee/web/static/js/main.js:40` | 2026-09-26 |
+| `src/matinee/web/static/js/main.js::start` | `src/matinee/web/static/js/main.js:186` | 2026-09-26 |
+| `src/matinee/web/static/js/main.js::step` | `src/matinee/web/static/js/main.js:225` | 2026-09-26 |
+| `src/matinee/web/static/js/main.js::pickNow` / `checking` | `src/matinee/web/static/js/main.js:272` | 2026-09-26 |
+| `src/matinee/web/static/js/main.js::trail` / `backTo` | `src/matinee/web/static/js/main.js:71` | 2026-09-26 |
+| `src/matinee/web/static/js/main.js::lockStage` / `nameTag` | `src/matinee/web/static/js/main.js:42` | 2026-09-26 |
 | `src/matinee/web/static/js/pick.js::showNoFilm` | `src/matinee/web/static/js/pick.js:93` | 2026-09-26 |
 | `src/matinee/web/static/js/pick.js::showPick` | `src/matinee/web/static/js/pick.js:113` | 2026-09-26 |
 | `src/matinee/web/static/js/pick.js::firstPickReveal` | `src/matinee/web/static/js/pick.js:70` | 2026-09-26 |
@@ -1117,7 +1124,7 @@ symbol when one does not match.
 | `src/matinee/web/static/js/dom.js::h` (text nodes only) | `src/matinee/web/static/js/dom.js:12` | 2026-09-26 |
 | `src/matinee/web/static/js/type.js::typeLine` | `src/matinee/web/static/js/type.js:10` | 2026-09-26 |
 | `src/matinee/web/static/manifest.webmanifest` | `src/matinee/web/static/manifest.webmanifest:1` | 2026-09-26 |
-| `src/matinee/web/static/css/matinee.css` reduced-motion rules | `src/matinee/web/static/css/matinee.css:776` | 2026-09-26 |
+| `src/matinee/web/static/css/matinee.css` reduced-motion rules | `src/matinee/web/static/css/matinee.css:839` | 2026-09-26 |
 
 ### Deployment
 

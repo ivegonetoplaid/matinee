@@ -20,6 +20,8 @@ const visit = {
   profileTopics: false,
   tree: null,
   answers: [],
+  says: [], // what the viewer answered, one per entry in answers
+  rushed: false, // "Just pick one!" ended the questions early
   firstSay: null,
   treeSay: null,
   seen: [],
@@ -65,6 +67,31 @@ function nameTag() {
   );
 }
 
+// The answers so far, first to last. Each re-asks the question it answered.
+function trail() {
+  if (!visit.tree) return null;
+  const crumbs = [visit.firstSay, ...visit.says].map((say, i) =>
+    h(
+      "li",
+      {},
+      h(
+        "button",
+        {
+          class: "crumb",
+          type: "button",
+          title: sentenceCase(say),
+          onclick: () => {
+            lockStage();
+            backTo(i);
+          },
+        },
+        sentenceCase(say),
+      ),
+    ),
+  );
+  return h("nav", { class: "trail", "aria-label": "Your answers so far" }, h("ol", {}, crumbs));
+}
+
 // A question screen. "Just pick one!" stands last, beneath the answers, and shows with them.
 function frame({ count }) {
   const line = h("h1", { class: "line", "aria-live": "polite" });
@@ -77,6 +104,7 @@ function frame({ count }) {
       hidden: true,
       onclick: () => {
         lockStage();
+        visit.rushed = true;
         pickNow();
       },
     },
@@ -84,7 +112,7 @@ function frame({ count }) {
   );
   clear(stage).append(
     h("header", { class: "topbar" }, h("div", { class: "wordmark" }, "Matinee"), nameTag(), h("div", { class: "count" }, count)),
-    h("section", { class: "talk" }, line, answers, pick),
+    h("section", { class: "talk" }, trail(), line, answers, pick),
     h("div", { class: "bottombar" }, h("span"), credits()),
   );
   return { line, answers, pick };
@@ -161,6 +189,8 @@ async function start({ reveal = null } = {}) {
   Object.assign(visit, {
     tree: null,
     answers: [],
+    says: [],
+    rushed: false,
     firstSay: null,
     treeSay: null,
     seen: [],
@@ -178,8 +208,18 @@ async function start({ reveal = null } = {}) {
 }
 
 function chooseTree(option) {
-  Object.assign(visit, { tree: option.tree, answers: [], firstSay: option.say, seen: [], treeSay: null });
+  Object.assign(visit, { tree: option.tree, answers: [], says: [], rushed: false, firstSay: option.say, seen: [], treeSay: null });
   step();
+}
+
+// Crumb 0 is the first question; crumb i re-asks the question answers[i - 1] answered.
+function backTo(i) {
+  if (i === 0) return start();
+  visit.answers = visit.answers.slice(0, i - 1);
+  visit.says = visit.says.slice(0, i - 1);
+  visit.rushed = false;
+  if (!visit.answers.length) visit.treeSay = null;
+  return step();
 }
 
 async function step() {
@@ -196,6 +236,7 @@ async function step() {
     go: () => {
       if (!visit.answers.length) visit.treeSay = o.say;
       visit.answers.push({ question: q.id, option: o.index });
+      visit.says.push(o.say);
       step();
     },
   }));

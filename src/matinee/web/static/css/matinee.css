@@ -237,6 +237,60 @@ button {
   }
 }
 
+/* The answers so far, above the question: small, dim, one crumb per answer. */
+.trail ol {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 14px;
+  color: var(--dim);
+}
+
+.trail li {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.trail li + li::before {
+  content: "›";
+  margin: 0 10px;
+}
+
+.crumb {
+  max-width: 26ch;
+  min-height: 32px;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-decoration: underline;
+  text-decoration-color: var(--chip-line);
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .crumb:hover {
+    color: var(--text);
+    text-decoration-color: currentColor;
+  }
+}
+
+.path {
+  margin: 0;
+  padding-left: 1.4em;
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--text);
+}
+
 .line {
   font-family: var(--display);
   font-weight: 800;
