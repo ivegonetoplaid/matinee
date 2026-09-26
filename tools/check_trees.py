@@ -15,7 +15,13 @@ It reports:
    squeamish." or "RIP AND TEAR.".
 5. The data: every film carries TMDB facts, and the shipped reference statistics
    cover every tree file.
-6. Answer coverage: every film a tree's pool holds is reachable through its answers.
+6. Answer coverage: every film a tree's pool holds is reachable through its answers,
+   no path ends on no film, and how many questions each tree asks.
+7. Smaller libraries: the same trees built against a random third and a random
+   tenth of the library, drawn with the fixed seeds in SAMPLES, must keep every
+   film reachable, and a film both hold in a tree's pool must reach the same
+   answers of that tree (decision 58). Fixtures are checked on the full
+   library only, since a sample may not hold them.
 
 Reads nothing live. Usage: python3 tools/check_trees.py [--table FILE]
 """
@@ -29,14 +35,16 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 import pandas as pd
 
-from matinee.engine import Catalog, EngineError, load_catalog, reachable, scale_members
+from matinee.engine import Catalog, EngineError, load_catalog, reachable, scale_members, walk_ends
 from matinee.pools import House
 from matinee.reference import DATA
 from matinee.table import FilmTable, load_table
 
 DEFAULT_TABLE = Path.home() / ".local/share/matinee/films.sqlite"
+SAMPLES = (("a third", 1 / 3, 3), ("a tenth", 1 / 10, 10))  # name, share of the library, fixed seed
 GORE_PROMISES = ("spotless", "rip")  # pails an unknown film could break the promise of
 # Trees a film's genre tag is expected to lead to.
 EXPECTED = {
@@ -67,13 +75,14 @@ Pools = dict[str, pd.Series]
 class Report:
     failures: list[str] = field(default_factory=list)
     lines: list[str] = field(default_factory=list)
+    prefix: str = ""
 
     def say(self, text: str) -> None:
         self.lines.append(text)
 
     def fail(self, text: str) -> None:
-        self.failures.append(text)
-        self.lines.append(f"FAIL {text}")
+        self.failures.append(f"{self.prefix}{text}")
+        self.lines.append(f"FAIL {self.prefix}{text}")
 
 
 def _label(table: FilmTable, tmdb: int) -> str:
@@ -235,22 +244,65 @@ def check_gore(table: FilmTable, pools: Pools, house: House, gore: pd.DataFrame,
 def check_answer_coverage(cat: Catalog, pools: Pools, report: Report) -> dict[str, pd.Series]:
     """Every film a tree's pool holds must be reachable through some complete path of its answers.
 
-    Returns each tree file's reachable films keyed by its pool name, which the other checks use as that
-    tree's home, so they judge what a viewer can actually be offered.
+    Also fails a path that ends on no film, and reports how many questions each tree asks. Returns each
+    tree file's reachable films keyed by its pool name, which the other checks use as that tree's home, so
+    they judge what a viewer can actually be offered.
     """
     reached: dict[str, pd.Series] = {}
     index = cat.table.films.index
-    report.say("\n== answer coverage: films in a tree's pool that no path of answers reaches ==")
+    report.say("\n== answer coverage: films reachable through each tree's answers, and questions asked ==")
     for tree_id, tree in sorted(cat.trees.items()):
+        ends = walk_ends(cat, tree_id)
         walked = pd.Series(reachable(cat, tree_id), index=index)
-        stranded = pools[tree.pool] & ~walked
-        report.say(f"  {tree_id:12s} {int(walked.sum()):5d} reachable of {int(pools[tree.pool].sum()):5d}")
-        for tmdb in index[stranded]:
+        asked = sorted({len(answers) for answers, _ in ends})
+        report.say(
+            f"  {tree_id:12s} {int(walked.sum()):5d} reachable of {int(pools[tree.pool].sum()):5d};"
+            f" asks {asked[0]}-{asked[-1]} questions over {len(ends)} paths"
+        )
+        for answers, step in ends:
+            if not step.pool:
+                report.fail(f"answers: a {tree_id} path ends on no film: {[(a.question, a.option) for a in answers]}")
+        for tmdb in index[pools[tree.pool] & ~walked]:
             report.fail(
                 f"answers: {_label(cat.table, int(tmdb))} is in the {tree_id} pool but no answer path reaches it"
             )
         reached[tree.pool] = walked
     return reached
+
+
+def check_same_answers(full: Catalog, sample: Catalog, report: Report) -> None:
+    """A film must reach the same answers in every library (decision 58).
+
+    Compared for every answer of every tree, over the films both libraries hold in that tree's pool: pool
+    membership itself may differ, because the franchise and stray rules read which films are present.
+    """
+    rows = full.table.films.index.get_indexer(sample.table.films.index)
+    for (tree_id, question, option), mask in sample.masks.items():
+        pool = sample.trees[tree_id].pool
+        both = sample.pools[pool] & full.pools[pool][rows]
+        theirs = full.masks[(tree_id, question, option)][rows]
+        for tmdb in sample.ids[both & (mask != theirs)]:
+            report.fail(
+                f"answers: {_label(sample.table, int(tmdb))} changes its {tree_id} '{question}' answer {option}"
+                " with the library's size"
+            )
+
+
+def check_sample(full: Catalog, name: str, share: float, seed: int, report: Report, data: Path = DATA) -> None:
+    """Build every tree against a random share of the library and hold it to reachability and placements."""
+    ids = full.table.films.index.to_numpy()
+    rng = np.random.default_rng(seed)
+    chosen = rng.choice(ids, size=round(len(ids) * share), replace=False)
+    table = full.table.subset([int(t) for t in chosen])
+    cat = load_catalog(table, data, full.reference)
+    report.prefix = f"[{name}] "
+    report.say(f"\n######## {name} of the library: {len(table.films)} films, seed {seed} ########")
+    pools = {n: pd.Series(mask, index=table.films.index) for n, mask in cat.pools.items()}
+    pools.update(check_answer_coverage(cat, pools, report))
+    check_same_answers(full, cat, report)
+    check_expected(table, pools, report)
+    check_reachability(table, pools, report)
+    report.prefix = ""
 
 
 def check_data(table: FilmTable, report: Report) -> None:
@@ -290,6 +342,8 @@ def main() -> int:
     check_lists(table, pools, key, report)
     check_expected(table, pools, report)
     check_reachability(table, pools, report)
+    for name, share, seed in SAMPLES:
+        check_sample(cat, name, share, seed, report)
     print("\n".join(report.lines))
     print(f"\n{len(report.failures)} failures")
     return 1 if report.failures else 0

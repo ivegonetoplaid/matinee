@@ -405,21 +405,29 @@ def walk(cat: Catalog, tree_id: str, viewer: Viewer, answers: Sequence[Answer]) 
     return Step(tree_id, line, None, tuple(int(t) for t in cat.ids[pool]), prefer)
 
 
-def reachable(cat: Catalog, tree_id: str, viewer: Viewer | None = None) -> Mask:
-    """Films some complete path of answers ends on for this viewer: the union of every walk's final pool.
-
-    A film in the tree's pool but not here can only be reached by `Just pick one!`.
-    """
+def walk_ends(cat: Catalog, tree_id: str, viewer: Viewer | None = None) -> list[tuple[tuple[Answer, ...], Step]]:
+    """Every complete path of answers through the tree for this viewer, with the step it ends on."""
     who = viewer or Viewer()
-    reached = np.zeros(len(cat.ids), dtype=bool)
+    ends = []
     stack: list[tuple[Answer, ...]] = [()]
     while stack:
         answers = stack.pop()
         step = walk(cat, tree_id, who, answers)
         if step.question is None:
-            reached[np.isin(cat.ids, step.pool)] = True
+            ends.append((answers, step))
             continue
         stack.extend((*answers, Answer(step.question.id, o.index)) for o in step.question.options)
+    return ends
+
+
+def reachable(cat: Catalog, tree_id: str, viewer: Viewer | None = None) -> Mask:
+    """Films some complete path of answers ends on for this viewer: the union of every walk's final pool.
+
+    A film in the tree's pool but not here can only be reached by `Just pick one!`.
+    """
+    reached = np.zeros(len(cat.ids), dtype=bool)
+    for _, step in walk_ends(cat, tree_id, viewer):
+        reached[np.isin(cat.ids, step.pool)] = True
     return reached
 
 

@@ -74,6 +74,11 @@ class FilmTable:
     def has_genome(self) -> pd.Series:
         return pd.Series(~np.isnan(self.genome).any(axis=1), index=self.films.index)
 
+    def subset(self, ids: Sequence[int]) -> FilmTable:
+        """The same table holding only the films `ids`, in table order: a smaller library for the checker."""
+        keep = self.films.index.isin(list(ids))
+        return FilmTable(self.films[keep], self.tags, self.genome[keep], self.built_at, self.oldest_tmdb, self.release)
+
 
 @dataclass
 class BuildReport:
