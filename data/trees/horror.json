@@ -47,8 +47,7 @@
           "reply": "fair enough. easy company, nothing that needs following.",
           "filter": {
             "runtime_max": 100,
-            "spoken_english": true,
-            "allow_rewatch": true
+            "spoken_english": true
           }
         },
         {
@@ -65,8 +64,7 @@
           "filter": {
             "runtime_min": 95,
             "rating_min": 6.3,
-            "sort": "rating",
-            "prefer_unseen": true
+            "sort": "rating"
           },
           "note": "a rating floor is defensible here and nowhere else: the viewer has explicitly asked for something worth disappearing into, so filtering on quality is answering them rather than overruling them."
         }
