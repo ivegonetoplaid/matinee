@@ -329,6 +329,8 @@ export class Door {
       return res.ok ? this.enterAs(res.data) : res.data.message;
     }
     if (!this.rememberBox.checked) return this.enter({ viewer: { topics, exclusions } });
+    // A profile is made only when there is something to keep.
+    if (!topics.length && !exclusions.length) return "Choose something to steer around, or untick Remember me.";
     const name = this.nameField.value.trim();
     if (!name) {
       this.nameField.focus();
