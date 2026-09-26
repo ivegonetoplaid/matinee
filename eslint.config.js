@@ -1,4 +1,5 @@
-// ESLint for the page scripts: the recommended rules, plus the coding standards' ban on nested ternaries.
+// ESLint for the page scripts: the recommended rules, plus the coding standards' ban on nested ternaries and
+// their cyclomatic limit of 10.
 import js from "@eslint/js";
 import globals from "globals";
 
@@ -9,6 +10,7 @@ export default [
     languageOptions: { ecmaVersion: 2023, sourceType: "module", globals: globals.browser },
     rules: {
       "no-nested-ternary": "error",
+      complexity: ["error", 10],
       "no-var": "error",
       "prefer-const": "error",
       eqeqeq: "error",

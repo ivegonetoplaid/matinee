@@ -1,7 +1,8 @@
-// Matinee's page: the questions on the poster wall, then the pick.
+// Matinee's page: the box office, then the questions on the poster wall, then the pick.
 
-import { post } from "./api.js";
+import { get, post } from "./api.js";
 import { correctionLink } from "./correct.js";
+import { Door } from "./door.js";
 import { clear, h, sentenceCase } from "./dom.js";
 import { showPick } from "./pick.js";
 import { typeLine } from "./type.js";
@@ -13,6 +14,8 @@ const wall = new Wall(document.getElementById("wall"));
 // Where this visit stands. The viewer is a held profile or this visit's own exclusions.
 const visit = {
   viewer: {},
+  name: null,
+  profileTopics: false,
   tree: null,
   answers: [],
   firstSay: null,
@@ -36,6 +39,30 @@ function lockStage() {
   for (const button of stage.querySelectorAll("button")) button.disabled = true;
 }
 
+// The profile's name at the top of the wall, with "Edit my list" and "Not <name>?".
+function nameTag() {
+  if (!visit.name) return null;
+  const leave = (opts) => {
+    lockStage();
+    boot(opts);
+  };
+  return h(
+    "div",
+    { class: "nametag" },
+    h("span", { class: "nametag-name" }, visit.name),
+    h("button", { class: "link-button", type: "button", onclick: () => leave({ screen: "list", profileId: visit.viewer.profile_id }) }, "Edit my list"),
+    h(
+      "button",
+      {
+        class: "link-button",
+        type: "button",
+        onclick: () => leave({ screen: "known" }),
+      },
+      `Not ${visit.name}?`,
+    ),
+  );
+}
+
 function frame({ count, justPick = true }) {
   const line = h("h1", { class: "line", "aria-live": "polite" });
   const answers = h("div", { class: "answers", role: "group", "aria-label": "Your answers", hidden: true });
@@ -52,7 +79,7 @@ function frame({ count, justPick = true }) {
     "Just pick one!",
   );
   clear(stage).append(
-    h("header", { class: "topbar" }, h("div", { class: "wordmark" }, "Matinee"), h("div", { class: "count" }, count)),
+    h("header", { class: "topbar" }, h("div", { class: "wordmark" }, "Matinee"), nameTag(), h("div", { class: "count" }, count)),
     h("section", { class: "talk" }, line, answers),
     h("div", { class: "bottombar" }, justPick ? pick : h("span")),
   );
@@ -99,7 +126,26 @@ function problem(data, again) {
   );
 }
 
-export async function start() {
+// The box office. `opts.screen` opens it on the name lookup ("known") or the viewer's list ("list").
+async function boot(opts = {}) {
+  const [door, first] = await Promise.all([get("/api/door"), post("/api/first", { viewer: {} })]);
+  if (!door.ok) return problem(door.data, () => boot(opts));
+  stage.classList.remove("revealed");
+  wall.root.classList.remove("spotlit", "revealed");
+  stage.classList.add("at-door");
+  wall.root.classList.add("at-door");
+  if (first.ok) wall.show(first.data.pool, { shuffle: false });
+  await new Door({ stage, onEnter: enter }).open({ door: door.data, ...opts });
+}
+
+function enter({ viewer, name, profileTopics }) {
+  Object.assign(visit, { viewer, name, profileTopics });
+  stage.classList.remove("at-door");
+  wall.root.classList.remove("at-door");
+  start();
+}
+
+async function start() {
   const res = await post("/api/first", { viewer: visit.viewer });
   if (!res.ok) return problem(res.data, start);
   Object.assign(visit, {
@@ -151,7 +197,7 @@ function pickFrame() {
   const aside = h("div", { class: "aside" }, line);
   const showing = h("section", { class: "showing" }, aside);
   clear(stage).append(
-    h("header", { class: "topbar" }, h("div", { class: "wordmark" }, "Matinee"), h("span")),
+    h("header", { class: "topbar" }, h("div", { class: "wordmark" }, "Matinee"), nameTag() || h("span")),
     showing,
   );
   return { line, aside, showing };
@@ -203,4 +249,4 @@ async function pickNow(opening = "") {
   });
 }
 
-start();
+boot();
