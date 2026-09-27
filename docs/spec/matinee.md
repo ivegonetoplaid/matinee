@@ -200,8 +200,9 @@ film onto the pinned payoff and off every other.
   choice beneath each question's answers. It ends the questions and picks from
   the pool as it stands. Pressed at the first question,
   it picks from every film some first answer offers this viewer.
-- **The trail.** On each question after the first, the page lists the viewer's
-  answers so far, first to last, in gold at the bottom centre. Choosing one asks its question again
+- **The trail.** On each question after the first, and on the pick screen, the
+  page lists the viewer's answers so far, first to last, in gold at the bottom
+  centre. Choosing one asks its question again
   and forgets every answer after it; choosing the first returns to the first
   question.
 
@@ -416,7 +417,7 @@ Horror's gore question is a scale cut into four pails, asked in pictures.
 | None. I'm squeamish. | spotless |
 | Some. I'll look away when I need to. | spotless, some |
 | Properly messy. I'm fine. | some, messy |
-| RIP AND TEAR. | rip |
+| RIP AND TEAR. | every pail: the worst and everything under it |
 
 A viewer excluding any of these DoesTheDogDie topics is never asked the gore
 question and is treated as "None. I'm squeamish.": 188, 296, 331, 203, 250,
@@ -619,7 +620,10 @@ never kept. No tree, scale or score is built from DoesTheDogDie data.
   A held id is forgotten when DoesTheDogDie answers 404 for its votes.
 - **The draw.** The pick draws a film at random from the candidates. The
   candidates are the pool less the films already shown or turned away since the
-  viewer last answered the first question (all of the pool if none is left).
+  viewer last answered the first question.
+- **Used up.** When every film in the pool has been shown or turned away, no
+  film is drawn again. The page says "That's every film I've got for those
+  answers. Step back along the trail, or start over." and offers `Start over`.
   With `sort: rating`, they are the better-rated half, and an unknown rating
   ranks last.
 - **Least gory first.** When a viewer's topics skip a question whose answers
@@ -839,11 +843,18 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
 - **The pick, in two beats.**
   1. *Land.* A spotlight lands on one poster (in the right two-thirds on
      desktop, the upper half on a phone) while "Here. Watch this one." types.
-  2. *Reveal.* After 1.5 seconds the lit poster and the wall fade nearly away.
-     The film's backdrop rises, fading into the title, year and synopsis, shown
-     without a tap. Beside them sit a reminder of the viewer's answer ("You said:
-     …"), `Not that one`, a "More on Seerr" link to the film's page on the
-     configured Seerr, `Start over`, and the correction link.
+  2. *Reveal.* After 1.5 seconds the wall fades nearly away and the lit poster
+     travels to where it rests. On a desktop that is the foot of the left
+     column, as large as the height left there allows at 2:3 (never under 160
+     px), while the film's backdrop rises on the right, fading into the title,
+     year and synopsis, shown without a tap. On a phone the poster fills the
+     width at the top, the details follow without a backdrop, and after 2.2
+     seconds the page scrolls gently to them. The left column hangs from the
+     top of the screen: the line, then `Not that one`, a "More on Seerr" link to
+     the film's page on the configured Seerr and `Start over` in one row, then
+     the correction link. The line's words never change, so `Not that one`
+     stays in one place from film to film. With reduced motion the poster and
+     the scroll move without animation.
 
   While a DoesTheDogDie check runs, the page types "One moment. Let me check
   this one against your list." and shuffles the wall.

@@ -187,6 +187,9 @@
             "bands": {
               "scale": "gore",
               "in": [
+                "spotless",
+                "some",
+                "messy",
                 "rip"
               ]
             }

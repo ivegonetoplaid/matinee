@@ -23,7 +23,6 @@ const visit = {
   says: [], // what the viewer answered, one per entry in answers
   rushed: false, // "Just pick one!" ended the questions early
   firstSay: null,
-  treeSay: null,
   seen: [],
   pool: [],
   trees: [],
@@ -192,7 +191,6 @@ async function start({ reveal = null } = {}) {
     says: [],
     rushed: false,
     firstSay: null,
-    treeSay: null,
     seen: [],
     pool: res.data.pool,
     trees: res.data.options,
@@ -208,7 +206,7 @@ async function start({ reveal = null } = {}) {
 }
 
 function chooseTree(option) {
-  Object.assign(visit, { tree: option.tree, answers: [], says: [], rushed: false, firstSay: option.say, seen: [], treeSay: null });
+  Object.assign(visit, { tree: option.tree, answers: [], says: [], rushed: false, firstSay: option.say, seen: [] });
   step();
 }
 
@@ -218,7 +216,6 @@ function backTo(i) {
   visit.answers = visit.answers.slice(0, i - 1);
   visit.says = visit.says.slice(0, i - 1);
   visit.rushed = false;
-  if (!visit.answers.length) visit.treeSay = null;
   return step();
 }
 
@@ -234,7 +231,6 @@ async function step() {
     say: o.say,
     image: o.image,
     go: () => {
-      if (!visit.answers.length) visit.treeSay = o.say;
       visit.answers.push({ question: q.id, option: o.index });
       visit.says.push(o.say);
       step();
@@ -243,16 +239,19 @@ async function step() {
   await ask({ ack: res.data.line, question: q.ask, options, count: countText(visit.pool.length, false), picture });
 }
 
+// The pick screen. The aside hangs from the top of the left column, so nothing re-centres as the film
+// arrives; the poster settles beneath it, in the column's foot.
 function pickFrame() {
   const line = h("h1", { class: "line pick-line", "aria-live": "polite" });
   const aside = h("div", { class: "aside" }, line);
-  const showing = h("section", { class: "showing" }, aside);
+  const left = h("div", { class: "pick-left" }, aside);
+  const showing = h("section", { class: "showing" }, left);
   clear(stage).append(
     h("header", { class: "topbar" }, h("div", { class: "wordmark" }, "Matinee"), nameTag() || h("span")),
     showing,
-    h("footer", { class: "bottombar" }, h("span"), credits()),
+    h("footer", { class: "bottombar" }, trail(), h("span"), credits()),
   );
-  return { line, aside, showing };
+  return { line, aside, left, showing };
 }
 
 function hasTopics() {
@@ -289,7 +288,6 @@ async function pickNow(opening = "", risk = false) {
     stage,
     wall,
     pool: visit.pool,
-    reminder: visit.treeSay || visit.firstSay,
     result: res.data,
     frame,
     actions: {

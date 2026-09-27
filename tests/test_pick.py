@@ -121,7 +121,7 @@ def test_the_device_cap_is_sixty_an_hour() -> None:
 def test_candidates_skip_what_was_seen_and_take_the_better_half() -> None:
     ratings = {1: 5.0, 2: 9.0, 3: 7.0, 4: 8.0, 5: 6.0}
     assert candidates([1, 2, 3, 4, 5], [2, 4], ratings, None) == [1, 3, 5]
-    assert candidates([1, 2], [1, 2], ratings, None) == [1, 2]  # all seen: start the pool again
+    assert candidates([1, 2], [1, 2], ratings, None) == []  # all seen: used up, never started again
     assert candidates([1, 2, 3, 4, 5], [], ratings, "rating") == [2, 4, 3]
 
 
@@ -187,6 +187,15 @@ def test_a_viewer_without_topics_causes_no_lookup_and_no_device_cookie(site: Any
 def test_seen_films_are_not_drawn_again(site: Any) -> None:
     client, _ = site
     assert client.post("/api/pick", json={"tree": "west", "seen": [1, 2]}).json()["film"]["tmdb"] == 3
+
+
+def test_a_pool_whose_every_film_was_shown_says_it_is_used_up(site: Any) -> None:
+    client, _ = site
+    body = client.post("/api/pick", json={"tree": "west", "seen": [1, 2, 3]}).json()
+    assert body["film"] is None
+    assert (
+        body["exhausted"] == "That's every film I've got for those answers. Step back along the trail, or start over."
+    )
 
 
 def test_an_exhausted_pool_says_so_in_words(site: Any) -> None:

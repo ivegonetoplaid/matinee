@@ -116,7 +116,12 @@ def test_gore_question_offers_the_decided_pails() -> None:
     gore = next(q for q in doc["questions"] if q["id"] == "gore")
     offers = [o["filter"]["bands"] for o in gore["options"]]
     assert [b["scale"] for b in offers] == ["gore"] * 4
-    assert [b["in"] for b in offers] == [["spotless"], ["spotless", "some"], ["some", "messy"], ["rip"]]
+    assert [b["in"] for b in offers] == [
+        ["spotless"],
+        ["spotless", "some"],
+        ["some", "messy"],
+        ["spotless", "some", "messy", "rip"],
+    ]
     assert offers[gore["treat_as"]]["in"] == ["spotless"]
     scale = doc["scales"]["gore"]
     assert scale["percentiles"] == [40, 70, 90]

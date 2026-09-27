@@ -212,6 +212,7 @@ UNCHECKED_LINES = {
     ),
 }
 EXHAUSTED = "Every film left here trips something on your list. Want to start over?"
+USED_UP = "That's every film I've got for those answers. Step back along the trail, or start over."
 TIRED = (
     "Three in a row trip your list, starting with one where {topic}. Roll again, or I can just pick one "
     "without turning any away. It might have some of what you'd rather skip."
@@ -235,6 +236,12 @@ def device_id(request: Request, response: Response) -> str:
     return fresh
 
 
+def _no_film_line(result: Pick) -> str | None:
+    if result.used_up:
+        return USED_UP
+    return EXHAUSTED if result.exhausted else None
+
+
 def pick_out(films: Any, result: Pick) -> PickOut:
     swapped = None
     if result.swapped is not None:
@@ -246,7 +253,7 @@ def pick_out(films: Any, result: Pick) -> PickOut:
         film=None if result.film is None else film_ref(films, result.film),
         swapped=swapped,
         unchecked=None if result.unchecked is None else UNCHECKED_LINES[result.unchecked],
-        exhausted=EXHAUSTED if result.exhausted else None,
+        exhausted=_no_film_line(result),
         tired=TIRED.format(topic=result.swapped_hits[0].name) if result.tired else None,
         turned_away=list(result.turned),
         credit=DTDD_CREDIT,
@@ -383,6 +390,8 @@ def add_pick_routes(app: FastAPI, theatre: Theatre, store: Store, picker: Picker
         films = cat.table.films
         ratings = dict(zip(films.index.tolist(), films.rating.fillna(0.0).tolist(), strict=True))
         pool = candidates(left, body.seen, ratings, prefer)
+        if left and not pool:
+            return pick_out(films, Pick(None, used_up=True))
         topics = frozenset() if body.risk else viewer.topics
         device = device_id(request, response) if topics else ""
         result = picker.pick(pool, topics, device, gentlest(cat, viewer, pool))

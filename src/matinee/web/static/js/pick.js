@@ -1,13 +1,20 @@
 // The pick, in two beats. Land: a spotlight lands on one poster while "Here.
-// Watch this one." types out. Reveal: after about a second and a half the lit
-// poster and the wall fade nearly away, and the film's backdrop rises with its
-// title, year and synopsis. The film is tonight's showing, never a search result.
+// Watch this one." types out. Reveal: after about a second and a half the wall
+// fades nearly away and the lit poster itself travels to its resting place. On a
+// desktop that is the foot of the left column, as large as the space allows, while
+// the film's backdrop rises on the right with its title, year and synopsis. On a
+// phone the poster fills the screen, then the page scrolls gently to the details.
+// The film is tonight's showing, never a search result.
 
 import { get } from "./api.js";
 import { h, isPhone, sentenceCase, wait } from "./dom.js";
 import { typeLine } from "./type.js";
 
 const REVEAL_AFTER_MS = 1500;
+const SETTLE_MS = 900;
+const PHONE_HOLD_MS = 2200;
+const POSTER_RATIO = 1.5; // height over width
+const POSTER_MIN_H = 160; // below this the page scrolls rather than shrink the poster further
 const HERE = "Here. Watch this one.";
 // Where the lit poster lands, as fractions of the screen: the right two-thirds on desktop, the upper half on a phone.
 const SPOTS = {
@@ -39,6 +46,35 @@ function spotlight(tmdb, title) {
   spot.style.left = `${at[0] * 100}vw`;
   spot.style.top = `${at[1] * 100}vh`;
   return spot;
+}
+
+const still = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+// The poster's resting box: as tall as the slot allows at 2:3, never wider than the slot.
+function fit(slot) {
+  const box = slot.getBoundingClientRect();
+  const height = Math.min(box.width * POSTER_RATIO, Math.max(POSTER_MIN_H, box.height));
+  return { width: height / POSTER_RATIO, height };
+}
+
+// Moves the lit poster into `slot` in the page's flow: the same picture, carried from where it
+// landed on the wall to where it rests. The slot is placed by the caller before this runs.
+function settle(spot, slot, film) {
+  const from = spot.querySelector(".spot-poster").getBoundingClientRect();
+  const poster = h("img", { class: "slot-poster", src: `/img/poster/${film.tmdb}/l`, alt: `${film.title} poster` });
+  poster.addEventListener("error", () => slot.remove());
+  const size = fit(slot);
+  poster.style.width = `${size.width}px`;
+  poster.style.height = `${size.height}px`;
+  slot.append(poster);
+  spot.remove();
+  const to = poster.getBoundingClientRect();
+  if (still() || !to.width) return;
+  const shift = `translate(${from.left - to.left}px, ${from.top - to.top}px) scale(${from.width / to.width})`;
+  poster.animate([{ transform: shift }, { transform: "none" }], {
+    duration: SETTLE_MS,
+    easing: "cubic-bezier(0.2, 0.7, 0.2, 1)",
+  });
 }
 
 function heading(film) {
@@ -110,7 +146,7 @@ async function showNoFilm(result, { line, aside }, actions) {
 }
 
 // The page's pick screen. `actions` holds notThatOne, justPick, startOver, failed and the correction panel's builder.
-export async function showPick({ stage, wall, pool, reminder, result, frame, actions }) {
+export async function showPick({ stage, wall, pool, result, frame, actions }) {
   const film = result.film;
   const { line, aside } = frame;
   if (!film) return showNoFilm(result, frame, actions);
@@ -131,21 +167,27 @@ export async function showPick({ stage, wall, pool, reminder, result, frame, act
   }
   const info = card.data;
   wall.root.classList.add("revealed");
-  spot.classList.add("faded");
   stage.classList.add("revealed");
-  frame.showing.append(feature(info, film, result));
+  const shown = feature(info, film, result);
+  frame.showing.append(shown);
+  // The buttons come straight after the line, whose words never change, so "Not that one" sits in
+  // the same place for every film. The answers so far are in the trail at the foot of the screen.
   const buttons = h(
     "div",
     { class: "choices" },
     h("button", { class: "pill velvet", type: "button", onclick: actions.notThatOne }, "Not that one"),
     info.seerr ? h("a", { class: "seerr", href: info.seerr, target: "_blank", rel: "noopener noreferrer" }, "More on Seerr") : null,
-  );
-  const parts = [
-    reminder ? h("p", { class: "you-said" }, `You said: “${sentenceCase(reminder)}”`) : null,
-    buttons,
     h("button", { class: "link-button", type: "button", onclick: actions.startOver }, "Start over"),
-    result.swapped ? firstPickReveal(result) : null,
-    actions.correction(film),
-  ];
+  );
+  const parts = [buttons, result.swapped ? firstPickReveal(result) : null, actions.correction(film)];
   aside.append(...parts.filter(Boolean));
+  // Measured once the aside is whole, so the poster takes only the height left beneath it.
+  const slot = h("div", { class: "poster-slot" });
+  frame.left.append(slot);
+  settle(spot, slot, film);
+  if (isPhone()) {
+    stage.scrollTop = 0;
+    await wait(PHONE_HOLD_MS);
+    shown.scrollIntoView({ behavior: still() ? "auto" : "smooth", block: "start" });
+  }
 }

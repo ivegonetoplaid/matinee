@@ -517,11 +517,6 @@ button {
   pointer-events: none;
 }
 
-/* The boards drop the lit poster at the reveal; the frosted wall is what stays "nearly away". */
-.spot.faded {
-  opacity: 0;
-}
-
 .spot-glow {
   position: absolute;
   left: -43%;
@@ -542,8 +537,9 @@ button {
   box-shadow: 0 0 0 2px rgba(255, 214, 140, 0.9), 0 0 60px 12px rgba(255, 190, 90, 0.45), 0 24px 60px rgba(0, 0, 0, 0.6);
 }
 
-/* Above the faded spot. The row is centred and the aside hangs from its top, so
-   opening the correction panel grows it downward instead of re-centring it. */
+/* Above the spot. The row fills the screen and everything hangs from its top, so
+   nothing re-centres as the film arrives, and opening the correction panel grows
+   the page downward. */
 .showing {
   position: relative;
   z-index: 1;
@@ -551,8 +547,29 @@ button {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
   gap: 48px;
-  align-content: center;
+  align-content: stretch;
   align-items: start;
+}
+
+/* The left column: the aside at the top, the poster resting in whatever height is left beneath it. */
+.pick-left {
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.poster-slot {
+  flex: 1 1 0;
+  display: flex;
+  align-items: flex-end;
+}
+
+.slot-poster {
+  display: block;
+  object-fit: cover;
+  border-radius: 6px;
+  box-shadow: 0 0 0 1px rgba(255, 214, 140, 0.35), 0 24px 60px rgba(0, 0, 0, 0.6);
 }
 
 .aside {
@@ -576,18 +593,15 @@ button {
   min-height: 0;
 }
 
-.you-said {
-  margin: 0;
-  font-size: 18px;
-  line-height: 1.45;
-  color: rgba(239, 233, 220, 0.72);
-}
-
 .choices {
   display: flex;
   gap: 12px 16px;
   flex-wrap: wrap;
   align-items: center;
+}
+
+.choices > .link-button {
+  align-self: center;
 }
 
 .seerr {
@@ -803,10 +817,30 @@ button {
     align-content: start;
   }
 
+  /* On a phone the poster fills the first screen, the details follow, and the aside comes last. */
+  .pick-left {
+    display: contents;
+  }
+
+  .poster-slot {
+    grid-row: 1;
+    height: calc(100svh - 150px);
+    justify-content: center;
+    align-items: flex-start;
+  }
+
   .feature {
     grid-column: 1;
-    grid-row: 1;
+    grid-row: 2;
     margin: 0 calc(var(--pad) * -1);
+  }
+
+  .showing:has(.poster-slot) .backdrop {
+    display: none;
+  }
+
+  .showing:has(.poster-slot) .feature-text {
+    margin-top: 0;
   }
 
   .backdrop {
@@ -828,7 +862,7 @@ button {
   }
 
   .aside {
-    grid-row: 2;
+    grid-row: 3;
     max-width: none;
   }
 }
@@ -836,6 +870,7 @@ button {
 /* Pinned to the foot of the screen; what scrolls beneath it fades under a dark band instead of showing through. */
 .bottombar {
   position: sticky;
+  z-index: 2;
   bottom: calc(-1 * var(--pad));
   margin: 0 calc(-1 * var(--pad)) calc(-1 * var(--pad));
   padding: 28px var(--pad) var(--pad);

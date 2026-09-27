@@ -64,6 +64,7 @@ class Pick:
     exhausted: bool = False
     tired: bool = False
     turned: tuple[int, ...] = ()
+    used_up: bool = False
 
 
 class Unreadable(ValueError):
@@ -209,9 +210,12 @@ class DeviceCap:
 
 
 def candidates(pool: Sequence[int], seen: Sequence[int], ratings: Mapping[int, float], prefer: str | None) -> list[int]:
-    """The films a pick draws from: the pool less those already shown, the better-rated half when asked."""
+    """The films a pick draws from: the pool less those already shown, the better-rated half when asked.
+
+    Empty once every film in the pool has been shown: the pool is used up, never started again.
+    """
     shown = set(seen)
-    fresh = [t for t in pool if t not in shown] or list(pool)
+    fresh = [t for t in pool if t not in shown]
     if prefer != "rating":
         return fresh
     ranked = sorted(fresh, key=lambda t: -ratings.get(t, 0.0))
