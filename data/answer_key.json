@@ -488,13 +488,13 @@
       "title": "Cube",
       "tmdb": 431,
       "must_reach": [
-        "thriller",
-        "horror"
+        "thriller"
       ],
       "must_not": [
-        "drama"
+        "drama",
+        "horror"
       ],
-      "note": "the operator: horror or thriller, kinda both; Saw but smarter. Thriller by rule, horror by house pin"
+      "note": "the operator (2026-09-27): a trap film, with Escape Room and The Belko Experiment, for thriller's trapped kind; labelled out of horror"
     },
     {
       "title": "Dune",
@@ -774,7 +774,7 @@
       ],
       "flavour_out": {
         "horror": [
-          "funny"
+          "comedy"
         ]
       },
       "note": "house flavour pin"
@@ -787,7 +787,7 @@
       ],
       "flavour_out": {
         "horror": [
-          "funny"
+          "comedy"
         ]
       },
       "note": "house flavour pin"
@@ -800,7 +800,7 @@
       ],
       "flavour_in": {
         "horror": [
-          "creature"
+          "monsters"
         ]
       },
       "note": "house flavour pin"
@@ -813,7 +813,7 @@
       ],
       "flavour_in": {
         "horror": [
-          "creature"
+          "monsters"
         ]
       },
       "note": "house flavour pin"
@@ -826,10 +826,32 @@
       ],
       "flavour_in": {
         "horror": [
-          "creature"
+          "monsters"
         ]
       },
       "note": "house flavour pin"
+    },
+    {
+      "title": "10 Cloverfield Lane",
+      "tmdb": 333371,
+      "must_reach": [
+        "thriller"
+      ],
+      "must_not": [
+        "horror"
+      ],
+      "note": "labelled not horror (2026-09-27): a trapped-in-a-bunker thriller, with the trap films"
+    },
+    {
+      "title": "Sweeney Todd: The Demon Barber of Fleet Street",
+      "tmdb": 13885,
+      "must_reach": [
+        "drama"
+      ],
+      "must_not": [
+        "horror"
+      ],
+      "note": "labelled not horror (2026-09-27): most viewers shelve it as a musical"
     }
   ]
 }

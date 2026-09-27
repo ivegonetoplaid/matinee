@@ -1,7 +1,7 @@
 {
   "pool": "horror",
   "genre": "Horror",
-  "opening": "horror. good. let's find you something.",
+  "opening": "horror. excellent choice.",
   "scores": {
     "fear": [
       "scary",
@@ -75,94 +75,57 @@
   },
   "questions": [
     {
-      "id": "attention",
-      "ask": "first though, how much of you is actually watching this?",
-      "options": [
-        {
-          "say": "honestly? it's just noise. I'm doing something else.",
-          "reply": "fair enough. easy company, nothing that needs following.",
-          "filter": {
-            "runtime_max": 100,
-            "spoken_english": true
-          }
-        },
-        {
-          "say": "I'll be half in. looking up when something happens.",
-          "reply": "the classic. half a film is still a film.",
-          "filter": {
-            "runtime_max": 125,
-            "spoken_english": true
-          }
-        },
-        {
-          "say": "I want to disappear into it and forget the world exists.",
-          "reply": "now we're talking. I'll bring you the good stuff.",
-          "filter": {
-            "runtime_min": 95,
-            "rating_min": 6.3,
-            "sort": "rating"
-          },
-          "note": "a rating floor is defensible here and nowhere else: the viewer has explicitly asked for something worth disappearing into, so filtering on quality is answering them rather than overruling them."
-        }
-      ]
-    },
-    {
       "id": "flavour",
-      "ask": "so what scares you the most?",
-      "note": "Every answer except \"make me laugh while I'm scared\" leaves out the funny flavour, \"anything scary\" included: a viewer who did not ask to laugh is not handed a comedy, however supernatural or scary it is (decision 66).",
+      "ask": "what kind of nightmare are we screening?",
+      "note": "Each kind holds the films the labels place in it (the labels file in Matinee's state directory, one written rule per kind, the operator's calls applied over a model's labels). A film may sit in two kinds when it clearly fits both. A film played mainly for laughs sits only under the comedy answer unless its horror is played straight; \"anything scary\" leaves out films that are comedy and nothing else. A film no kind clearly fits, or not yet labelled, is reached through \"anything scary\" and \"Just pick one!\".",
       "options": [
         {
-          "say": "I don't care. anything scary. I'm easy.",
-          "reply": "a person of simple tastes.",
+          "say": "ghosts, demons, curses. invite something in.",
+          "reply": "very well. let's see what answers the invitation.",
           "filter": {
-            "flavour_none": "funny"
+            "flavour": "supernatural"
           }
         },
         {
-          "say": "I'm not really scared unless it's supernatural.",
-          "reply": "ghosts and demons then. things that shouldn't be there.",
+          "say": "a killer on the loose. slashers, stalkers, masks.",
+          "reply": "lock the doors. check them twice.",
           "filter": {
-            "flavour": "supernatural",
-            "flavour_none": "funny"
+            "flavour": "killers"
           }
         },
         {
-          "say": "psycho killers. people are the scariest thing there is.",
-          "reply": "agreed, frankly. no ghost ever followed anyone home.",
+          "say": "monsters, aliens, the undead. I want to watch the hunt.",
+          "reply": "let's find something worth the hunt.",
           "filter": {
-            "flavour": "human_killer",
-            "flavour_none": "funny"
+            "flavour": "monsters"
           }
         },
         {
-          "say": "something with teeth. a monster, a creature, a thing.",
-          "reply": "good. monsters are honest about what they want.",
+          "say": "slow burns, paranoia, existential dread. I need a nightmare that lingers.",
+          "reply": "then let's find one that stays with you after the lights come up.",
           "filter": {
-            "flavour": "creature",
-            "flavour_none": "funny"
+            "flavour": "slowburn"
           }
         },
         {
-          "say": "the slow kind. the sort that gets under your skin and stays.",
-          "reply": "the ones that ruin the drive home. I know the type.",
+          "say": "not a nightmare. make me laugh.",
+          "reply": "comedies, camp and the gloriously awful. let's find you one.",
           "filter": {
-            "flavour": "creeping",
-            "flavour_none": "funny"
+            "flavour": "comedy"
           }
         },
         {
-          "say": "make me laugh while I'm scared.",
-          "reply": "nothing wrong with a film that knows it's ridiculous.",
+          "say": "found footage. convince me someone actually found this.",
+          "reply": "most of these are terrible. let's find one that might fool you.",
           "filter": {
-            "flavour": "funny"
+            "flavour": "found_footage"
           }
         },
         {
-          "say": "shaky camera, someone found the tapes.",
-          "reply": "brave. half of these are terrible and you know it.",
+          "say": "anything scary. I'll take it.",
+          "reply": "we'll let fate decide.",
           "filter": {
-            "flavour": "found_footage",
-            "flavour_none": "funny"
+            "flavour_none": "comedy"
           }
         }
       ]
@@ -254,7 +217,7 @@
       "only_if_pool_over": 40,
       "options": [
         {
-          "say": "give me something old. eighties, nineties.",
+          "say": "the classics. anything before 2000.",
           "reply": "practical effects and no phones. nice.",
           "filter": {
             "year_max": 1999
@@ -273,180 +236,32 @@
           "filter": {}
         }
       ]
-    },
-    {
-      "id": "sequel",
-      "ask": "last one. do you mind walking into the middle of a franchise?",
-      "only_if_pool_over": 40,
-      "options": [
-        {
-          "say": "no sequels. I don't want homework.",
-          "reply": "standalone only.",
-          "filter": {
-            "sequel": false
-          }
-        },
-        {
-          "say": "I don't care, I'll work it out.",
-          "reply": "",
-          "filter": {}
-        }
-      ]
     }
   ],
   "flavours": {
     "supernatural": {
-      "keywords_any": [
-        "supernatural horror",
-        "supernatural",
-        "ghost",
-        "demon",
-        "demonic possession",
-        "possession",
-        "exorcism",
-        "haunted house",
-        "witch",
-        "curse",
-        "poltergeist",
-        "afterlife",
-        "supernatural power",
-        "paranormal",
-        "occult",
-        "seance",
-        "vampire",
-        "angel"
-      ],
-      "genome_any": [
-        "supernatural",
-        "ghosts",
-        "demons",
-        "haunted house",
-        "witches",
-        "vampire",
-        "vampires"
-      ]
+      "labelled": true,
+      "note": "the threat comes from beyond: ghosts, hauntings, demons, possession, curses, witches, evil objects, the devil. A supernatural killer who stalks victims one by one is killers."
     },
-    "human_killer": {
-      "keywords_any": [
-        "slasher",
-        "serial killer",
-        "psychopath",
-        "killer",
-        "stalker",
-        "masked killer",
-        "home invasion",
-        "kidnapping",
-        "sadism",
-        "death game"
-      ],
-      "note": "chainsaw, murder and mask were removed after Gremlins and Army of Darkness both matched on chainsaw alone. murder appears on 93 of 599 horror titles and names nothing useful.",
-      "genome_any": [
-        "slasher",
-        "serial killer"
-      ]
+    "killers": {
+      "labelled": true,
+      "note": "a killer hunts people: slashers, stalkers, home invaders, serial killers, Saw. The killer may be supernatural when the film is built as a stalk-and-kill (Freddy, Chucky, Candyman, Jason)."
     },
-    "creature": {
-      "keywords_any": [
-        "monster",
-        "creature",
-        "vampire",
-        "werewolf",
-        "zombie",
-        "alien",
-        "shark",
-        "giant monster",
-        "mutant",
-        "creature feature",
-        "survival horror"
-      ],
-      "genome_any": [
-        "monster",
-        "monsters",
-        "zombies",
-        "vampires",
-        "werewolf",
-        "aliens"
-      ]
+    "monsters": {
+      "labelled": true,
+      "note": "something with teeth: creatures, animals, aliens, zombies, werewolves, vampires, mutants, giant bugs."
     },
-    "funny": {
-      "note": "the Comedy genre tag beats any keyword cluster here. Measured against 599 horror titles: the tag found 114, the keyword cluster 64, and the tag caught 80 the keywords missed including Tucker and Dale, Happy Death Day, Army of Darkness and Cabin in the Woods. Genre tags are reliable for co-membership and unreliable only as a primary label. See discussion log 17. A film tagged Comedy counts only when viewers find it funny: its laugh score (comedy, funny, humorous, hilarious, humor) is at least 0.25, or it has no genome entry. Demon Knight (0.15) and Trick 'r Treat (0.16) are tagged Comedy and play as horror; Knights of Badassdom (0.27) and The 'Burbs (0.61) play as comedies. Decision 66; the line is expected to be tuned.",
-      "genres_any": [
-        "Comedy"
-      ],
-      "score_at_least": {
-        "laugh": 0.25
-      }
+    "slowburn": {
+      "labelled": true,
+      "note": "dread over shocks: the horror is in the mind, the atmosphere, or something wrong that builds slowly."
+    },
+    "comedy": {
+      "labelled": true,
+      "note": "made to be laughed with or at: horror comedies, spoofs and cheesy cult B-movies. A scary film with some jokes is not comedy (The Cabin in the Woods, Ready or Not)."
     },
     "found_footage": {
-      "keywords_any": [
-        "found footage",
-        "mockumentary"
-      ],
-      "note": "no genome equivalent: 'found footage' is not in the 1,128-tag vocabulary"
-    },
-    "creeping": {
-      "note": "derived from what the target films share rather than from a word meaning dread. Half of them carry no dread keyword at all: Get Out, Poltergeist, 1408 and Oculus carry none. What they do share is a haunted place or a psychological frame. The gore ceiling was removed: blood is already its own question and gating creeping on it wrongly excluded Get Out, Weapons and The Babadook. See discussion log 11.",
-      "keywords_any": [
-        "haunted house",
-        "haunted",
-        "haunted hotel",
-        "paranormal phenomena",
-        "haunting",
-        "psychological thriller",
-        "psychological horror",
-        "psychological disintegration",
-        "paranoia",
-        "atmospheric",
-        "folk horror",
-        "cult",
-        "macabre",
-        "isolation",
-        "surrealism",
-        "nightmare",
-        "hallucination",
-        "dread",
-        "slow burn",
-        "seclusion"
-      ],
-      "genome_any": [
-        "atmospheric",
-        "psychological",
-        "paranoia",
-        "claustrophobic"
-      ]
-    }
-  },
-  "genome": {
-    "source": "MovieLens ml-latest, generated 2023-07-20, joined on TMDB id via its links.csv",
-    "threshold": 0.6,
-    "mode": "union",
-    "note": "A film joins a flavour when its genome relevance reaches the threshold OR its keywords match, not one as a fallback for the other. Measured across 27 fixtures: genome alone passes 21 to 25 depending on threshold; the union passes 27 at every threshold from 0.45 to 0.60, and cuts films matching no flavour from 73 to 44. The two signals fail on different films, so keeping both is strictly better than choosing between them.",
-    "clusters": {
-      "supernatural": [
-        "supernatural",
-        "ghosts",
-        "demons",
-        "haunted house",
-        "witches"
-      ],
-      "creature": [
-        "monster",
-        "monsters",
-        "zombies",
-        "vampires",
-        "werewolf",
-        "aliens"
-      ],
-      "human_killer": [
-        "slasher",
-        "serial killer"
-      ],
-      "creeping": [
-        "atmospheric",
-        "psychological",
-        "paranoia",
-        "claustrophobic"
-      ]
+      "labelled": true,
+      "note": "a format, labelled beside the kind: presented as recovered tapes, a documentary, a livestream or screen recordings. Shown at 24 films, under the usual bar of about 30."
     }
   }
 }

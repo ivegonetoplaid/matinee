@@ -1,5 +1,5 @@
 {
-  "note": "Films chosen by the operator as the target set for the horror tree. A branch passes when its pool CONTAINS the film, not when it picks it. Overlap between branches is expected and correct; a film may legitimately appear in several. must_not names memberships that would be wrong.",
+  "note": "Films chosen by the operator as the target set for the horror tree. A branch passes when its pool CONTAINS the film, not when it picks it. Overlap between branches is expected and correct; a film may legitimately appear in several. must_not names memberships that would be wrong. Each expected kind and each must_not kind is checked against the labels and house pins.",
   "genre": "Horror",
   "films": [
     {
@@ -8,7 +8,7 @@
       "expect": [
         "supernatural"
       ],
-      "note": "tagged Comedy but plays as horror (laugh 0.15), so it stays under supernatural and leaves \"make me laugh\" (decision 66, 2026-09-26)"
+      "note": "tagged Comedy but plays as horror (laugh 0.15), so it stays under supernatural and stays out of comedy (decision 66, 2026-09-26)"
     },
     {
       "title": "Constantine",
@@ -29,7 +29,7 @@
       "title": "28 Days Later",
       "tmdb": "170",
       "expect": [
-        "creature"
+        "monsters"
       ]
     },
     {
@@ -39,36 +39,35 @@
         "supernatural"
       ],
       "must_not": [
-        "funny"
+        "comedy"
       ]
     },
     {
       "title": "30 Days of Night",
       "tmdb": "4513",
       "expect": [
-        "creature"
+        "monsters"
       ]
     },
     {
       "title": "It",
       "tmdb": "346364",
       "expect": [
-        "supernatural",
-        "creature"
+        "supernatural"
       ]
     },
     {
       "title": "Scream",
       "tmdb": "4232",
       "expect": [
-        "human_killer"
+        "killers"
       ]
     },
     {
       "title": "The Babadook",
       "tmdb": "242224",
       "expect": [
-        "creeping"
+        "slowburn"
       ],
       "note": "TMDB tags it 'monster' and nothing supernatural, so it lands in creature on its only content word. Removing 'monster' from the creature cluster would break every real creature feature. This is the first override row: Babadook is supernatural, not a creature feature. Kept as a fixture so the override is exercised, not forgotten."
     },
@@ -76,33 +75,31 @@
       "title": "Get Out",
       "tmdb": "419430",
       "expect": [
-        "creeping"
+        "slowburn"
       ],
       "must_not": [
-        "funny"
+        "comedy"
       ]
     },
     {
       "title": "Sinners",
       "tmdb": "1233413",
       "expect": [
-        "supernatural",
-        "creature"
+        "monsters"
       ]
     },
     {
       "title": "Jaws",
       "tmdb": "578",
       "expect": [
-        "creature"
+        "monsters"
       ]
     },
     {
       "title": "A Quiet Place",
       "tmdb": "447332",
       "expect": [
-        "creature",
-        "creeping"
+        "monsters"
       ]
     },
     {
@@ -110,54 +107,37 @@
       "tmdb": "1078605",
       "expect": [
         "supernatural",
-        "creeping"
+        "slowburn"
       ]
     },
     {
       "title": "The Cabin in the Woods",
       "tmdb": "22970",
       "expect": [
-        "funny"
+        "monsters"
       ],
-      "note": "tagged Comedy, so offered only under \"make me laugh while I'm scared\" (decision 66, 2026-09-26)"
-    },
-    {
-      "title": "10 Cloverfield Lane",
-      "tmdb": "333371",
-      "expect": [
-        "human_killer",
-        "creeping"
-      ]
+      "note": "house flavour pin: a horror film with some comedic elements, not comedy (2026-09-26)"
     },
     {
       "title": "The Purge",
       "tmdb": "158015",
       "expect": [
-        "human_killer"
+        "killers"
       ]
     },
     {
       "title": "An American Werewolf in London",
       "tmdb": "814",
       "expect": [
-        "funny"
+        "comedy"
       ],
-      "note": "tagged Comedy, so offered only under \"make me laugh while I'm scared\" (decision 66, 2026-09-26)"
-    },
-    {
-      "title": "Sweeney Todd: The Demon Barber of Fleet Street",
-      "tmdb": "13885",
-      "expect": [
-        "creeping"
-      ],
-      "note": "horror musical; currently reachable through no flavour at all"
+      "note": "tagged Comedy, so offered only under the comedy answer (decision 66, 2026-09-26)"
     },
     {
       "title": "Poltergeist",
       "tmdb": "609",
       "expect": [
-        "supernatural",
-        "creeping"
+        "supernatural"
       ]
     },
     {
@@ -165,15 +145,14 @@
       "tmdb": "694",
       "expect": [
         "supernatural",
-        "creeping"
+        "slowburn"
       ]
     },
     {
       "title": "1408",
       "tmdb": "3021",
       "expect": [
-        "supernatural",
-        "creeping"
+        "supernatural"
       ]
     },
     {
@@ -181,48 +160,48 @@
       "tmdb": "157547",
       "expect": [
         "supernatural",
-        "creeping"
+        "slowburn"
       ]
     },
     {
       "title": "Happy Death Day",
       "tmdb": "440021",
       "expect": [
-        "funny"
+        "comedy"
       ],
-      "note": "tagged Comedy, so offered only under \"make me laugh while I'm scared\" (decision 66, 2026-09-26)"
+      "note": "tagged Comedy, so offered only under the comedy answer (decision 66, 2026-09-26)"
     },
     {
       "title": "Tucker and Dale vs. Evil",
       "tmdb": "46838",
       "expect": [
-        "funny"
+        "comedy"
       ],
-      "note": "tagged Comedy, so offered only under \"make me laugh while I'm scared\" (decision 66, 2026-09-26)"
+      "note": "tagged Comedy, so offered only under the comedy answer (decision 66, 2026-09-26)"
     },
     {
       "title": "Army of Darkness",
       "tmdb": "766",
       "expect": [
-        "funny"
+        "comedy"
       ],
-      "note": "tagged Comedy, so offered only under \"make me laugh while I'm scared\" (decision 66, 2026-09-26)"
+      "note": "tagged Comedy, so offered only under the comedy answer (decision 66, 2026-09-26)"
     },
     {
       "title": "Gremlins",
       "tmdb": "927",
       "expect": [
-        "funny"
+        "comedy"
       ],
-      "note": "tagged Comedy, so offered only under \"make me laugh while I'm scared\" (decision 66, 2026-09-26)"
+      "note": "tagged Comedy, so offered only under the comedy answer (decision 66, 2026-09-26)"
     },
     {
       "title": "Knights of Badassdom",
       "tmdb": "74461",
       "expect": [
-        "funny"
+        "comedy"
       ],
-      "note": "a stoner comedy summoning a succubus: supernatural, but a comedy first, so only under \"make me laugh while I'm scared\" (decision 66, 2026-09-26)"
+      "note": "a stoner comedy summoning a succubus: supernatural, but a comedy first, so only under the comedy answer (decision 66, 2026-09-26)"
     }
   ],
   "absent_from_library": [

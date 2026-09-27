@@ -39,6 +39,7 @@ import numpy as np
 import pandas as pd
 
 from matinee.engine import Catalog, EngineError, house_flavour, load_catalog, reachable, scale_members, walk_ends
+from matinee.labels import LabelsError, load_labels
 from matinee.pools import House
 from matinee.reference import DATA
 from matinee.table import FilmTable, load_table
@@ -198,7 +199,8 @@ def tree_fixture_entries(table: FilmTable, report: Report) -> list[dict[str, Any
     """The horror and comedy fixture films as must_reach entries for their own tree.
 
     A comedy fixture expecting standup must reach the standup path instead, since standup specials are
-    held out of the comedy tree (decision 26).
+    held out of the comedy tree (decision 26). Each fixture's expected and must_not kinds ride along as
+    flavour_in and flavour_out, checked only in a tree that defines flavours.
     """
     entries = []
     for fname, tree in (("horror.json", "horror"), ("comedy.json", "comedy")):
@@ -206,13 +208,22 @@ def tree_fixture_entries(table: FilmTable, report: Report) -> list[dict[str, Any
             tmdb = int(f["tmdb"]) if "tmdb" in f else tmdb_by_title(f["title"], table, report)
             home = "standup" if "standup" in f.get("expect", []) else tree
             if tmdb is not None:
-                entries.append({"title": f["title"], "tmdb": tmdb, "must_reach": [home]})
+                entries.append(
+                    {
+                        "title": f["title"],
+                        "tmdb": tmdb,
+                        "must_reach": [home],
+                        "flavour_in": {tree: f.get("expect", [])},
+                        "flavour_out": {tree: f.get("must_not", [])},
+                    }
+                )
     return entries
 
 
-def check_fixtures(table: FilmTable, pools: Pools, gore: pd.DataFrame, key: dict[str, Any], report: Report) -> None:
+def check_fixtures(
+    table: FilmTable, pools: Pools, gore: pd.DataFrame, entries: list[dict[str, Any]], report: Report
+) -> None:
     before = len(report.failures)
-    entries = key["films"] + tree_fixture_entries(table, report)
     for entry in entries:
         check_film(entry, table, pools, gore, report)
     failed = len(report.failures) - before
@@ -246,14 +257,18 @@ def check_pins_in_key(house: House, key: dict[str, Any], report: Report) -> None
             report.fail(f"house pin tmdb {tmdb} needs an answer-key fixture asserting {want}")
 
 
-def check_flavour_fixtures(cat: Catalog, key: dict[str, Any], report: Report) -> None:
-    """Fixtures with flavour_in or flavour_out must be in, or out of, those flavours after house pins."""
+def check_flavour_fixtures(cat: Catalog, entries: list[dict[str, Any]], report: Report) -> None:
+    """Fixtures with flavour_in or flavour_out must be in, or out of, those flavours after house pins.
+
+    A tree defining no flavours is skipped: its fixtures name payoffs, not flavours.
+    """
     index = cat.table.films.index
     wants = [
         (entry, tree_id, flavour, member)
-        for entry in key["films"]
+        for entry in entries
         for side, member in (("flavour_in", True), ("flavour_out", False))
         for tree_id, flavours in entry.get(side, {}).items()
+        if cat.trees[tree_id].flavours
         for flavour in flavours
     ]
     for entry, tree_id, flavour, member in wants:
@@ -327,7 +342,7 @@ def check_sample(full: Catalog, name: str, share: float, seed: int, report: Repo
     rng = np.random.default_rng(seed)
     chosen = rng.choice(ids, size=round(len(ids) * share), replace=False)
     table = full.table.subset([int(t) for t in chosen])
-    cat = load_catalog(table, data, full.reference)
+    cat = load_catalog(table, data, full.reference, full.labels)
     report.prefix = f"[{name}] "
     report.say(f"\n######## {name} of the library: {len(table.films)} films, seed {seed} ########")
     pools = {n: pd.Series(mask, index=table.films.index) for n, mask in cat.pools.items()}
@@ -358,13 +373,14 @@ def check_data(table: FilmTable, report: Report) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--table", type=Path, default=DEFAULT_TABLE, help="film table written by rebuild_table.py")
+    parser.add_argument("--labels", type=Path, help="labels file; default: labels.json beside the table")
     args = parser.parse_args()
     key = json.loads((DATA / "answer_key.json").read_text())
     table = load_table(args.table)
     report = Report()
     try:
-        cat = load_catalog(table)
-    except EngineError as exc:
+        cat = load_catalog(table, labels=load_labels(args.labels or args.table.with_name("labels.json")))
+    except (EngineError, LabelsError) as exc:
         print(f"FAIL {exc}; run tools/build_reference.py if the statistics are stale")
         return 1
     house = cat.house
@@ -372,14 +388,21 @@ def main() -> int:
     gore = scale_members(cat, cat.trees["horror"], "gore")
     report.say(f"film table {args.table}: {len(table.films)} films, {int(table.has_genome().sum())} with genome scores")
     report.say(f"built {table.built_at:%Y-%m-%d %H:%M}, genome {table.release}")
+    for tree_id, labels in cat.labels.trees.items():
+        report.say(f"labels: {len(labels.kinds)} films labelled in {tree_id}, {len(labels.out)} labelled out of it")
+        kept = table.films.index[pools[cat.trees[tree_id].pool] & table.films.index.isin(list(labels.out))]
+        if len(kept):
+            names = "; ".join(_label(table, int(t)) for t in kept)
+            report.say(f"  labelled out of {tree_id} but kept there, having no other home: {names}")
     added = table.films.index[pools["kids:franchise"]]
     report.say(f"franchise rule added {len(added)} films to kids: " + "; ".join(sorted(table.films.loc[added, "name"])))
     check_data(table, report)
     check_first_question(cat, report)
     pools.update(check_answer_coverage(cat, pools, report))
     check_pins_in_key(house, key, report)
-    check_fixtures(table, pools, gore, key, report)
-    check_flavour_fixtures(cat, key, report)
+    entries = key["films"] + tree_fixture_entries(table, report)
+    check_fixtures(table, pools, gore, entries, report)
+    check_flavour_fixtures(cat, entries, report)
     check_gore(table, pools, house, gore, report)
     check_lists(table, pools, key, report)
     check_expected(table, pools, report)

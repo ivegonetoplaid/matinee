@@ -248,7 +248,11 @@ def _payoffs(doc: Mapping[str, Any], tree: str) -> Payoffs | None:
 
 def _check_flavours(tree: str, flavours: Mapping[str, Any], scores: Mapping[str, Any]) -> None:
     for name, spec in flavours.items():
-        _check_keys(spec, FLAVOUR_SIGNALS | {"note", "score_at_least"}, f"tree '{tree}' flavour '{name}'")
+        _check_keys(spec, FLAVOUR_SIGNALS | {"note", "score_at_least", "labelled"}, f"tree '{tree}' flavour '{name}'")
+        if spec.get("labelled") is True:
+            if set(spec) - {"labelled", "note"}:
+                raise TreeError(f"tree '{tree}' flavour '{name}' is labelled, so it takes no signals or floors")
+            continue
         floors = spec.get("score_at_least", {})
         if not isinstance(floors, dict) or not all(isinstance(v, int | float) for v in floors.values()):
             raise TreeError(f"tree '{tree}' flavour '{name}' score_at_least must map score names to numbers")
@@ -256,7 +260,9 @@ def _check_flavours(tree: str, flavours: Mapping[str, Any], scores: Mapping[str,
         if unknown:
             raise TreeError(f"tree '{tree}' flavour '{name}' score_at_least names undefined scores {sorted(unknown)}")
         if not FLAVOUR_SIGNALS & set(spec):
-            raise TreeError(f"tree '{tree}' flavour '{name}' names no keywords, genome tags or genres")
+            raise TreeError(
+                f"tree '{tree}' flavour '{name}' names no keywords, genome tags or genres, and is not labelled"
+            )
 
 
 def parse_tree(tree: str, doc: Mapping[str, Any]) -> Tree:

@@ -455,7 +455,7 @@ def test_a_flavour_floor_keeps_only_films_reaching_it_and_films_with_no_score(tm
     # odd films are Comedy; 'fast' is 0.9 up to film 10, 0.6 for 13, 0.1 otherwise; 31-40 have no genome entry
     assert laughs == {1, 3, 5, 7, 9, 13, 31, 33, 35, 37, 39}
     rest = set(walk(cat, "west", Viewer(), [Answer("era", 1)]).pool)
-    assert rest == set(range(1, 41)) - laughs  # leaving the flavour out is its exact complement
+    assert rest == (set(range(1, 41)) - laughs) | {3, 7}  # the complement, plus laughs also in heroic
 
 
 def pin_flavours(root: Path, pins: list[dict[str, Any]]) -> Path:

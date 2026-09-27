@@ -86,7 +86,7 @@ on. The engine carries the behaviour. Adding a genre means adding a file.
 
 | File | Pool | Questions, in order |
 |---|---|---|
-| `trees/horror.json` | horror | attention; flavour (only its funny answer offers comedies; section 2.3); gore (pictures); era (only above 40 films); sequel (only above 40 films) |
+| `trees/horror.json` | horror | flavour (kinds read from the labels; section 2.3); gore (pictures); era (only above 40 films) |
 | `trees/comedy.json` | comedy | room (certificate); register; weight; crossed (only above 40 films) |
 | `trees/action.json` | action | payoff; thrill |
 | `trees/thriller.json` | thriller | payoff |
@@ -124,8 +124,8 @@ these signals, and no others:
 | `certificate_in` | Films whose certificate is listed; an absent certificate is the empty string |
 | `genres_any`, `genre_also` | Films carrying any listed media-server genre |
 | `genres_none` | Films carrying none of the listed genres |
-| `flavour` | Films matching a named keyword, genome or genre cluster the tree defines |
-| `flavour_none` | Films outside a named flavour, plus films a house pin puts in another flavour of the tree |
+| `flavour` | Films in a named flavour the tree defines: matched by keyword, genome or genre, or read from the labels |
+| `flavour_none` | Films outside a named flavour, plus films also in another flavour of the tree (house pins included) |
 | `register` | Films a named register rule (a comparison of genome dimensions) accepts |
 | `payoff` | Films placed on a named payoff (see below) |
 | `bands` | Films in any of the listed bands of a named scale (see section 4) |
@@ -148,11 +148,18 @@ excluded one is invisible. Two signals are the exceptions:
 **Flavours.** A flavour matches a film when any of its keywords, genome tags
 (at the tree's genome threshold) or genres match. A flavour may also set
 `score_at_least`: a film then matches only when each named score reaches its
-floor, and a film with no score passes the floor. Horror's funny flavour is
-tagged Comedy with a laugh score (comedy, funny, humorous, hilarious, humor) of
-at least **0.25**, so a film billed as a comedy that viewers do not find funny
-is not in it. Every other horror answer, "anything scary" included, leaves the
-funny flavour out: a viewer who did not ask to laugh is not handed a comedy.
+floor, and a film with no score passes the floor. A flavour marked `labelled`
+takes no signals: its films are those the labels file names with it (section
+2.6). An answer leaving a flavour out keeps every film that also sits in another
+flavour of the tree.
+
+Horror's flavours are all labelled: supernatural, killers, monsters, slowburn,
+comedy and found_footage. A film may sit in two. A film played mainly for laughs
+is labelled comedy alone unless its horror is played straight, so it reaches
+only the comedy answer. "anything scary" leaves comedy out, so it keeps every
+horror film except those labelled comedy and nothing else. A horror film
+labelled with no kind, or not yet labelled, is reached through "anything scary"
+and `Just pick one!`.
 
 **Payoffs.** A payoff score is the mean genome relevance of its tags,
 standardised with the reference mean and standard deviation for that tree
@@ -175,8 +182,8 @@ film onto the pinned payoff and off every other.
   the next question is asked.
 - **Fewer than 12 films left:** no further question is asked, and the walk ends.
 - A question marked `only_if_pool_over` is asked only while the pool holds more
-  films than that number. Horror's era and sequel questions and comedy's
-  crossed question use 40.
+  films than that number. Horror's era question and comedy's crossed question
+  use 40.
 - A question marked `skip_if_topics` is never asked of a viewer who excludes any
   of those DoesTheDogDie topics. Its `treat_as` answer is applied to the whole
   starting pool instead, so every count and every shown answer already reflects
@@ -217,7 +224,9 @@ non-zero exit, on any of these:
 5. **Fixtures.** A fixture film in `data/answer_key.json`,
    `data/fixtures/horror.json` or `data/fixtures/comedy.json` misses a tree it
    must reach, reaches one it must not, or lands in the wrong kids band or gore
-   pail. A fixture names its film by TMDB id, and fails when that id holds a
+   pail. A fixture's `flavour_in` and `flavour_out` kinds, and a horror fixture
+   file's `expect` and `must_not` kinds, must hold after labels and house pins.
+   A fixture names its film by TMDB id, and fails when that id holds a
    different title in the library. A fixture-file entry without an id must match
    exactly one library title.
 6. **The gore promise.** A horror film with no genome entry and no pin lands in
@@ -236,6 +245,38 @@ non-zero exit, on any of these:
 
 Separately, the engine refuses to prepare when the shipped reference statistics
 do not cover the tree files (section 3). The checker reports that as a failure.
+The checker reads the labels file beside the film table unless `--labels` names
+another, and reports each film labelled out of a tree but kept there for having
+no other home.
+
+### 2.6 Labels
+
+A tree may take its kinds from a labels file instead of from signals. The file
+is `labels.json` in the state directory. It is written outside Matinee and never
+committed, because it lists the films one library holds. Its shape:
+
+```json
+{"format": 1,
+ "trees": {"horror": {"kinds": {"238": ["supernatural", "slowburn"], "431": []},
+                      "out": [617505]}}}
+```
+
+- `kinds` maps a TMDB id to the kinds the film clearly fits. An empty list means
+  the film was labelled and fits no kind. Every film in `kinds` joins the tree's
+  pool, whatever the pool rules said: a horror comedy the rules sent to comedy
+  alone is in horror too once labelled.
+- A film absent from `kinds` is unlabelled and sits under no kind.
+- `out` lists films carrying the tree's genre that belong elsewhere. Such a film
+  leaves the tree's pool only when another tree's pool holds it; otherwise it
+  stays, so no film loses its way in.
+- An absent file means no film is labelled, and the server logs a warning. A
+  malformed file, a tree no file defines, or a kind the tree does not label
+  stops the server at start-up.
+- The server reads the file once at start-up. Replacing it takes a restart.
+
+The horror labels were written by a language model against one rule per kind,
+with the operator's calls laid over them. The kinds' rules are the `note` of
+each flavour in `data/trees/horror.json`.
 
 ## 3. Pools and reference statistics
 
@@ -396,8 +437,8 @@ takes one of five forms:
 | `flavours` | in one flavour of one tree (`member` true) or out of it (`member` false) |
 
 A film pinned into a flavour stays in every answer that leaves another flavour
-out. A funny horror film pinned into creature is therefore offered under the
-funny answer and under the scary ones.
+out. A funny horror film pinned into monsters is therefore offered under the
+comedy answer and under the scary ones.
 
 Every pin must also be an answer-key fixture asserting the pinned placement. The
 checker fails otherwise, so a later rule change cannot silently undo a pin.
@@ -478,7 +519,9 @@ The server refuses to start, and logs why, when any of these holds:
   every profile silently);
 - the film table is absent, in another format, or too old;
 - the reference statistics are absent or stale;
-- a tree or mode file is malformed.
+- a tree or mode file is malformed;
+- the labels file is malformed, or names a tree no file defines or a kind its
+  tree does not label.
 
 ## 6. What one viewer's pool is
 
@@ -819,7 +862,7 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
 ## 13. Deployment
 
 - **One server process, one worker.** Every DoesTheDogDie limit, hold and
-  remembered item id lives in the process (known gap 8). A second worker would
+  remembered item id lives in the process (known gap 7). A second worker would
   double every limit.
 - **The image** (`Dockerfile`) runs on `python:3.13-slim`. It installs the
   package editable, so it finds `data/` beside `src/` as a checkout does. It
@@ -829,9 +872,10 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
   proxy. The image carries `tools/`, so the same image can run the nightly
   rebuild with `--daily`.
 - **State** is one directory mounted at `/state` (`MATINEE_STATE`). It holds
-  the film table (`films.sqlite`), Matinee's store (`matinee.sqlite`), the TMDB
-  cache (`tmdb/films.jsonl`) and the MovieLens genome (`ml-latest/`, or
-  `MATINEE_ML`). None of it is in the image.
+  the film table (`films.sqlite`), Matinee's store (`matinee.sqlite`), the
+  labels (`labels.json`, section 2.6), the TMDB cache (`tmdb/films.jsonl`) and
+  the MovieLens genome (`ml-latest/`, or `MATINEE_ML`). None of it is in the
+  image.
 - **Settings and keys arrive as environment**, never committed, logged or sent
   to a browser. `.dockerignore` keeps `.env` files out of the image.
 
@@ -892,50 +936,44 @@ Not part of this build, and not to be added until asked:
 # Known gaps
 
 Behaviour that is deliberately absent, still open, or short of the contract,
-as the code stood on 2026-09-26.
+as the code stood on 2026-09-27.
 
 **Short of the contract:**
 
-1. **Some horror films fit no attention answer.** An English film longer than
-   125 minutes and rated under 6.3 fits none of the three. So does a non-English
-   film shorter than 95 minutes or rated under 6.3. Such a film is in the horror
-   pool but on no complete path, so it is reached in horror only by `Just pick
-   one!`. The checker reports each such film. Where one has no other home,
-   section 2.5's reachability rule fails. (`data/trees/horror.json:78`)
-2. **The profile API does not require anything to save.** `POST /api/profiles`
+1. **The profile API does not require anything to save.** `POST /api/profiles`
    accepts empty topics and exclusions from any caller. The page's own "Save
    and continue" refuses to send that request and asks the viewer to choose
    something or untick Remember me, so only a caller bypassing the page can
    create an empty profile. Any caller may still do this until the cap of 50
    fills. (`src/matinee/web/app.py:170`, `src/matinee/store.py:207`)
-3. **A film with no genres fails reachability.** It is not set apart as a
-   metadata fault. (`tools/check_trees.py:118`)
+2. **A film with no genres fails reachability.** It is not set apart as a
+   metadata fault. (`tools/check_trees.py:119`)
 
 **Deliberately absent or open:**
 
-4. **No cap on corrections or notes per profile.** Identical corrections are not
+3. **No cap on corrections or notes per profile.** Identical corrections are not
    deduplicated. One held profile can grow its correction rows without bound,
    which slows that profile's walks, and its note rows likewise.
    (`src/matinee/store.py:281`, `src/matinee/store.py:296`)
-5. **The per-device allowance is per cookie.** A client that discards
+4. **The per-device allowance is per cookie.** A client that discards
    `matinee_device` is issued a new one with a fresh allowance. The
    installation's hourly ceiling still bounds it. (`src/matinee/web/viewing.py:226`)
-6. **"Slow" is timed per request, not per film.** A film lookup is two
+5. **"Slow" is timed per request, not per film.** A film lookup is two
    requests. Each may wait up to 3 seconds for its turn, then pause for the
    pacing allowance, then allow 3 seconds for an answer. One check can therefore
    take longer than 3 seconds before it counts as slow.
    (`src/matinee/dtdd.py:106`, `src/matinee/pick.py:142`)
-7. **Names are compared after NFKC normalisation and case folding only.**
+6. **Names are compared after NFKC normalisation and case folding only.**
    Look-alike letters from other scripts count as different names. The refusal
    message says names are "letters, numbers or spaces". The rule accepts any
    printable character. (`src/matinee/store.py:127`,
    `src/matinee/web/common.py:18`)
-8. **The allowances, holds, pacing, item ids and topic list live in memory.** A
+7. **The allowances, holds, pacing, item ids and topic list live in memory.** A
    restart forgets every device's spent lookups, the hour's ceiling, any hold,
    every remembered item id and the kept topic list, and a second worker would
    double every limit.
    (`Dockerfile:1`)
-9. **Validation failures use the framework's error shape.** A request body
+8. **Validation failures use the framework's error shape.** A request body
    that fails validation answers 422 with `{"detail": [...]}`, not Matinee's
    `{"error", "message"}` shape. (`src/matinee/web/app.py:86`)
 
@@ -964,23 +1002,22 @@ symbol when one does not match.
 | Handle | Where | Verified |
 |---|---|---|
 | `data/first_question.json` (lines, answers, labels) | `data/first_question.json:3` | 2026-09-26 |
-| `src/matinee/trees.py::parse_tree` | `src/matinee/trees.py:262` | 2026-09-26 |
-| `src/matinee/trees.py::load_trees` (duplicate names refused) | `src/matinee/trees.py:283` | 2026-09-26 |
+| `src/matinee/trees.py::parse_tree` | `src/matinee/trees.py:268` | 2026-09-26 |
+| `src/matinee/trees.py::load_trees` (duplicate names refused) | `src/matinee/trees.py:289` | 2026-09-26 |
 | `src/matinee/trees.py::FILTER_KEYS` / `OPTION_KEYS` / `QUESTION_KEYS` | `src/matinee/trees.py:110` | 2026-09-26 |
 | `src/matinee/trees.py::parse_filter` | `src/matinee/trees.py:163` | 2026-09-26 |
 | `src/matinee/trees.py::Payoffs` | `src/matinee/trees.py:77` | 2026-09-26 |
-| `src/matinee/engine.py::STOP_UNDER` | `src/matinee/engine.py:44` | 2026-09-26 |
-| `src/matinee/engine.py::load_catalog` | `src/matinee/engine.py:364` | 2026-09-26 |
-| `src/matinee/engine.py::_first_option` (label required) | `src/matinee/engine.py:358` | 2026-09-26 |
-| `src/matinee/engine.py::first_question` | `src/matinee/engine.py:505` | 2026-09-26 |
-| `src/matinee/engine.py::base_pool` (order of corrections, exclusions, topic skip) | `src/matinee/engine.py:395` | 2026-09-26 |
-| `src/matinee/engine.py::walk` | `src/matinee/engine.py:454` | 2026-09-26 |
-| `src/matinee/engine.py::_gate` (`only_if_pool_over`, `skip_if_topics`) | `src/matinee/engine.py:437` | 2026-09-26 |
-| `src/matinee/engine.py::_shown` (empty answers hidden, `not_after`) | `src/matinee/engine.py:425` | 2026-09-26 |
-| `src/matinee/engine.py::_plain_mask` / `_range_mask` (unknown values pass) | `src/matinee/engine.py:299` | 2026-09-26 |
-| `src/matinee/engine.py::payoff_members` | `src/matinee/engine.py:204` | 2026-09-26 |
-| `src/matinee/engine.py::walk_ends` / `reachable` | `src/matinee/engine.py:479` | 2026-09-26 |
-| `data/trees/horror.json` attention question | `data/trees/horror.json:78` | 2026-09-26 |
+| `src/matinee/engine.py::STOP_UNDER` | `src/matinee/engine.py:50` | 2026-09-26 |
+| `src/matinee/engine.py::load_catalog` | `src/matinee/engine.py:405` | 2026-09-26 |
+| `src/matinee/engine.py::_first_option` (label required) | `src/matinee/engine.py:372` | 2026-09-26 |
+| `src/matinee/engine.py::first_question` | `src/matinee/engine.py:550` | 2026-09-26 |
+| `src/matinee/engine.py::base_pool` (order of corrections, exclusions, topic skip) | `src/matinee/engine.py:440` | 2026-09-26 |
+| `src/matinee/engine.py::walk` | `src/matinee/engine.py:499` | 2026-09-26 |
+| `src/matinee/engine.py::_gate` (`only_if_pool_over`, `skip_if_topics`) | `src/matinee/engine.py:482` | 2026-09-26 |
+| `src/matinee/engine.py::_shown` (empty answers hidden, `not_after`) | `src/matinee/engine.py:470` | 2026-09-26 |
+| `src/matinee/engine.py::_plain_mask` / `_range_mask` (unknown values pass) | `src/matinee/engine.py:313` | 2026-09-26 |
+| `src/matinee/engine.py::payoff_members` | `src/matinee/engine.py:218` | 2026-09-26 |
+| `src/matinee/engine.py::walk_ends` / `reachable` | `src/matinee/engine.py:524` | 2026-09-26 |
 | `data/trees/comedy.json` room question | `data/trees/comedy.json:17` | 2026-09-26 |
 | `data/modes/fall-asleep.json` | `data/modes/fall-asleep.json:3` | 2026-09-26 |
 
@@ -988,15 +1025,15 @@ symbol when one does not match.
 
 | Handle | Where | Verified |
 |---|---|---|
-| `tools/check_trees.py::main` | `tools/check_trees.py:358` | 2026-09-26 |
-| `tools/check_trees.py::SAMPLES` | `tools/check_trees.py:47` | 2026-09-26 |
-| `tools/check_trees.py::check_answer_coverage` | `tools/check_trees.py:277` | 2026-09-26 |
-| `tools/check_trees.py::check_same_answers` | `tools/check_trees.py:306` | 2026-09-26 |
-| `tools/check_trees.py::check_sample` | `tools/check_trees.py:324` | 2026-09-26 |
-| `tools/check_trees.py::check_pins_in_key` | `tools/check_trees.py:232` | 2026-09-26 |
-| `tools/check_trees.py::check_gore` | `tools/check_trees.py:266` | 2026-09-26 |
-| `tools/check_trees.py::check_lists` | `tools/check_trees.py:135` | 2026-09-26 |
-| `tools/check_trees.py::check_data` | `tools/check_trees.py:348` | 2026-09-26 |
+| `tools/check_trees.py::main` | `tools/check_trees.py:373` | 2026-09-26 |
+| `tools/check_trees.py::SAMPLES` | `tools/check_trees.py:48` | 2026-09-26 |
+| `tools/check_trees.py::check_answer_coverage` | `tools/check_trees.py:292` | 2026-09-26 |
+| `tools/check_trees.py::check_same_answers` | `tools/check_trees.py:321` | 2026-09-26 |
+| `tools/check_trees.py::check_sample` | `tools/check_trees.py:339` | 2026-09-26 |
+| `tools/check_trees.py::check_pins_in_key` | `tools/check_trees.py:243` | 2026-09-26 |
+| `tools/check_trees.py::check_gore` | `tools/check_trees.py:281` | 2026-09-26 |
+| `tools/check_trees.py::check_lists` | `tools/check_trees.py:136` | 2026-09-26 |
+| `tools/check_trees.py::check_data` | `tools/check_trees.py:363` | 2026-09-26 |
 | `data/answer_key.json` list tags | `data/answer_key.json:3` | 2026-09-26 |
 
 ### Pools and reference statistics
@@ -1025,12 +1062,14 @@ symbol when one does not match.
 | `src/matinee/scales.py::film_scores` (bonus only with a genome entry) | `src/matinee/scales.py:65` | 2026-09-26 |
 | `src/matinee/scales.py::band_index` | `src/matinee/scales.py:75` | 2026-09-26 |
 | `src/matinee/scales.py::membership` (unscored bands, pins) | `src/matinee/scales.py:81` | 2026-09-26 |
-| `src/matinee/engine.py::scale_members` | `src/matinee/engine.py:239` | 2026-09-26 |
+| `src/matinee/engine.py::scale_members` | `src/matinee/engine.py:253` | 2026-09-26 |
 | `data/trees/horror.json` gore scale | `data/trees/horror.json:38` | 2026-09-26 |
-| `data/trees/horror.json` gore question, `skip_if_topics`, `treat_as` | `data/trees/horror.json:171` | 2026-09-26 |
-| `data/trees/horror.json` funny flavour (`score_at_least` laugh 0.25) | `data/trees/horror.json:371` | 2026-09-26 |
+| `data/trees/horror.json` gore question, `skip_if_topics`, `treat_as` | `data/trees/horror.json:134` | 2026-09-27 |
+| `data/trees/horror.json` labelled flavours (the kinds' rules) | `data/trees/horror.json:241` | 2026-09-27 |
+| `src/matinee/labels.py::load_labels` | `src/matinee/labels.py:62` | 2026-09-27 |
+| `src/matinee/engine.py::_apply_labels` (out films leave only with another home) | `src/matinee/engine.py:387` | 2026-09-27 |
 | `src/matinee/pools.py::load_house` / `House` | `src/matinee/pools.py:110` | 2026-09-26 |
-| `src/matinee/engine.py::house_flavour` | `src/matinee/engine.py:164` | 2026-09-26 |
+| `src/matinee/engine.py::house_flavour` | `src/matinee/engine.py:177` | 2026-09-26 |
 | `data/house_overrides.json` scale pins | `data/house_overrides.json:94` | 2026-09-26 |
 
 ### Film table and nightly rebuild
@@ -1079,7 +1118,7 @@ symbol when one does not match.
 | Handle | Where | Verified |
 |---|---|---|
 | `data/exclusions.json` | `data/exclusions.json:4` | 2026-09-26 |
-| `src/matinee/engine.py::_exclusion` | `src/matinee/engine.py:346` | 2026-09-26 |
+| `src/matinee/engine.py::_exclusion` | `src/matinee/engine.py:360` | 2026-09-26 |
 | `src/matinee/web/viewing.py::check_exclusions` | `src/matinee/web/viewing.py:186` | 2026-09-26 |
 | `src/matinee/dtdd.py::Dtdd.get` / `_pace` (`BURST`, `RATE_PER_S`) | `src/matinee/dtdd.py:106` | 2026-09-26 |
 | `src/matinee/dtdd.py::Dtdd._check_holds` / `_refused` / `_note_remaining` (`REQUESTS_PER_HOUR`, `MONTH_RESERVE`, `RESERVE_HOLD_S`, `BACKOFF_S`) | `src/matinee/dtdd.py:123` | 2026-09-26 |
@@ -1089,7 +1128,7 @@ symbol when one does not match.
 | `src/matinee/pick.py::look_up` (`LOOKUP_S`) | `src/matinee/pick.py:142` | 2026-09-26 |
 | `src/matinee/pick.py::DeviceCap` (`LOOKUPS_PER_HOUR`) | `src/matinee/pick.py:178` | 2026-09-26 |
 | `src/matinee/pick.py::candidates` | `src/matinee/pick.py:211` | 2026-09-26 |
-| `src/matinee/engine.py::gentlest` | `src/matinee/engine.py:258` | 2026-09-26 |
+| `src/matinee/engine.py::gentlest` | `src/matinee/engine.py:272` | 2026-09-26 |
 | `src/matinee/pick.py::Picker.pick` (`PICK_TRIES`) | `src/matinee/pick.py:234` | 2026-09-26 |
 | `src/matinee/web/viewing.py::device_id` / `DEVICE_COOKIE` | `src/matinee/web/viewing.py:226` | 2026-09-26 |
 | `src/matinee/web/viewing.py::SWAP_LINE` / `UNCHECKED_LINES` / `EXHAUSTED` / `TIRED` | `src/matinee/web/viewing.py:202` | 2026-09-26 |
@@ -1100,15 +1139,15 @@ symbol when one does not match.
 
 | Handle | Where | Verified |
 |---|---|---|
-| `src/matinee/web/main.py::build` | `src/matinee/web/main.py:21` | 2026-09-26 |
-| `src/matinee/web/config.py::from_env` | `src/matinee/web/config.py:43` | 2026-09-26 |
-| `src/matinee/web/app.py::create_app` (docs disabled) | `src/matinee/web/app.py:218` | 2026-09-26 |
-| `src/matinee/web/app.py::SECURITY_HEADERS` | `src/matinee/web/app.py:184` | 2026-09-26 |
-| `src/matinee/web/app.py::add_page` | `src/matinee/web/app.py:196` | 2026-09-26 |
-| `src/matinee/web/app.py::add_film_routes` / `IMAGE_WIDTHS` | `src/matinee/web/app.py:117` | 2026-09-26 |
-| `src/matinee/web/app.py::held` | `src/matinee/web/app.py:77` | 2026-09-26 |
-| `src/matinee/web/app.py::add_door_routes` | `src/matinee/web/app.py:149` | 2026-09-26 |
-| `src/matinee/web/app.py::add_error_handlers` | `src/matinee/web/app.py:86` | 2026-09-26 |
+| `src/matinee/web/main.py::build` | `src/matinee/web/main.py:25` | 2026-09-26 |
+| `src/matinee/web/config.py::from_env` | `src/matinee/web/config.py:47` | 2026-09-26 |
+| `src/matinee/web/app.py::create_app` (docs disabled) | `src/matinee/web/app.py:224` | 2026-09-26 |
+| `src/matinee/web/app.py::SECURITY_HEADERS` | `src/matinee/web/app.py:190` | 2026-09-26 |
+| `src/matinee/web/app.py::add_page` | `src/matinee/web/app.py:202` | 2026-09-26 |
+| `src/matinee/web/app.py::add_film_routes` / `IMAGE_WIDTHS` | `src/matinee/web/app.py:123` | 2026-09-26 |
+| `src/matinee/web/app.py::held` | `src/matinee/web/app.py:83` | 2026-09-26 |
+| `src/matinee/web/app.py::add_door_routes` | `src/matinee/web/app.py:155` | 2026-09-26 |
+| `src/matinee/web/app.py::add_error_handlers` | `src/matinee/web/app.py:92` | 2026-09-26 |
 | `src/matinee/web/common.py::Problem` | `src/matinee/web/common.py:102` | 2026-09-26 |
 | `src/matinee/web/viewing.py::add_viewing_routes` | `src/matinee/web/viewing.py:257` | 2026-09-26 |
 | `src/matinee/web/viewing.py::WalkIn` / `PickIn` (request caps) | `src/matinee/web/viewing.py:48` | 2026-09-26 |

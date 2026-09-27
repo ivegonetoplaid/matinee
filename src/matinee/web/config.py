@@ -29,6 +29,10 @@ class Config:
         return self.state / "films.sqlite"
 
     @property
+    def labels_path(self) -> Path:
+        return self.state / "labels.json"
+
+    @property
     def store_path(self) -> Path:
         return self.state / "matinee.sqlite"
 

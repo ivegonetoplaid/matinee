@@ -1,5 +1,5 @@
 {
-  "note": "House pins: single films the rules place wrong, fixed for everyone on this installation. A pattern of three or more films going wrong for one reason is a rule to fix, not a pin to add. Each pin is also a fixture in data/answer_key.json, so the checker guards it. A flavour pin puts a film in one flavour of a tree (member true) or takes it out (member false); a film pinned into a flavour stays in answers that leave another flavour out, so a funny film pinned into creature is offered under the scary answers too. Personal corrections (per profile) layer on top of these.",
+  "note": "House pins: single films the rules place wrong, fixed for everyone on this installation. A pattern of three or more films going wrong for one reason is a rule to fix, not a pin to add. Each pin is also a fixture in data/answer_key.json, so the checker guards it. A flavour pin puts a film in one flavour of a tree (member true) or takes it out (member false); a film pinned into a flavour stays in answers that leave another flavour out, so a funny film pinned into monsters is offered under the scary answers too. Personal corrections (per profile) layer on top of these.",
   "kids": [
     {
       "title": "The School of Rock",
@@ -21,12 +21,6 @@
     }
   ],
   "trees": [
-    {
-      "title": "Cube",
-      "tmdb": 431,
-      "tree": "horror",
-      "note": "Mystery, Science Fiction, Thriller with no Horror tag; the operator watches it as horror, Saw but smarter"
-    },
     {
       "title": "The Batman",
       "tmdb": 414906,
@@ -122,7 +116,7 @@
       "title": "The Cabin in the Woods",
       "tmdb": 22970,
       "tree": "horror",
-      "flavour": "funny",
+      "flavour": "comedy",
       "member": false,
       "note": "tagged Comedy with laugh 0.48, but the operator: a horror film with some comedic elements, not one for someone sitting down to Shaun of the Dead"
     },
@@ -130,7 +124,7 @@
       "title": "Ready or Not",
       "tmdb": 567609,
       "tree": "horror",
-      "flavour": "funny",
+      "flavour": "comedy",
       "member": false,
       "note": "tagged Comedy with laugh 0.38; the operator: a horror thriller with comedic elements"
     },
@@ -138,25 +132,25 @@
       "title": "Tremors",
       "tmdb": 9362,
       "tree": "horror",
-      "flavour": "creature",
+      "flavour": "monsters",
       "member": true,
-      "note": "a comedy by every gauge (laugh 0.50, fear 0.51) that the operator also wants under the scary answers: in his creature examples"
+      "note": "a comedy by every gauge (laugh 0.50, fear 0.51) that the operator also wants under the scary answers: in the monsters kind"
     },
     {
       "title": "Arachnophobia",
       "tmdb": 6488,
       "tree": "horror",
-      "flavour": "creature",
+      "flavour": "monsters",
       "member": true,
-      "note": "a comedy by the Comedy tag and laugh 0.33 that the operator also wants under the scary answers: in his creature examples"
+      "note": "a comedy by the Comedy tag and laugh 0.33 that the operator also wants under the scary answers: in the monsters kind"
     },
     {
       "title": "An American Werewolf in London",
       "tmdb": 814,
       "tree": "horror",
-      "flavour": "creature",
+      "flavour": "monsters",
       "member": true,
-      "note": "a comedy by the Comedy tag and laugh 0.65 that the operator also wants under the scary answers: in his creature examples"
+      "note": "a comedy by the Comedy tag and laugh 0.65 that the operator also wants under the scary answers: in the monsters kind"
     }
   ]
 }

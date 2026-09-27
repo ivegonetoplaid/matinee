@@ -17,6 +17,11 @@ DoesTheDogDie exclusions, which are checked at the pick. For a viewer whose topi
 skip a scale question (horror's gore pails), `gentlest` names the least-scoring
 third of a pool on that scale, which the pick draws from first.
 
+A tree's flavours are found by keyword, genome and genre signals, or, for a
+flavour marked `labelled`, read from the labels file (`matinee.labels`), which
+also settles which films a tree's pool holds. An answer leaving one
+flavour out keeps films that also sit in another flavour of the tree.
+
 Unknown values are inclusive: a film with no runtime, rating, year, language,
 collection or score passes a filter on it, because a wrongly included film costs
 one `Not that one` and a wrongly excluded one is invisible.
@@ -35,6 +40,7 @@ import numpy as np
 import numpy.typing as npt
 import pandas as pd
 
+from matinee.labels import Labels
 from matinee.pools import House, build_pools, load_house
 from matinee.reference import DATA, Reference, load_reference, load_specs, problems
 from matinee.scales import film_scores, membership, offered, scale_of
@@ -116,6 +122,7 @@ class Catalog:
     exclusion_names: Mapping[str, str]
     first_lines: tuple[str, ...]
     first_options: tuple[FirstOption, ...]
+    labels: Labels = field(default_factory=Labels)
     pools: dict[str, Mask] = field(default_factory=dict)
     masks: dict[tuple[str, str, int], Mask] = field(default_factory=dict)
 
@@ -161,24 +168,31 @@ def _flavour(table: FilmTable, tree: Tree, name: str) -> Mask:
     return hit
 
 
+def _labelled(cat: Catalog, tree: Tree, name: str) -> Mask:
+    """Films whose labels in this tree name the kind `name`; an unlabelled film is in no kind."""
+    kinds = cat.labels.of(tree.id).kinds
+    return np.array([name in kinds.get(int(t), ()) for t in cat.table.films.index], dtype=bool)
+
+
 def house_flavour(cat: Catalog, tree: Tree, name: str) -> Mask:
-    """The flavour's films after house pins: a film pinned in joins it, a film pinned out leaves it."""
-    hit = _flavour(cat.table, tree, name)
+    """The flavour's films after house pins: a film pinned in joins it, a film pinned out leaves it.
+
+    A flavour marked `labelled` takes its films from the labels; any other is found by its signals.
+    """
+    labelled = bool(tree.flavours.get(name, {}).get("labelled"))
+    hit = _labelled(cat, tree, name) if labelled else _flavour(cat.table, tree, name)
     for tmdb, member in cat.house.flavour_pins.get((tree.id, name), {}).items():
         hit[cat.table.films.index == tmdb] = member
     return hit
 
 
-def _pinned_into_other(cat: Catalog, tree: Tree, name: str) -> Mask:
-    """Films pinned into any flavour of the tree but `name`; they stay in answers that leave `name` out."""
-    ids = {
-        t
-        for (tid, fl), pins in cat.house.flavour_pins.items()
-        if tid == tree.id and fl != name
-        for t, member in pins.items()
-        if member
-    }
-    return np.asarray(cat.table.films.index.isin(list(ids)), dtype=bool)
+def _in_other_flavour(cat: Catalog, tree: Tree, name: str) -> Mask:
+    """Films in any flavour of the tree but `name`, after house pins; they stay in answers that leave `name` out."""
+    hit = np.zeros(len(cat.table.films), dtype=bool)
+    for other in tree.flavours:
+        if other != name:
+            hit |= house_flavour(cat, tree, other)
+    return hit
 
 
 OPS = {">=": np.greater_equal, ">": np.greater, "<": np.less, "<=": np.less_equal}
@@ -318,7 +332,7 @@ def _scored_mask(cat: Catalog, tree: Tree, f: Filter) -> Mask:
     if f.flavour is not None:
         mask &= house_flavour(cat, tree, f.flavour)
     if f.flavour_none is not None:
-        mask &= ~house_flavour(cat, tree, f.flavour_none) | _pinned_into_other(cat, tree, f.flavour_none)
+        mask &= ~house_flavour(cat, tree, f.flavour_none) | _in_other_flavour(cat, tree, f.flavour_none)
     if f.register is not None:
         mask &= _register(table, tree, f.register)
     if f.payoff is not None:
@@ -361,7 +375,38 @@ def _first_option(o: dict[str, str]) -> FirstOption:
     return FirstOption(o["say"], o["tree"], o["label"])
 
 
-def load_catalog(table: FilmTable, data: Path = DATA, reference: Reference | None = None) -> Catalog:
+def _elsewhere(cat: Catalog, tree: Tree) -> Mask:
+    """Films held by the pool of any tree other than `tree`."""
+    held = np.zeros(len(cat.table.films), dtype=bool)
+    for other in cat.trees.values():
+        if other.pool != tree.pool and other.pool in cat.pools:
+            held |= cat.pools[other.pool]
+    return held
+
+
+def _apply_labels(cat: Catalog) -> None:
+    """Check the labels against the trees, then settle each tree's pool by them.
+
+    Every labelled film joins the pool, whatever the pool rules said. A film labelled out leaves only
+    when another tree holds it, so no film is left with no way in.
+    """
+    for tree_id, labels in cat.labels.trees.items():
+        tree = cat.trees.get(tree_id)
+        if tree is None:
+            raise EngineError(f"the labels name tree '{tree_id}', which no tree file defines")
+        known = {name for name, spec in tree.flavours.items() if spec.get("labelled")}
+        unknown = set().union(*labels.kinds.values()) - known
+        if unknown:
+            raise EngineError(f"the labels give tree '{tree_id}' kinds it does not label: {sorted(unknown)}")
+        if tree.pool in cat.pools:
+            index = cat.table.films.index
+            held, out = index.isin(list(labels.kinds)), index.isin(list(labels.out))
+            cat.pools[tree.pool] = (cat.pools[tree.pool] | held) & ~(out & _elsewhere(cat, tree))
+
+
+def load_catalog(
+    table: FilmTable, data: Path = DATA, reference: Reference | None = None, labels: Labels | None = None
+) -> Catalog:
     """Prepare the engine for one film table; raises when the shipped statistics do not cover the trees."""
     ref = reference or load_reference(data / "reference.json")
     stale = problems(ref, load_specs(data / "trees"))
@@ -378,11 +423,13 @@ def load_catalog(table: FilmTable, data: Path = DATA, reference: Reference | Non
         exclusion_names={name: str(spec.get("say", name)) for name, spec in excl["exclusions"].items()},
         first_lines=tuple(first["lines"]),
         first_options=tuple(_first_option(o) for o in first["options"]),
+        labels=labels or Labels(),
     )
     for tree_id, flavour in cat.house.flavour_pins:
         if flavour not in getattr(cat.trees.get(tree_id), "flavours", {}):
             raise EngineError(f"house flavour pin names tree '{tree_id}' flavour '{flavour}', which no tree defines")
     cat.pools = {name: np.array(pool, dtype=bool) for name, pool in build_pools(table, cat.house).items()}
+    _apply_labels(cat)
     for tree in cat.trees.values():
         if tree.pool not in cat.pools:
             raise EngineError(f"tree '{tree.id}' names pool '{tree.pool}', which no pool rule builds")
