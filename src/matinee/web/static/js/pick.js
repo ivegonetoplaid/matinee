@@ -1,6 +1,6 @@
 // The pick, in two beats. Land: one poster tears loose from the floor of the wall,
 // leaving a gap, and comes up into a spotlight while "Here. Watch this one."
-// types out. Reveal: after about two and a half seconds the wall
+// types out. Reveal: after about three and a half seconds the wall
 // fades nearly away and the lit poster itself travels to its resting place. On a
 // desktop that is the foot of the left column, as large as the space allows, while
 // the film's backdrop rises on the right with its title, year and synopsis. On a
@@ -11,7 +11,7 @@ import { get } from "./api.js";
 import { h, isPhone, sentenceCase, wait } from "./dom.js";
 import { typeLine } from "./type.js";
 
-const REVEAL_AFTER_MS = 2400; // the rip takes 1.3 s, then the poster holds in the light
+const REVEAL_AFTER_MS = 3400; // the rip takes 2.3 s, then the poster holds in the light
 const SETTLE_MS = 1300;
 const PHONE_HOLD_MS = 2200;
 const POSTER_RATIO = 1.5; // height over width

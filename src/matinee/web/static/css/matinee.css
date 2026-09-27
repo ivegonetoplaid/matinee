@@ -536,12 +536,12 @@ button {
   background: rgba(2, 3, 6, 0.85);
   box-shadow: inset 0 0 24px 6px rgba(0, 0, 0, 0.9);
   transform: perspective(1100px) rotateX(var(--lay)) rotate(var(--tilt)) scale(0.62);
-  animation: fade 0.4s ease 0.15s backwards;
+  animation: fade 0.4s ease 1s backwards;
 }
 
 .spot-glow {
   position: absolute;
-  animation: fade 0.7s ease 0.8s backwards;
+  animation: fade 0.7s ease 1.7s backwards;
   left: -43%;
   top: -12%;
   width: 186%;
@@ -558,11 +558,12 @@ button {
   object-fit: cover;
   border-radius: 6px;
   box-shadow: 0 0 0 2px rgba(255, 214, 140, 0.9), 0 0 60px 12px rgba(255, 190, 90, 0.45), 0 24px 60px rgba(0, 0, 0, 0.6);
-  animation: rip 1.3s cubic-bezier(0.3, 0.6, 0.2, 1) both;
+  animation: rip 2.3s cubic-bezier(0.3, 0.6, 0.2, 1) both;
 }
 
-/* Torn from the floor: it lies in the wall at the floor's angle, blurred and dim; a corner
-   catches, then it pulls free toward the viewer with a twist and settles in the light. */
+/* Torn from the floor: it lies in the wall at the floor's angle, blurred and dim, for a
+   second while the light finds it; a corner catches, then it pulls free toward the viewer
+   with a twist and settles in the light. */
 @keyframes rip {
   0% {
     transform: perspective(1100px) rotateX(var(--lay)) rotate(var(--tilt)) scale(0.62);
@@ -570,18 +571,24 @@ button {
     box-shadow: none;
   }
 
-  20% {
+  38% {
+    transform: perspective(1100px) rotateX(var(--lay)) rotate(var(--tilt)) scale(0.62);
+    filter: blur(calc(var(--blur) / 2)) brightness(0.8);
+    box-shadow: none;
+  }
+
+  50% {
     transform: perspective(1100px) rotateX(calc(var(--lay) - 12deg)) rotate(calc(var(--tilt) + 3deg)) scale(0.66)
       translateY(-3%);
     filter: blur(3px) brightness(0.5);
   }
 
-  50% {
+  71% {
     transform: perspective(1100px) rotateX(-10deg) rotate(6deg) scale(1.08) translateY(-6%);
     filter: none;
   }
 
-  74% {
+  86% {
     transform: perspective(1100px) rotateX(3deg) rotate(-2deg) scale(0.98);
   }
 
