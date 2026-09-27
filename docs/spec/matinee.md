@@ -851,7 +851,7 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
      a corner, pulls free toward the viewer with a twist, and settles in a
      spotlight (2.3 s in all), leaving a dark gap in the floor. "Here. Watch
      this one." types meanwhile.
-  2. *Reveal.* After 3.4 seconds the wall fades nearly away and the lit poster
+  2. *Reveal.* After 2.7 seconds the wall fades nearly away and the lit poster
      slides to where it rests (1.3 s). On a desktop that is the foot of the left
      column, as large as the height left there allows at 2:3 (never under 160
      px), while the film's backdrop rises on the right, fading into the title,
