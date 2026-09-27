@@ -13,6 +13,10 @@ const GAP = { desktop: 10, phone: 6 };
 const UNIQUE_POSTERS = { desktop: 72, phone: 40 };
 const MAX_CANVAS_PX = 2400; // the layer is blurred, so a lower drawing resolution is invisible
 const SETTLE_MS = 700;
+// The glide to the pick: far across the floor in a random direction, within the slack the grid
+// keeps beyond the plane's edge (20% of the plane each side), so no edge ever shows.
+const TRAVEL_MS = 1400;
+const REACH = { desktop: [760, 620], phone: [190, 480] }; // px along the floor, across and deep
 const REDRAW_EVERY_MS = 150;
 
 function across(poolSize, phone) {
@@ -85,6 +89,7 @@ export class Wall {
   }
 
   move() {
+    for (const grid of this.grids) grid.style.removeProperty("--shuffle");
     this.seed += 1;
     const drift = (this.seed % 3) - 1;
     const phone = isPhone();
@@ -98,6 +103,24 @@ export class Wall {
     this.root.classList.add("moving");
     clearTimeout(this.settleTimer);
     this.settleTimer = setTimeout(() => this.root.classList.remove("moving"), SETTLE_MS);
+  }
+
+  // A long glide to somewhere else on the floor, as if going to fetch one poster in particular.
+  // Returns how long it takes, which is nothing under reduced motion.
+  travel() {
+    const [across, deep] = isPhone() ? REACH.phone : REACH.desktop;
+    const angle = Math.random() * 2 * Math.PI;
+    const reach = 0.7 + Math.random() * 0.3;
+    for (const grid of this.grids) {
+      grid.style.setProperty("--shuffle", `${TRAVEL_MS}ms`);
+      grid.style.setProperty("--gx", `${Math.round(Math.cos(angle) * across * reach)}px`);
+      grid.style.setProperty("--gy", `${Math.round(Math.sin(angle) * deep * reach)}px`);
+    }
+    if (prefersLessMotion()) return 0;
+    this.root.classList.add("moving");
+    clearTimeout(this.settleTimer);
+    this.settleTimer = setTimeout(() => this.root.classList.remove("moving"), TRAVEL_MS - 300);
+    return TRAVEL_MS;
   }
 
   draw() {

@@ -1,4 +1,5 @@
-// The pick, in two beats. Land: one poster tears loose from the floor of the wall,
+// The pick, in two beats. Land: the wall glides far across its floor, as if going to
+// fetch one poster, then that poster tears loose from the floor,
 // leaving a gap, and comes up into a spotlight while "Here. Watch this one."
 // types out. Reveal: after about two and three-quarter seconds the wall
 // fades nearly away and the lit poster itself travels to its resting place. On a
@@ -8,7 +9,7 @@
 // The film is tonight's showing, never a search result.
 
 import { get } from "./api.js";
-import { h, isPhone, sentenceCase, wait } from "./dom.js";
+import { h, isPhone, prefersLessMotion, sentenceCase, wait } from "./dom.js";
 import { typeLine } from "./type.js";
 
 const REVEAL_AFTER_MS = 2700; // the rip takes 2.3 s, then the poster holds in the light for a beat
@@ -50,8 +51,6 @@ function spotlight(tmdb, title) {
   return spot;
 }
 
-const still = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
 // The poster's resting box: as tall as the slot allows at 2:3, never wider than the slot.
 function fit(slot) {
   const box = slot.getBoundingClientRect();
@@ -71,7 +70,7 @@ function settle(spot, slot, film) {
   slot.append(poster);
   spot.remove();
   const to = poster.getBoundingClientRect();
-  if (still() || !to.width) return;
+  if (prefersLessMotion() || !to.width) return;
   const shift = `translate(${from.left - to.left}px, ${from.top - to.top}px) scale(${from.width / to.width})`;
   poster.animate([{ transform: shift }, { transform: "none" }], {
     duration: SETTLE_MS,
@@ -156,11 +155,12 @@ export async function showPick({ stage, wall, pool, result, frame, actions }) {
     await typeLine(line, result.swapped.line, "");
     await wait(900);
   }
-  wall.show(pool, { spotlight: true });
+  const cardRequest = get(`/api/film/${film.tmdb}`);
+  wall.show(pool, { spotlight: true, shuffle: false });
   wall.root.classList.add("spotlit");
+  await wait(wall.travel());
   const spot = spotlight(film.tmdb, film.title);
   stage.append(spot);
-  const cardRequest = get(`/api/film/${film.tmdb}`);
   await Promise.all([typeLine(line, HERE, ""), wait(REVEAL_AFTER_MS)]);
   const card = await cardRequest;
   if (!card.ok) {
@@ -190,6 +190,6 @@ export async function showPick({ stage, wall, pool, result, frame, actions }) {
   if (isPhone()) {
     stage.scrollTop = 0;
     await wait(PHONE_HOLD_MS);
-    shown.scrollIntoView({ behavior: still() ? "auto" : "smooth", block: "start" });
+    shown.scrollIntoView({ behavior: prefersLessMotion() ? "auto" : "smooth", block: "start" });
   }
 }

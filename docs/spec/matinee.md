@@ -845,7 +845,10 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
 - **The pails.** The gore question shows four pail pictures, spotless to
   overflowing, each with its answer's words beneath it as text.
 - **The pick, in two beats.**
-  1. *Land.* One poster tears loose from the floor of the wall (in the right
+  1. *Land.* The wall glides far across its floor in a random direction (1.4
+     s; up to 760 px across and 620 px deep on desktop, 190 and 480 on a phone,
+     inside the floor's spare edge so no edge shows), as if going to fetch one
+     poster. Then that poster tears loose from the floor of the wall (in the right
      two-thirds on desktop, the upper half on a phone): it lies at the floor's
      angle, blurred and dim, for about a second while it brightens, catches at
      a corner, pulls free toward the viewer with a twist, and settles in a
