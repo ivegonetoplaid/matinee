@@ -834,17 +834,24 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
   fewer. Each answer shuffles the floor with a short motion blur. The wall never
   dims to black between answers.
 - **Questions.** Matinee's line types out (an acknowledgement, then the
-  question), and the answers appear once it finishes. On desktop they are
-  letter-board strips, on a phone dark pills. The first action on a screen
+  question), and the answers appear once it finishes. The line and the answers
+  keep apart, and nothing re-centres as the line types or the answers appear:
+  the line hangs from the top of the screen with three lines reserved, so on
+  desktop the answers start at the same height on every question whose line
+  fits in three; on a phone the answers sit at the foot of the screen. On
+  desktop the answers are letter-board strips, on a phone dark pills. The first action on a screen
   disables every button on it. The profile's name tag, with "Edit my list" and
   "Not <name>?", sits at the top of the wall and the pick screen.
 - **The pails.** The gore question shows four pail pictures, spotless to
   overflowing, each with its answer's words beneath it as text.
 - **The pick, in two beats.**
-  1. *Land.* A spotlight lands on one poster (in the right two-thirds on
-     desktop, the upper half on a phone) while "Here. Watch this one." types.
-  2. *Reveal.* After 1.5 seconds the wall fades nearly away and the lit poster
-     travels to where it rests. On a desktop that is the foot of the left
+  1. *Land.* One poster tears loose from the floor of the wall (in the right
+     two-thirds on desktop, the upper half on a phone): it starts lying at the
+     floor's angle, blurred and dim, catches at a corner, pulls free toward the
+     viewer with a twist, and settles in a spotlight (1.3 s), leaving a dark gap
+     in the floor. "Here. Watch this one." types meanwhile.
+  2. *Reveal.* After 2.4 seconds the wall fades nearly away and the lit poster
+     slides to where it rests (1.3 s). On a desktop that is the foot of the left
      column, as large as the height left there allows at 2:3 (never under 160
      px), while the film's backdrop rises on the right, fading into the title,
      year and synopsis, shown without a tap. On a phone the poster fills the

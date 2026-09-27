@@ -1,5 +1,6 @@
-// The pick, in two beats. Land: a spotlight lands on one poster while "Here.
-// Watch this one." types out. Reveal: after about a second and a half the wall
+// The pick, in two beats. Land: one poster tears loose from the floor of the wall,
+// leaving a gap, and comes up into a spotlight while "Here. Watch this one."
+// types out. Reveal: after about two and a half seconds the wall
 // fades nearly away and the lit poster itself travels to its resting place. On a
 // desktop that is the foot of the left column, as large as the space allows, while
 // the film's backdrop rises on the right with its title, year and synopsis. On a
@@ -10,8 +11,8 @@ import { get } from "./api.js";
 import { h, isPhone, sentenceCase, wait } from "./dom.js";
 import { typeLine } from "./type.js";
 
-const REVEAL_AFTER_MS = 1500;
-const SETTLE_MS = 900;
+const REVEAL_AFTER_MS = 2400; // the rip takes 1.3 s, then the poster holds in the light
+const SETTLE_MS = 1300;
 const PHONE_HOLD_MS = 2200;
 const POSTER_RATIO = 1.5; // height over width
 const POSTER_MIN_H = 160; // below this the page scrolls rather than shrink the poster further
@@ -40,6 +41,7 @@ function spotlight(tmdb, title) {
   const spot = h(
     "div",
     { class: "spot", "aria-hidden": "true" },
+    h("div", { class: "spot-hole" }),
     h("div", { class: "spot-glow" }),
     h("img", { class: "spot-poster", src: `/img/poster/${tmdb}/l`, alt: `${title} poster` }),
   );
