@@ -1,6 +1,6 @@
 // The pick. The wall hunts across itself to the picked film's poster and lands it at the centre of the
-// screen, and "Here. Watch this one." types out. After a beat the poster travels from exactly where it
-// hangs to its resting place. On a desktop that is the foot of the left column, as large as the space
+// screen. The poster brightens as the rest of the wall dims, then grows in place while "Here. Watch this
+// one." types out. After a beat it travels from exactly where it hangs to its resting place. On a desktop that is the foot of the left column, as large as the space
 // allows, while the film's backdrop rises on the right with its title, year and synopsis. On a phone the
 // poster fills the screen, then the page scrolls gently to the details.
 // The film is tonight's showing, never a search result.
@@ -9,8 +9,8 @@ import { get } from "./api.js";
 import { h, isPhone, prefersLessMotion, sentenceCase, wait } from "./dom.js";
 import { typeLine } from "./type.js";
 
-const BEAT_MS = 500; // the landed poster holds for one beat before it moves to rest
-const STILL_HOLD_MS = 2000; // under reduced motion there is no hunt; the landed poster holds about as long
+const BEAT_MS = 500; // the grown poster holds for one beat before it moves to rest
+const STILL_HOLD_MS = 2000; // under reduced motion there is no hunt or growth; the grown poster holds about as long
 const SETTLE_MS = 1300;
 const PHONE_HOLD_MS = 2200;
 const POSTER_RATIO = 1.5; // height over width
@@ -156,16 +156,19 @@ async function rest({ stage, wall, frame, film, result, actions, info, backdrop,
   }
 }
 
-// The poster to carry to rest: the sharp picture when it has loaded, else the wall's own picture of
-// the film when it has one, else null, and no poster rests.
-function restingPoster(sharp, wall, film) {
+// The poster to carry to rest: the sharp picture when it has loaded, else a copy of the wall's own
+// picture of the film once that copy can be drawn, else null, and no poster rests.
+async function restingPoster(sharp, wall, film) {
   if (sharp) return sharp;
   const tile = wall.landedTile()?.img;
-  if (!tile?.currentSrc || tile.currentSrc.endsWith("/blank.svg") || !tile.naturalWidth) return null;
+  if (!tile?.currentSrc || tile.currentSrc.endsWith("/blank.svg") || !(tile.naturalWidth > 1)) return null;
   const copy = new Image();
   copy.alt = `${film.title} poster`;
   copy.src = tile.currentSrc;
-  return copy;
+  return copy.decode().then(
+    () => copy,
+    () => null,
+  );
 }
 
 // Where the check turned the first pick away, the line says so before the new pick lands.
@@ -173,6 +176,30 @@ async function sayWhySwapped(line, result) {
   if (!result.swapped) return;
   await typeLine(line, result.swapped.line, "");
   await wait(900);
+}
+
+// From the landing to the grown poster. The sharp picture takes the wall picture's place as soon as it
+// can be drawn, on the wall and later at rest. A poster that landed without a picture waits for its
+// sharp one; with neither, nothing grows and the wall steps back for the resting page. The line types
+// while the poster grows. Resolves to { shown, sharp, typing }, or null when the viewer left.
+async function bringOut({ wall, frame, pause, posterReady, left }) {
+  const sharp = { img: null, resting: null };
+  const sharpShown = posterReady.then(async (img) => {
+    if (!img || left()) return;
+    sharp.img = img;
+    await wall.useSharp(img.src);
+    if (sharp.resting && sharp.resting !== img) sharp.resting.src = img.src;
+  });
+  if (!wall.landedHasPicture()) await sharpShown;
+  if (left()) return null;
+  const shown = wall.landedHasPicture();
+  // The line read before the hunt is cleared before the line comes back, so it never shows again.
+  frame.line.replaceChildren();
+  frame.line.classList.remove("hushed");
+  const typing = wait(prefersLessMotion() || !shown ? 0 : pause * 1000).then(() => typeLine(frame.line, HERE, ""));
+  if (!shown) wall.stepBack();
+  else if (!(await wall.bringForward(pause))) return null;
+  return { shown, sharp, typing };
 }
 
 // The page's pick screen. `actions` holds notThatOne, justPick, startOver, failed and the correction
@@ -187,20 +214,36 @@ export async function showPick({ stage, wall, result, frame, readUntil = 0, acti
   const left = () => !frame.showing.isConnected || wall.round !== round;
   await sayWhySwapped(frame.line, result);
   if (left()) return undefined;
-  const cardRequest = get(`/api/film/${film.tmdb}`);
-  const posterReady = picture(`/img/poster/${film.tmdb}/l`, `${film.title} poster`);
-  const backdropReady = isPhone() ? null : picture(`/img/backdrop/${film.tmdb}/l`, `${film.title}, a still from the film`);
+  const { cardRequest, posterReady, backdropReady } = fetchFilm(film);
   // The words fade as the drift stops; the reason a film was turned away stays on screen.
   const onStop = () => {
     if (!result.swapped) frame.line.classList.add("hushed");
   };
   const pause = await wall.hunt(film.tmdb, { notBefore: readUntil, onStop });
   if (pause === null || left()) return undefined;
-  frame.line.classList.remove("hushed");
-  const hold = prefersLessMotion() ? STILL_HOLD_MS : pause * 1000 + BEAT_MS;
-  const [card, backdrop, sharp] = await Promise.all([cardRequest, backdropReady, posterReady, typeLine(frame.line, HERE, ""), wait(hold)]);
+  const out = await bringOut({ wall, frame, pause, posterReady, left });
+  if (!out) return undefined;
+  return toRest({ stage, wall, frame, film, result, actions, left, out, cardRequest, backdropReady });
+}
+
+// After the beat, once the film's details and backdrop have arrived, the poster moves to rest.
+async function toRest({ stage, wall, frame, film, result, actions, left, out, cardRequest, backdropReady }) {
+  const beat = wait(prefersLessMotion() ? STILL_HOLD_MS : BEAT_MS);
+  const [card, backdrop] = await Promise.all([cardRequest, backdropReady, out.typing, beat]);
   if (left()) return undefined;
   if (!card.ok) return actions.failed(card.data);
-  const poster = restingPoster(sharp, wall, film);
+  const poster = out.shown ? await restingPoster(out.sharp.img, wall, film) : null;
+  if (left()) return undefined;
+  out.sharp.resting = poster;
   return rest({ stage, wall, frame, film, result, actions, info: card.data, backdrop, poster });
+}
+
+// What the pick fetches as soon as it knows the film: its details, its sharp poster and, on a desktop,
+// its backdrop. A phone's resting page shows no backdrop, so a phone fetches none.
+function fetchFilm(film) {
+  return {
+    cardRequest: get(`/api/film/${film.tmdb}`),
+    posterReady: picture(`/img/poster/${film.tmdb}/l`, `${film.title} poster`),
+    backdropReady: isPhone() ? null : picture(`/img/backdrop/${film.tmdb}/l`, `${film.title}, a still from the film`),
+  };
 }

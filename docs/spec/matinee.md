@@ -887,11 +887,22 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
   spacing along its axis in 1/60 s; a hop that would takes longer. Before the
   hunt the whole plan is made and the picked film is placed in the landing
   cell, which is off screen until the hunt brings it to the centre. Under
-  reduced motion the wall jumps to it. After the last hop's pause and a 0.5 s
-  beat (2 s under reduced motion) "Here. Watch this one." types, and once the
-  film's details (and on a desktop its backdrop) have arrived the poster
-  moves from exactly where it hangs on the wall to its resting place (1.3 s),
-  leaving its cell empty while it rests. On a desktop that is the foot of the
+  reduced motion the wall jumps to it once the landed cell can draw the
+  picked film. Over the last hop's pause the landed poster brightens to full
+  strength while the rest of the wall dims halfway to 12 per cent; then, over
+  0.75 s, it grows about its centre to 2.4 times a resting-size poster
+  (whatever the wall's poster size) while the wall dims to 12 per cent and
+  "Here. Watch this one." types. The poster grows by its laid-out size, so its
+  picture stays sharp. The sharp 640 px picture is shown over the wall's
+  picture, in the same box, only once it has decoded. A landed poster with no
+  picture waits for the sharp one; with neither, nothing grows, the wall dims
+  to 12 per cent over 0.35 s and the pick goes to the resting page without a
+  poster. Under reduced motion the poster appears grown and the wall dimmed at
+  once. After a 0.5 s beat (2 s under reduced motion), once the film's
+  details (and on a desktop its backdrop) have arrived, the poster moves from
+  exactly where it hangs to its resting place (1.3 s) as the details rise,
+  leaving its cell empty while it rests; the wall stays at 12 per cent behind
+  the resting page. On a desktop that is the foot of the
   left column, as large as the height left there allows at 2:3 (never under
   160 px), while the backdrop rises on the right, fading into the title, year
   and synopsis, shown without a tap. On a phone the poster fills the width at
@@ -900,8 +911,8 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
   screen: the line, then `Not that one`, a "More on Seerr" link to the film's
   page on the configured Seerr and `Start over` in one row, then the
   correction link. The poster at rest is the sharp 640 px picture when it has
-  loaded, else the wall's own picture of the film; with neither, no poster
-  rests. A backdrop that fails is left out, and a phone fetches none.
+  loaded, else a decoded copy of the wall's own picture of the film, replaced
+  by the sharp picture when it arrives; with neither, no poster rests. A backdrop that fails is left out, and a phone fetches none.
 
   A trail answer, the name tag or `Start over` ends the pick at the tap: the
   hunt stops where it is, the wall drifts again, and the pick changes nothing

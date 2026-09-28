@@ -106,7 +106,8 @@ button {
   will-change: transform;
 }
 
-.wall-tiles[hidden] {
+.wall-tiles[hidden],
+.tile[hidden] {
   display: none;
 }
 
@@ -122,6 +123,9 @@ button {
   opacity: var(--tile);
   transform-origin: 0 0;
   user-select: none;
+  /* The wall moves every poster itself, frame by frame; no style change on one is ever eased, so
+     the reduced-motion rule's short transitions never paint a poster's old size or strength. */
+  transition-property: none !important;
 }
 
 /* ---------- the stage the questions sit on ---------- */

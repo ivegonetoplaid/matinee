@@ -5,8 +5,9 @@
 // whose picture has not loaded is a dark cell.
 
 import { isPhone } from "./dom.js";
-import { SETTLE_EASE, SETTLE_S, centreOf, hopCell, hopCount, placeLanding, planHunt, settledCamera } from "./hunt-plan.js";
+import { SETTLE_EASE, SETTLE_S, bezier, centreOf, hopCell, hopCount, placeLanding, planHunt, settledCamera } from "./hunt-plan.js";
 import {
+  ACROSS,
   camCell,
   cellBox,
   filmAt,
@@ -29,9 +30,26 @@ const PRELOAD_MS = 600; // the re-sort waits this long at most for the posters i
 const DROPPED_SCALE = 0.5; // a dropped film's poster shrinks to this and fades where it stands
 const BLANK = "/static/blank.svg"; // a tile with no picture shows this, so it is a dark cell, never a broken image
 const SIZES = ["l", "m", "s"];
+const GROW = 2.4; // the landed poster grows to this many times a poster at the resting size
+const GROW_MS = 750;
+const GROW_EASE = bezier(0.2, 0.8, 0.2, 1);
+const WALL_STRENGTH = 0.35; // the wall's posters, as the stylesheet's --tile holds them
+const AWAY_STRENGTH = 0.12; // the rest of the wall once the pick has landed, and behind the resting page
+const STEP_BACK_MS = 350; // the wall dimming for a resting page that has no poster to bring forward
+const LANDED_DRAW_MS = 1000; // under reduced motion, the jump waits at most this long for the landed picture
 const NONE_PLACED = new Map();
 
 const lessMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+// The box, in layer px, of cell (i, j) grown `scale` times about its centre.
+function grownBox(i, j, layout, scale) {
+  return {
+    x: i * layout.sx - (layout.w * (scale - 1)) / 2,
+    y: j * layout.sy - (layout.h * (scale - 1)) / 2,
+    w: layout.w * scale,
+    h: layout.h * scale,
+  };
+}
 
 // Resolves once every promise has settled or `ms` has passed, whichever comes first.
 function within(ms, promises) {
@@ -61,6 +79,14 @@ export class Wall {
     this.placed = new Map(); // "i,j" -> the film a hunt placed in that cell
     this.landed = null; // the cell a hunt landed on
     this.lifted = null; // the landed cell while its poster has left the wall, as "i,j"
+    this.look = null; // how the landed poster is shown: { lit, scale }, strength and size
+    // The landed poster's sharper picture, on its own element over the landed cell, shown only once it
+    // has decoded; until then the tile beneath keeps drawing the wall's picture.
+    this.front = document.createElement("img");
+    this.front.className = "tile front";
+    this.front.alt = "";
+    this.front.hidden = true;
+    this.frontCell = null; // the landed cell the front element's picture belongs to, once it has decoded
     this.last = performance.now();
     window.addEventListener("resize", () => this.relayout(null, null));
     requestAnimationFrame((t) => this.frame(t));
@@ -119,6 +145,10 @@ export class Wall {
     this.round += 1;
     this.drifting = true;
     this.landed = null;
+    this.look = null;
+    this.frontCell = null;
+    this.front.hidden = true;
+    this.layer.style.removeProperty("--tile");
     this.lifted = null;
     this.dirty = true;
   }
@@ -167,12 +197,20 @@ export class Wall {
     this.placed = new Map([...this.placed, ...placeLanding(plan, id)]);
     this.dirty = true;
     this.request(`/img/poster/${id}/${this.size}`);
-    if (lessMotion.matches) {
-      this.aim(plan.landing.i, plan.landing.j);
-      this.landed = plan.landing;
-      return 0;
-    }
+    if (lessMotion.matches) return this.jump(plan, round);
     return this.hop(plan, from);
+  }
+
+  // Under reduced motion: the camera moves to the landing cell at once, and the jump ends once the
+  // landed tile can draw the picked film's picture (or after LANDED_DRAW_MS), so it never shows the
+  // film the cell held before. Resolves to 0, the pause, or null when the pick was ended meanwhile.
+  async jump(plan, round) {
+    this.aim(plan.landing.i, plan.landing.j);
+    this.landed = plan.landing;
+    this.place();
+    const img = this.landedTile()?.img;
+    if (img) await within(LANDED_DRAW_MS, [img.decode()]);
+    return round === this.round ? 0 : null;
   }
 
   // Whether the pick of `round` may start its hunt: once any re-sort has ended and `notBefore` has
@@ -213,6 +251,96 @@ export class Wall {
     }
     this.landed = plan.landing;
     return plan.hops.at(-1).pause;
+  }
+
+  // Holds the rest of the wall at `strength` (0 to 1).
+  dim(strength) {
+    this.layer.style.setProperty("--tile", String(strength));
+  }
+
+  // Dims the wall to the strength it keeps behind the resting page, over STEP_BACK_MS (at once under
+  // reduced motion).
+  stepBack() {
+    if (lessMotion.matches) return this.dim(AWAY_STRENGTH);
+    return this.tween(STEP_BACK_MS, (t) => this.dim(WALL_STRENGTH + (AWAY_STRENGTH - WALL_STRENGTH) * t));
+  }
+
+  // How many times its wall size the landed poster grows: to GROW times a resting-size poster, whatever
+  // the size of the wall's posters when the pick began.
+  grownScale() {
+    const resting = window.innerWidth / (isPhone() ? ACROSS.phone.fewest : ACROSS.desktop.fewest);
+    return (GROW * resting) / this.layout.w;
+  }
+
+  // Whether the landed poster can draw a picture of its film: its sharper picture has decoded, or its
+  // tile has drawn the wall's picture (the blank of a dark cell does not count).
+  landedHasPicture() {
+    if (this.frontCell) return true;
+    const img = this.landedTile()?.img;
+    return Boolean(img && img.getAttribute("src") !== BLANK && img.complete && img.naturalWidth > 1);
+  }
+
+  // Puts `url`, the landed poster's sharper picture, on the front element and shows it over the landed
+  // cell, in the same box, once it has decoded there. Resolves once it shows, or when it cannot.
+  async useSharp(url) {
+    const cell = this.landed && `${this.landed.i},${this.landed.j}`;
+    if (!cell) return;
+    this.front.src = url;
+    try {
+      await this.front.decode();
+    } catch {
+      return; // the picture failed; the wall's own picture stays, and the server has logged why
+    }
+    if (!this.landed || `${this.landed.i},${this.landed.j}` !== cell) return;
+    this.frontCell = cell;
+    this.dirty = true;
+  }
+
+  // Brings the landed poster forward: over `pause` seconds it brightens to full strength while the rest
+  // of the wall dims halfway to AWAY_STRENGTH; then over GROW_MS it grows in place to its grown size
+  // while the wall dims the rest of the way. Under reduced motion it is shown grown at once. Resolves
+  // true when it ends, or false when the pick was ended first.
+  async bringForward(pause) {
+    const grown = this.grownScale();
+    const half = WALL_STRENGTH + (AWAY_STRENGTH - WALL_STRENGTH) / 2;
+    const show = (lit, scale, away) => {
+      this.look = { lit, scale };
+      this.dim(away);
+      this.dirty = true;
+    };
+    if (lessMotion.matches) {
+      show(1, grown, AWAY_STRENGTH);
+      return true;
+    }
+    const lit = await this.tween(pause * 1000, (t) => show(WALL_STRENGTH + (1 - WALL_STRENGTH) * t, 1, WALL_STRENGTH + (half - WALL_STRENGTH) * t));
+    if (!lit) return false;
+    return this.tween(GROW_MS, (t) => show(1, 1 + (grown - 1) * t, half + (AWAY_STRENGTH - half) * t), GROW_EASE);
+  }
+
+  // Dresses the landed poster as `look` says, or returns a poster that was dressed to the wall's own.
+  // It grows about its centre, above its neighbours, by its laid-out size rather than a scale, so its
+  // picture stays sharp. The front element, once its picture has decoded, is dressed over it the same.
+  dress(tile, i, j, layout) {
+    const cell = `${i},${j}`;
+    const landed = Boolean(this.landed && this.look && `${this.landed.i},${this.landed.j}` === cell);
+    if (!landed && !tile.dressed) return;
+    tile.dressed = landed;
+    if (!landed) return this.fit(tile.img, grownBox(i, j, layout, 1), null, "");
+    const box = grownBox(i, j, layout, this.look.scale);
+    this.fit(tile.img, box, this.look.lit, "1");
+    const front = this.frontCell === cell;
+    this.front.hidden = !front || this.lifted === cell;
+    if (front) this.fit(this.front, box, this.look.lit, "2");
+    return undefined;
+  }
+
+  // Lays `img` in `box` (layer px) at strength `lit` (null: the wall's own), stacked at `z`.
+  fit(img, box, lit, z) {
+    img.style.transform = `translate(${box.x}px, ${box.y}px)`;
+    img.style.width = `${box.w}px`;
+    img.style.height = `${box.h}px`;
+    img.style.opacity = lit === null ? "" : String(lit);
+    img.style.zIndex = z;
   }
 
   // The landed poster's element, or null when no hunt has landed.
@@ -263,6 +391,7 @@ export class Wall {
     this.size = pictureSize(L.w, window.devicePixelRatio || 1);
     this.tiles = tiles || this.makeTiles(L);
     for (const tile of this.tiles) this.layer.append(tile.img);
+    this.layer.append(this.front);
     this.layer.hidden = !L.films;
     this.corner = null;
     this.place();
@@ -326,7 +455,8 @@ export class Wall {
     if (corner === this.corner && !this.dirty) return;
     this.corner = corner;
     this.dirty = false;
-    this.layTiles(this.tiles, this.cam, { layout: L, order: this.order, size: this.size, placed: this.placed, lifted: this.lifted });
+    const view = { layout: L, order: this.order, size: this.size, placed: this.placed, lifted: this.lifted };
+    this.layTiles(this.tiles, this.cam, view);
   }
 
   // Puts `tile` on cell (i, j) of `view.layout` and gives it that cell's picture.
@@ -341,6 +471,7 @@ export class Wall {
     const src = (tile.id === null ? null : this.picture(tile.id, view.size)) || BLANK;
     if (tile.img.getAttribute("src") !== src) tile.img.src = src;
     tile.img.style.visibility = view.lifted === `${i},${j}` ? "hidden" : "";
+    if (view.placed) this.dress(tile, i, j, view.layout);
   }
 
   // The url of a film's wall picture at `size` once it has loaded. While it loads, a picture of the
