@@ -24,10 +24,10 @@ function failures(dir) {
     return [];
   } catch (err) {
     const out = String(err.stdout);
-    // A test file that fails to load reports under its own path; that counts as a catch too, and so
-    // does a run that failed without reporting any test.
+    // A test file that fails to load reports under its own path; that counts as a catch too. A run that
+    // failed without reporting any test is neither a catch nor a pass: it is reported as a run error.
     const named = [...out.matchAll(/^\s*not ok \d+ - (.+)$/gm)].map((m) => m[1].trim());
-    return named.length ? named : ["(the test run failed without a TAP report)"];
+    return named.length ? named : null;
   }
 }
 
@@ -43,7 +43,7 @@ function inCopy(fn) {
 }
 
 const base = inCopy(failures);
-if (base.length) throw new Error(`the unmutated tests fail: ${base.join("; ")}`);
+if (base === null || base.length) throw new Error(`the unmutated tests fail: ${base ? base.join("; ") : "the run reported no test"}`);
 
 const rows = mutations.map(([id, file, search, replace, condition]) =>
   inCopy((dir) => {
@@ -55,10 +55,15 @@ const rows = mutations.map(([id, file, search, replace, condition]) =>
   }),
 );
 
-for (const r of rows) console.log(`${r.id}  ${r.by.length ? "CAUGHT  " : "SURVIVED"}  ${r.condition}${r.by.length ? `  <- ${r.by.join(" | ")}` : ""}`);
+const status = (r) => {
+  if (r.by === null) return "RUN-ERROR";
+  return r.by.length ? "CAUGHT  " : "SURVIVED";
+};
+for (const r of rows) console.log(`${r.id}  ${status(r)}  ${r.condition}${r.by?.length ? `  <- ${r.by.join(" | ")}` : ""}`);
 const names = readdirSync("tests/js")
   .filter((f) => f.endsWith(".test.mjs"))
   .flatMap((f) => [...readFileSync(join("tests/js", f), "utf8").matchAll(/^test\("(.+?)"/gm)].map((m) => m[1]));
 console.log("\nper assertion:");
-for (const name of names) console.log(`  ${rows.filter((r) => r.by.includes(name)).map((r) => r.id).join(",") || "NONE"}  <- ${name}`);
-console.log(`\n${rows.filter((r) => r.by.length).length} of ${rows.length} breaks caught`);
+for (const name of names) console.log(`  ${rows.filter((r) => r.by?.includes(name)).map((r) => r.id).join(",") || "NONE"}  <- ${name}`);
+const errors = rows.filter((r) => r.by === null).length;
+console.log(`\n${rows.filter((r) => r.by?.length).length} of ${rows.length} breaks caught${errors ? `; ${errors} runs errored without a report` : ""}`);
