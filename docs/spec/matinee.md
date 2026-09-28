@@ -247,6 +247,8 @@ non-zero exit, on any of these:
    the library (seed 3) and a random tenth (seed 10). Each must keep every film
    reachable. A film both libraries hold in a tree's pool must reach the same
    answers of that tree in both. Fixtures are checked on the full library only.
+10. **Quips.** The pick's lines break a rule of section 2.7, or the file cannot
+    be loaded.
 
 Separately, the engine refuses to prepare when the shipped reference statistics
 do not cover the tree files (section 3). The checker reports that as a failure.
@@ -282,6 +284,49 @@ committed, because it lists the films one library holds. Its shape:
 The horror labels were written by a language model against one rule per kind,
 with the operator's calls laid over them. The kinds' rules are the `note` of
 each flavour in `data/trees/horror.json`.
+
+### 2.7 The pick's lines
+
+What Matinee says as it hands over a film is data in `data/quips.json`. The
+page reads it through `GET /api/quips`, which returns the file as loaded
+(`src/matinee/quips.py::Quips`, served by
+`src/matinee/web/app.py::add_quip_routes`):
+
+```json
+{"note": "…",
+ "caps": {"line": 64, "pair": 76},
+ "borrow": {"standup": "comedy"},
+ "categories": {"universal": {"reveal": ["How about this one?", "…"], "nope": ["…"]},
+                "horror": {"reveal": ["…"], "nope": ["…"]},
+                "comedy": {"reveal": ["…"], "nope": ["…"]}}}
+```
+
+- A category is `universal`, or a tree or mode by its file name. It may hold
+  `reveal` lines, said as a film arrives, and `nope` lines, said after
+  `Not that one`. The shipped file holds universal (16 reveal, 22 nope),
+  horror (18, 19) and comedy (22, 29).
+- `borrow` names a category that draws from another's lines. Standup draws
+  comedy's.
+- `caps.line` is the most characters one line may hold. `caps.pair` is the
+  most a nope line and a reveal line shown together may hold. Both were set by
+  rendering every line as the pick line, on a 360 px phone and on the widest
+  desktop: `line` is the longest line that fits in three lines at both, and
+  `pair` is one less than the shortest same-category pair that overflows four
+  lines at either. A test pins them at 64 and 76, so a cap cannot be raised to
+  admit a long line without that test failing.
+- Loading is strict. An unknown key is refused. A file whose universal
+  category lacks reveal lines or nope lines is refused, because every set
+  falls back on universal's. The server reads the file once at start-up;
+  replacing it takes a restart.
+- The checker (section 2.5), and a test in `./check.sh`, refuse by name a line
+  over `caps.line`, a line wrapped in quotation marks, and a line in title
+  case. A line is in title case when it has at least two words after its
+  first, not counting words in capitals for emphasis or "I" and its
+  contractions, and every one of them is capitalised. They also refuse a
+  category or a borrowing category that is neither universal nor a tree or
+  mode, and a borrowing from a category that holds no lines.
+- The pair cap is held when the page deals lines (section 12), not by the
+  checker.
 
 ## 3. Pools and reference statistics
 
@@ -526,7 +571,9 @@ The server refuses to start, and logs why, when any of these holds:
 - the reference statistics are absent or stale;
 - a tree or mode file is malformed;
 - the labels file is malformed, or names a tree no file defines or a kind its
-  tree does not label.
+  tree does not label;
+- the pick's lines (`data/quips.json`) are missing or malformed, or universal
+  lacks reveal lines or nope lines (section 2.7).
 
 ## 6. What one viewer's pool is
 
@@ -746,6 +793,7 @@ documentation, ReDoc and the OpenAPI schema are all disabled.
 | PUT | `/api/profiles/{id}/exclusions` | replace a held profile's exclusions |
 | GET | `/api/topics` | DoesTheDogDie's topic list, with its credit |
 | GET | `/api/exclusions` | Matinee's own exclusions |
+| GET | `/api/quips` | the pick's lines and their caps (section 2.7) |
 | POST | `/api/first` | the first question for this viewer, and the pool behind it |
 | POST | `/api/walk` | the next question and the pool, given a tree and answers |
 | POST | `/api/pick` | one checked film from the pool the answers leave |
@@ -855,8 +903,9 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
   timed by the clock, and stands still under reduced motion. Each poster uses
   the smallest picture (160, 320 or 640 px wide) that covers its cell at the
   screen's pixel density; while it loads, a picture of the same film already
-  loaded at another size stands in, and with none the cell is dark. The
-  posters ignore taps and clicks.
+  loaded at another size stands in, and with none the cell is dark, never a
+  broken-image mark. A picture that fails is not asked for again on that
+  page load. The posters ignore taps and clicks.
 - **Questions.** Matinee's line types out (an acknowledgement, then the
   question), and the answers appear once it finishes. The line and the answers
   keep apart, and nothing re-centres as the line types or the answers appear:
@@ -869,48 +918,53 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
 - **The pails.** The gore question shows four pail pictures, spotless to
   overflowing, each with its answer's words beneath it as text.
 - **The pick, as a hunt.** From a question screen the question's words fade
-  over 0.35 s while the pick is already being fetched. Where the last answer
-  has a reply, it types on the pick screen and stays whole for at least 1 s.
-  Then, once any re-sort has ended, the drift stops, Matinee's words fade out
-  (a line saying why a film was turned away stays), and the wall eases forward
-  to the next whole row (0.4 s). The wall then hunts in one, two or three
-  hops, drawn at random with weights 1, 2 and 3 in 6, with the lengths, move
-  times and pauses of decision §83's table: 6 to 9 posters in 1.5 s; 5 to 7
-  then 1 in 1.05 and 0.55 s; 5 to 8, 2 to 3, then 1 in 0.95, 0.7 and 0.5 s,
-  pausing 0.3; 0.18 and 0.34; 0.14, 0.22 and 0.34 s after each. The first hop
-  always runs at least one poster further than the screen shows along its
-  axis, so the landing poster starts off screen. A vertical hop longer than
-  one poster runs 0.7 of its count, rounded, and goes down the wall, the
-  drift's way; no hop moves back along an axis already travelled. Each hop
-  moves on one axis, passes its stop by at most 12 px (6 per cent of a short
-  hop) and settles back, and never moves the wall more than half the poster
-  spacing along its axis in 1/60 s; a hop that would takes longer. Before the
-  hunt the whole plan is made and the picked film is placed in the landing
-  cell, which is off screen until the hunt brings it to the centre. Under
-  reduced motion the wall jumps to it once the landed cell can draw the
-  picked film. Over the last hop's pause the landed poster brightens to full
-  strength while the rest of the wall dims halfway to 12 per cent; then, over
-  0.75 s, it grows about its centre to 2.4 times a resting-size poster
-  (whatever the wall's poster size) while the wall dims to 12 per cent and the
-  pick's reveal line types in the text colour. As it grows it glows in its strongest colour:
-  its picture is read at 32 by 48 pixels, near-black (brightest channel under
-  0.22), grey and near-white (saturation under 0.3) pixels are dropped, the
-  rest are grouped into 24 hue bands weighted by saturation times brightness,
-  and the heaviest band's average is raised to full brightness; a poster with
-  too little vivid colour, or whose pixels cannot be read (logged as a
-  warning), glows marquee gold. The glow's blur and spread follow the grown
-  poster's width. The poster grows by its laid-out size, so its
-  picture stays sharp. The sharp 640 px picture is shown over the wall's
-  picture, in the same box, only once it has decoded. A landed poster with no
-  picture waits for the sharp one; with neither, nothing grows, the wall dims
-  to 12 per cent over 0.35 s and the pick goes to the resting page without a
-  poster. Under reduced motion the poster appears grown and the wall dimmed at
-  once. After a 0.5 s beat (2 s under reduced motion), once the film's
-  details (and on a desktop its backdrop) have arrived, the poster moves from
-  exactly where it hangs to its resting place (1.3 s) as the details rise,
-  leaving its cell empty while it rests; the wall stays at 12 per cent behind
-  the resting page. On a desktop that is the foot of the
-  left column, as large as the height left there allows at 2:3 (never under
+  over 0.35 s (at once under reduced motion) while the pick is already being
+  fetched. Where the last answer has a reply, it types in gold on the pick
+  screen and stays whole for at least 1 s. Then, once any re-sort has ended,
+  the drift stops, Matinee's words fade out (a gold nope line, or a line
+  saying why a film was turned away, stays), and the wall eases forward to
+  the next whole row (0.4 s). The wall then hunts in one, two or three hops,
+  drawn at random with weights 1, 2 and 3 in 6: 6 to 9 posters in 1.5 s; 5
+  to 7 then 1 in 1.05 and 0.55 s; 5 to 8, 2 to 3, then 1 in 0.95, 0.7 and
+  0.5 s, pausing 0.3; 0.18 and 0.34; 0.14, 0.22 and 0.34 s after each. The
+  first hop runs across the wall three times in five and down it otherwise;
+  a second hop turns onto the other axis, and a third takes either. The
+  first hop always runs at least one poster further than the screen shows
+  along its axis, so the landing poster starts off screen. A vertical hop
+  longer than one poster runs 0.7 of its count, rounded, and goes down the
+  wall, the drift's way; no hop moves back along an axis already travelled.
+  Each hop moves on one axis, passes its stop by at most 12 px (6 per cent
+  of a short hop) and settles back, and never moves the wall more than half
+  the poster spacing along its axis in 1/60 s; a hop that would takes longer,
+  its length unchanged. Before the hunt the whole plan is made and the picked
+  film is placed in the landing cell, which is off screen until the hunt
+  brings it to the centre. Under reduced motion there is no ease and no
+  hunt: the wall moves to the landing cell at once, and the pick waits up to
+  1 s for that cell to draw the picked film. Over the last hop's pause the
+  landed poster brightens to full strength while the rest of the wall dims
+  halfway to 12 per cent; then, over 0.75 s, it grows about its centre to
+  2.4 times a resting-size poster (whatever the wall's poster size) while the
+  wall dims to 12 per cent and the pick's reveal line types in the text
+  colour. As it grows it glows in its strongest colour: its picture (the
+  sharp one once decoded, else the wall's) is read at 32 by 48 pixels,
+  near-black (brightest channel under 0.22), grey and near-white (saturation
+  under 0.3) pixels are dropped, the rest are grouped into 24 hue bands
+  weighted by saturation times brightness, and the heaviest band's average
+  is raised to full brightness; a poster with too little vivid colour, or
+  whose pixels cannot be read (logged as a warning), glows marquee gold. The
+  glow grows in with the poster, and its blur and spread follow the grown
+  poster's width. The poster grows by its laid-out size, so its picture stays
+  sharp. The sharp 640 px picture is shown over the wall's picture, in the
+  same box, only once it has decoded. A landed poster with no picture waits
+  for the sharp one; with neither, nothing grows, the wall dims to 12 per
+  cent over 0.35 s and the pick goes to the resting page without a poster.
+  Under reduced motion the wall is not dimmed before it moves; once there, the
+  poster appears grown and the wall dimmed at once. After a 0.5 s beat (2 s under reduced
+  motion), once the line has typed and the film's details (and on a desktop
+  its backdrop) have arrived, the poster moves from exactly where it hangs to
+  its resting place (1.3 s) as the details rise, leaving its cell empty while
+  it rests. The wall stays at 12 per cent behind the resting page. On a
+  desktop the resting place is the foot of the left column, as large as the height left there allows at 2:3 (never under
   160 px), while the backdrop rises on the right, fading into the title, year
   and synopsis, shown without a tap. On a phone the poster fills the width at
   the top, the details follow without a backdrop, and after 2.2 seconds the
@@ -921,26 +975,29 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
   loaded, else a decoded copy of the wall's own picture of the film, replaced
   by the sharp picture when it arrives; with neither, no poster rests. A backdrop that fails is left out, and a phone fetches none.
 
-  The pick's line is a quip from `data/quips.json`, served by `GET /api/quips`
-  and read once per page. A pick draws from the category the first answer led
-  to: its own lines, or those of the category it borrows (standup borrows
-  comedy's), each set falling back on its own to universal's; "Just pick
-  one!" before a category draws universal. Each set deals like a shuffled
-  deck for the page's visit and is reshuffled only when every line has been
-  dealt. The line is set in Big Shoulders Display at 28 px to 40 px
-  (`clamp(28px, min(4vw, 6vh), 40px)`) with four lines reserved, so the
-  buttons beneath it stay in place from pick to pick. On a first pick no line
-  shows during the hunt and the reveal line types while the poster grows. On
-  `Not that one` a nope line and a reveal line are dealt together within the
-  combined cap (76 characters; the longer line of a pair over it goes back
-  unshown and its set deals the next that fits, and a set with none left
-  that fits gives its shortest line); the nope line types in gold at the tap
-  and stays through the wait and the hunt, and the reveal line types beneath
-  it in the text colour as the new poster grows. Where the check turned a
-  film away, its reason types in gold in the nope line's place and stays, and
-  only the reveal line is redealt to fit beneath it; the resting page keeps
-  the credit and the "What were you going to show me?" link. A pick with no
-  film speaks no quip.
+  The pick's line is a quip from `data/quips.json` (section 2.7), served by
+  `GET /api/quips` and read once per page load. When the lines cannot be
+  read, the page logs a warning and its picks show no line. A pick draws from
+  the category the first answer led to: its own lines, or those of the
+  category it borrows (standup borrows comedy's), each set falling back on its
+  own to universal's; "Just pick one!" before a category draws universal. The
+  film's own genres play no part. Each set deals like a shuffled deck, one
+  deck per page load, and is reshuffled only when every line has been dealt.
+  The line is set in Big Shoulders Display, scaling with the screen between
+  28 px and 40 px, with four lines reserved, so the buttons beneath it stay in
+  place from pick to pick. On a first pick no line shows during the hunt and
+  the reveal line types while the poster grows. On `Not that one` a nope line
+  and a reveal line are dealt together within the combined cap: when a pair
+  is over it, the longer line goes back unshown and its set deals the next
+  that fits beside the other, then, if the pair is still over, the other is
+  redealt the same way, and a set with no line left that fits gives its
+  shortest line. The nope line types in gold at the tap and stays through the
+  wait and the hunt, and the reveal line types beneath it in the text colour
+  as the new poster grows. Where the check turned a film away, its reason
+  types in gold in the nope line's place and stays, and only the reveal line
+  is redealt to fit beneath it within the cap; the resting page keeps the
+  credit and the "What were you going to show me?" link. A pick with no film
+  speaks no quip.
 
   `Not that one` asks for the next film at the tap and carries the resting
   poster back from where it rests to its cell on the wall, at the wall's size
@@ -951,6 +1008,8 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
   the screen. The next hunt starts
   from where the wall stands, by every rule above. "Roll again", after three
   films in a row were turned away, is a new pick: its check line types.
+  `Just pick one` there is a new pick that checks nothing, so no check line
+  types.
 
   A trail answer, the name tag or `Start over` ends the pick at the tap: the
   hunt stops where it is, the wall drifts again, and the pick changes nothing
@@ -959,6 +1018,10 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
 
   While a DoesTheDogDie check runs, the page types "One moment. Let me check
   this one against your list." and the wall keeps drifting.
+
+  The wall's geometry and re-sort plan, the hop plan and its speed limit, the
+  glow colour and the quip deal are modules that touch no page. Their tests
+  under `tests/js/` run with `node --test` from `./check.sh`.
 - **Credits.** The bottom bar of the wall and pick screens carries "Posters and
   film data from TMDB [logo] · Tag genome by MovieLens · Powered by
   DoesTheDogDie.com", each linked. The box office counter carries the same line
@@ -1056,9 +1119,9 @@ as the code stood on 2026-09-27.
    and continue" refuses to send that request and asks the viewer to choose
    something or untick Remember me, so only a caller bypassing the page can
    create an empty profile. Any caller may still do this until the cap of 50
-   fills. (`src/matinee/web/app.py:170`, `src/matinee/store.py:207`)
+   fills. (`src/matinee/web/app.py:171`, `src/matinee/store.py:207`)
 2. **A film with no genres fails reachability.** It is not set apart as a
-   metadata fault. (`tools/check_trees.py:119`)
+   metadata fault. (`tools/check_trees.py:120`)
 
 **Deliberately absent or open:**
 
@@ -1086,7 +1149,7 @@ as the code stood on 2026-09-27.
    (`Dockerfile:1`)
 8. **Validation failures use the framework's error shape.** A request body
    that fails validation answers 422 with `{"detail": [...]}`, not Matinee's
-   `{"error", "message"}` shape. (`src/matinee/web/app.py:86`)
+   `{"error", "message"}` shape. (`src/matinee/web/app.py:87`)
 
 ---
 
@@ -1136,16 +1199,27 @@ symbol when one does not match.
 
 | Handle | Where | Verified |
 |---|---|---|
-| `tools/check_trees.py::main` | `tools/check_trees.py:376` | 2026-09-26 |
-| `tools/check_trees.py::SAMPLES` | `tools/check_trees.py:48` | 2026-09-26 |
-| `tools/check_trees.py::check_answer_coverage` | `tools/check_trees.py:295` | 2026-09-26 |
-| `tools/check_trees.py::check_same_answers` | `tools/check_trees.py:324` | 2026-09-26 |
-| `tools/check_trees.py::check_sample` | `tools/check_trees.py:342` | 2026-09-26 |
-| `tools/check_trees.py::check_pins_in_key` | `tools/check_trees.py:246` | 2026-09-26 |
-| `tools/check_trees.py::check_gore` | `tools/check_trees.py:284` | 2026-09-26 |
-| `tools/check_trees.py::check_lists` | `tools/check_trees.py:136` | 2026-09-26 |
-| `tools/check_trees.py::check_data` | `tools/check_trees.py:366` | 2026-09-26 |
+| `tools/check_trees.py::main` | `tools/check_trees.py:387` | 2026-09-28 |
+| `tools/check_trees.py::SAMPLES` | `tools/check_trees.py:49` | 2026-09-28 |
+| `tools/check_trees.py::check_answer_coverage` | `tools/check_trees.py:296` | 2026-09-28 |
+| `tools/check_trees.py::check_same_answers` | `tools/check_trees.py:325` | 2026-09-28 |
+| `tools/check_trees.py::check_sample` | `tools/check_trees.py:343` | 2026-09-28 |
+| `tools/check_trees.py::check_pins_in_key` | `tools/check_trees.py:247` | 2026-09-28 |
+| `tools/check_trees.py::check_gore` | `tools/check_trees.py:285` | 2026-09-28 |
+| `tools/check_trees.py::check_lists` | `tools/check_trees.py:137` | 2026-09-28 |
+| `tools/check_trees.py::check_data` | `tools/check_trees.py:377` | 2026-09-28 |
+| `tools/check_trees.py::check_quips` | `tools/check_trees.py:367` | 2026-09-28 |
 | `data/answer_key.json` list tags | `data/answer_key.json:3` | 2026-09-26 |
+
+### The pick's lines
+
+| Handle | Where | Verified |
+|---|---|---|
+| `data/quips.json` (caps, borrow, categories) | `data/quips.json:3` | 2026-09-28 |
+| `src/matinee/quips.py::Quips` / `QuipSet` / `Caps` (universal must hold both sets) | `src/matinee/quips.py:43` | 2026-09-28 |
+| `src/matinee/quips.py::load_quips` / `QuipsError` | `src/matinee/quips.py:62` | 2026-09-28 |
+| `src/matinee/quips.py::quip_problems` / `line_problems` / `in_title_case` | `src/matinee/quips.py:91` | 2026-09-28 |
+| `tests/test_quips.py::test_the_caps_are_the_measured_ones` | `tests/test_quips.py:24` | 2026-09-28 |
 
 ### Pools and reference statistics
 
@@ -1250,15 +1324,16 @@ symbol when one does not match.
 
 | Handle | Where | Verified |
 |---|---|---|
-| `src/matinee/web/main.py::build` | `src/matinee/web/main.py:25` | 2026-09-26 |
+| `src/matinee/web/main.py::build` (reads the quips) | `src/matinee/web/main.py:27` | 2026-09-28 |
 | `src/matinee/web/config.py::from_env` | `src/matinee/web/config.py:47` | 2026-09-26 |
-| `src/matinee/web/app.py::create_app` (docs disabled) | `src/matinee/web/app.py:224` | 2026-09-26 |
-| `src/matinee/web/app.py::SECURITY_HEADERS` | `src/matinee/web/app.py:190` | 2026-09-26 |
-| `src/matinee/web/app.py::add_page` | `src/matinee/web/app.py:202` | 2026-09-26 |
-| `src/matinee/web/app.py::add_film_routes` / `IMAGE_WIDTHS` | `src/matinee/web/app.py:123` | 2026-09-26 |
-| `src/matinee/web/app.py::held` | `src/matinee/web/app.py:83` | 2026-09-26 |
-| `src/matinee/web/app.py::add_door_routes` | `src/matinee/web/app.py:155` | 2026-09-26 |
-| `src/matinee/web/app.py::add_error_handlers` | `src/matinee/web/app.py:92` | 2026-09-26 |
+| `src/matinee/web/app.py::create_app` (docs disabled) | `src/matinee/web/app.py:232` | 2026-09-28 |
+| `src/matinee/web/app.py::SECURITY_HEADERS` | `src/matinee/web/app.py:191` | 2026-09-28 |
+| `src/matinee/web/app.py::add_page` | `src/matinee/web/app.py:203` | 2026-09-28 |
+| `src/matinee/web/app.py::add_quip_routes` (`GET /api/quips`) | `src/matinee/web/app.py:225` | 2026-09-28 |
+| `src/matinee/web/app.py::add_film_routes` / `IMAGE_WIDTHS` | `src/matinee/web/app.py:124` | 2026-09-28 |
+| `src/matinee/web/app.py::held` | `src/matinee/web/app.py:84` | 2026-09-28 |
+| `src/matinee/web/app.py::add_door_routes` | `src/matinee/web/app.py:156` | 2026-09-28 |
+| `src/matinee/web/app.py::add_error_handlers` | `src/matinee/web/app.py:93` | 2026-09-28 |
 | `src/matinee/web/common.py::Problem` | `src/matinee/web/common.py:102` | 2026-09-26 |
 | `src/matinee/web/viewing.py::add_viewing_routes` | `src/matinee/web/viewing.py:257` | 2026-09-26 |
 | `src/matinee/web/viewing.py::WalkIn` / `PickIn` (request caps) | `src/matinee/web/viewing.py:48` | 2026-09-26 |
@@ -1273,48 +1348,69 @@ symbol when one does not match.
 | `src/matinee/web/static/js/door.js::bulbs` | `src/matinee/web/static/js/door.js:31` | 2026-09-26 |
 | `src/matinee/web/static/js/door.js::BULBS` | `src/matinee/web/static/js/door.js:12` | 2026-09-26 |
 | `src/matinee/web/static/js/iris.js::closeIris` / `openIris` | `src/matinee/web/static/js/iris.js:14` | 2026-09-26 |
-| `src/matinee/web/static/js/wall.js::across` | `src/matinee/web/static/js/wall.js:24` | 2026-09-28 |
-| `src/matinee/web/static/js/wall.js::locate` | `src/matinee/web/static/js/wall.js:42` | 2026-09-28 |
-| `src/matinee/web/static/js/wall.js::Wall` | `src/matinee/web/static/js/wall.js:64` | 2026-09-28 |
-| `src/matinee/web/static/js/wall.js::Wall.probeLayer` | `src/matinee/web/static/js/wall.js:98` | 2026-09-28 |
-| `src/matinee/web/static/js/wall.js::Wall.show` | `src/matinee/web/static/js/wall.js:117` | 2026-09-28 |
-| `src/matinee/web/static/js/wall.js::Wall.hold` | `src/matinee/web/static/js/wall.js:132` | 2026-09-28 |
-| `src/matinee/web/static/js/wall.js::Wall.travel` | `src/matinee/web/static/js/wall.js:162` | 2026-09-28 |
-| `src/matinee/web/static/js/wall.js::Wall.arriving` | `src/matinee/web/static/js/wall.js:182` | 2026-09-28 |
-| `src/matinee/web/static/js/wall.js::Wall.tile` | `src/matinee/web/static/js/wall.js:218` | 2026-09-28 |
-| `src/matinee/web/static/js/main.js::start` | `src/matinee/web/static/js/main.js:185` | 2026-09-28 |
-| `src/matinee/web/static/js/main.js::step` | `src/matinee/web/static/js/main.js:222` | 2026-09-28 |
-| `src/matinee/web/static/js/main.js::pickNow` / `checking` | `src/matinee/web/static/js/main.js:272` | 2026-09-28 |
-| `src/matinee/web/static/js/main.js::trail` / `backTo` | `src/matinee/web/static/js/main.js:70` | 2026-09-28 |
-| `src/matinee/web/static/js/main.js::lockStage` / `nameTag` | `src/matinee/web/static/js/main.js:41` | 2026-09-28 |
-| `src/matinee/web/static/js/pick.js::showPick` | `src/matinee/web/static/js/pick.js:316` | 2026-09-28 |
-| `src/matinee/web/static/js/pick.js::sayWhySwapped` | `src/matinee/web/static/js/pick.js:307` | 2026-09-28 |
-| `src/matinee/web/static/js/pick.js::picture` | `src/matinee/web/static/js/pick.js:45` | 2026-09-28 |
-| `src/matinee/web/static/js/pick.js::nextPlace` / `placed` | `src/matinee/web/static/js/pick.js:56` | 2026-09-28 |
-| `src/matinee/web/static/js/pick.js::land` | `src/matinee/web/static/js/pick.js:220` | 2026-09-28 |
-| `src/matinee/web/static/js/pick.js::searchlight` / `glideEase` | `src/matinee/web/static/js/pick.js:76` | 2026-09-28 |
-| `src/matinee/web/static/js/pick.js::ride` | `src/matinee/web/static/js/pick.js:197` | 2026-09-28 |
-| `src/matinee/web/static/js/pick.js::spotlight` | `src/matinee/web/static/js/pick.js:69` | 2026-09-28 |
-| `src/matinee/web/static/js/pick.js::inTheLight` | `src/matinee/web/static/js/pick.js:245` | 2026-09-28 |
-| `src/matinee/web/static/js/pick.js::inTheLightThen` | `src/matinee/web/static/js/pick.js:295` | 2026-09-28 |
-| `src/matinee/web/static/js/pick.js::rest` | `src/matinee/web/static/js/pick.js:273` | 2026-09-28 |
-| `src/matinee/web/static/js/pick.js::settle` | `src/matinee/web/static/js/pick.js:110` | 2026-09-28 |
-| `src/matinee/web/static/js/pick.js::fadeAway` | `src/matinee/web/static/js/pick.js:93` | 2026-09-28 |
-| `src/matinee/web/static/js/pick.js::feature` | `src/matinee/web/static/js/pick.js:135` | 2026-09-28 |
-| `src/matinee/web/static/js/pick.js::choices` | `src/matinee/web/static/js/pick.js:260` | 2026-09-28 |
-| `src/matinee/web/static/js/pick.js::leave` | `src/matinee/web/static/js/pick.js:301` | 2026-09-28 |
-| `src/matinee/web/static/js/pick.js::showNoFilm` | `src/matinee/web/static/js/pick.js:175` | 2026-09-28 |
-| `src/matinee/web/static/js/pick.js::firstPickReveal` | `src/matinee/web/static/js/pick.js:152` | 2026-09-28 |
+| `src/matinee/web/static/js/wall-grid.js::posterAcross` / `ACROSS` / `GAP` | `src/matinee/web/static/js/wall-grid.js:26` | 2026-09-28 |
+| `src/matinee/web/static/js/wall-grid.js::wallLayout` | `src/matinee/web/static/js/wall-grid.js:36` | 2026-09-28 |
+| `src/matinee/web/static/js/wall-grid.js::bestStride` / `repeatDistance` | `src/matinee/web/static/js/wall-grid.js:60` | 2026-09-28 |
+| `src/matinee/web/static/js/wall-grid.js::filmIndex` / `nearestCell` / `filmAt` | `src/matinee/web/static/js/wall-grid.js:70` | 2026-09-28 |
+| `src/matinee/web/static/js/wall-grid.js::pictureSize` | `src/matinee/web/static/js/wall-grid.js:88` | 2026-09-28 |
+| `src/matinee/web/static/js/wall-grid.js::rankPool` (the page's order)` | `src/matinee/web/static/js/wall-grid.js:97` | 2026-09-28 |
+| `src/matinee/web/static/js/wall-grid.js::resortAnchor` | `src/matinee/web/static/js/wall-grid.js:140` | 2026-09-28 |
+| `src/matinee/web/static/js/wall-grid.js::resortPlan` | `src/matinee/web/static/js/wall-grid.js:167` | 2026-09-28 |
+| `src/matinee/web/static/js/hunt-plan.js::HOP_TABLE` / `hopCount` | `src/matinee/web/static/js/hunt-plan.js:7` | 2026-09-28 |
+| `src/matinee/web/static/js/hunt-plan.js::hopOffset` (the tick) / `TICK_PX` | `src/matinee/web/static/js/hunt-plan.js:58` | 2026-09-28 |
+| `src/matinee/web/static/js/hunt-plan.js::peakStep` / `limitedTime` (the speed limit)` | `src/matinee/web/static/js/hunt-plan.js:65` | 2026-09-28 |
+| `src/matinee/web/static/js/hunt-plan.js::settledCamera` | `src/matinee/web/static/js/hunt-plan.js:96` | 2026-09-28 |
+| `src/matinee/web/static/js/hunt-plan.js::planHunt` (first hop, no reversal)` | `src/matinee/web/static/js/hunt-plan.js:118` | 2026-09-28 |
+| `src/matinee/web/static/js/hunt-plan.js::hopCell` / `placeLanding` | `src/matinee/web/static/js/hunt-plan.js:138` | 2026-09-28 |
+| `src/matinee/web/static/js/glow.js::posterGlow` / `GOLD` | `src/matinee/web/static/js/glow.js:19` | 2026-09-28 |
+| `src/matinee/web/static/js/quips.js::setFor` | `src/matinee/web/static/js/quips.js:9` | 2026-09-28 |
+| `src/matinee/web/static/js/quips.js::Deck` | `src/matinee/web/static/js/quips.js:20` | 2026-09-28 |
+| `src/matinee/web/static/js/quips.js::dealPair` / `dealBeneath` | `src/matinee/web/static/js/quips.js:52` | 2026-09-28 |
+| `src/matinee/web/static/js/wall.js::Wall` | `src/matinee/web/static/js/wall.js:81` | 2026-09-28 |
+| `src/matinee/web/static/js/wall.js::Wall.show` / `clear` / `whenStill` | `src/matinee/web/static/js/wall.js:123` | 2026-09-28 |
+| `src/matinee/web/static/js/wall.js::Wall.endPick` | `src/matinee/web/static/js/wall.js:167` | 2026-09-28 |
+| `src/matinee/web/static/js/wall.js::Wall.hunt` / `jump` / `readyToHunt` / `settle` / `hop` | `src/matinee/web/static/js/wall.js:212` | 2026-09-28 |
+| `src/matinee/web/static/js/wall.js::Wall.stepBack` / `grownScale` | `src/matinee/web/static/js/wall.js:287` | 2026-09-28 |
+| `src/matinee/web/static/js/wall.js::Wall.useSharp` (the front element)` | `src/matinee/web/static/js/wall.js:309` | 2026-09-28 |
+| `src/matinee/web/static/js/wall.js::Wall.bringForward` | `src/matinee/web/static/js/wall.js:328` | 2026-09-28 |
+| `src/matinee/web/static/js/wall.js::Wall.dress` / `glowShadow` | `src/matinee/web/static/js/wall.js:350` | 2026-09-28 |
+| `src/matinee/web/static/js/wall.js::glowOf` | `src/matinee/web/static/js/wall.js:52` | 2026-09-28 |
+| `src/matinee/web/static/js/wall.js::Wall.putBack` / `returnPoster` / `liftDim` / `settleBack` | `src/matinee/web/static/js/wall.js:391` | 2026-09-28 |
+| `src/matinee/web/static/js/wall.js::Wall.relayout` / `makeTiles` | `src/matinee/web/static/js/wall.js:491` | 2026-09-28 |
+| `src/matinee/web/static/js/wall.js::Wall.prepare` (the re-sort's wait)` | `src/matinee/web/static/js/wall.js:524` | 2026-09-28 |
+| `src/matinee/web/static/js/wall.js::Wall.frame` (the drift, `DRIFT_PX_S`)` | `src/matinee/web/static/js/wall.js:544` | 2026-09-28 |
+| `src/matinee/web/static/js/wall.js::Wall.place` / `lay` / `picture` / `request` (`BLANK`)` | `src/matinee/web/static/js/wall.js:555` | 2026-09-28 |
+| `src/matinee/web/static/js/wall.js::Wall.resort` / `slide` / `depart` | `src/matinee/web/static/js/wall.js:635` | 2026-09-28 |
+| `src/matinee/web/static/js/main.js::lockStage` / `leaveTo` / `nameTag` | `src/matinee/web/static/js/main.js:52` | 2026-09-28 |
+| `src/matinee/web/static/js/main.js::trail` | `src/matinee/web/static/js/main.js:86` | 2026-09-28 |
+| `src/matinee/web/static/js/main.js::start` | `src/matinee/web/static/js/main.js:197` | 2026-09-28 |
+| `src/matinee/web/static/js/main.js::backTo` / `step` | `src/matinee/web/static/js/main.js:225` | 2026-09-28 |
+| `src/matinee/web/static/js/main.js::checking` / `fadeTalk` (`READ_MS`)` | `src/matinee/web/static/js/main.js:274` | 2026-09-28 |
+| `src/matinee/web/static/js/main.js::pickLines` | `src/matinee/web/static/js/main.js:292` | 2026-09-28 |
+| `src/matinee/web/static/js/main.js::clearForPick` / `requestPick` / `openPick` | `src/matinee/web/static/js/main.js:306` | 2026-09-28 |
+| `src/matinee/web/static/js/main.js::pickNow` (`notThatOne`, `rollAgain`, `justPick`)` | `src/matinee/web/static/js/main.js:337` | 2026-09-28 |
+| `src/matinee/web/static/js/pick.js::showPick` | `src/matinee/web/static/js/pick.js:217` | 2026-09-28 |
+| `src/matinee/web/static/js/pick.js::goldLine` | `src/matinee/web/static/js/pick.js:178` | 2026-09-28 |
+| `src/matinee/web/static/js/pick.js::bringOut` | `src/matinee/web/static/js/pick.js:189` | 2026-09-28 |
+| `src/matinee/web/static/js/pick.js::toRest` (`BEAT_MS`, `STILL_HOLD_MS`)` | `src/matinee/web/static/js/pick.js:237` | 2026-09-28 |
+| `src/matinee/web/static/js/pick.js::fetchFilm` / `picture` | `src/matinee/web/static/js/pick.js:250` | 2026-09-28 |
+| `src/matinee/web/static/js/pick.js::restingPoster` | `src/matinee/web/static/js/pick.js:161` | 2026-09-28 |
+| `src/matinee/web/static/js/pick.js::rest` | `src/matinee/web/static/js/pick.js:139` | 2026-09-28 |
+| `src/matinee/web/static/js/pick.js::settle` / `fit` | `src/matinee/web/static/js/pick.js:41` | 2026-09-28 |
+| `src/matinee/web/static/js/pick.js::feature` | `src/matinee/web/static/js/pick.js:63` | 2026-09-28 |
+| `src/matinee/web/static/js/pick.js::choices` | `src/matinee/web/static/js/pick.js:126` | 2026-09-28 |
+| `src/matinee/web/static/js/pick.js::showNoFilm` | `src/matinee/web/static/js/pick.js:104` | 2026-09-28 |
+| `src/matinee/web/static/js/pick.js::firstPickReveal` | `src/matinee/web/static/js/pick.js:80` | 2026-09-28 |
 | `src/matinee/web/static/js/correct.js::GATED_NOTE` | `src/matinee/web/static/js/correct.js:10` | 2026-09-26 |
 | `src/matinee/web/static/js/correct.js::correctionLink` / `ensureProfile` | `src/matinee/web/static/js/correct.js:91` | 2026-09-26 |
 | `src/matinee/web/static/js/credits.js::credits` | `src/matinee/web/static/js/credits.js:23` | 2026-09-26 |
 | `src/matinee/web/static/js/dom.js::h` (text nodes only) | `src/matinee/web/static/js/dom.js:12` | 2026-09-26 |
-| `src/matinee/web/static/js/type.js::typeLine` | `src/matinee/web/static/js/type.js:10` | 2026-09-26 |
+| `src/matinee/web/static/js/type.js::typeLine` (`shown`: a gold line kept while the rest types beneath) | `src/matinee/web/static/js/type.js:11` | 2026-09-28 |
 | `src/matinee/web/static/manifest.webmanifest` | `src/matinee/web/static/manifest.webmanifest:1` | 2026-09-26 |
-| `src/matinee/web/static/css/matinee.css` reduced-motion rules | `src/matinee/web/static/css/matinee.css:979` | 2026-09-28 |
-| `src/matinee/web/static/css/matinee.css` `@keyframes rip` (the poster's lift) | `src/matinee/web/static/css/matinee.css:577` | 2026-09-28 |
-| `src/matinee/web/static/css/matinee.css` `.spot`, `.searchlight` | `src/matinee/web/static/css/matinee.css:538` | 2026-09-28 |
-| `src/matinee/web/static/css/matinee.css` `--glide-ease` (the floor's glide, read by the searchlight) | `src/matinee/web/static/css/matinee.css:45` | 2026-09-28 |
+| `src/matinee/web/static/css/matinee.css` reduced-motion rules | `src/matinee/web/static/css/matinee.css:831` | 2026-09-28 |
+| `src/matinee/web/static/css/matinee.css` `.wall`, `.wall.at-door`, `.wall-tiles`, `.tile` (`--tile`, the dark cell) | `src/matinee/web/static/css/matinee.css:87` | 2026-09-28 |
+| `src/matinee/web/static/css/matinee.css` `.pick-line` (size, four lines reserved), `.hushed` | `src/matinee/web/static/css/matinee.css:504` | 2026-09-28 |
+| `src/matinee/web/static/blank.svg` (a tile with no picture) | `src/matinee/web/static/blank.svg:1` | 2026-09-28 |
 
 ### Deployment
 

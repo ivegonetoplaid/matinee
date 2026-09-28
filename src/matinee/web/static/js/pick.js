@@ -1,8 +1,9 @@
 // The pick. The wall hunts across itself to the picked film's poster and lands it at the centre of the
-// screen. The poster brightens as the rest of the wall dims, then grows in place while "Here. Watch this
-// one." types out. After a beat it travels from exactly where it hangs to its resting place. On a desktop that is the foot of the left column, as large as the space
-// allows, while the film's backdrop rises on the right with its title, year and synopsis. On a phone the
-// poster fills the screen, then the page scrolls gently to the details.
+// screen. The poster brightens as the rest of the wall dims, then grows in place while the pick's line
+// types out. After a beat it travels from exactly where it hangs to its resting place. On a desktop
+// that is the foot of the left column, as large as the space allows, while the film's backdrop rises on
+// the right with its title, year and synopsis. On a phone the poster fills the screen, then the page
+// scrolls gently to the details.
 // The film is tonight's showing, never a search result.
 
 import { get } from "./api.js";
@@ -120,9 +121,9 @@ async function showNoFilm(result, { line, aside }, actions) {
   );
 }
 
-// What sits under the line on the resting page. The buttons come straight after the line, whose words
-// never change, so "Not that one" sits in the same place for every film. The answers so far are in the
-// trail at the foot of the screen.
+// What sits under the line on the resting page. The buttons come straight after the line, which keeps
+// four lines of room whatever its words, so "Not that one" sits in the same place for every film. The
+// answers so far are in the trail at the foot of the screen.
 function choices(info, film, result, actions) {
   const buttons = h(
     "div",

@@ -365,7 +365,7 @@ def check_first_question(cat: Catalog, report: Report) -> None:
 
 
 def check_quips(cat: Catalog, report: Report) -> None:
-    """Every pick line keeps decision 84's rules, and every category it names is a tree or mode."""
+    """Every pick line keeps the quips file's rules, and every category it names is a tree or mode."""
     try:
         problems = quip_problems(load_quips(), set(cat.trees))
     except QuipsError as exc:
