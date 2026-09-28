@@ -1353,14 +1353,14 @@ symbol when one does not match.
 | `src/matinee/web/static/js/wall-grid.js::bestStride` / `repeatDistance` | `src/matinee/web/static/js/wall-grid.js:60` | 2026-09-28 |
 | `src/matinee/web/static/js/wall-grid.js::filmIndex` / `nearestCell` / `filmAt` | `src/matinee/web/static/js/wall-grid.js:70` | 2026-09-28 |
 | `src/matinee/web/static/js/wall-grid.js::pictureSize` | `src/matinee/web/static/js/wall-grid.js:88` | 2026-09-28 |
-| `src/matinee/web/static/js/wall-grid.js::rankPool` (the page's order)` | `src/matinee/web/static/js/wall-grid.js:97` | 2026-09-28 |
+| `src/matinee/web/static/js/wall-grid.js::rankPool` (the page's order) | `src/matinee/web/static/js/wall-grid.js:97` | 2026-09-28 |
 | `src/matinee/web/static/js/wall-grid.js::resortAnchor` | `src/matinee/web/static/js/wall-grid.js:140` | 2026-09-28 |
 | `src/matinee/web/static/js/wall-grid.js::resortPlan` | `src/matinee/web/static/js/wall-grid.js:167` | 2026-09-28 |
 | `src/matinee/web/static/js/hunt-plan.js::HOP_TABLE` / `hopCount` | `src/matinee/web/static/js/hunt-plan.js:7` | 2026-09-28 |
 | `src/matinee/web/static/js/hunt-plan.js::hopOffset` (the tick) / `TICK_PX` | `src/matinee/web/static/js/hunt-plan.js:58` | 2026-09-28 |
-| `src/matinee/web/static/js/hunt-plan.js::peakStep` / `limitedTime` (the speed limit)` | `src/matinee/web/static/js/hunt-plan.js:65` | 2026-09-28 |
+| `src/matinee/web/static/js/hunt-plan.js::peakStep` / `limitedTime` (the speed limit) | `src/matinee/web/static/js/hunt-plan.js:65` | 2026-09-28 |
 | `src/matinee/web/static/js/hunt-plan.js::settledCamera` | `src/matinee/web/static/js/hunt-plan.js:96` | 2026-09-28 |
-| `src/matinee/web/static/js/hunt-plan.js::planHunt` (first hop, no reversal)` | `src/matinee/web/static/js/hunt-plan.js:118` | 2026-09-28 |
+| `src/matinee/web/static/js/hunt-plan.js::planHunt` (first hop, no reversal) | `src/matinee/web/static/js/hunt-plan.js:118` | 2026-09-28 |
 | `src/matinee/web/static/js/hunt-plan.js::hopCell` / `placeLanding` | `src/matinee/web/static/js/hunt-plan.js:138` | 2026-09-28 |
 | `src/matinee/web/static/js/glow.js::posterGlow` / `GOLD` | `src/matinee/web/static/js/glow.js:19` | 2026-09-28 |
 | `src/matinee/web/static/js/quips.js::setFor` | `src/matinee/web/static/js/quips.js:9` | 2026-09-28 |
@@ -1371,28 +1371,28 @@ symbol when one does not match.
 | `src/matinee/web/static/js/wall.js::Wall.endPick` | `src/matinee/web/static/js/wall.js:167` | 2026-09-28 |
 | `src/matinee/web/static/js/wall.js::Wall.hunt` / `jump` / `readyToHunt` / `settle` / `hop` | `src/matinee/web/static/js/wall.js:212` | 2026-09-28 |
 | `src/matinee/web/static/js/wall.js::Wall.stepBack` / `grownScale` | `src/matinee/web/static/js/wall.js:287` | 2026-09-28 |
-| `src/matinee/web/static/js/wall.js::Wall.useSharp` (the front element)` | `src/matinee/web/static/js/wall.js:309` | 2026-09-28 |
+| `src/matinee/web/static/js/wall.js::Wall.useSharp` (the front element) | `src/matinee/web/static/js/wall.js:309` | 2026-09-28 |
 | `src/matinee/web/static/js/wall.js::Wall.bringForward` | `src/matinee/web/static/js/wall.js:328` | 2026-09-28 |
 | `src/matinee/web/static/js/wall.js::Wall.dress` / `glowShadow` | `src/matinee/web/static/js/wall.js:350` | 2026-09-28 |
 | `src/matinee/web/static/js/wall.js::glowOf` | `src/matinee/web/static/js/wall.js:52` | 2026-09-28 |
 | `src/matinee/web/static/js/wall.js::Wall.putBack` / `returnPoster` / `liftDim` / `settleBack` | `src/matinee/web/static/js/wall.js:391` | 2026-09-28 |
 | `src/matinee/web/static/js/wall.js::Wall.relayout` / `makeTiles` | `src/matinee/web/static/js/wall.js:491` | 2026-09-28 |
-| `src/matinee/web/static/js/wall.js::Wall.prepare` (the re-sort's wait)` | `src/matinee/web/static/js/wall.js:524` | 2026-09-28 |
-| `src/matinee/web/static/js/wall.js::Wall.frame` (the drift, `DRIFT_PX_S`)` | `src/matinee/web/static/js/wall.js:544` | 2026-09-28 |
-| `src/matinee/web/static/js/wall.js::Wall.place` / `lay` / `picture` / `request` (`BLANK`)` | `src/matinee/web/static/js/wall.js:555` | 2026-09-28 |
+| `src/matinee/web/static/js/wall.js::Wall.prepare` (the re-sort's wait) | `src/matinee/web/static/js/wall.js:524` | 2026-09-28 |
+| `src/matinee/web/static/js/wall.js::Wall.frame` (the drift, `DRIFT_PX_S`) | `src/matinee/web/static/js/wall.js:544` | 2026-09-28 |
+| `src/matinee/web/static/js/wall.js::Wall.place` / `lay` / `picture` / `request` (`BLANK`) | `src/matinee/web/static/js/wall.js:555` | 2026-09-28 |
 | `src/matinee/web/static/js/wall.js::Wall.resort` / `slide` / `depart` | `src/matinee/web/static/js/wall.js:635` | 2026-09-28 |
 | `src/matinee/web/static/js/main.js::lockStage` / `leaveTo` / `nameTag` | `src/matinee/web/static/js/main.js:52` | 2026-09-28 |
 | `src/matinee/web/static/js/main.js::trail` | `src/matinee/web/static/js/main.js:86` | 2026-09-28 |
 | `src/matinee/web/static/js/main.js::start` | `src/matinee/web/static/js/main.js:197` | 2026-09-28 |
 | `src/matinee/web/static/js/main.js::backTo` / `step` | `src/matinee/web/static/js/main.js:225` | 2026-09-28 |
-| `src/matinee/web/static/js/main.js::checking` / `fadeTalk` (`READ_MS`)` | `src/matinee/web/static/js/main.js:274` | 2026-09-28 |
+| `src/matinee/web/static/js/main.js::checking` / `fadeTalk` (`READ_MS`) | `src/matinee/web/static/js/main.js:274` | 2026-09-28 |
 | `src/matinee/web/static/js/main.js::pickLines` | `src/matinee/web/static/js/main.js:292` | 2026-09-28 |
 | `src/matinee/web/static/js/main.js::clearForPick` / `requestPick` / `openPick` | `src/matinee/web/static/js/main.js:306` | 2026-09-28 |
-| `src/matinee/web/static/js/main.js::pickNow` (`notThatOne`, `rollAgain`, `justPick`)` | `src/matinee/web/static/js/main.js:337` | 2026-09-28 |
+| `src/matinee/web/static/js/main.js::pickNow` (`notThatOne`, `rollAgain`, `justPick`) | `src/matinee/web/static/js/main.js:337` | 2026-09-28 |
 | `src/matinee/web/static/js/pick.js::showPick` | `src/matinee/web/static/js/pick.js:217` | 2026-09-28 |
 | `src/matinee/web/static/js/pick.js::goldLine` | `src/matinee/web/static/js/pick.js:178` | 2026-09-28 |
 | `src/matinee/web/static/js/pick.js::bringOut` | `src/matinee/web/static/js/pick.js:189` | 2026-09-28 |
-| `src/matinee/web/static/js/pick.js::toRest` (`BEAT_MS`, `STILL_HOLD_MS`)` | `src/matinee/web/static/js/pick.js:237` | 2026-09-28 |
+| `src/matinee/web/static/js/pick.js::toRest` (`BEAT_MS`, `STILL_HOLD_MS`) | `src/matinee/web/static/js/pick.js:237` | 2026-09-28 |
 | `src/matinee/web/static/js/pick.js::fetchFilm` / `picture` | `src/matinee/web/static/js/pick.js:250` | 2026-09-28 |
 | `src/matinee/web/static/js/pick.js::restingPoster` | `src/matinee/web/static/js/pick.js:161` | 2026-09-28 |
 | `src/matinee/web/static/js/pick.js::rest` | `src/matinee/web/static/js/pick.js:139` | 2026-09-28 |
