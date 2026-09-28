@@ -11,7 +11,7 @@ import json
 import re
 from pathlib import Path
 
-from pydantic import BaseModel, ConfigDict, ValidationError
+from pydantic import BaseModel, ConfigDict, ValidationError, model_validator
 
 from matinee.reference import DATA
 
@@ -47,6 +47,16 @@ class Quips(BaseModel):
     caps: Caps
     borrow: dict[str, str] = {}
     categories: dict[str, QuipSet]
+
+    @model_validator(mode="after")
+    def _universal_holds_both_sets(self) -> Quips:
+        """Every set falls back on universal's, so universal must hold reveal lines and nope lines."""
+        universal = self.categories.get(UNIVERSAL)
+        if universal is None or not universal.reveal or not universal.nope:
+            raise ValueError(
+                f"the {UNIVERSAL!r} category must hold reveal lines and nope lines, which every set falls back on"
+            )
+        return self
 
 
 def load_quips(path: Path = QUIPS_PATH) -> Quips:

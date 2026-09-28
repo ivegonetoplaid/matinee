@@ -10,7 +10,7 @@ import { cpSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync }
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-const PARTS = ["src/matinee/web/static/js", "src/matinee/web/static/css", "tests/js", "package.json"];
+const PARTS = ["src/matinee/web/static/js", "src/matinee/web/static/css", "tests/js", "data/quips.json", "package.json"];
 const TESTS = "tests/js/*.test.mjs";
 
 const listing = process.argv[2];
@@ -24,8 +24,10 @@ function failures(dir) {
     return [];
   } catch (err) {
     const out = String(err.stdout);
-    // A test file that fails to load reports under its own path; that counts as a catch too.
-    return [...out.matchAll(/^\s*not ok \d+ - (.+)$/gm)].map((m) => m[1].trim());
+    // A test file that fails to load reports under its own path; that counts as a catch too, and so
+    // does a run that failed without reporting any test.
+    const named = [...out.matchAll(/^\s*not ok \d+ - (.+)$/gm)].map((m) => m[1].trim());
+    return named.length ? named : ["(the test run failed without a TAP report)"];
   }
 }
 

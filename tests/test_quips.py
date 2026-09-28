@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+from pydantic import ValidationError
 
 from matinee.quips import Caps, Quips, QuipSet, load_quips, quip_problems
 from matinee.reference import DATA
@@ -12,7 +13,7 @@ CATEGORIES = {p.stem for p in (DATA / "trees").glob("*.json")} | {p.stem for p i
 
 def _with(line: str = "This one should do nicely.", **extra: object) -> Quips:
     return Quips.model_validate(
-        {"caps": {"line": 64, "pair": 76}, "categories": {"universal": {"reveal": [line]}}, **extra},
+        {"caps": {"line": 64, "pair": 76}, "categories": {"universal": {"reveal": [line], "nope": ["Fine."]}}, **extra},
     )
 
 
@@ -62,3 +63,12 @@ def test_a_category_or_a_borrowing_that_is_not_a_tree_or_mode_is_refused() -> No
     assert "category 'sitcom2' is not a tree or mode" in problems
     assert "borrowing category 'cartoons' is not a tree or mode" in problems
     assert "'standup' borrows from 'sitcom', which holds no lines" in problems
+
+
+@pytest.mark.parametrize("universal", [None, {"reveal": ["There we are."]}, {"nope": ["Fine."]}])
+def test_a_file_without_universal_reveal_and_nope_lines_is_refused(universal: dict[str, list[str]] | None) -> None:
+    categories: dict[str, object] = {"horror": {"reveal": ["Boo."], "nope": ["No."]}}
+    if universal is not None:
+        categories["universal"] = universal
+    with pytest.raises(ValidationError, match="must hold reveal lines and nope lines"):
+        Quips.model_validate({"caps": {"line": 64, "pair": 76}, "categories": categories})
