@@ -5,7 +5,7 @@ import { correctionLink } from "./correct.js";
 import { credits } from "./credits.js";
 import { Door } from "./door.js";
 import { closeIris, openIris } from "./iris.js";
-import { clear, h, sentenceCase } from "./dom.js";
+import { clear, h, prefersLessMotion, sentenceCase, wait } from "./dom.js";
 import { showPick } from "./pick.js";
 import { typeLine } from "./type.js";
 import { Wall } from "./wall.js";
@@ -35,19 +35,27 @@ function countText(n, first) {
   return first ? `${films} in the running` : `${films} still in the running`;
 }
 
+const TALK_FADE_MS = 350; // the question's words fade out as a pick begins
+const READ_MS = 1000; // Matinee's reply to the last answer stays whole this long before the hunt fades it
+
 // The first action on a screen wins: every button on it is disabled at once, so an
 // answer and "Just pick one!" can never both run.
 function lockStage() {
   for (const button of stage.querySelectorAll("button")) button.disabled = true;
 }
 
+// Leaving a pick by a way back out (a trail answer, the name tag, "Start over") ends it at the tap:
+// the hunt stops where it is, and the pick changes nothing further while the next screen loads.
+function leaveTo(next) {
+  lockStage();
+  wall.endPick();
+  next();
+}
+
 // The profile's name at the top of the wall, with "Edit my list" and "Not <name>?".
 function nameTag() {
   if (!visit.name) return null;
-  const leave = (opts) => {
-    lockStage();
-    boot(opts);
-  };
+  const leave = (opts) => leaveTo(() => boot(opts));
   return h(
     "div",
     { class: "nametag" },
@@ -78,10 +86,7 @@ function trail() {
           class: "crumb",
           type: "button",
           title: sentenceCase(say),
-          onclick: () => {
-            lockStage();
-            backTo(i);
-          },
+          onclick: () => leaveTo(() => backTo(i)),
         },
         sentenceCase(say),
       ),
@@ -264,25 +269,42 @@ function checking(frame) {
 const SEEN_MAX = 200; // PickIn.seen's max_length on the server
 
 // `risk` is "Just pick one" after three films tripped the list: nothing is checked or turned away.
+// The question's words fade out as a pick begins from a question screen.
+async function fadeTalk() {
+  const talk = stage.querySelector(".talk");
+  if (!talk || prefersLessMotion()) return;
+  talk.classList.add("hushed");
+  await wait(TALK_FADE_MS);
+}
+
 async function pickNow(opening = "", risk = false) {
-  stage.classList.remove("revealed");
-  const frame = pickFrame();
-  if (opening) await typeLine(frame.line, opening, "");
-  // The check runs while the checking line types, not after it.
+  const round = wall.round;
+  // The pick is asked for first, so the check and the fetch run while the words fade and the line types.
   const seen = visit.seen.slice(-SEEN_MAX); // the server takes at most SEEN_MAX; the oldest may come round again
   const body = { tree: visit.tree, answers: visit.answers, viewer: visit.viewer, seen, risk };
   const request = post("/api/pick", body);
+  await fadeTalk();
+  stage.classList.remove("revealed");
+  const frame = pickFrame();
+  let readUntil = 0;
+  if (opening) {
+    await typeLine(frame.line, opening, "");
+    readUntil = performance.now() + READ_MS;
+  }
   if (hasTopics() && !risk) await checking(frame);
   const res = await request;
-  if (!frame.showing.isConnected) return undefined; // the viewer took a way back out while the pick was fetched
+  // The viewer took a way back out while the pick was fetched.
+  if (!frame.showing.isConnected || wall.round !== round) return undefined;
   if (!res.ok) return problem(res.data, start);
   // Every film the check turned away is seen too, so "Not that one" never draws it again.
   if (res.data.film) visit.seen.push(res.data.film.tmdb);
   visit.seen.push(...res.data.turned_away);
   await showPick({
     stage,
+    wall,
     result: res.data,
     frame,
+    readUntil,
     actions: {
       notThatOne: () => {
         lockStage();
@@ -292,10 +314,7 @@ async function pickNow(opening = "", risk = false) {
         lockStage();
         pickNow("", true);
       },
-      startOver: () => {
-        lockStage();
-        start();
-      },
+      startOver: () => leaveTo(start),
       failed: (data) => problem(data, start),
       correction: (film) => correctionLink({ visit, film, trees: visit.trees }),
     },

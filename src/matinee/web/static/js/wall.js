@@ -1,10 +1,13 @@
 // The poster wall: a flat grid of the posters of the films still in the running, each its own image,
 // sharp and upright, held at 35 per cent strength. The grid repeats in both directions, so no edge
-// ever shows, and it drifts upward while the viewer answers. Each answer re-sorts it in place. The
-// posters ignore taps and clicks; a poster whose picture has not loaded is a dark cell.
+// ever shows, and it drifts upward while the viewer answers. Each answer re-sorts it in place, and a
+// pick hunts across it to the picked film's poster. The posters ignore taps and clicks; a poster
+// whose picture has not loaded is a dark cell.
 
 import { isPhone } from "./dom.js";
+import { SETTLE_EASE, SETTLE_S, centreOf, hopCell, hopCount, placeLanding, planHunt, settledCamera } from "./hunt-plan.js";
 import {
+  camCell,
   cellBox,
   filmAt,
   mod,
@@ -26,6 +29,7 @@ const PRELOAD_MS = 600; // the re-sort waits this long at most for the posters i
 const DROPPED_SCALE = 0.5; // a dropped film's poster shrinks to this and fades where it stands
 const BLANK = "/static/blank.svg"; // a tile with no picture shows this, so it is a dark cell, never a broken image
 const SIZES = ["l", "m", "s"];
+const NONE_PLACED = new Map();
 
 const lessMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 
@@ -51,6 +55,12 @@ export class Wall {
     this.dirty = false; // a picture arrived: tiles showing a dark cell look again
     this.showing = null; // the latest pool shown; an earlier one still preparing gives way
     this.still = Promise.resolve(); // resolves once the latest re-sort has ended
+    this.tweens = []; // the hunt's motions, run by the frame clock
+    this.round = 0; // each ending of a pick (endPick) ends every motion of the round before
+    this.drifting = true;
+    this.placed = new Map(); // "i,j" -> the film a hunt placed in that cell
+    this.landed = null; // the cell a hunt landed on
+    this.lifted = null; // the landed cell while its poster has left the wall, as "i,j"
     this.last = performance.now();
     window.addEventListener("resize", () => this.relayout(null, null));
     requestAnimationFrame((t) => this.frame(t));
@@ -62,6 +72,7 @@ export class Wall {
   // in the running slide into their new places and the dropped ones shrink and fade where they stand.
   // Under reduced motion it changes without sliding. `whenStill()` resolves once that has ended.
   show(pool, { resting = false } = {}) {
+    this.endPick();
     const { ranks, order } = rankPool(this.ranks, pool, Math.random);
     this.ranks = ranks;
     const token = {};
@@ -89,6 +100,7 @@ export class Wall {
   }
 
   clear() {
+    this.endPick();
     this.showing = {};
     this.setPool([], this.resting);
     this.relayout(this.measure(0, this.resting), null);
@@ -100,9 +112,126 @@ export class Wall {
     return this.still;
   }
 
+  // Ends a hunt and everything a pick left on the wall: its motions stop where they are, the landed
+  // cell is forgotten and the wall drifts again. A film a hunt placed stays in its cell until a new
+  // pool's tiles take over, so no poster on screen changes film when the viewer leaves.
+  endPick() {
+    this.round += 1;
+    this.drifting = true;
+    this.landed = null;
+    this.lifted = null;
+    this.dirty = true;
+  }
+
+  // Runs `apply(ease(t))` each frame for `ms`, t from 0 to 1. Resolves true when it ends, or false when
+  // a new pool or a cleared wall ended it first.
+  tween(ms, apply, ease = (t) => t) {
+    return new Promise((done) => this.tweens.push({ start: performance.now(), ms, apply, ease, done, round: this.round }));
+  }
+
+  runTweens(now) {
+    this.tweens = this.tweens.filter((tw) => {
+      if (tw.round !== this.round) {
+        tw.done(false);
+        return false;
+      }
+      const t = tw.ms > 0 ? Math.min(1, Math.max(0, (now - tw.start) / tw.ms)) : 1;
+      tw.apply(tw.ease(t));
+      if (t < 1) return true;
+      tw.done(true);
+      return false;
+    });
+  }
+
+  // Centres the camera on column `i`, row `j`, which may be fractional.
+  aim(i, j) {
+    this.cam = centreOf({ i, j }, this.layout);
+  }
+
+  // The hunt for film `id`. It waits for any re-sort to end and until `notBefore` (a
+  // performance.now() time), then stops the drift, calls `onStop`, and eases forward to the next
+  // whole row; it plans every hop, places the film in the cell the last hop lands on (a cell off the
+  // screen until the hunt brings it in), and plays the hops. Resolves to the pause the plan gives
+  // after the last hop, in seconds, or null when the pick was ended (`endPick`, a new pool or a
+  // cleared wall) at any point. Under reduced motion the camera jumps straight to the landing cell.
+  // The camera is steered in cells, so a window resized mid-hunt only rescales it.
+  async hunt(id, { rand = Math.random, notBefore = 0, onStop = () => {} } = {}) {
+    const round = this.round;
+    if (!(await this.readyToHunt(round, notBefore))) return null;
+    this.lift(false);
+    this.drifting = false;
+    onStop();
+    const from = await this.settle();
+    if (!from || round !== this.round) return null;
+    const plan = planHunt({ n: hopCount(rand), rand, layout: this.layout, from });
+    this.placed = new Map([...this.placed, ...placeLanding(plan, id)]);
+    this.dirty = true;
+    this.request(`/img/poster/${id}/${this.size}`);
+    if (lessMotion.matches) {
+      this.aim(plan.landing.i, plan.landing.j);
+      this.landed = plan.landing;
+      return 0;
+    }
+    return this.hop(plan, from);
+  }
+
+  // Whether the pick of `round` may start its hunt: once any re-sort has ended and `notBefore` has
+  // passed, and only while the pick has not been ended and the wall has films.
+  async readyToHunt(round, notBefore) {
+    await this.whenStill();
+    if (round !== this.round || !this.layout?.films) return false;
+    return this.tween(Math.max(0, notBefore - performance.now()), () => {});
+  }
+
+  // Eases the camera forward to the next whole row in the drift's direction and resolves to that
+  // cell, or to null when the pick was ended meanwhile. Under reduced motion it moves at once.
+  async settle() {
+    const L = this.layout;
+    const row = (this.cam.y - L.h / 2) / L.sy;
+    const from = camCell(L, settledCamera(this.cam, L));
+    if (!lessMotion.matches) {
+      const eased = await this.tween(SETTLE_S * 1000, (t) => this.aim(from.i, row + (from.j - row) * t), SETTLE_EASE);
+      if (!eased) return null;
+    }
+    this.aim(from.i, from.j);
+    return from;
+  }
+
+  async hop(plan, from) {
+    let at = from;
+    for (const [k, hop] of plan.hops.entries()) {
+      const start = at;
+      const moved = await this.tween(hop.seconds * 1000, (t) => {
+        const cell = hopCell(start, hop, t);
+        this.aim(cell.i, cell.j);
+      });
+      if (!moved) return null;
+      at = hop.to;
+      this.aim(at.i, at.j);
+      const last = k === plan.hops.length - 1;
+      if (!last && !(await this.tween(hop.pause * 1000, () => {}))) return null;
+    }
+    this.landed = plan.landing;
+    return plan.hops.at(-1).pause;
+  }
+
+  // The landed poster's element, or null when no hunt has landed.
+  landedTile() {
+    if (!this.landed) return null;
+    return this.tiles.find((tile) => tile.i === this.landed.i && tile.j === this.landed.j) || null;
+  }
+
+  // Takes the landed poster off the wall while it rests on the page, or, with `away` false, puts it back.
+  lift(away) {
+    this.lifted = away && this.landed ? `${this.landed.i},${this.landed.j}` : null;
+    this.dirty = true;
+  }
+
+  // A new pool's tiles take over: the films a hunt placed belong to the tiles they leave.
   setPool(order, resting) {
     this.order = order;
     this.resting = resting;
+    this.placed = new Map();
   }
 
   measure(films, resting) {
@@ -181,7 +310,8 @@ export class Wall {
   frame(now) {
     const dt = Math.min(MAX_STEP_S, (now - this.last) / 1000);
     this.last = now;
-    if (!lessMotion.matches) this.cam.y += DRIFT_PX_S * dt;
+    if (this.drifting && !lessMotion.matches) this.cam.y += DRIFT_PX_S * dt;
+    if (this.tweens.length) this.runTweens(now);
     this.place();
     requestAnimationFrame((t) => this.frame(t));
   }
@@ -196,7 +326,7 @@ export class Wall {
     if (corner === this.corner && !this.dirty) return;
     this.corner = corner;
     this.dirty = false;
-    this.layTiles(this.tiles, this.cam, { layout: L, order: this.order, size: this.size });
+    this.layTiles(this.tiles, this.cam, { layout: L, order: this.order, size: this.size, placed: this.placed, lifted: this.lifted });
   }
 
   // Puts `tile` on cell (i, j) of `view.layout` and gives it that cell's picture.
@@ -207,9 +337,10 @@ export class Wall {
       tile.j = j;
       tile.img.style.transform = `translate(${i * view.layout.sx}px, ${j * view.layout.sy}px)`;
     }
-    tile.id = filmAt(view.layout, view.order, new Map(), i, j);
+    tile.id = filmAt(view.layout, view.order, view.placed || NONE_PLACED, i, j);
     const src = (tile.id === null ? null : this.picture(tile.id, view.size)) || BLANK;
     if (tile.img.getAttribute("src") !== src) tile.img.src = src;
+    tile.img.style.visibility = view.lifted === `${i},${j}` ? "hidden" : "";
   }
 
   // The url of a film's wall picture at `size` once it has loaded. While it loads, a picture of the

@@ -868,72 +868,45 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
   "Not <name>?", sits at the top of the wall and the pick screen.
 - **The pails.** The gore question shows four pail pictures, spotless to
   overflowing, each with its answer's words beneath it as text.
-- **The pick, as one motion.** On a desktop it takes about 3.8 s from the
-  start of the glide to the poster at rest: 0.55 s of glide, the poster's
-  1.55 s lift, a 0.4 s beat and the 1.3 s move to rest. Nothing on screen
-  holds still except for that one beat. On a phone the turning point of the
-  poster's swing also pauses, for under 0.1 s.
-  1. *Land.* The floor glides far in a random direction (1.4 s; up to 760 px
-     across and 620 px deep on desktop, 190 and 480 on a phone, inside the
-     floor's spare edge so no edge shows), as if going to fetch one poster,
-     and the wall's frost deepens. A searchlight rides in with the floor from
-     the glide's first frame. It is one soft pool of warm light, with no beam
-     and no source. It starts wide and faint over the landing place, at 2.2
-     times its landing size and 0.3 of its full strength, and gathers to small
-     and bright on the glide's own easing. Its centre travels with the floor
-     in one direction and comes to rest on the landing place as the floor
-     does. The landing place is in the right two-thirds of the screen on a
-     desktop and in the upper half on a phone, and four places take turns.
-     While the floor still coasts, 0.55 s into the glide, the poster appears
-     in the searchlight, lying in the floor at the floor's angle, blurred and
-     dim. From that moment it lifts: it peels away while it still rides the
-     floor, brightening as the searchlight finds it, pulls free toward the
-     viewer in one movement, swings a little past and eases back into the
-     searchlight (1.55 s in all). "Here. Watch this one." types from the
-     moment the poster appears.
-  2. *Reveal.* The poster holds in the searchlight for 0.4 s after its lift
-     ends, and longer only while the line still types or the film's details
-     or a desktop's backdrop are still arriving. Then the wall fades nearly
-     away and the lit poster slides to where it rests (1.3 s). It is the same
-     picture, and the move starts from exactly where it hung, without a jump.
-     On a desktop that is the foot of the left column, as large as the height
-     left there allows at 2:3 (never under 160 px), while the film's backdrop
-     rises on the right, fading into the title, year and synopsis, shown
-     without a tap. On a phone the poster fills the width at the top, the
-     details follow without a backdrop, and after 2.2 seconds the page scrolls
-     gently to them. The left column hangs from the top of the screen: the
-     line, then `Not that one`, a "More on Seerr" link to the film's page on
-     the configured Seerr and `Start over` in one row, then the correction
-     link. The line's words never change, so `Not that one` stays in one place
-     from film to film.
+- **The pick, as a hunt.** From a question screen the question's words fade
+  over 0.35 s while the pick is already being fetched. Where the last answer
+  has a reply, it types on the pick screen and stays whole for at least 1 s.
+  Then, once any re-sort has ended, the drift stops, Matinee's words fade out
+  (a line saying why a film was turned away stays), and the wall eases forward
+  to the next whole row (0.4 s). The wall then hunts in one, two or three
+  hops, drawn at random with weights 1, 2 and 3 in 6, with the lengths, move
+  times and pauses of decision §83's table: 6 to 9 posters in 1.5 s; 5 to 7
+  then 1 in 1.05 and 0.55 s; 5 to 8, 2 to 3, then 1 in 0.95, 0.7 and 0.5 s,
+  pausing 0.3; 0.18 and 0.34; 0.14, 0.22 and 0.34 s after each. The first hop
+  always runs at least one poster further than the screen shows along its
+  axis, so the landing poster starts off screen. A vertical hop longer than
+  one poster runs 0.7 of its count, rounded, and goes down the wall, the
+  drift's way; no hop moves back along an axis already travelled. Each hop
+  moves on one axis, passes its stop by at most 12 px (6 per cent of a short
+  hop) and settles back, and never moves the wall more than half the poster
+  spacing along its axis in 1/60 s; a hop that would takes longer. Before the
+  hunt the whole plan is made and the picked film is placed in the landing
+  cell, which is off screen until the hunt brings it to the centre. Under
+  reduced motion the wall jumps to it. After the last hop's pause and a 0.5 s
+  beat (2 s under reduced motion) "Here. Watch this one." types, and once the
+  film's details (and on a desktop its backdrop) have arrived the poster
+  moves from exactly where it hangs on the wall to its resting place (1.3 s),
+  leaving its cell empty while it rests. On a desktop that is the foot of the
+  left column, as large as the height left there allows at 2:3 (never under
+  160 px), while the backdrop rises on the right, fading into the title, year
+  and synopsis, shown without a tap. On a phone the poster fills the width at
+  the top, the details follow without a backdrop, and after 2.2 seconds the
+  page scrolls gently to them. The left column hangs from the top of the
+  screen: the line, then `Not that one`, a "More on Seerr" link to the film's
+  page on the configured Seerr and `Start over` in one row, then the
+  correction link. The poster at rest is the sharp 640 px picture when it has
+  loaded, else the wall's own picture of the film; with neither, no poster
+  rests. A backdrop that fails is left out, and a phone fetches none.
 
-  The searchlight fades out over the first 0.4 s of the move to rest and is
-  then removed.
-
-  The pick fetches the lit poster's picture, and on a desktop the backdrop, as
-  soon as it knows the film. Where the check turned the first film away, the
-  fetch starts once the line has said why. The lit poster shows only once its
-  picture can be drawn, and the backdrop rises only once it has loaded, so
-  neither shows as an empty box. A late picture appears late: the wait ends
-  when Matinee's server gives up on it (10 s). With no poster picture there
-  is no lit poster and no poster at rest: the searchlight fades once the
-  picture fails (never before 0.55 s into the glide), and the pick waits for
-  the floor to stop and goes to the resting page. A backdrop that fails is
-  left out. A phone's resting page shows no backdrop, so a phone fetches none.
-
-  With reduced motion the floor takes its new place without the glide. The
-  searchlight is there at once, in place, at full strength. The lit poster
-  appears in place as soon as its picture can be drawn and holds in the
-  searchlight for 2 s. Then the poster moves to rest and the page scrolls,
-  both without animation, and the searchlight goes at once.
-
-  Leaving the pick by a trail answer or the name tag ends it: once the next
-  screen replaces the pick screen, the pick changes nothing further on the
-  page, and its searchlight and lit poster leave with its screen. A known gap
-  remains in the wall, not promised and due for repair: a trail answer taken
-  after the glide has started re-asks its question over a wall that keeps the
-  pick's deeper frost, or, from the resting page, stays faded nearly away,
-  until the next pick, a return to the first question, or the box office.
+  A trail answer, the name tag or `Start over` ends the pick at the tap: the
+  hunt stops where it is, the wall drifts again, and the pick changes nothing
+  further. A film the hunt placed keeps its cell until the next pool's
+  posters take over.
 
   While a DoesTheDogDie check runs, the page types "One moment. Let me check
   this one against your list." and the wall keeps drifting.

@@ -30,20 +30,11 @@
   --display: "Big Shoulders Display", "Arial Narrow", sans-serif;
   --body: "DM Sans", system-ui, sans-serif;
   --pad: 48px;
-
-  /* the lit poster's tear from the wall */
-  --lay: 50deg;
-  --tilt: -12deg;
-  --blur: 6px;
-  --glide-ease: cubic-bezier(0.2, 0.7, 0.2, 1); /* the searchlight's fade */
 }
 
 @media (max-width: 600px) {
   :root {
     --pad: 20px;
-    --lay: 40deg;
-    --tilt: -6deg;
-    --blur: 3px;
   }
 }
 
@@ -453,76 +444,7 @@ button {
 
 /* ---------- the pick ---------- */
 
-.spot,
-.searchlight {
-  position: fixed;
-  z-index: 0;
-  width: min(280px, 19vw);
-  transform: translate(-10%, 0);
-  pointer-events: none;
-}
-
-/* The light's box is the poster's box, so the pool sits around the poster where it lands. */
-.searchlight {
-  aspect-ratio: 2 / 3;
-}
-
-.spot-glow {
-  position: absolute;
-  left: -43%;
-  top: -12%;
-  width: 186%;
-  height: 152%;
-  border-radius: 50%;
-  background: radial-gradient(closest-side, rgba(255, 214, 140, 0.42), rgba(255, 214, 140, 0));
-}
-
-.spot-poster {
-  position: relative;
-  display: block;
-  width: 100%;
-  aspect-ratio: 2 / 3;
-  object-fit: cover;
-  border-radius: 6px;
-  box-shadow: 0 0 0 2px rgba(255, 214, 140, 0.9), 0 0 60px 12px rgba(255, 190, 90, 0.45), 0 24px 60px rgba(0, 0, 0, 0.6);
-  animation: rip 1.55s linear both;
-}
-
-/* Torn from the floor: it appears lying in the wall at the floor's angle, blurred and dim, and starts
-   to peel away at once, slowly at first, brightening as the light finds it. It pulls free toward the
-   viewer in one movement, swings a little past, and eases back into the light. Each stretch carries
-   its own easing, so the lift never slows to a stop part-way. */
-@keyframes rip {
-  0% {
-    transform: perspective(1100px) rotateX(var(--lay)) rotate(var(--tilt)) scale(0.62);
-    filter: blur(var(--blur)) brightness(0.35);
-    box-shadow: none;
-    opacity: 0;
-    animation-timing-function: cubic-bezier(0.4, 0.12, 0.65, 1);
-  }
-
-  5% {
-    opacity: 1;
-  }
-
-  16% {
-    filter: blur(calc(var(--blur) / 2)) brightness(0.8);
-    box-shadow: none;
-  }
-
-  62% {
-    transform: perspective(1100px) rotateX(-8deg) rotate(5deg) scale(1.06) translateY(-5%);
-    filter: none;
-    animation-timing-function: cubic-bezier(0.3, 0, 0.35, 1);
-  }
-
-  100% {
-    transform: none;
-    filter: none;
-  }
-}
-
-/* Above the spot. The row fills the screen and everything hangs from its top, so
+/* Above the wall. The row fills the screen and everything hangs from its top, so
    nothing re-centres as the film arrives, and opening the correction panel grows
    the page downward. */
 .showing {
@@ -576,6 +498,17 @@ button {
 .pick-line {
   font-size: clamp(40px, min(4.4vw, 7vh), 64px);
   min-height: 0;
+}
+
+/* Matinee's words fade out as a pick begins and while the wall hunts. */
+.pick-line,
+.talk {
+  transition: opacity 0.35s ease;
+}
+
+.pick-line.hushed,
+.talk.hushed {
+  opacity: 0;
 }
 
 .choices {
@@ -788,11 +721,6 @@ button {
 }
 
 @media (max-width: 600px) {
-  .spot,
-  .searchlight {
-    width: 44vw;
-  }
-
   .showing {
     grid-template-columns: minmax(0, 1fr);
     align-content: end;

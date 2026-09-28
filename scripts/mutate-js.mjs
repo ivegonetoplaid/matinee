@@ -24,7 +24,8 @@ function failures(dir) {
     return [];
   } catch (err) {
     const out = String(err.stdout);
-    return [...out.matchAll(/^\s*not ok \d+ - (.+)$/gm)].map((m) => m[1].trim()).filter((name) => !name.startsWith("tests/"));
+    // A test file that fails to load reports under its own path; that counts as a catch too.
+    return [...out.matchAll(/^\s*not ok \d+ - (.+)$/gm)].map((m) => m[1].trim());
   }
 }
 
