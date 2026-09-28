@@ -18,6 +18,8 @@ const SETTLE_MS = 700;
 const TRAVEL_MS = 1400;
 const REACH = { desktop: [760, 620], phone: [190, 480] }; // px along the floor, across and deep
 const REDRAW_EVERY_MS = 150;
+const PROBE_STEP_PX = 40; // how far the floor mark moves to learn which way the floor maps onto the screen
+const PROBE_ROUNDS = 4;
 
 function across(poolSize, phone) {
   const range = phone ? ACROSS.phone : ACROSS.desktop;
@@ -39,6 +41,13 @@ export class Wall {
   constructor(root) {
     this.root = root;
     this.grids = [...root.querySelectorAll(".grid")];
+    // A hidden layer that moves exactly as the floor does. Its mark finds where a point of the floor is.
+    this.probe = document.createElement("div");
+    this.probe.className = "grid floor-probe";
+    this.mark = document.createElement("i");
+    this.probe.append(this.mark);
+    this.grids[0].parentElement.append(this.probe);
+    this.movers = [...this.grids, this.probe];
     this.images = new Map();
     this.ids = [];
     this.pool = [];
@@ -108,12 +117,12 @@ export class Wall {
   }
 
   move() {
-    for (const grid of this.grids) grid.style.removeProperty("--shuffle");
+    for (const grid of this.movers) grid.style.removeProperty("--shuffle");
     this.seed += 1;
     const drift = (this.seed % 3) - 1;
     const phone = isPhone();
     const scale = phone ? 0.35 : 1;
-    for (const grid of this.grids) {
+    for (const grid of this.movers) {
       grid.style.setProperty("--gx", `${drift * 140 * scale}px`);
       grid.style.setProperty("--gy", `${((this.seed % 2) * 2 - 1) * 80 * scale}px`);
       grid.style.setProperty("--turn", `${drift * (phone ? 2 : 4)}deg`);
@@ -130,7 +139,7 @@ export class Wall {
     const [across, deep] = isPhone() ? REACH.phone : REACH.desktop;
     const angle = Math.random() * 2 * Math.PI;
     const reach = 0.7 + Math.random() * 0.3;
-    for (const grid of this.grids) {
+    for (const grid of this.movers) {
       grid.style.setProperty("--shuffle", `${TRAVEL_MS}ms`);
       grid.style.setProperty("--gx", `${Math.round(Math.cos(angle) * across * reach)}px`);
       grid.style.setProperty("--gy", `${Math.round(Math.sin(angle) * deep * reach)}px`);
@@ -140,6 +149,36 @@ export class Wall {
     clearTimeout(this.settleTimer);
     this.settleTimer = setTimeout(() => this.root.classList.remove("moving"), TRAVEL_MS - 300);
     return TRAVEL_MS;
+  }
+
+  // The point of the floor that is under screen position (x, y) now. Returns a function giving where
+  // that point is on the screen when it is called, as [x, y], while the floor moves on. The point is
+  // found by moving the mark and correcting from how the screen position answers, a few times over.
+  floorPoint(x, y) {
+    const mark = this.mark;
+    const place = (u, v) => {
+      mark.style.left = `${u}px`;
+      mark.style.top = `${v}px`;
+      const r = mark.getBoundingClientRect();
+      return [r.left, r.top];
+    };
+    let u = this.probe.offsetWidth / 2;
+    let v = this.probe.offsetHeight / 2;
+    for (let round = 0; round < PROBE_ROUNDS; round += 1) {
+      const [px, py] = place(u, v);
+      const [ax, ay] = place(u + PROBE_STEP_PX, v);
+      const [bx, by] = place(u, v + PROBE_STEP_PX);
+      const [j11, j21] = [(ax - px) / PROBE_STEP_PX, (ay - py) / PROBE_STEP_PX];
+      const [j12, j22] = [(bx - px) / PROBE_STEP_PX, (by - py) / PROBE_STEP_PX];
+      const det = j11 * j22 - j12 * j21;
+      u += (j22 * (x - px) - j12 * (y - py)) / det;
+      v += (j11 * (y - py) - j21 * (x - px)) / det;
+    }
+    place(u, v);
+    return () => {
+      const r = mark.getBoundingClientRect();
+      return [r.left, r.top];
+    };
   }
 
   draw() {

@@ -853,19 +853,24 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
   "Not <name>?", sits at the top of the wall and the pick screen.
 - **The pails.** The gore question shows four pail pictures, spotless to
   overflowing, each with its answer's words beneath it as text.
-- **The pick, in two beats.**
+- **The pick, as one motion.** It takes about 3.7 s on a desktop from the start
+  of the glide to the poster at rest, and nothing on screen stops except for one
+  beat in the light.
   1. *Land.* The wall glides far across its floor in a random direction (1.4
      s; up to 760 px across and 620 px deep on desktop, 190 and 480 on a phone,
      inside the floor's spare edge so no edge shows), as if going to fetch one
-     poster. Then that poster tears loose from the floor of the wall (in the right
-     two-thirds on desktop, the upper half on a phone): it lies at the floor's
-     angle, blurred and dim, for about a second while it brightens, catches at
-     a corner, pulls free toward the viewer with a twist, and settles in a
-     spotlight (2.3 s in all), leaving a dark gap in the floor. "Here. Watch
-     this one." types meanwhile.
-  2. *Reveal.* After 2.7 seconds the wall fades nearly away and the lit poster
-     slides to where it rests (1.3 s). It is the same picture, and the move
-     starts from exactly where it hung, without a jump. On a desktop that is the foot of the left
+     poster. While the floor still coasts, 0.55 s into the glide, that poster
+     appears lying in the floor at the floor's angle (in the right two-thirds on
+     desktop, the upper half on a phone), blurred and dim, and moves with the
+     floor until it stops. It peels away at once, brightening as the light
+     finds it, pulls free toward the viewer in one movement, swings a little
+     past and eases back into the spotlight (1.55 s in all). "Here. Watch this
+     one." types meanwhile. A poster whose
+     picture arrives after that moment appears when it arrives.
+  2. *Reveal.* The poster holds in the light for 0.4 s after its lift ends. Then
+     the wall fades nearly away and the lit poster slides to where it rests (1.3
+     s). It is the same picture, and the move starts from exactly where it hung,
+     without a jump. On a desktop that is the foot of the left
      column, as large as the height left there allows at 2:3 (never under 160
      px), while the film's backdrop rises on the right, fading into the title,
      year and synopsis, shown without a tap. On a phone the poster fills the
@@ -874,8 +879,10 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
      top of the screen: the line, then `Not that one`, a "More on Seerr" link to
      the film's page on the configured Seerr and `Start over` in one row, then
      the correction link. The line's words never change, so `Not that one`
-     stays in one place from film to film. With reduced motion the poster and
-     the scroll move without animation.
+     stays in one place from film to film. With reduced motion the lit poster
+     appears in place, holds in the light for 2 s, and then it and the scroll
+     move without animation. Leaving the pick by a trail answer while the
+     poster lifts ends the pick there.
 
   The pick fetches the lit poster's picture, and on a desktop the backdrop, as
   soon as it knows the film. The lit poster shows only once its picture can be

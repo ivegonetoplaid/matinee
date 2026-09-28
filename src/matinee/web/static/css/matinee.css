@@ -156,6 +156,16 @@ button {
   transition: transform var(--shuffle) cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 
+.floor-probe {
+  visibility: hidden;
+}
+
+.floor-probe > i {
+  position: absolute;
+  width: 0;
+  height: 0;
+}
+
 .wall-fade {
   position: absolute;
   inset: 0;
@@ -528,20 +538,9 @@ button {
   pointer-events: none;
 }
 
-/* The gap the poster leaves in the floor: lying at the floor's angle, where the poster lay. */
-.spot-hole {
-  position: absolute;
-  inset: 0;
-  border-radius: 4px;
-  background: rgba(2, 3, 6, 0.85);
-  box-shadow: inset 0 0 24px 6px rgba(0, 0, 0, 0.9);
-  transform: perspective(1100px) rotateX(var(--lay)) rotate(var(--tilt)) scale(0.62);
-  animation: fade 0.4s ease 1s backwards;
-}
-
 .spot-glow {
   position: absolute;
-  animation: fade 0.7s ease 1.7s backwards;
+  animation: fade 0.7s ease 0.5s backwards;
   left: -43%;
   top: -12%;
   width: 186%;
@@ -558,38 +557,35 @@ button {
   object-fit: cover;
   border-radius: 6px;
   box-shadow: 0 0 0 2px rgba(255, 214, 140, 0.9), 0 0 60px 12px rgba(255, 190, 90, 0.45), 0 24px 60px rgba(0, 0, 0, 0.6);
-  animation: rip 2.3s cubic-bezier(0.3, 0.6, 0.2, 1) both;
+  animation: rip 1.55s linear both;
 }
 
-/* Torn from the floor: it lies in the wall at the floor's angle, blurred and dim, for a
-   second while the light finds it; a corner catches, then it pulls free toward the viewer
-   with a twist and settles in the light. */
+/* Torn from the floor: it appears lying in the wall at the floor's angle, blurred and dim, and starts
+   to peel away at once, slowly at first, brightening as the light finds it. It pulls free toward the
+   viewer in one movement, swings a little past, and eases back into the light. Each stretch carries
+   its own easing, so the lift never slows to a stop part-way. */
 @keyframes rip {
   0% {
     transform: perspective(1100px) rotateX(var(--lay)) rotate(var(--tilt)) scale(0.62);
     filter: blur(var(--blur)) brightness(0.35);
     box-shadow: none;
+    opacity: 0;
+    animation-timing-function: cubic-bezier(0.4, 0.12, 0.65, 1);
   }
 
-  38% {
-    transform: perspective(1100px) rotateX(var(--lay)) rotate(var(--tilt)) scale(0.62);
+  5% {
+    opacity: 1;
+  }
+
+  16% {
     filter: blur(calc(var(--blur) / 2)) brightness(0.8);
     box-shadow: none;
   }
 
-  50% {
-    transform: perspective(1100px) rotateX(calc(var(--lay) - 12deg)) rotate(calc(var(--tilt) + 3deg)) scale(0.66)
-      translateY(-3%);
-    filter: blur(3px) brightness(0.5);
-  }
-
-  71% {
-    transform: perspective(1100px) rotateX(-10deg) rotate(6deg) scale(1.08) translateY(-6%);
+  62% {
+    transform: perspective(1100px) rotateX(-8deg) rotate(5deg) scale(1.06) translateY(-5%);
     filter: none;
-  }
-
-  86% {
-    transform: perspective(1100px) rotateX(3deg) rotate(-2deg) scale(0.98);
+    animation-timing-function: cubic-bezier(0.3, 0, 0.35, 1);
   }
 
   100% {
