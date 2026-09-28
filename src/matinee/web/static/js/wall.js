@@ -41,6 +41,7 @@ const GLOW_SPREAD = 0.033; // the glow's spread, likewise
 const GLOW_ALPHA = 0.35; // the glow's strength once grown
 const GLOW_SAMPLE = [32, 48]; // the poster is read at this size for its colour
 const STEP_BACK_MS = 350; // the wall dimming for a resting page that has no poster to bring forward
+const RETURN_MS = 450; // "Not that one" carries the resting poster back to its cell
 const LANDED_DRAW_MS = 1000; // under reduced motion, the jump waits at most this long for the landed picture
 const NONE_PLACED = new Map();
 
@@ -93,7 +94,7 @@ export class Wall {
     this.corner = null; // the top-left cell the tiles are laid from, as "i,j"
     this.dirty = false; // a picture arrived: tiles showing a dark cell look again
     this.showing = null; // the latest pool shown; an earlier one still preparing gives way
-    this.still = Promise.resolve(); // resolves once the latest re-sort has ended
+    this.still = Promise.resolve(); // resolves once the latest re-sort, or a poster's return, has ended
     this.tweens = []; // the hunt's motions, run by the frame clock
     this.round = 0; // each ending of a pick (endPick) ends every motion of the round before
     this.drifting = true;
@@ -155,7 +156,7 @@ export class Wall {
     this.still = Promise.resolve();
   }
 
-  // Resolves once the wall has finished moving to the latest pool it was shown.
+  // Resolves once the wall has finished moving: to the latest pool it was shown, and any poster's return.
   whenStill() {
     return this.still;
   }
@@ -381,6 +382,70 @@ export class Wall {
     img.style.height = `${box.h}px`;
     img.style.opacity = lit === null ? "" : String(lit);
     img.style.zIndex = z;
+  }
+
+  // "Not that one": carries `img`, the poster resting on the page, from where it rests back to its cell
+  // on the wall over RETURN_MS, at the wall's size and strength, while the wall's dimming lifts; then
+  // the cell shows its poster again and the wall drifts. The element itself moves onto the wall, so
+  // its picture never has to be drawn again. The next hunt waits for it. Resolves when it has ended.
+  putBack(img) {
+    const done = this.returnPoster(img, this.landed);
+    this.still = Promise.all([this.still, done]);
+    return done;
+  }
+
+  async returnPoster(img, cell) {
+    const from = img?.getBoundingClientRect();
+    this.look = null;
+    this.frontCell = null;
+    this.front.hidden = true;
+    this.dirty = true;
+    if (!cell || !from?.width || lessMotion.matches) {
+      img?.remove();
+      return this.liftDim(cell);
+    }
+    img.getAnimations().forEach((motion) => motion.cancel());
+    img.removeAttribute("style");
+    img.className = "tile";
+    const screen = { x: from.left, y: from.top, w: from.width, h: from.height };
+    this.fit(img, { ...this.toLayer(screen), w: screen.w, h: screen.h }, 1, "3");
+    this.layer.append(img);
+    const between = (a, b, t) => a + (b - a) * t;
+    // Both ends are worked out each frame, so a window resized mid-return still lands in the cell.
+    const moved = await this.tween(
+      RETURN_MS,
+      (t) => {
+        const start = { ...this.toLayer(screen), w: screen.w, h: screen.h };
+        const end = grownBox(cell.i, cell.j, this.layout, 1);
+        const box = { x: between(start.x, end.x, t), y: between(start.y, end.y, t), w: between(start.w, end.w, t), h: between(start.h, end.h, t) };
+        this.fit(img, box, between(1, WALL_STRENGTH, t), "3");
+        this.dim(between(AWAY_STRENGTH, WALL_STRENGTH, t));
+      },
+      GROW_EASE,
+    );
+    img.remove();
+    if (moved) this.settleBack();
+    return undefined;
+  }
+
+  // With no poster to carry back (none rested, or reduced motion), the dimming lifts over RETURN_MS
+  // (at once under reduced motion) before the wall drifts again.
+  async liftDim(cell) {
+    if (cell && !lessMotion.matches) {
+      const lifted = await this.tween(RETURN_MS, (t) => this.dim(AWAY_STRENGTH + (WALL_STRENGTH - AWAY_STRENGTH) * t));
+      if (!lifted) return;
+    }
+    this.settleBack();
+  }
+
+  // The returned poster is back in its cell, the dimming lifted and the wall drifting. The wall is laid
+  // at once, so the cell shows its poster in the same frame the returning one leaves.
+  settleBack() {
+    this.lift(false);
+    this.landed = null;
+    this.drifting = true;
+    this.layer.style.removeProperty("--tile");
+    this.place();
   }
 
   // The landed poster's element, or null when no hunt has landed.

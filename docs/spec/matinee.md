@@ -921,6 +921,15 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
   loaded, else a decoded copy of the wall's own picture of the film, replaced
   by the sharp picture when it arrives; with neither, no poster rests. A backdrop that fails is left out, and a phone fetches none.
 
+  `Not that one` asks for the next film at the tap and carries the resting
+  poster back from where it rests to its cell on the wall, at the wall's size
+  and strength, over 0.45 s while the wall's dimming lifts (at once under
+  reduced motion; with no poster at rest the dimming alone lifts over 0.45 s).
+  The wall then drifts, and the returned poster rests in its cell, until the
+  next film is known; the check's line does not type. The next hunt starts
+  from where the wall stands, by every rule above. "Roll again", after three
+  films in a row were turned away, is a new pick: its check line types.
+
   A trail answer, the name tag or `Start over` ends the pick at the tap: the
   hunt stops where it is, the wall drifts again, and the pick changes nothing
   further. A film the hunt placed keeps its cell until the next pool's

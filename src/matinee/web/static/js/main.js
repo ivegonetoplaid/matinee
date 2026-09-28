@@ -277,29 +277,51 @@ async function fadeTalk() {
   await wait(TALK_FADE_MS);
 }
 
-async function pickNow(opening = "", risk = false) {
-  const round = wall.round;
-  // The pick is asked for first, so the check and the fetch run while the words fade and the line types.
+// What the screen gives up as a pick begins: a question's words fade out, or, on "Not that one", the
+// resting poster goes back to its cell on the wall.
+async function clearForPick(again) {
+  if (again) wall.putBack(stage.querySelector(".slot-poster"));
+  else await fadeTalk();
+}
+
+// Asks the server for a pick from the answers so far, leaving out films already seen.
+function requestPick(risk) {
   const seen = visit.seen.slice(-SEEN_MAX); // the server takes at most SEEN_MAX; the oldest may come round again
-  const body = { tree: visit.tree, answers: visit.answers, viewer: visit.viewer, seen, risk };
-  const request = post("/api/pick", body);
-  await fadeTalk();
+  return post("/api/pick", { tree: visit.tree, answers: visit.answers, viewer: visit.viewer, seen, risk });
+}
+
+// Opens the pick screen and types `opening`, the reply to the last answer, when there is one. Resolves
+// to the frame and the time until which that reply should stay whole (0 without one).
+async function openPick(opening) {
   stage.classList.remove("revealed");
   const frame = pickFrame();
-  let readUntil = 0;
-  if (opening) {
-    await typeLine(frame.line, opening, "");
-    readUntil = performance.now() + READ_MS;
-  }
-  if (hasTopics() && !risk) await checking(frame);
+  if (!opening) return { frame, readUntil: 0 };
+  await typeLine(frame.line, opening, "");
+  return { frame, readUntil: performance.now() + READ_MS };
+}
+
+// Every film the pick showed or the check turned away is seen, so "Not that one" never draws it again.
+function markSeen(data) {
+  if (data.film) visit.seen.push(data.film.tmdb);
+  visit.seen.push(...data.turned_away);
+}
+
+// `again` is "Not that one": the resting poster goes back to the wall while the next film is fetched,
+// and the check's line does not type.
+async function pickNow(opening = "", risk = false, again = false) {
+  const round = wall.round;
+  // The pick is asked for first, so the check and the fetch run while the words fade and the line types.
+  const request = requestPick(risk);
+  await clearForPick(again);
+  const { frame, readUntil } = await openPick(opening);
+  // The check's line types only on a checked pick that is not "Not that one".
+  if (hasTopics() && !(risk || again)) await checking(frame);
   const res = await request;
   // The viewer took a way back out while the pick was fetched.
   if (!frame.showing.isConnected || wall.round !== round) return undefined;
   if (!res.ok) return problem(res.data, start);
-  // Every film the check turned away is seen too, so "Not that one" never draws it again.
-  if (res.data.film) visit.seen.push(res.data.film.tmdb);
-  visit.seen.push(...res.data.turned_away);
-  await showPick({
+  markSeen(res.data);
+  return showPick({
     stage,
     wall,
     result: res.data,
@@ -307,6 +329,10 @@ async function pickNow(opening = "", risk = false) {
     readUntil,
     actions: {
       notThatOne: () => {
+        lockStage();
+        pickNow("", false, true);
+      },
+      rollAgain: () => {
         lockStage();
         pickNow();
       },

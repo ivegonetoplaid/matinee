@@ -112,7 +112,7 @@ async function showNoFilm(result, { line, aside }, actions) {
     h(
       "div",
       { class: "choices" },
-      h("button", { class: "pill gold", type: "button", onclick: actions.notThatOne }, "Roll again"),
+      h("button", { class: "pill gold", type: "button", onclick: actions.rollAgain }, "Roll again"),
       h("button", { class: "pill velvet", type: "button", onclick: actions.justPick }, "Just pick one"),
     ),
     h("button", { class: "link-button", type: "button", onclick: actions.startOver }, "Start over"),
@@ -202,7 +202,7 @@ async function bringOut({ wall, frame, pause, posterReady, left }) {
   return { shown, sharp, typing };
 }
 
-// The page's pick screen. `actions` holds notThatOne, justPick, startOver, failed and the correction
+// The page's pick screen. `actions` holds notThatOne, rollAgain, justPick, startOver, failed and the correction
 // panel's builder. `readUntil` (a performance.now() time) holds the hunt until the line on screen has
 // been read. After every wait the pick checks that its screen is still showing and that the pick was
 // not ended on the wall: a trail answer or the name tag can end it at any moment, and a pick the viewer
