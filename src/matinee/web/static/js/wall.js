@@ -37,17 +37,39 @@ function sample(ids, n) {
   return copy.slice(0, n);
 }
 
+// Where on a probe layer to put its mark so that the mark shows at screen position (x, y): found by
+// moving the mark and correcting from how its screen position answers, a few times over.
+function locate({ layer, mark }, x, y) {
+  const place = (u, v) => {
+    mark.style.left = `${u}px`;
+    mark.style.top = `${v}px`;
+    const r = mark.getBoundingClientRect();
+    return [r.left, r.top];
+  };
+  let u = layer.offsetWidth / 2;
+  let v = layer.offsetHeight / 2;
+  for (let round = 0; round < PROBE_ROUNDS; round += 1) {
+    const [px, py] = place(u, v);
+    const [ax, ay] = place(u + PROBE_STEP_PX, v);
+    const [bx, by] = place(u, v + PROBE_STEP_PX);
+    const [j11, j21] = [(ax - px) / PROBE_STEP_PX, (ay - py) / PROBE_STEP_PX];
+    const [j12, j22] = [(bx - px) / PROBE_STEP_PX, (by - py) / PROBE_STEP_PX];
+    const det = j11 * j22 - j12 * j21;
+    u += (j22 * (x - px) - j12 * (y - py)) / det;
+    v += (j11 * (y - py) - j21 * (x - px)) / det;
+  }
+  return [u, v];
+}
+
 export class Wall {
   constructor(root) {
     this.root = root;
     this.grids = [...root.querySelectorAll(".grid")];
-    // A hidden layer that moves exactly as the floor does. Its mark finds where a point of the floor is.
-    this.probe = document.createElement("div");
-    this.probe.className = "grid floor-probe";
-    this.mark = document.createElement("i");
-    this.probe.append(this.mark);
-    this.grids[0].parentElement.append(this.probe);
-    this.movers = [...this.grids, this.probe];
+    // Two hidden layers: one moves exactly as the floor does, the other stands at once where the floor
+    // is going. A mark in each finds where a point of the floor is, now and at the end of a glide.
+    this.probe = this.probeLayer("floor-probe");
+    this.ahead = this.probeLayer("floor-probe floor-ahead");
+    this.movers = [...this.grids, this.probe.layer, this.ahead.layer];
     this.images = new Map();
     this.ids = [];
     this.pool = [];
@@ -70,6 +92,15 @@ export class Wall {
       this.images.set(id, img);
     }
     return img;
+  }
+
+  probeLayer(className) {
+    const layer = document.createElement("div");
+    layer.className = `grid ${className}`;
+    const mark = document.createElement("i");
+    layer.append(mark);
+    this.grids[0].parentElement.append(layer);
+    return { layer, mark };
   }
 
   scheduleRedraw() {
@@ -151,32 +182,16 @@ export class Wall {
     return TRAVEL_MS;
   }
 
-  // The point of the floor that is under screen position (x, y) now. Returns a function giving where
-  // that point is on the screen when it is called, as [x, y], while the floor moves on. The point is
-  // found by moving the mark and correcting from how the screen position answers, a few times over.
-  floorPoint(x, y) {
-    const mark = this.mark;
-    const place = (u, v) => {
-      mark.style.left = `${u}px`;
-      mark.style.top = `${v}px`;
-      const r = mark.getBoundingClientRect();
-      return [r.left, r.top];
-    };
-    let u = this.probe.offsetWidth / 2;
-    let v = this.probe.offsetHeight / 2;
-    for (let round = 0; round < PROBE_ROUNDS; round += 1) {
-      const [px, py] = place(u, v);
-      const [ax, ay] = place(u + PROBE_STEP_PX, v);
-      const [bx, by] = place(u, v + PROBE_STEP_PX);
-      const [j11, j21] = [(ax - px) / PROBE_STEP_PX, (ay - py) / PROBE_STEP_PX];
-      const [j12, j22] = [(bx - px) / PROBE_STEP_PX, (by - py) / PROBE_STEP_PX];
-      const det = j11 * j22 - j12 * j21;
-      u += (j22 * (x - px) - j12 * (y - py)) / det;
-      v += (j11 * (y - py) - j21 * (x - px)) / det;
-    }
-    place(u, v);
+  // The point of the floor that the floor is carrying to screen position (x, y): the point under it
+  // once the current glide ends, or now when the floor is at rest. Returns a function giving where that
+  // point is on the screen when it is called, as [x, y]. One point is tracked at a time; a later call
+  // moves the mark that earlier readers follow.
+  arriving(x, y) {
+    const [u, v] = locate(this.ahead, x, y);
+    this.probe.mark.style.left = `${u}px`;
+    this.probe.mark.style.top = `${v}px`;
     return () => {
-      const r = mark.getBoundingClientRect();
+      const r = this.probe.mark.getBoundingClientRect();
       return [r.left, r.top];
     };
   }

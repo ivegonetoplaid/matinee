@@ -42,6 +42,7 @@
   --edge-blur: 14px;
   --frost: 0.7;
   --shuffle: 1.2s;
+  --glide-ease: cubic-bezier(0.2, 0.7, 0.2, 1); /* the floor's glide; the searchlight travels on it too */
   --settle: 0.7s;
 }
 
@@ -153,7 +154,7 @@ button {
   width: 140%;
   height: 140%;
   transform: rotate(calc(var(--tilt) + var(--turn, 0deg))) translate(var(--gx, 0px), var(--gy, 0px));
-  transition: transform var(--shuffle) cubic-bezier(0.2, 0.7, 0.2, 1);
+  transition: transform var(--shuffle) var(--glide-ease);
 }
 
 .floor-probe {
@@ -164,6 +165,10 @@ button {
   position: absolute;
   width: 0;
   height: 0;
+}
+
+.floor-ahead {
+  transition: none;
 }
 
 .wall-fade {
@@ -530,7 +535,8 @@ button {
   opacity: 0;
 }
 
-.spot {
+.spot,
+.searchlight {
   position: fixed;
   z-index: 0;
   width: min(280px, 19vw);
@@ -538,9 +544,13 @@ button {
   pointer-events: none;
 }
 
+/* The light's box is the poster's box, so the pool sits around the poster where it lands. */
+.searchlight {
+  aspect-ratio: 2 / 3;
+}
+
 .spot-glow {
   position: absolute;
-  animation: fade 0.7s ease 0.5s backwards;
   left: -43%;
   top: -12%;
   width: 186%;
@@ -860,7 +870,8 @@ button {
 }
 
 @media (max-width: 600px) {
-  .spot {
+  .spot,
+  .searchlight {
     width: 44vw;
   }
 

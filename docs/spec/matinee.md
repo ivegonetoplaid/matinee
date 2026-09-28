@@ -859,8 +859,12 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
   1. *Land.* The wall glides far across its floor in a random direction (1.4
      s; up to 760 px across and 620 px deep on desktop, 190 and 480 on a phone,
      inside the floor's spare edge so no edge shows), as if going to fetch one
-     poster. While the floor still coasts, 0.55 s into the glide, that poster
-     appears lying in the floor at the floor's angle (in the right two-thirds on
+     poster. A searchlight rides in with the floor: one soft pool of warm
+     light, with no beam and no source, wide and faint over the landing place
+     at first, gathering to small and bright as the floor comes to rest where
+     the poster will lift. Its centre travels with the floor and moves once. While the floor still
+     coasts, 0.55 s into the glide, the poster appears in that light, lying in
+     the floor at the floor's angle (in the right two-thirds on
      desktop, the upper half on a phone), blurred and dim, and moves with the
      floor until it stops. It peels away at once, brightening as the light
      finds it, pulls free toward the viewer in one movement, swings a little
@@ -881,7 +885,9 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
      the correction link. The line's words never change, so `Not that one`
      stays in one place from film to film. With reduced motion the lit poster
      appears in place, holds in the light for 2 s, and then it and the scroll
-     move without animation. Leaving the pick by a trail answer while the
+     move without animation, and the searchlight is there at once, in place.
+     The searchlight fades out in the first 0.4 s of the move to rest; where the poster has no
+     picture, it fades once the picture fails. Leaving the pick by a trail answer while the
      poster lifts ends the pick there.
 
   The pick fetches the lit poster's picture, and on a desktop the backdrop, as

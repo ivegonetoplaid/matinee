@@ -12,6 +12,9 @@ import { h, isPhone, prefersLessMotion, sentenceCase, wait } from "./dom.js";
 import { typeLine } from "./type.js";
 
 const APPEAR_MS = 550; // into the glide, while the floor still coasts
+const LIGHT_WIDE = 2.2; // the light's size while it travels, against its size where it lands
+const LIGHT_FAINT = 0.3; // the light's strength while it travels
+const LIGHT_FADE_MS = 400; // the light leaves early in the move to rest, before the backdrop rises over it
 const BEAT_MS = 400; // the poster holds in the light once the lift ends, the pick's one deliberate stop
 const STILL_HOLD_MS = 2000; // under reduced motion there is no lift; the poster holds in the light about as long
 const SETTLE_MS = 1300;
@@ -49,15 +52,49 @@ function picture(src, alt) {
   );
 }
 
-// The lit poster in its spotlight. `poster` is a picture that can already be drawn.
-function spotlight(poster) {
+// Where this pick lands on the screen, in px; the places take turns.
+function nextPlace() {
   const at = (isPhone() ? SPOTS.phone : SPOTS.desktop)[spotTurn % 4];
   spotTurn += 1;
+  return [at[0] * window.innerWidth, at[1] * window.innerHeight];
+}
+
+function placed(el, [x, y]) {
+  el.style.left = `${x}px`;
+  el.style.top = `${y}px`;
+  return el;
+}
+
+// The lit poster. `poster` is a picture that can already be drawn.
+function spotlight(poster, place) {
   poster.className = "spot-poster";
-  const spot = h("div", { class: "spot", "aria-hidden": "true" }, h("div", { class: "spot-glow" }), poster);
-  spot.style.left = `${at[0] * 100}vw`;
-  spot.style.top = `${at[1] * 100}vh`;
-  return spot;
+  return placed(h("div", { class: "spot", "aria-hidden": "true" }, poster), place);
+}
+
+// The searchlight: one soft pool of warm light that travels in with the floor, wide and faint, and
+// tightens to small and bright as the floor comes to rest where the poster lifts.
+function searchlight(place, glide) {
+  const pool = h("div", { class: "spot-glow" });
+  const light = placed(h("div", { class: "searchlight", "aria-hidden": "true" }, pool), place);
+  if (glide) {
+    const ease = glideEase();
+    // The pool tightens inside a box that keeps its size, so the pool stays centred on where it lands.
+    pool.animate([{ scale: LIGHT_WIDE }, { scale: 1 }], { duration: glide, easing: ease });
+    light.animate([{ opacity: LIGHT_FAINT }, { opacity: 1 }], { duration: glide, easing: ease });
+  }
+  return light;
+}
+
+function glideEase() {
+  return getComputedStyle(document.documentElement).getPropertyValue("--glide-ease");
+}
+
+// Fades the light out over `ms`, fastest at first, then removes it.
+function fadeAway(light, ms) {
+  if (prefersLessMotion()) return light.remove();
+  const fade = light.animate([{ opacity: 1 }, { opacity: 0 }], { duration: ms, easing: glideEase(), fill: "forwards" });
+  fade.onfinish = () => light.remove();
+  return undefined;
 }
 
 // The poster's resting box: as tall as the slot allows at 2:3, never wider than the slot.
@@ -154,37 +191,51 @@ async function showNoFilm(result, { line, aside }, actions) {
   );
 }
 
-// Keeps the spot over the same point of the floor until `until`, so the poster lying in the floor and
-// the gap it leaves move with the floor while it coasts to rest.
-function ride(spot, wall, until) {
-  const box = spot.getBoundingClientRect();
-  const point = wall.floorPoint(box.left + box.width / 2, box.top + box.height / 2);
-  const [x0, y0] = point();
-  const follow = () => {
+// Carries riders with the floor point that the glide brings to `place`, until `until`, so the light and
+// the poster lying in the floor travel with the floor and come to rest at `place` as it stops. Returns
+// the function that takes on a rider, placed at once where the point is.
+function ride(wall, place, until) {
+  const point = wall.arriving(...place);
+  const riders = new Set();
+  const carry = (el) => {
     const [x, y] = point();
-    spot.style.translate = `${x - x0}px ${y - y0}px`;
+    el.style.translate = `${x - place[0]}px ${y - place[1]}px`;
+  };
+  const follow = () => {
+    riders.forEach(carry);
     if (performance.now() < until) requestAnimationFrame(follow);
   };
   requestAnimationFrame(follow);
+  return (el) => {
+    riders.add(el);
+    carry(el);
+  };
 }
 
-// Land: the glide, and while the floor still coasts, the lit poster appears in it and starts its lift.
-// A poster whose picture arrives late appears late. Resolves to the spot, or to null when the poster
-// has no picture: then there is nothing to lift, and the pick goes straight to the film.
+// Land: the glide brings the searchlight in with the floor, and while the floor still coasts, the lit
+// poster appears in the light and starts its lift. A poster whose picture arrives late appears late.
+// Resolves to the spot and the light; the spot is null when the poster has no picture, and then there
+// is nothing to lift, the light fades, and the pick goes straight to the film.
 async function land(stage, wall, posterReady) {
   wall.root.classList.add("spotlit");
   await wall.ready();
+  const place = nextPlace();
   const glide = wall.travel();
   const glideEnd = performance.now() + glide;
+  const light = searchlight(place, glide);
+  stage.append(light);
+  const carry = glide ? ride(wall, place, glideEnd) : () => {};
+  carry(light);
   const [poster] = await Promise.all([posterReady, wait(Math.min(APPEAR_MS, glide))]);
   if (!poster) {
+    fadeAway(light, LIGHT_FADE_MS);
     await wait(glideEnd - performance.now());
-    return null;
+    return { spot: null, light: null };
   }
-  const spot = spotlight(poster);
+  const spot = spotlight(poster, place);
   stage.append(spot);
-  if (performance.now() < glideEnd) ride(spot, wall, glideEnd);
-  return spot;
+  if (performance.now() < glideEnd) carry(spot);
+  return { spot, light };
 }
 
 // Resolves once the poster has lifted into the light and held there for its beat. A lift cut short
@@ -217,7 +268,7 @@ function choices(info, film, result, actions) {
 
 // The resting page: the wall fades nearly away, the film's details rise, and the lit poster, where
 // there is one, moves to its place.
-async function rest({ stage, wall, frame, film, result, actions, info, backdrop, spot }) {
+async function rest({ stage, wall, frame, film, result, actions, info, backdrop, spot, light }) {
   wall.root.classList.add("revealed");
   stage.classList.add("revealed");
   const shown = feature(info, film, result, backdrop);
@@ -228,12 +279,19 @@ async function rest({ stage, wall, frame, film, result, actions, info, backdrop,
     const slot = h("div", { class: "poster-slot" });
     frame.left.append(slot);
     settle(spot, slot);
+    fadeAway(light, LIGHT_FADE_MS);
   }
   if (isPhone()) {
     stage.scrollTop = 0;
     await wait(PHONE_HOLD_MS);
     shown.scrollIntoView({ behavior: prefersLessMotion() ? "auto" : "smooth", block: "start" });
   }
+}
+
+// Takes the lit poster and the light off the page when the pick ends early.
+function leave(spot, light) {
+  spot?.remove();
+  light?.remove();
 }
 
 // Where the check turned the first pick away, the line says so before the new pick lands.
@@ -252,15 +310,15 @@ export async function showPick({ stage, wall, result, frame, actions }) {
   const cardRequest = get(`/api/film/${film.tmdb}`);
   const posterReady = picture(`/img/poster/${film.tmdb}/l`, `${film.title} poster`);
   const backdropReady = isPhone() ? null : picture(`/img/backdrop/${film.tmdb}/l`, `${film.title}, a still from the film`);
-  const spot = await land(stage, wall, posterReady);
+  const { spot, light } = await land(stage, wall, posterReady);
   const left = () => !frame.showing.isConnected; // the viewer took a way back out of the pick
-  if (left()) return spot?.remove();
+  if (left()) return leave(spot, light);
   await Promise.all([typeLine(line, HERE, ""), inTheLight(spot)]);
-  if (left()) return spot?.remove();
+  if (left()) return leave(spot, light);
   const [card, backdrop] = await Promise.all([cardRequest, backdropReady]);
   if (!card.ok) {
-    spot?.remove();
+    leave(spot, light);
     return actions.failed(card.data);
   }
-  return rest({ stage, wall, frame, film, result, actions, info: card.data, backdrop, spot });
+  return rest({ stage, wall, frame, film, result, actions, info: card.data, backdrop, spot, light });
 }
