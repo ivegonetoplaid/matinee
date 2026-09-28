@@ -22,6 +22,24 @@
   ],
   "trees": [
     {
+      "title": "Andrew Dice Clay: One Night with Dice",
+      "tmdb": 37876,
+      "tree": "standup",
+      "note": "a standup special the standup rule misses (no stand-up keyword); found in the comedy review, 2026-09-27"
+    },
+    {
+      "title": "Andrew Dice Clay: The Diceman Cometh",
+      "tmdb": 83709,
+      "tree": "standup",
+      "note": "a standup special the standup rule misses (no stand-up keyword); found in the comedy review, 2026-09-27"
+    },
+    {
+      "title": "Stavros Halkias: Fat Rascal",
+      "tmdb": 1200108,
+      "tree": "standup",
+      "note": "a standup special the standup rule misses (no stand-up keyword); found in the comedy review, 2026-09-27"
+    },
+    {
       "title": "The Batman",
       "tmdb": 414906,
       "tree": "action",

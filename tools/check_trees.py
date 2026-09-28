@@ -206,18 +206,21 @@ def tree_fixture_entries(table: FilmTable, report: Report) -> list[dict[str, Any
     for fname, tree in (("horror.json", "horror"), ("comedy.json", "comedy")):
         for f in json.loads((DATA / "fixtures" / fname).read_text())["films"]:
             tmdb = int(f["tmdb"]) if "tmdb" in f else tmdb_by_title(f["title"], table, report)
-            home = "standup" if "standup" in f.get("expect", []) else tree
             if tmdb is not None:
-                entries.append(
-                    {
-                        "title": f["title"],
-                        "tmdb": tmdb,
-                        "must_reach": [home],
-                        "flavour_in": {tree: f.get("expect", [])},
-                        "flavour_out": {tree: f.get("must_not", [])},
-                    }
-                )
+                entries.append(_tree_fixture(f, tree, tmdb))
     return entries
+
+
+def _tree_fixture(f: dict[str, Any], tree: str, tmdb: int) -> dict[str, Any]:
+    """One fixture-file film as an answer-key entry; standup is where it must reach, not a kind."""
+    expect = f.get("expect", [])
+    return {
+        "title": f["title"],
+        "tmdb": tmdb,
+        "must_reach": ["standup" if "standup" in expect else tree],
+        "flavour_in": {tree: [e for e in expect if e != "standup"]},
+        "flavour_out": {tree: f.get("must_not", [])},
+    }
 
 
 def check_fixtures(

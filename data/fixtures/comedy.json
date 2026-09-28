@@ -1,5 +1,5 @@
 {
-  "note": "Comedy fixture set. A register passes when the film is IN that register's pool, not when it is the top score. Overlap is expected: Airplane is both parody and broad. must_not names memberships that would be wrong, and those are the load-bearing half of this file.",
+  "note": "Comedy fixture set, mapped on 2026-09-27 from the old registers onto the labelled answers (parody, broad and absurd to slapstick; warm and dry to feel-good). Each expected answer and each must_not answer is checked against the labels; standup is a route, not an answer. The Truman Show and Knives Out left: both are labelled not comedy.",
   "genre": "Comedy",
   "acceptance_pairs": [
     [
@@ -22,118 +22,109 @@
     {
       "title": "Step Brothers",
       "expect": [
-        "broad"
+        "slapstick"
       ],
       "must_not": [
-        "dry",
-        "parody"
+        "feelgood"
       ]
     },
     {
       "title": "Dumb and Dumber",
       "expect": [
-        "broad"
+        "slapstick"
       ],
       "must_not": [
-        "dry",
-        "dark"
+        "dark",
+        "feelgood"
       ]
     },
     {
       "title": "Anchorman: The Legend of Ron Burgundy",
       "expect": [
-        "broad"
+        "slapstick"
       ],
       "must_not": [
-        "dry"
+        "feelgood"
       ]
     },
     {
       "title": "Tommy Boy",
       "expect": [
-        "broad"
+        "slapstick"
       ],
       "must_not": [
-        "dry"
+        "feelgood"
       ]
     },
     {
       "title": "Ace Ventura: Pet Detective",
       "expect": [
-        "broad"
+        "slapstick"
       ],
       "must_not": [
-        "dry"
+        "feelgood"
       ]
     },
     {
       "title": "Monty Python and the Holy Grail",
       "expect": [
-        "parody"
-      ],
-      "must_not": []
+        "slapstick"
+      ]
     },
     {
       "title": "Airplane!",
       "expect": [
-        "parody"
-      ],
-      "must_not": []
+        "slapstick"
+      ]
     },
     {
       "title": "Young Frankenstein",
       "expect": [
-        "parody"
-      ],
-      "must_not": []
+        "slapstick"
+      ]
     },
     {
       "title": "Spaceballs",
       "expect": [
-        "parody"
-      ],
-      "must_not": []
+        "slapstick"
+      ]
     },
     {
       "title": "Life of Brian",
       "expect": [
-        "parody"
-      ],
-      "must_not": []
+        "slapstick"
+      ]
     },
     {
       "title": "The Big Lebowski",
       "expect": [
-        "absurd"
-      ],
-      "must_not": [
-        "broad"
+        "slapstick"
       ]
     },
     {
       "title": "Groundhog Day",
       "expect": [
-        "warm"
+        "feelgood"
       ],
       "must_not": [
-        "broad",
-        "dark"
+        "dark",
+        "slapstick"
       ]
     },
     {
       "title": "Up",
       "expect": [
-        "warm"
+        "animated"
       ],
       "must_not": [
-        "broad",
-        "dark"
+        "dark",
+        "slapstick"
       ]
     },
     {
       "title": "Klaus",
       "expect": [
-        "warm"
+        "animated"
       ],
       "must_not": [
         "dark"
@@ -142,8 +133,7 @@
     {
       "title": "The School of Rock",
       "expect": [
-        "warm",
-        "teen"
+        "feelgood"
       ],
       "must_not": [
         "dark"
@@ -156,8 +146,8 @@
         "dark"
       ],
       "must_not": [
-        "broad",
-        "warm"
+        "feelgood",
+        "slapstick"
       ]
     },
     {
@@ -166,8 +156,8 @@
         "dark"
       ],
       "must_not": [
-        "broad",
-        "warm"
+        "feelgood",
+        "slapstick"
       ]
     },
     {
@@ -176,7 +166,7 @@
         "dark"
       ],
       "must_not": [
-        "broad"
+        "slapstick"
       ]
     },
     {
@@ -185,44 +175,25 @@
         "dark"
       ],
       "must_not": [
-        "warm"
-      ]
-    },
-    {
-      "title": "The Truman Show",
-      "expect": [
-        "absurd"
-      ],
-      "must_not": [
-        "broad",
-        "dark"
+        "feelgood"
       ]
     },
     {
       "title": "Office Space",
       "expect": [
-        "dry"
+        "feelgood"
       ],
       "must_not": [
-        "broad"
+        "slapstick"
       ]
     },
     {
       "title": "The Grand Budapest Hotel",
       "expect": [
-        "dry"
+        "feelgood"
       ],
       "must_not": [
-        "broad"
-      ]
-    },
-    {
-      "title": "Knives Out",
-      "expect": [
-        "dry"
-      ],
-      "must_not": [
-        "broad"
+        "slapstick"
       ]
     },
     {
@@ -231,8 +202,7 @@
         "teen"
       ],
       "must_not": [
-        "dry",
-        "warm"
+        "feelgood"
       ],
       "note": "teen 0.91. The register the operator called cringe turns out to be teen comedy for this film and not for the others in that group."
     },
@@ -240,9 +210,8 @@
       "title": "Horrible Bosses",
       "expect": [],
       "must_not": [
-        "dry",
-        "warm",
-        "broad"
+        "feelgood",
+        "slapstick"
       ],
       "note": "unreachable. The operator calls it cringe; the genome scores it teen 0.32, dark 0.41, nothing else above 0.35. Kept as a negative fixture: it must not land anywhere wrong."
     },
@@ -251,28 +220,22 @@
       "expect": [],
       "must_not": [
         "dark",
-        "dry"
+        "feelgood"
       ],
       "note": "unreachable, same as Horrible Bosses. teen 0.36, broad 0.47. Kept as a negative fixture."
     },
     {
       "title": "Tucker and Dale vs. Evil",
       "expect": [
-        "parody",
-        "dark",
-        "warm"
+        "horror"
       ],
-      "must_not": [],
       "note": "the crossed question was removed 2026-09-26 (comedy asks at most three questions); a horror-comedy's horror home is horror's \"make me laugh while I'm scared\""
     },
     {
       "title": "Shaun of the Dead",
       "expect": [
-        "parody",
-        "dry",
-        "dark"
+        "horror"
       ],
-      "must_not": [],
       "note": "the crossed question was removed 2026-09-26 (comedy asks at most three questions); a horror-comedy's horror home is horror's \"make me laugh while I'm scared\""
     },
     {
@@ -281,9 +244,8 @@
         "standup"
       ],
       "must_not": [
-        "broad",
-        "dry",
-        "warm"
+        "feelgood",
+        "slapstick"
       ]
     }
   ],

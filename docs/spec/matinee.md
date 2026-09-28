@@ -87,7 +87,7 @@ on. The engine carries the behaviour. Adding a genre means adding a file.
 | File | Pool | Questions, in order |
 |---|---|---|
 | `trees/horror.json` | horror | flavour (kinds read from the labels; section 2.3); gore (pictures); era (only above 40 films) |
-| `trees/comedy.json` | comedy | room (certificate); register; weight; crossed (only above 40 films) |
+| `trees/comedy.json` | comedy | room (certificate ceilings); kind (labels; animated by genre; section 2.3) |
 | `trees/action.json` | action | payoff; thrill |
 | `trees/thriller.json` | thriller | payoff |
 | `trees/drama.json` | drama | payoff |
@@ -139,11 +139,11 @@ keeps films with no known collection, so a film whose TMDB facts are unknown
 passes it too. A wrongly included film costs one `Not that one`; a wrongly
 excluded one is invisible. Two signals are the exceptions:
 
-- A certificate filter keeps only the certificates it lists. Only comedy's adult
-  room answer lists the empty certificate and the unrated ones.
-- A register rule matches nothing on a missing score. A comedy with no genome
-  entry reaches comedy's "I don't care. just make me laugh." answer and no
-  register answer.
+- A certificate filter keeps only the certificates it lists. Comedy's room
+  answers are ceilings: "children present" lists G, TV-G, PG, TV-PG, TV-Y and
+  TV-Y7; "grown-ups, technically" adds PG-13 and TV-14; "no witnesses" has no
+  certificate filter, so it alone offers films with no usable certificate.
+- A register rule matches nothing on a missing score.
 
 **Flavours.** A flavour matches a film when any of its keywords, genome tags
 (at the tree's genome threshold) or genres match. A flavour may also set
@@ -160,6 +160,13 @@ only the comedy answer. "anything scary" leaves comedy out, so it keeps every
 horror film except those labelled comedy and nothing else. A horror film
 labelled with no kind, or not yet labelled, is reached through "anything scary"
 and `Just pick one!`.
+
+Comedy's flavours are labelled except animated, which is every film carrying
+TMDB's Animation genre; its labels give an animated film no other kind, so an
+animated comedy sits only under animated. The labelled kinds are slapstick,
+feelgood, dark, action, horror, teen and romcom. Its horror kind holds the
+horror tree's comedy films, so both trees offer the same horror comedies, and
+each is labelled into both. "anything" has no filter.
 
 **Payoffs.** A payoff score is the mean genome relevance of its tags,
 standardised with the reference mean and standard deviation for that tree
@@ -182,8 +189,7 @@ film onto the pinned payoff and off every other.
   the next question is asked.
 - **Fewer than 12 films left:** no further question is asked, and the walk ends.
 - A question marked `only_if_pool_over` is asked only while the pool holds more
-  films than that number. Horror's era question and comedy's crossed question
-  use 40.
+  films than that number. Horror's era question uses 40.
 - A question marked `skip_if_topics` is never asked of a viewer who excludes any
   of those DoesTheDogDie topics. Its `treat_as` answer is applied to the whole
   starting pool instead, so every count and every shown answer already reflects
@@ -432,7 +438,7 @@ takes one of five forms:
 | Form | Places a film |
 |---|---|
 | `kids` | in the kids pool, in the named band |
-| `trees` | in a tree's pool (a film pinned to standup also leaves non-fiction) |
+| `trees` | in a tree's pool (a film pinned to standup also leaves comedy and non-fiction) |
 | `payoffs` | on one payoff of one tree, and off its others |
 | `scales` | in one band of one scale, and out of its others |
 | `flavours` | in one flavour of one tree (`member` true) or out of it (`member` false) |
@@ -1030,32 +1036,32 @@ symbol when one does not match.
 | `src/matinee/trees.py::parse_filter` | `src/matinee/trees.py:163` | 2026-09-26 |
 | `src/matinee/trees.py::Payoffs` | `src/matinee/trees.py:77` | 2026-09-26 |
 | `src/matinee/engine.py::STOP_UNDER` | `src/matinee/engine.py:50` | 2026-09-26 |
-| `src/matinee/engine.py::load_catalog` | `src/matinee/engine.py:405` | 2026-09-26 |
+| `src/matinee/engine.py::load_catalog` | `src/matinee/engine.py:407` | 2026-09-26 |
 | `src/matinee/engine.py::_first_option` (label required) | `src/matinee/engine.py:372` | 2026-09-26 |
-| `src/matinee/engine.py::first_question` | `src/matinee/engine.py:550` | 2026-09-26 |
-| `src/matinee/engine.py::base_pool` (order of corrections, exclusions, topic skip) | `src/matinee/engine.py:440` | 2026-09-26 |
-| `src/matinee/engine.py::walk` | `src/matinee/engine.py:499` | 2026-09-26 |
-| `src/matinee/engine.py::_gate` (`only_if_pool_over`, `skip_if_topics`) | `src/matinee/engine.py:482` | 2026-09-26 |
-| `src/matinee/engine.py::_shown` (empty answers hidden, `not_after`) | `src/matinee/engine.py:470` | 2026-09-26 |
+| `src/matinee/engine.py::first_question` | `src/matinee/engine.py:552` | 2026-09-26 |
+| `src/matinee/engine.py::base_pool` (order of corrections, exclusions, topic skip) | `src/matinee/engine.py:442` | 2026-09-26 |
+| `src/matinee/engine.py::walk` | `src/matinee/engine.py:501` | 2026-09-26 |
+| `src/matinee/engine.py::_gate` (`only_if_pool_over`, `skip_if_topics`) | `src/matinee/engine.py:484` | 2026-09-26 |
+| `src/matinee/engine.py::_shown` (empty answers hidden, `not_after`) | `src/matinee/engine.py:472` | 2026-09-26 |
 | `src/matinee/engine.py::_plain_mask` / `_range_mask` (unknown values pass) | `src/matinee/engine.py:313` | 2026-09-26 |
 | `src/matinee/engine.py::payoff_members` | `src/matinee/engine.py:218` | 2026-09-26 |
-| `src/matinee/engine.py::walk_ends` / `reachable` | `src/matinee/engine.py:524` | 2026-09-26 |
-| `data/trees/comedy.json` room question | `data/trees/comedy.json:17` | 2026-09-26 |
+| `src/matinee/engine.py::walk_ends` / `reachable` | `src/matinee/engine.py:526` | 2026-09-26 |
+| `data/trees/comedy.json` room question (ceilings) | `data/trees/comedy.json:7` | 2026-09-27 |
 | `data/modes/fall-asleep.json` | `data/modes/fall-asleep.json:3` | 2026-09-26 |
 
 ### The checker
 
 | Handle | Where | Verified |
 |---|---|---|
-| `tools/check_trees.py::main` | `tools/check_trees.py:373` | 2026-09-26 |
+| `tools/check_trees.py::main` | `tools/check_trees.py:376` | 2026-09-26 |
 | `tools/check_trees.py::SAMPLES` | `tools/check_trees.py:48` | 2026-09-26 |
-| `tools/check_trees.py::check_answer_coverage` | `tools/check_trees.py:292` | 2026-09-26 |
-| `tools/check_trees.py::check_same_answers` | `tools/check_trees.py:321` | 2026-09-26 |
-| `tools/check_trees.py::check_sample` | `tools/check_trees.py:339` | 2026-09-26 |
-| `tools/check_trees.py::check_pins_in_key` | `tools/check_trees.py:243` | 2026-09-26 |
-| `tools/check_trees.py::check_gore` | `tools/check_trees.py:281` | 2026-09-26 |
+| `tools/check_trees.py::check_answer_coverage` | `tools/check_trees.py:295` | 2026-09-26 |
+| `tools/check_trees.py::check_same_answers` | `tools/check_trees.py:324` | 2026-09-26 |
+| `tools/check_trees.py::check_sample` | `tools/check_trees.py:342` | 2026-09-26 |
+| `tools/check_trees.py::check_pins_in_key` | `tools/check_trees.py:246` | 2026-09-26 |
+| `tools/check_trees.py::check_gore` | `tools/check_trees.py:284` | 2026-09-26 |
 | `tools/check_trees.py::check_lists` | `tools/check_trees.py:136` | 2026-09-26 |
-| `tools/check_trees.py::check_data` | `tools/check_trees.py:363` | 2026-09-26 |
+| `tools/check_trees.py::check_data` | `tools/check_trees.py:366` | 2026-09-26 |
 | `data/answer_key.json` list tags | `data/answer_key.json:3` | 2026-09-26 |
 
 ### Pools and reference statistics
@@ -1088,7 +1094,7 @@ symbol when one does not match.
 | `data/trees/horror.json` gore scale | `data/trees/horror.json:38` | 2026-09-26 |
 | `data/trees/horror.json` gore question, `skip_if_topics`, `treat_as` | `data/trees/horror.json:134` | 2026-09-27 |
 | `data/trees/horror.json` labelled flavours (the kinds' rules) | `data/trees/horror.json:241` | 2026-09-27 |
-| `src/matinee/labels.py::load_labels` | `src/matinee/labels.py:62` | 2026-09-27 |
+| `src/matinee/labels.py::load_labels` | `src/matinee/labels.py:64` | 2026-09-27 |
 | `src/matinee/engine.py::_apply_labels` (out films leave only with another home) | `src/matinee/engine.py:387` | 2026-09-27 |
 | `src/matinee/pools.py::load_house` / `House` | `src/matinee/pools.py:110` | 2026-09-26 |
 | `src/matinee/engine.py::house_flavour` | `src/matinee/engine.py:177` | 2026-09-26 |

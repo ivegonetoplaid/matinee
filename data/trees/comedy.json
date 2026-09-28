@@ -1,27 +1,16 @@
 {
   "pool": "comedy",
   "genre": "Comedy",
-  "opening": "comedy. good call. let's narrow it down.",
-  "scores": {
-    "weight": [
-      "drama",
-      "dramatic",
-      "emotional",
-      "moving",
-      "touching",
-      "harsh"
-    ]
-  },
+  "opening": "good. I was afraid we'd have to take this seriously.",
   "questions": [
     {
       "id": "room",
-      "ask": "first, who's watching this with you?",
-      "presentation": "the room empties as you go right: family on the sofa, then two adults, then one person alone with the curtains shut",
-      "note": "the certificate. 99% coverage and the evenest split in the whole dataset: 558 family, 420 teens up, 463 adults. asked as who is in the room, never as how rude the film is. A film with no usable certificate (none, NR, Not Rated, Unrated, Approved) is offered only to the room with nobody to explain to, because an unknown certificate must never reach the kids.",
+      "ask": "how respectable are we pretending to be?",
+      "note": "Each answer is a ceiling on the certificate: it holds its certificates and every tamer one. A film with no usable certificate (none, NR, Not Rated, Unrated, Approved) reaches only the last answer, because an unknown certificate must never reach children.",
       "options": [
         {
-          "say": "the kids are up. keep it clean.",
-          "reply": "family viewing. understood.",
+          "say": "children present. behave yourself.",
+          "reply": "right. we'll keep the naughty bits offstage.",
           "filter": {
             "certificate_in": [
               "G",
@@ -34,329 +23,137 @@
           }
         },
         {
-          "say": "just adults, but nothing outrageous.",
-          "reply": "grown-ups, but behaving.",
+          "say": "grown-ups, technically. a little misbehavior is fine.",
+          "reply": "excellent. nothing that requires an inquiry.",
           "filter": {
             "certificate_in": [
+              "G",
+              "TV-G",
+              "PG",
+              "TV-PG",
+              "TV-Y",
+              "TV-Y7",
               "PG-13",
               "TV-14"
             ]
           }
         },
         {
-          "say": "nobody I have to explain myself to.",
-          "reply": "excellent. no brakes then.",
-          "filter": {
-            "certificate_in": [
-              "R",
-              "NC-17",
-              "TV-MA",
-              "NR",
-              "Not Rated",
-              "Unrated",
-              "Approved",
-              ""
-            ]
-          }
-        }
-      ]
-    },
-    {
-      "id": "register",
-      "ask": "so what kind of funny are we talking?",
-      "note": "genome register dimensions. each rule is a CONTRAST between dimensions, not a single high score: Step Brothers and Holy Grail both score about 0.6 on broad, and what separates them is that Holy Grail is also dry 0.59 and parodic 0.70 while Step Brothers is 0.14 and 0.27.",
-      "options": [
-        {
-          "say": "big dumb chaos. I want to switch my brain off.",
-          "reply": "no notes. chaos it is.",
-          "filter": {
-            "register": "broad"
-          }
-        },
-        {
-          "say": "send something up. I want it taking the mickey.",
-          "reply": "a film with a target. good.",
-          "filter": {
-            "register": "parody"
-          }
-        },
-        {
-          "say": "make reality stop making sense.",
-          "reply": "oh, the strange stuff. my favourite.",
-          "filter": {
-            "register": "absurd"
-          }
-        },
-        {
-          "say": "keep it dry. I'll catch the joke myself.",
-          "reply": "understated. no laugh track.",
-          "filter": {
-            "register": "dry"
-          }
-        },
-        {
-          "say": "let me laugh at things I probably shouldn't.",
-          "reply": "I won't tell anyone.",
-          "filter": {
-            "register": "dark"
-          }
-        },
-        {
-          "say": "I want to feel better when it's over.",
-          "reply": "something kind, then.",
-          "filter": {
-            "register": "warm"
-          }
-        },
-        {
-          "say": "something the kids will actually sit through.",
-          "reply": "talking animals and a happy ending. on it.",
-          "filter": {
-            "register": "family"
-          },
-          "not_after": {
-            "room": [
-              1,
-              2
-            ]
-          },
-          "note": "offered only after \"the kids are up\": the other two rooms have said there are no kids (2026-09-26)"
-        },
-        {
-          "say": "teenage disaster energy.",
-          "reply": "nothing but bad decisions. perfect.",
-          "filter": {
-            "register": "teen"
-          }
-        },
-        {
-          "say": "I don't care. just make me laugh.",
-          "reply": "a person of simple tastes.",
+          "say": "no witnesses. anything goes.",
+          "reply": "splendid. nothing's off the table.",
           "filter": {}
         }
       ]
     },
     {
-      "id": "weight",
-      "ask": "light and silly, or can it tug at you a bit?",
-      "note": "Decision 42: the weight dial, fixed at 0.22 (heavy above). A comedy with no genome score passes all three answers. The replies were drafted in the build and approved by the operator on 2026-09-25. Reworded 2026-09-26: the question asks how heavy the comedy may be; the no-filter answer is said plainly as \"either's fine.\" and stands last.",
+      "id": "kind",
+      "ask": "so, what manner of foolishness are we watching?",
+      "note": "Each answer holds the films the labels place in it (the labels file in Matinee's state directory, one rule per answer quoting its words). Animated comedies are their own answer by TMDB's Animation genre and are labelled with no other kind. Horror comedy is the horror tree's comedy kind. A film no answer clearly fits, or not yet labelled, is reached through \"anything\" and \"Just pick one!\".",
       "options": [
         {
-          "say": "light and silly, please.",
-          "reply": "Light and silly. Got it.",
+          "say": "slapstick, spoofs, and complete nonsense.",
+          "reply": "excellent. dignity will not be required.",
           "filter": {
-            "score_at_most": {
-              "weight": 0.22
-            }
+            "flavour": "slapstick"
           }
         },
         {
-          "say": "I'd like some heart in it.",
-          "reply": "Laughs with a lump in the throat. Nice.",
+          "say": "something sweet. a happy ending and a few laughs getting there.",
+          "reply": "lovely. tissues optional, smiles mandatory.",
           "filter": {
-            "score_above": {
-              "weight": 0.22
-            }
+            "flavour": "feelgood"
           }
         },
         {
-          "say": "either's fine.",
-          "reply": "Either way, then.",
+          "say": "cartoons. drawn, animated, and gloriously unhinged.",
+          "reply": "excellent. reality is overrated.",
+          "filter": {
+            "flavour": "animated"
+          }
+        },
+        {
+          "say": "dark humor and terrible ideas. let me laugh at things I probably shouldn't.",
+          "reply": "I won't tell anyone.",
+          "filter": {
+            "flavour": "dark"
+          }
+        },
+        {
+          "say": "wisecracks, explosions, and spectacularly bad decisions.",
+          "reply": "excellent. subtlety can stay home.",
+          "filter": {
+            "flavour": "action"
+          }
+        },
+        {
+          "say": "blood, monsters, and punchlines. make the nightmare funny.",
+          "reply": "excellent. let's find something that kills.",
+          "filter": {
+            "flavour": "horror"
+          }
+        },
+        {
+          "say": "awkward adolescence, bad influences, and absolutely no supervision.",
+          "reply": "nothing but bad decisions. perfect.",
+          "filter": {
+            "flavour": "teen"
+          }
+        },
+        {
+          "say": "love, longing, and a frankly irresponsible amount of charm.",
+          "reply": "wonderful. let's get these idiots together.",
+          "filter": {
+            "flavour": "romcom"
+          }
+        },
+        {
+          "say": "anything. surprise me.",
+          "reply": "very well. I shall fetch the wheel of nonsense.",
           "filter": {}
         }
       ]
     }
   ],
-  "registers": {
-    "_note": "Each dimension is the mean genome relevance of its tags. A register is a rule over dimensions.",
-    "dimensions": {
-      "broad": [
-        "dumb",
-        "stupid",
-        "silly",
-        "goofy",
-        "slapstick",
-        "ridiculous",
-        "over the top"
-      ],
-      "parody": [
-        "parody",
-        "spoof",
-        "satire",
-        "farce",
-        "screwball"
-      ],
-      "absurd": [
-        "absurd",
-        "surreal",
-        "quirky",
-        "whimsical"
-      ],
-      "dry": [
-        "witty",
-        "clever",
-        "intelligent",
-        "cerebral",
-        "deadpan",
-        "understated",
-        "talky"
-      ],
-      "dark": [
-        "dark humor",
-        "black comedy",
-        "cynical",
-        "irreverent",
-        "sarcasm"
-      ],
-      "warm": [
-        "feel-good",
-        "heartwarming",
-        "sweet",
-        "light",
-        "touching"
-      ],
-      "teen": [
-        "crude humor",
-        "coming of age",
-        "teen"
-      ],
-      "family": [
-        "animation",
-        "cartoon",
-        "animated",
-        "talking animals",
-        "kids and family",
-        "kids",
-        "computer animation",
-        "children",
-        "cute",
-        "family",
-        "disney",
-        "pixar"
-      ]
-    },
-    "rules": {
-      "broad": {
-        "all": [
-          [
-            "broad",
-            ">=",
-            0.45
-          ],
-          [
-            "dry",
-            "<",
-            0.45
-          ]
-        ]
-      },
-      "parody": {
-        "all": [
-          [
-            "parody",
-            ">=",
-            0.5
-          ]
-        ]
-      },
-      "absurd": {
-        "all": [
-          [
-            "absurd",
-            ">=",
-            0.5
-          ],
-          [
-            "broad",
-            "<",
-            0.5
-          ]
-        ]
-      },
-      "dry": {
-        "all": [
-          [
-            "dry",
-            ">=",
-            0.44
-          ],
-          [
-            "broad",
-            "<",
-            0.45
-          ]
-        ]
-      },
-      "dark": {
-        "all": [
-          [
-            "dark",
-            ">=",
-            0.45
-          ],
-          [
-            "warm",
-            "<",
-            0.45
-          ]
-        ]
-      },
-      "warm": {
-        "all": [
-          [
-            "warm",
-            ">=",
-            0.4
-          ],
-          [
-            "dark",
-            "<",
-            0.55
-          ]
-        ]
-      },
-      "teen": {
-        "all": [
-          [
-            "teen",
-            ">=",
-            0.55
-          ]
-        ]
-      },
-      "family": {
-        "any": [
-          [
-            "family",
-            ">=",
-            0.5
-          ],
-          {
-            "all": [
-              [
-                "family",
-                ">=",
-                0.33
-              ],
-              [
-                "dark",
-                "<",
-                0.3
-              ]
-            ]
-          }
-        ]
-      }
-    },
-    "_family_note": "Family animation is its own mode, not a shade of adult comedy. It was missed entirely in the first build: 56 per cent of the 456 unregistered comedies were Family films and 32 per cent Animation, against 18 and 8 per cent of the registered ones. Their profiles are flat on every adult dimension (Sing 2 peaks at 0.37, Abominable at 0.22) while scoring animation 0.82, cartoon 0.72, talking animals 0.60. The darkness contrast is what does the operator's original Paw Patrol against Sausage Party test: family alone scores Sausage Party 0.38 and The Super Mario Bros. Movie 0.35, nearly identical, and dark separates them at 0.35 against 0.15. The 0.50 shortcut exists so Shrek, family 0.86 but dark 0.39 from its own snark, is not lost."
-  },
   "excluded": {
     "standup": {
       "rule": "TMDB keyword 'stand-up comedy' (id 9716)",
       "note": "14 films. Excluded from film results and reachable on its own. A runtime check guards against a feature film about a comedian, such as Man on the Moon at 118 minutes against 57 to 90 for specials."
     }
   },
-  "unreachable": {
-    "cringe": "Comedy's slow burn. No genome tag carries it. See data/fixtures/comedy.json."
+  "flavours": {
+    "slapstick": {
+      "labelled": true,
+      "note": "broad, silly, gag-a-minute: slapstick, spoofs and parodies, absurd nonsense, stoner and gross-out comedy."
+    },
+    "feelgood": {
+      "labelled": true,
+      "note": "warm, gentle comedies where the heart is the point: family, cosy and charming, and dry, quirky ones."
+    },
+    "animated": {
+      "genres_any": [
+        "Animation"
+      ],
+      "note": "every animated comedy, by TMDB's Animation genre: a fact about the film, not a label."
+    },
+    "dark": {
+      "labelled": true,
+      "note": "death, crime, cruelty or disaster played for laughs; the joke is that it is wrong."
+    },
+    "action": {
+      "labelled": true,
+      "note": "the action drives the plot and the jokes carry the film: buddy cops, heists gone wrong, spy and chase comedies."
+    },
+    "horror": {
+      "labelled": true,
+      "note": "horror comedies: the horror tree's comedy kind, so both trees offer the same films."
+    },
+    "teen": {
+      "labelled": true,
+      "note": "comedies about teenagers or college students, their schools, parties and growing up."
+    },
+    "romcom": {
+      "labelled": true,
+      "note": "falling in love is the plot, and it is played for laughs."
+    }
   }
 }
