@@ -44,7 +44,6 @@ class Filter:
     genres_none: frozenset[str] | None = None
     flavour: str | None = None
     flavour_none: str | None = None
-    register: str | None = None
     payoff: str | None = None
     bands: Bands | None = None
     score_at_most: Mapping[str, float] = field(default_factory=dict)
@@ -101,8 +100,6 @@ class Tree:
     scores: Mapping[str, tuple[str, ...]]
     flavours: Mapping[str, Mapping[str, Any]]
     genome_threshold: float
-    registers: Mapping[str, Any]
-    register_dimensions: Mapping[str, tuple[str, ...]]
     payoffs: Payoffs | None
     scales: Mapping[str, Mapping[str, Any]]
 
@@ -121,7 +118,6 @@ FILTER_KEYS = {
     "genres_none",
     "flavour",
     "flavour_none",
-    "register",
     "payoff",
     "bands",
     "score_at_most",
@@ -182,7 +178,6 @@ def parse_filter(raw: Mapping[str, Any], what: str) -> Filter:
         genres_none=_opt_set(raw, "genres_none"),
         flavour=raw.get("flavour"),
         flavour_none=raw.get("flavour_none"),
-        register=raw.get("register"),
         payoff=raw.get("payoff"),
         bands=None if bands is None else Bands(str(bands["scale"]), frozenset(bands["in"])),
         score_at_most={k: float(v) for k, v in raw.get("score_at_most", {}).items()},
@@ -270,7 +265,6 @@ def parse_tree(tree: str, doc: Mapping[str, Any]) -> Tree:
         if key not in doc:
             raise TreeError(f"tree '{tree}' has no '{key}'")
     _check_flavours(tree, doc.get("flavours", {}), doc.get("scores", {}))
-    registers = doc.get("registers", {})
     return Tree(
         id=tree,
         pool=str(doc["pool"]),
@@ -279,8 +273,6 @@ def parse_tree(tree: str, doc: Mapping[str, Any]) -> Tree:
         scores={name: tuple(tags) for name, tags in doc.get("scores", {}).items()},
         flavours=doc.get("flavours", {}),
         genome_threshold=float(doc.get("genome", {}).get("threshold", 0.6)),
-        registers=registers.get("rules", {}),
-        register_dimensions={name: tuple(tags) for name, tags in registers.get("dimensions", {}).items()},
         payoffs=_payoffs(doc, tree),
         scales=doc.get("scales", {}),
     )

@@ -195,26 +195,6 @@ def _in_other_flavour(cat: Catalog, tree: Tree, name: str) -> Mask:
     return hit
 
 
-OPS = {">=": np.greater_equal, ">": np.greater, "<": np.less, "<=": np.less_equal}
-
-
-def _rule(rule: Any, dims: Mapping[str, npt.NDArray[np.float32]]) -> Mask:
-    """A register rule: ["dim", op, value], {"all": [...]} or {"any": [...]}. An unknown score matches nothing."""
-    if isinstance(rule, list):
-        name, op, value = rule
-        return np.asarray(OPS[op](dims[name], float(value)), dtype=bool)
-    if "all" in rule:
-        return np.array(np.logical_and.reduce([_rule(r, dims) for r in rule["all"]]), dtype=bool)
-    return np.array(np.logical_or.reduce([_rule(r, dims) for r in rule["any"]]), dtype=bool)
-
-
-def _register(table: FilmTable, tree: Tree, name: str) -> Mask:
-    if name not in tree.registers:
-        raise TreeError(f"tree '{tree.id}' has no register '{name}'")
-    dims = {d: table.mean_of(tags).to_numpy() for d, tags in tree.register_dimensions.items()}
-    return _rule(tree.registers[name], dims)
-
-
 def payoff_members(cat: Catalog, tree: Tree) -> pd.DataFrame:
     """One boolean column per payoff answer of `tree`: whether each film belongs to it."""
     spec = tree.payoffs
@@ -333,8 +313,6 @@ def _scored_mask(cat: Catalog, tree: Tree, f: Filter) -> Mask:
         mask &= house_flavour(cat, tree, f.flavour)
     if f.flavour_none is not None:
         mask &= ~house_flavour(cat, tree, f.flavour_none) | _in_other_flavour(cat, tree, f.flavour_none)
-    if f.register is not None:
-        mask &= _register(table, tree, f.register)
     if f.payoff is not None:
         members = payoff_members(cat, tree)
         if f.payoff not in members.columns:

@@ -100,13 +100,6 @@ TREE: dict[str, Any] = {
     },
     "flavours": {"heroic": {"keywords_any": ["superhero"], "genome_any": ["hero"], "genres_any": ["Musical"]}},
     "genome": {"threshold": 0.6},
-    "registers": {
-        "dimensions": {"a": ["p_fast"], "b": ["p_slow"]},
-        "rules": {
-            "both": {"all": [["a", ">=", 0.5], ["b", ">=", 0.5]]},
-            "either": {"any": [["a", ">=", 0.85], ["b", ">=", 0.85]]},
-        },
-    },
     "payoffs": {"fast": ["p_fast"], "slow": ["p_slow"]},
     "payoff_rule": {
         "overlap": 1.0,
@@ -332,12 +325,6 @@ def test_misspelt_filter_refuses_to_load(tmp_path: Path) -> None:
 def mask_of(cat: Catalog, **kw: Any) -> list[int]:
     films = option_mask(cat, cat.trees["west"], Option("x", "", Filter(**kw)))
     return [int(t) for t in cat.ids[films]]
-
-
-def test_register_rules(cat: Catalog) -> None:
-    assert mask_of(cat, register="both") == [13, 14]
-    either = mask_of(cat, register="either")
-    assert 1 in either and 14 in either and 13 not in either and 11 not in either
 
 
 def test_metadata_filters(cat: Catalog) -> None:

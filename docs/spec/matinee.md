@@ -126,7 +126,6 @@ these signals, and no others:
 | `genres_none` | Films carrying none of the listed genres |
 | `flavour` | Films in a named flavour the tree defines: matched by keyword, genome or genre, or read from the labels |
 | `flavour_none` | Films outside a named flavour, plus films also in another flavour of the tree (house pins included) |
-| `register` | Films a named register rule (a comparison of genome dimensions) accepts |
 | `payoff` | Films placed on a named payoff (see below) |
 | `bands` | Films in any of the listed bands of a named scale (see section 4) |
 | `score_at_most`, `score_above` | Films whose named score is at or below, or above, a value |
@@ -137,13 +136,12 @@ these signals, and no others:
 collection or score is unknown passes a filter on it. A `sequel: false` filter
 keeps films with no known collection, so a film whose TMDB facts are unknown
 passes it too. A wrongly included film costs one `Not that one`; a wrongly
-excluded one is invisible. Two signals are the exceptions:
+excluded one is invisible. One signal is the exception:
 
 - A certificate filter keeps only the certificates it lists. Comedy's room
   answers are ceilings: "children present" lists G, TV-G, PG, TV-PG, TV-Y and
   TV-Y7; "grown-ups, technically" adds PG-13 and TV-14; "no witnesses" has no
   certificate filter, so it alone offers films with no usable certificate.
-- A register rule matches nothing on a missing score.
 
 **Flavours.** A flavour matches a film when any of its keywords, genome tags
 (at the tree's genome threshold) or genres match. A flavour may also set
@@ -948,7 +946,6 @@ Not part of this build, and not to be added until asked:
 
 - offering films the library does not hold (TMDB mode);
 - a checker run over every film in the genome;
-- a register model scoring comedies the genome does not cover;
 - a CLI or HTTP API for anyone but Matinee's own page;
 - `Watch this`, or any hand-off to a player;
 - thumbs up and thumbs down;
@@ -1030,22 +1027,22 @@ symbol when one does not match.
 | Handle | Where | Verified |
 |---|---|---|
 | `data/first_question.json` (lines, answers, labels) | `data/first_question.json:3` | 2026-09-26 |
-| `src/matinee/trees.py::parse_tree` | `src/matinee/trees.py:268` | 2026-09-26 |
-| `src/matinee/trees.py::load_trees` (duplicate names refused) | `src/matinee/trees.py:289` | 2026-09-26 |
-| `src/matinee/trees.py::FILTER_KEYS` / `OPTION_KEYS` / `QUESTION_KEYS` | `src/matinee/trees.py:110` | 2026-09-26 |
-| `src/matinee/trees.py::parse_filter` | `src/matinee/trees.py:163` | 2026-09-26 |
-| `src/matinee/trees.py::Payoffs` | `src/matinee/trees.py:77` | 2026-09-26 |
+| `src/matinee/trees.py::parse_tree` | `src/matinee/trees.py:263` | 2026-09-26 |
+| `src/matinee/trees.py::load_trees` (duplicate names refused) | `src/matinee/trees.py:281` | 2026-09-26 |
+| `src/matinee/trees.py::FILTER_KEYS` / `OPTION_KEYS` / `QUESTION_KEYS` | `src/matinee/trees.py:107` | 2026-09-26 |
+| `src/matinee/trees.py::parse_filter` | `src/matinee/trees.py:159` | 2026-09-26 |
+| `src/matinee/trees.py::Payoffs` | `src/matinee/trees.py:76` | 2026-09-26 |
 | `src/matinee/engine.py::STOP_UNDER` | `src/matinee/engine.py:50` | 2026-09-26 |
-| `src/matinee/engine.py::load_catalog` | `src/matinee/engine.py:407` | 2026-09-26 |
-| `src/matinee/engine.py::_first_option` (label required) | `src/matinee/engine.py:372` | 2026-09-26 |
-| `src/matinee/engine.py::first_question` | `src/matinee/engine.py:552` | 2026-09-26 |
-| `src/matinee/engine.py::base_pool` (order of corrections, exclusions, topic skip) | `src/matinee/engine.py:442` | 2026-09-26 |
-| `src/matinee/engine.py::walk` | `src/matinee/engine.py:501` | 2026-09-26 |
-| `src/matinee/engine.py::_gate` (`only_if_pool_over`, `skip_if_topics`) | `src/matinee/engine.py:484` | 2026-09-26 |
-| `src/matinee/engine.py::_shown` (empty answers hidden, `not_after`) | `src/matinee/engine.py:472` | 2026-09-26 |
-| `src/matinee/engine.py::_plain_mask` / `_range_mask` (unknown values pass) | `src/matinee/engine.py:313` | 2026-09-26 |
-| `src/matinee/engine.py::payoff_members` | `src/matinee/engine.py:218` | 2026-09-26 |
-| `src/matinee/engine.py::walk_ends` / `reachable` | `src/matinee/engine.py:526` | 2026-09-26 |
+| `src/matinee/engine.py::load_catalog` | `src/matinee/engine.py:385` | 2026-09-26 |
+| `src/matinee/engine.py::_first_option` (label required) | `src/matinee/engine.py:350` | 2026-09-26 |
+| `src/matinee/engine.py::first_question` | `src/matinee/engine.py:530` | 2026-09-26 |
+| `src/matinee/engine.py::base_pool` (order of corrections, exclusions, topic skip) | `src/matinee/engine.py:420` | 2026-09-26 |
+| `src/matinee/engine.py::walk` | `src/matinee/engine.py:479` | 2026-09-26 |
+| `src/matinee/engine.py::_gate` (`only_if_pool_over`, `skip_if_topics`) | `src/matinee/engine.py:462` | 2026-09-26 |
+| `src/matinee/engine.py::_shown` (empty answers hidden, `not_after`) | `src/matinee/engine.py:450` | 2026-09-26 |
+| `src/matinee/engine.py::_plain_mask` / `_range_mask` (unknown values pass) | `src/matinee/engine.py:293` | 2026-09-26 |
+| `src/matinee/engine.py::payoff_members` | `src/matinee/engine.py:198` | 2026-09-26 |
+| `src/matinee/engine.py::walk_ends` / `reachable` | `src/matinee/engine.py:504` | 2026-09-26 |
 | `data/trees/comedy.json` room question (ceilings) | `data/trees/comedy.json:7` | 2026-09-27 |
 | `data/modes/fall-asleep.json` | `data/modes/fall-asleep.json:3` | 2026-09-26 |
 
@@ -1090,12 +1087,12 @@ symbol when one does not match.
 | `src/matinee/scales.py::film_scores` (bonus only with a genome entry) | `src/matinee/scales.py:65` | 2026-09-26 |
 | `src/matinee/scales.py::band_index` | `src/matinee/scales.py:75` | 2026-09-26 |
 | `src/matinee/scales.py::membership` (unscored bands, pins) | `src/matinee/scales.py:81` | 2026-09-26 |
-| `src/matinee/engine.py::scale_members` | `src/matinee/engine.py:253` | 2026-09-26 |
+| `src/matinee/engine.py::scale_members` | `src/matinee/engine.py:233` | 2026-09-26 |
 | `data/trees/horror.json` gore scale | `data/trees/horror.json:38` | 2026-09-26 |
 | `data/trees/horror.json` gore question, `skip_if_topics`, `treat_as` | `data/trees/horror.json:134` | 2026-09-27 |
 | `data/trees/horror.json` labelled flavours (the kinds' rules) | `data/trees/horror.json:241` | 2026-09-27 |
 | `src/matinee/labels.py::load_labels` | `src/matinee/labels.py:64` | 2026-09-27 |
-| `src/matinee/engine.py::_apply_labels` (out films leave only with another home) | `src/matinee/engine.py:387` | 2026-09-27 |
+| `src/matinee/engine.py::_apply_labels` (out films leave only with another home) | `src/matinee/engine.py:365` | 2026-09-27 |
 | `src/matinee/pools.py::load_house` / `House` | `src/matinee/pools.py:110` | 2026-09-26 |
 | `src/matinee/engine.py::house_flavour` | `src/matinee/engine.py:177` | 2026-09-26 |
 | `data/house_overrides.json` scale pins | `data/house_overrides.json:94` | 2026-09-26 |
@@ -1146,7 +1143,7 @@ symbol when one does not match.
 | Handle | Where | Verified |
 |---|---|---|
 | `data/exclusions.json` | `data/exclusions.json:4` | 2026-09-26 |
-| `src/matinee/engine.py::_exclusion` | `src/matinee/engine.py:360` | 2026-09-26 |
+| `src/matinee/engine.py::_exclusion` | `src/matinee/engine.py:338` | 2026-09-26 |
 | `src/matinee/web/viewing.py::check_exclusions` | `src/matinee/web/viewing.py:186` | 2026-09-26 |
 | `src/matinee/dtdd.py::Dtdd.get` / `_pace` (`BURST`, `RATE_PER_S`) | `src/matinee/dtdd.py:106` | 2026-09-26 |
 | `src/matinee/dtdd.py::Dtdd._check_holds` / `_refused` / `_note_remaining` (`REQUESTS_PER_HOUR`, `MONTH_RESERVE`, `RESERVE_HOLD_S`, `BACKOFF_S`) | `src/matinee/dtdd.py:123` | 2026-09-26 |
@@ -1156,7 +1153,7 @@ symbol when one does not match.
 | `src/matinee/pick.py::look_up` (`LOOKUP_S`) | `src/matinee/pick.py:142` | 2026-09-26 |
 | `src/matinee/pick.py::DeviceCap` (`LOOKUPS_PER_HOUR`) | `src/matinee/pick.py:178` | 2026-09-26 |
 | `src/matinee/pick.py::candidates` | `src/matinee/pick.py:211` | 2026-09-26 |
-| `src/matinee/engine.py::gentlest` | `src/matinee/engine.py:272` | 2026-09-26 |
+| `src/matinee/engine.py::gentlest` | `src/matinee/engine.py:252` | 2026-09-26 |
 | `src/matinee/pick.py::Picker.pick` (`PICK_TRIES`) | `src/matinee/pick.py:234` | 2026-09-26 |
 | `src/matinee/web/viewing.py::device_id` / `DEVICE_COOKIE` | `src/matinee/web/viewing.py:226` | 2026-09-26 |
 | `src/matinee/web/viewing.py::SWAP_LINE` / `UNCHECKED_LINES` / `EXHAUSTED` / `TIRED` | `src/matinee/web/viewing.py:202` | 2026-09-26 |
