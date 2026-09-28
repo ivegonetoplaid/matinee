@@ -66,20 +66,22 @@ function fit(slot) {
   return { width: height / POSTER_RATIO, height };
 }
 
-// Moves the lit poster into `slot` in the page's flow: the same picture, carried from where it
-// landed on the wall to where it rests. The slot is placed by the caller before this runs.
-function settle(spot, slot, film) {
-  const from = spot.querySelector(".spot-poster").getBoundingClientRect();
-  const poster = h("img", { class: "slot-poster", src: `/img/poster/${film.tmdb}/l`, alt: `${film.title} poster` });
-  poster.addEventListener("error", () => slot.remove());
+// Moves the lit poster into `slot` in the page's flow: the same picture, carried from where it hung in
+// the light to where it rests. The slot is placed by the caller before this runs. The move starts from
+// the lit poster's own box, measured from the same corner it scales from, so it never jumps.
+function settle(spot, slot) {
+  const poster = spot.querySelector(".spot-poster");
+  const from = poster.getBoundingClientRect();
   const size = fit(slot);
+  poster.className = "slot-poster";
   poster.style.width = `${size.width}px`;
   poster.style.height = `${size.height}px`;
   slot.append(poster);
   spot.remove();
   const to = poster.getBoundingClientRect();
   if (prefersLessMotion() || !to.width) return;
-  const shift = `translate(${from.left - to.left}px, ${from.top - to.top}px) scale(${from.width / to.width})`;
+  const shift = `translate(${from.left - to.left}px, ${from.top - to.top}px) scale(${from.width / to.width}, ${from.height / to.height})`;
+  poster.style.transformOrigin = "top left";
   poster.animate([{ transform: shift }, { transform: "none" }], {
     duration: SETTLE_MS,
     easing: "cubic-bezier(0.2, 0.7, 0.2, 1)",
@@ -206,7 +208,7 @@ export async function showPick({ stage, wall, result, frame, actions }) {
   if (spot) {
     const slot = h("div", { class: "poster-slot" });
     frame.left.append(slot);
-    settle(spot, slot, film);
+    settle(spot, slot);
   }
   if (isPhone()) {
     stage.scrollTop = 0;
