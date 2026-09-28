@@ -5,6 +5,7 @@
 // whose picture has not loaded is a dark cell.
 
 import { isPhone } from "./dom.js";
+import { GOLD, posterGlow } from "./glow.js";
 import { SETTLE_EASE, SETTLE_S, bezier, centreOf, hopCell, hopCount, placeLanding, planHunt, settledCamera } from "./hunt-plan.js";
 import {
   ACROSS,
@@ -35,11 +36,31 @@ const GROW_MS = 750;
 const GROW_EASE = bezier(0.2, 0.8, 0.2, 1);
 const WALL_STRENGTH = 0.35; // the wall's posters, as the stylesheet's --tile holds them
 const AWAY_STRENGTH = 0.12; // the rest of the wall once the pick has landed, and behind the resting page
+const GLOW_BLUR = 0.25; // the glow's blur, as a share of the poster's width once grown
+const GLOW_SPREAD = 0.033; // the glow's spread, likewise
+const GLOW_ALPHA = 0.35; // the glow's strength once grown
+const GLOW_SAMPLE = [32, 48]; // the poster is read at this size for its colour
 const STEP_BACK_MS = 350; // the wall dimming for a resting page that has no poster to bring forward
 const LANDED_DRAW_MS = 1000; // under reduced motion, the jump waits at most this long for the landed picture
 const NONE_PLACED = new Map();
 
 const lessMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+// The glow colour of the picture `img` draws. A picture whose pixels cannot be read glows gold, and
+// the failure is logged.
+function glowOf(img) {
+  if (!img?.naturalWidth || img.naturalWidth <= 1) return GOLD;
+  try {
+    const canvas = document.createElement("canvas");
+    [canvas.width, canvas.height] = GLOW_SAMPLE;
+    const context = canvas.getContext("2d", { willReadFrequently: true });
+    context.drawImage(img, 0, 0, canvas.width, canvas.height);
+    return posterGlow(context.getImageData(0, 0, canvas.width, canvas.height).data);
+  } catch (err) {
+    console.warn("the poster's glow colour could not be read; it glows gold", err);
+    return GOLD;
+  }
+}
 
 // The box, in layer px, of cell (i, j) grown `scale` times about its centre.
 function grownBox(i, j, layout, scale) {
@@ -87,6 +108,7 @@ export class Wall {
     this.front.alt = "";
     this.front.hidden = true;
     this.frontCell = null; // the landed cell the front element's picture belongs to, once it has decoded
+    this.glow = GOLD; // the landed poster's glow colour, [r, g, b]
     this.last = performance.now();
     window.addEventListener("resize", () => this.relayout(null, null));
     requestAnimationFrame((t) => this.frame(t));
@@ -146,6 +168,7 @@ export class Wall {
     this.drifting = true;
     this.landed = null;
     this.look = null;
+    this.glow = GOLD;
     this.frontCell = null;
     this.front.hidden = true;
     this.layer.style.removeProperty("--tile");
@@ -293,6 +316,7 @@ export class Wall {
     }
     if (!this.landed || `${this.landed.i},${this.landed.j}` !== cell) return;
     this.frontCell = cell;
+    this.glow = glowOf(this.front);
     this.dirty = true;
   }
 
@@ -302,6 +326,8 @@ export class Wall {
   // true when it ends, or false when the pick was ended first.
   async bringForward(pause) {
     const grown = this.grownScale();
+    this.grown = grown;
+    if (!this.frontCell) this.glow = glowOf(this.landedTile()?.img);
     const half = WALL_STRENGTH + (AWAY_STRENGTH - WALL_STRENGTH) / 2;
     const show = (lit, scale, away) => {
       this.look = { lit, scale };
@@ -325,13 +351,27 @@ export class Wall {
     const landed = Boolean(this.landed && this.look && `${this.landed.i},${this.landed.j}` === cell);
     if (!landed && !tile.dressed) return;
     tile.dressed = landed;
-    if (!landed) return this.fit(tile.img, grownBox(i, j, layout, 1), null, "");
+    if (!landed) {
+      tile.img.style.boxShadow = "";
+      return this.fit(tile.img, grownBox(i, j, layout, 1), null, "");
+    }
     const box = grownBox(i, j, layout, this.look.scale);
     this.fit(tile.img, box, this.look.lit, "1");
+    tile.img.style.boxShadow = this.glowShadow(box);
     const front = this.frontCell === cell;
     this.front.hidden = !front || this.lifted === cell;
     if (front) this.fit(this.front, box, this.look.lit, "2");
     return undefined;
+  }
+
+  // The landed poster's glow for a poster in `box`: its colour, sized from the poster's width and grown
+  // in with it, so a phone's glow stays around the poster.
+  glowShadow(box) {
+    const g = this.grown > 1 ? Math.min(1, Math.max(0, (this.look.scale - 1) / (this.grown - 1))) : 1;
+    const [r, gr, b] = this.glow;
+    const blur = Math.round(box.w * GLOW_BLUR * g);
+    const spread = Math.round(box.w * GLOW_SPREAD * g);
+    return `0 0 ${blur}px ${spread}px rgba(${r}, ${gr}, ${b}, ${(GLOW_ALPHA * g).toFixed(3)})`;
   }
 
   // Lays `img` in `box` (layer px) at strength `lit` (null: the wall's own), stacked at `z`.

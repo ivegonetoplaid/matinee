@@ -892,7 +892,14 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
   strength while the rest of the wall dims halfway to 12 per cent; then, over
   0.75 s, it grows about its centre to 2.4 times a resting-size poster
   (whatever the wall's poster size) while the wall dims to 12 per cent and
-  "Here. Watch this one." types. The poster grows by its laid-out size, so its
+  "Here. Watch this one." types. As it grows it glows in its strongest colour:
+  its picture is read at 32 by 48 pixels, near-black (brightest channel under
+  0.22), grey and near-white (saturation under 0.3) pixels are dropped, the
+  rest are grouped into 24 hue bands weighted by saturation times brightness,
+  and the heaviest band's average is raised to full brightness; a poster with
+  too little vivid colour, or whose pixels cannot be read (logged as a
+  warning), glows marquee gold. The glow's blur and spread follow the grown
+  poster's width. The poster grows by its laid-out size, so its
   picture stays sharp. The sharp 640 px picture is shown over the wall's
   picture, in the same box, only once it has decoded. A landed poster with no
   picture waits for the sharp one; with neither, nothing grows, the wall dims
