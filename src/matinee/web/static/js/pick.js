@@ -36,16 +36,24 @@ const SPOTS = {
 
 let spotTurn = 0;
 
-function spotlight(tmdb, title) {
+// A picture fetched ahead of its moment. Resolves to the image once it can be drawn, or to null when it
+// fails: the server answers 404 for a picture it cannot fetch, and bounds how long it tries.
+function picture(src, alt) {
+  const img = new Image();
+  img.alt = alt;
+  img.src = src;
+  return img.decode().then(
+    () => img,
+    () => null,
+  );
+}
+
+// The lit poster in its spotlight. `poster` is a picture that can already be drawn.
+function spotlight(poster) {
   const at = (isPhone() ? SPOTS.phone : SPOTS.desktop)[spotTurn % 4];
   spotTurn += 1;
-  const spot = h(
-    "div",
-    { class: "spot", "aria-hidden": "true" },
-    h("div", { class: "spot-hole" }),
-    h("div", { class: "spot-glow" }),
-    h("img", { class: "spot-poster", src: `/img/poster/${tmdb}/l`, alt: `${title} poster` }),
-  );
+  poster.className = "spot-poster";
+  const spot = h("div", { class: "spot", "aria-hidden": "true" }, h("div", { class: "spot-hole" }), h("div", { class: "spot-glow" }), poster);
   spot.style.left = `${at[0] * 100}vw`;
   spot.style.top = `${at[1] * 100}vh`;
   return spot;
@@ -82,13 +90,10 @@ function heading(film) {
   return h("h2", { class: "film-title" }, film.title, film.year ? h("span", { class: "film-year" }, ` ${film.year}`) : null);
 }
 
-function feature(card, film, result) {
-  const backdrop = h("img", {
-    class: "backdrop",
-    src: `/img/backdrop/${film.tmdb}/${isPhone() ? "m" : "l"}`,
-    alt: `${film.title}, a still from the film`,
-  });
-  backdrop.addEventListener("error", () => backdrop.remove());
+// The film's details. `backdrop` is a loaded picture, or null where there is none to show: a phone's
+// resting page shows no backdrop, and a backdrop that failed is left out.
+function feature(card, film, result, backdrop) {
+  if (backdrop) backdrop.className = "backdrop";
   const unchecked = result.unchecked ? h("p", { class: "note" }, result.unchecked, " ", credit(result)) : null;
   return h(
     "div",
@@ -146,6 +151,33 @@ async function showNoFilm(result, { line, aside }, actions) {
   );
 }
 
+// Land: the glide, then the lit poster in its spotlight. Resolves to the spot, or to null when the poster
+// has no picture: then there is nothing to lift, and the pick goes straight to the film.
+async function land(stage, wall, posterReady) {
+  wall.root.classList.add("spotlit");
+  await wall.ready();
+  await wait(wall.travel());
+  const poster = await posterReady;
+  if (!poster) return null;
+  const spot = spotlight(poster);
+  stage.append(spot);
+  return spot;
+}
+
+// What sits under the line on the resting page. The buttons come straight after the line, whose words
+// never change, so "Not that one" sits in the same place for every film. The answers so far are in the
+// trail at the foot of the screen.
+function choices(info, film, result, actions) {
+  const buttons = h(
+    "div",
+    { class: "choices" },
+    h("button", { class: "pill velvet", type: "button", onclick: actions.notThatOne }, "Not that one"),
+    info.seerr ? h("a", { class: "seerr", href: info.seerr, target: "_blank", rel: "noopener noreferrer" }, "More on Seerr") : null,
+    h("button", { class: "link-button", type: "button", onclick: actions.startOver }, "Start over"),
+  );
+  return [buttons, result.swapped ? firstPickReveal(result) : null, actions.correction(film)].filter(Boolean);
+}
+
 // The page's pick screen. `actions` holds notThatOne, justPick, startOver, failed and the correction panel's builder.
 export async function showPick({ stage, wall, result, frame, actions }) {
   const film = result.film;
@@ -156,37 +188,26 @@ export async function showPick({ stage, wall, result, frame, actions }) {
     await wait(900);
   }
   const cardRequest = get(`/api/film/${film.tmdb}`);
-  wall.root.classList.add("spotlit");
-  await wall.ready();
-  await wait(wall.travel());
-  const spot = spotlight(film.tmdb, film.title);
-  stage.append(spot);
-  await Promise.all([typeLine(line, HERE, ""), wait(REVEAL_AFTER_MS)]);
-  const card = await cardRequest;
+  const posterReady = picture(`/img/poster/${film.tmdb}/l`, `${film.title} poster`);
+  const backdropReady = isPhone() ? null : picture(`/img/backdrop/${film.tmdb}/l`, `${film.title}, a still from the film`);
+  const spot = await land(stage, wall, posterReady);
+  await Promise.all([typeLine(line, HERE, ""), wait(spot ? REVEAL_AFTER_MS : 0)]);
+  const [card, backdrop] = await Promise.all([cardRequest, backdropReady]);
   if (!card.ok) {
-    spot.remove();
+    spot?.remove();
     return actions.failed(card.data);
   }
-  const info = card.data;
   wall.root.classList.add("revealed");
   stage.classList.add("revealed");
-  const shown = feature(info, film, result);
+  const shown = feature(card.data, film, result, backdrop);
   frame.showing.append(shown);
-  // The buttons come straight after the line, whose words never change, so "Not that one" sits in
-  // the same place for every film. The answers so far are in the trail at the foot of the screen.
-  const buttons = h(
-    "div",
-    { class: "choices" },
-    h("button", { class: "pill velvet", type: "button", onclick: actions.notThatOne }, "Not that one"),
-    info.seerr ? h("a", { class: "seerr", href: info.seerr, target: "_blank", rel: "noopener noreferrer" }, "More on Seerr") : null,
-    h("button", { class: "link-button", type: "button", onclick: actions.startOver }, "Start over"),
-  );
-  const parts = [buttons, result.swapped ? firstPickReveal(result) : null, actions.correction(film)];
-  aside.append(...parts.filter(Boolean));
+  aside.append(...choices(card.data, film, result, actions));
   // Measured once the aside is whole, so the poster takes only the height left beneath it.
-  const slot = h("div", { class: "poster-slot" });
-  frame.left.append(slot);
-  settle(spot, slot, film);
+  if (spot) {
+    const slot = h("div", { class: "poster-slot" });
+    frame.left.append(slot);
+    settle(spot, slot, film);
+  }
   if (isPhone()) {
     stage.scrollTop = 0;
     await wait(PHONE_HOLD_MS);

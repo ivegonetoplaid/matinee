@@ -876,6 +876,15 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
      stays in one place from film to film. With reduced motion the poster and
      the scroll move without animation.
 
+  The pick fetches the lit poster's picture, and on a desktop the backdrop, as
+  soon as it knows the film. The lit poster shows only once its picture can be
+  drawn, and the backdrop rises only once it has loaded, so neither shows as an
+  empty box. A late picture appears late: the wait ends when Matinee's server
+  gives up on it (10 s). With no poster picture the pick goes from the glide
+  straight to the film, with no lit poster and no poster at rest; a backdrop
+  that fails is left out. A phone's resting page shows no backdrop, so a phone
+  fetches none.
+
   While a DoesTheDogDie check runs, the page types "One moment. Let me check
   this one against your list." and shuffles the wall.
 - **Credits.** The bottom bar of the wall and pick screens carries "Posters and
