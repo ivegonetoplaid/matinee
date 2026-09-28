@@ -41,6 +41,7 @@ import pandas as pd
 from matinee.engine import Catalog, EngineError, house_flavour, load_catalog, reachable, scale_members, walk_ends
 from matinee.labels import LabelsError, load_labels
 from matinee.pools import House
+from matinee.quips import QuipsError, load_quips, quip_problems
 from matinee.reference import DATA
 from matinee.table import FilmTable, load_table
 
@@ -363,6 +364,16 @@ def check_first_question(cat: Catalog, report: Report) -> None:
             report.fail(f"first question: '{option.say}' leads to '{option.tree}', which names no tree or mode file")
 
 
+def check_quips(cat: Catalog, report: Report) -> None:
+    """Every pick line keeps decision 84's rules, and every category it names is a tree or mode."""
+    try:
+        problems = quip_problems(load_quips(), set(cat.trees))
+    except QuipsError as exc:
+        problems = [str(exc)]
+    for problem in problems:
+        report.fail(f"quips: {problem}")
+
+
 def check_data(table: FilmTable, report: Report) -> None:
     unknown = table.films.index[~table.films.tmdb_known.astype(bool)]
     if len(unknown):
@@ -401,6 +412,7 @@ def main() -> int:
     report.say(f"franchise rule added {len(added)} films to kids: " + "; ".join(sorted(table.films.loc[added, "name"])))
     check_data(table, report)
     check_first_question(cat, report)
+    check_quips(cat, report)
     pools.update(check_answer_coverage(cat, pools, report))
     check_pins_in_key(house, key, report)
     entries = key["films"] + tree_fixture_entries(table, report)

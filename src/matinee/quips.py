@@ -1,0 +1,94 @@
+"""Matinee's lines for a pick, read from data/quips.json, and the rules every line keeps.
+
+Each category (universal, or a tree or mode by its file name) may hold reveal lines and nope lines.
+A category may borrow another's lines. The caps are character counts: no single line may exceed
+`line`, and a nope line and a reveal line shown together may not exceed `pair`.
+"""
+
+from __future__ import annotations
+
+import json
+import re
+from pathlib import Path
+
+from pydantic import BaseModel, ConfigDict, ValidationError
+
+from matinee.reference import DATA
+
+QUIPS_PATH = DATA / "quips.json"
+UNIVERSAL = "universal"
+QUOTES = "\"'“”‘’«»"
+# Words a sentence-case line may still capitalise: "I" and its contractions.
+_ALWAYS_CAPITAL = re.compile(r"^I('(m|d|ve|ll|s))?$")
+
+
+class QuipsError(ValueError):
+    """The quips file is missing or not the shape Matinee reads."""
+
+
+class QuipSet(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    reveal: tuple[str, ...] = ()
+    nope: tuple[str, ...] = ()
+
+
+class Caps(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    line: int
+    pair: int
+
+
+class Quips(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    note: str = ""
+    caps: Caps
+    borrow: dict[str, str] = {}
+    categories: dict[str, QuipSet]
+
+
+def load_quips(path: Path = QUIPS_PATH) -> Quips:
+    """The quips file, or QuipsError naming the file and what was wrong with it."""
+    try:
+        return Quips.model_validate(json.loads(path.read_text(encoding="utf-8")))
+    except (OSError, json.JSONDecodeError, ValidationError) as exc:
+        raise QuipsError(f"{path}: {exc}") from exc
+
+
+def in_title_case(line: str) -> bool:
+    """Whether a line capitalises the words after its first, as a title does. A word in capitals for
+    emphasis ("DO IT"), and "I", do not count; a line needs two such words after its first to read as
+    a title."""
+    words = re.findall(r"[A-Za-z][A-Za-z']*", line)[1:]
+    counted = [w for w in words if not (w.isupper() or _ALWAYS_CAPITAL.match(w))]
+    return len(counted) >= 2 and all(w[0].isupper() for w in counted)
+
+
+def line_problems(line: str, cap: int) -> list[str]:
+    """What is wrong with one line, each naming the line."""
+    problems = []
+    if len(line) > cap:
+        problems.append(f"{line!r} has {len(line)} characters; the cap for one line is {cap}")
+    if line[:1] in QUOTES and line[-1:] in QUOTES:
+        problems.append(f"{line!r} is wrapped in quotation marks")
+    if in_title_case(line):
+        problems.append(f"{line!r} is in title case; lines are in sentence case")
+    return problems
+
+
+def quip_problems(quips: Quips, categories: set[str]) -> list[str]:
+    """Every rule the file breaks, each naming what breaks it. `categories` are the trees and modes
+    that exist, by file name."""
+    known = categories | {UNIVERSAL}
+    problems = [f"category {name!r} is not a tree or mode" for name in quips.categories if name not in known]
+    for name, source in quips.borrow.items():
+        if name not in known:
+            problems.append(f"borrowing category {name!r} is not a tree or mode")
+        if source not in quips.categories:
+            problems.append(f"{name!r} borrows from {source!r}, which holds no lines")
+    for sets in quips.categories.values():
+        for line in (*sets.reveal, *sets.nope):
+            problems.extend(line_problems(line, quips.caps.line))
+    return problems
