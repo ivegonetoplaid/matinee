@@ -214,11 +214,12 @@ function ride(wall, place, until) {
 
 // Land: the glide brings the searchlight in with the floor, and while the floor still coasts, the lit
 // poster appears in the light and starts its lift. A poster whose picture arrives late appears late.
-// Resolves to the spot and the light; the spot is null when the poster has no picture, and then there
-// is nothing to lift, the light fades, and the pick goes straight to the film.
-async function land(stage, wall, posterReady) {
+// Resolves to the spot and the light; the spot is null when the poster has no picture (then there is
+// nothing to lift, the light fades, and the pick goes straight to the film) or when `left()` says the
+// viewer has left the pick while the picture was on its way.
+async function land(stage, wall, posterReady, left) {
   wall.root.classList.add("spotlit");
-  await wall.ready();
+  wall.hold();
   const place = nextPlace();
   const glide = wall.travel();
   const glideEnd = performance.now() + glide;
@@ -227,6 +228,7 @@ async function land(stage, wall, posterReady) {
   const carry = glide ? ride(wall, place, glideEnd) : () => {};
   carry(light);
   const [poster] = await Promise.all([posterReady, wait(Math.min(APPEAR_MS, glide))]);
+  if (left()) return { spot: null, light };
   if (!poster) {
     fadeAway(light, LIGHT_FADE_MS);
     await wait(glideEnd - performance.now());
@@ -288,6 +290,13 @@ async function rest({ stage, wall, frame, film, result, actions, info, backdrop,
   }
 }
 
+// "Here. Watch this one." types while the poster lifts and holds for its beat; then resolves to what
+// `pending` resolves to: the film's details and its backdrop.
+async function inTheLightThen(line, spot, pending) {
+  await Promise.all([typeLine(line, HERE, ""), inTheLight(spot)]);
+  return Promise.all(pending);
+}
+
 // Takes the lit poster and the light off the page when the pick ends early.
 function leave(spot, light) {
   spot?.remove();
@@ -301,21 +310,21 @@ async function sayWhySwapped(line, result) {
   await wait(900);
 }
 
-// The page's pick screen. `actions` holds notThatOne, justPick, startOver, failed and the correction panel's builder.
+// The page's pick screen. `actions` holds notThatOne, justPick, startOver, failed and the correction
+// panel's builder. After every wait the pick checks that its screen is still showing: a trail answer or
+// the name tag can replace it at any moment, and a pick the viewer has left changes nothing further.
 export async function showPick({ stage, wall, result, frame, actions }) {
   const film = result.film;
-  const { line } = frame;
   if (!film) return showNoFilm(result, frame, actions);
-  await sayWhySwapped(line, result);
+  const left = () => !frame.showing.isConnected;
+  await sayWhySwapped(frame.line, result);
+  if (left()) return undefined;
   const cardRequest = get(`/api/film/${film.tmdb}`);
   const posterReady = picture(`/img/poster/${film.tmdb}/l`, `${film.title} poster`);
   const backdropReady = isPhone() ? null : picture(`/img/backdrop/${film.tmdb}/l`, `${film.title}, a still from the film`);
-  const { spot, light } = await land(stage, wall, posterReady);
-  const left = () => !frame.showing.isConnected; // the viewer took a way back out of the pick
+  const { spot, light } = await land(stage, wall, posterReady, left);
+  const [card, backdrop] = left() ? [] : await inTheLightThen(frame.line, spot, [cardRequest, backdropReady]);
   if (left()) return leave(spot, light);
-  await Promise.all([typeLine(line, HERE, ""), inTheLight(spot)]);
-  if (left()) return leave(spot, light);
-  const [card, backdrop] = await Promise.all([cardRequest, backdropReady]);
   if (!card.ok) {
     leave(spot, light);
     return actions.failed(card.data);

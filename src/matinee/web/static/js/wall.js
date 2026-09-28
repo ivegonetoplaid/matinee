@@ -76,6 +76,7 @@ export class Wall {
     this.pickedIds = [];
     this.seed = 0;
     this.deal = 0; // which poster lands in which place; set only by show(), so a redraw never re-deals
+    this.held = false; // while held, a poster that finishes loading does not redraw the floor
     this.redrawTimer = null;
     this.across = 0;
     window.addEventListener("resize", () => this.draw());
@@ -107,7 +108,7 @@ export class Wall {
     if (this.redrawTimer) return;
     this.redrawTimer = setTimeout(() => {
       this.redrawTimer = null;
-      this.draw();
+      if (!this.held) this.draw();
     }, REDRAW_EVERY_MS);
   }
 
@@ -122,28 +123,20 @@ export class Wall {
     this.pickedIds.forEach((id) => this.poster(id));
     if (shuffle) this.move();
     this.deal = this.seed;
+    this.held = false;
     this.draw();
   }
 
-  // Resolves once every poster in the current deal has loaded or failed, with the wall drawn as it
-  // then stands, so nothing on the floor pops in afterwards. The server bounds each poster's wait.
-  ready() {
-    const pending = this.pickedIds
-      .map((id) => this.images.get(id))
-      .filter((img) => img && !img.complete)
-      .map(
-        (img) =>
-          new Promise((resolve) => {
-            img.addEventListener("load", resolve, { once: true });
-            img.addEventListener("error", resolve, { once: true });
-          }),
-      );
-    return Promise.all(pending).then(() => this.draw());
+  // Keeps the floor exactly as it is drawn until the next pool is shown: a poster that finishes loading
+  // meanwhile waits for the next deal instead of popping in while the floor moves. Nothing waits on it.
+  hold() {
+    this.held = true;
   }
 
   clear() {
     this.pool = [];
     this.pickedIds = [];
+    this.held = false;
     this.draw();
   }
 

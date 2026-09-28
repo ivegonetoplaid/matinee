@@ -839,8 +839,10 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
   that ends the questions brings the posters to 9 across, or 6, the size they
   keep through the pick; "Just pick one!" keeps the size the wall has. From the
   glide's start to the resting page the floor keeps the same posters in the
-  same places: the glide waits until the wall's posters have loaded, and a
-  shuffle while a check runs moves the floor without re-dealing it. The wall
+  same places: the floor holds as it is drawn when the pick begins, so a
+  poster that finishes loading during the pick waits for the next deal, and a
+  shuffle while a check runs moves the floor without re-dealing it. Nothing in
+  the pick waits on the wall's posters. The wall
   never dims to black between answers.
 - **Questions.** Matinee's line types out (an acknowledgement, then the
   question), and the answers appear once it finishes. The line and the answers
@@ -887,8 +889,9 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
      appears in place, holds in the light for 2 s, and then it and the scroll
      move without animation, and the searchlight is there at once, in place.
      The searchlight fades out in the first 0.4 s of the move to rest; where the poster has no
-     picture, it fades once the picture fails. Leaving the pick by a trail answer while the
-     poster lifts ends the pick there.
+     picture, it fades once the picture fails. Leaving the pick by a trail answer or the name tag,
+     at any point from the moment the pick is asked for, ends it there: a pick
+     the viewer has left changes nothing further on the page.
 
   The pick fetches the lit poster's picture, and on a desktop the backdrop, as
   soon as it knows the film. The lit poster shows only once its picture can be

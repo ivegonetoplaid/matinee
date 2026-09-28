@@ -281,6 +281,7 @@ async function pickNow(opening = "", risk = false) {
   const stopChecking = hasTopics() && !risk ? await checking(frame) : () => {};
   const res = await request;
   stopChecking();
+  if (!frame.showing.isConnected) return undefined; // the viewer took a way back out while the pick was fetched
   if (!res.ok) return problem(res.data, start);
   // Every film the check turned away is seen too, so "Not that one" never draws it again.
   if (res.data.film) visit.seen.push(res.data.film.tmdb);
