@@ -147,7 +147,7 @@ async function showNoFilm(result, { line, aside }, actions) {
 }
 
 // The page's pick screen. `actions` holds notThatOne, justPick, startOver, failed and the correction panel's builder.
-export async function showPick({ stage, wall, pool, result, frame, actions }) {
+export async function showPick({ stage, wall, result, frame, actions }) {
   const film = result.film;
   const { line, aside } = frame;
   if (!film) return showNoFilm(result, frame, actions);
@@ -156,8 +156,8 @@ export async function showPick({ stage, wall, pool, result, frame, actions }) {
     await wait(900);
   }
   const cardRequest = get(`/api/film/${film.tmdb}`);
-  wall.show(pool, { spotlight: true, shuffle: false });
   wall.root.classList.add("spotlit");
+  await wall.ready();
   await wait(wall.travel());
   const spot = spotlight(film.tmdb, film.title);
   stage.append(spot);

@@ -223,8 +223,9 @@ async function step() {
   const res = await post("/api/walk", { tree: visit.tree, answers: visit.answers, viewer: visit.viewer });
   if (!res.ok) return problem(res.data, start);
   visit.pool = res.data.pool;
-  wall.show(visit.pool);
   const q = res.data.question;
+  // The last answer's shuffle brings the posters to the size they keep through the pick.
+  wall.show(visit.pool, { resting: !q });
   if (!q) return pickNow(res.data.line);
   const picture = q.presentation === "pails" && q.options.every((o) => o.image);
   const options = q.options.map((o) => ({
@@ -287,7 +288,6 @@ async function pickNow(opening = "", risk = false) {
   await showPick({
     stage,
     wall,
-    pool: visit.pool,
     result: res.data,
     frame,
     actions: {

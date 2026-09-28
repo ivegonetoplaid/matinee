@@ -44,6 +44,7 @@ export class Wall {
     this.pool = [];
     this.pickedIds = [];
     this.seed = 0;
+    this.deal = 0; // which poster lands in which place; set only by show(), so a redraw never re-deals
     this.redrawTimer = null;
     this.across = 0;
     window.addEventListener("resize", () => this.draw());
@@ -70,16 +71,34 @@ export class Wall {
     }, REDRAW_EVERY_MS);
   }
 
-  // Show a pool. `shuffle` slides the floor to a new place, as each answer does.
-  show(pool, { shuffle = true, spotlight = false } = {}) {
+  // Show a pool. `shuffle` slides the floor to a new place, as each answer does. `resting` sets the
+  // posters to the size they keep through the pick, whatever the pool's size.
+  show(pool, { shuffle = true, resting = false } = {}) {
     this.pool = pool;
     const phone = isPhone();
     const range = phone ? ACROSS.phone : ACROSS.desktop;
-    this.across = spotlight ? range.fewest : across(pool.length, phone);
+    this.across = resting ? range.fewest : across(pool.length, phone);
     this.pickedIds = sample(pool, phone ? UNIQUE_POSTERS.phone : UNIQUE_POSTERS.desktop);
     this.pickedIds.forEach((id) => this.poster(id));
     if (shuffle) this.move();
+    this.deal = this.seed;
     this.draw();
+  }
+
+  // Resolves once every poster in the current deal has loaded or failed, with the wall drawn as it
+  // then stands, so nothing on the floor pops in afterwards. The server bounds each poster's wait.
+  ready() {
+    const pending = this.pickedIds
+      .map((id) => this.images.get(id))
+      .filter((img) => img && !img.complete)
+      .map(
+        (img) =>
+          new Promise((resolve) => {
+            img.addEventListener("load", resolve, { once: true });
+            img.addEventListener("error", resolve, { once: true });
+          }),
+      );
+    return Promise.all(pending).then(() => this.draw());
   }
 
   clear() {
@@ -157,7 +176,7 @@ export class Wall {
     const posterH = posterW * 1.5;
     const cols = Math.ceil(cssW / (posterW + gap));
     const rows = Math.ceil(cssH / (posterH + gap));
-    const offset = this.seed * 17;
+    const offset = this.deal * 17;
     const n = this.pickedIds.length;
     for (let r = 0; r < rows; r += 1) {
       for (let c = 0; c < cols; c += 1) {

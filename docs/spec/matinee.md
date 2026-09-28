@@ -835,8 +835,13 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
   floor in perspective, blurred on the poster layer itself (never a backdrop
   blur) under a dark frost. Poster size follows the pool: from 22 across on
   desktop, or 14 on a phone, at 1,200 films or more, down to 9, or 6, at 40 or
-  fewer. Each answer shuffles the floor with a short motion blur. The wall never
-  dims to black between answers.
+  fewer. Each answer shuffles the floor with a short motion blur. The answer
+  that ends the questions brings the posters to 9 across, or 6, the size they
+  keep through the pick; "Just pick one!" keeps the size the wall has. From the
+  glide's start to the resting page the floor keeps the same posters in the
+  same places: the glide waits until the wall's posters have loaded, and a
+  shuffle while a check runs moves the floor without re-dealing it. The wall
+  never dims to black between answers.
 - **Questions.** Matinee's line types out (an acknowledgement, then the
   question), and the answers appear once it finishes. The line and the answers
   keep apart, and nothing re-centres as the line types or the answers appear:
