@@ -1,6 +1,6 @@
 ---
 purpose: The contract Matinee's first build holds to — the conversation model, the pools and scales, the offline film table, profiles, exclusions, the DoesTheDogDie check, corrections, the web surface, the page, deployment and third-party terms — with a map of where each part lives.
-updated: 2026-09-26
+updated: 2026-09-28
 governs:
   - src/matinee/
   - tools/
@@ -837,13 +837,13 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
   desktop, or 14 on a phone, at 1,200 films or more, down to 9, or 6, at 40 or
   fewer. Each answer shuffles the floor with a short motion blur. The answer
   that ends the questions brings the posters to 9 across, or 6, the size they
-  keep through the pick; "Just pick one!" keeps the size the wall has. From the
-  glide's start to the resting page the floor keeps the same posters in the
-  same places: the floor holds as it is drawn when the pick begins, so a
-  poster that finishes loading during the pick waits for the next deal, and a
-  shuffle while a check runs moves the floor without re-dealing it. Nothing in
-  the pick waits on the wall's posters. The wall
-  never dims to black between answers.
+  keep through the pick; "Just pick one!" keeps the size the wall has. Only a
+  new pool re-deals the floor. A shuffle while a check runs moves the floor
+  without re-dealing it, and so do "Not that one" and "Roll again". From the
+  glide's start the floor holds as it is drawn: it keeps the same posters in
+  the same places, and a poster that finishes loading meanwhile is drawn only
+  when the next pool is shown or the window changes size. Nothing in the pick
+  waits on the wall's posters. The wall never dims to black between answers.
 - **Questions.** Matinee's line types out (an acknowledgement, then the
   question), and the answers appear once it finishes. The line and the answers
   keep apart, and nothing re-centres as the line types or the answers appear:
@@ -855,52 +855,72 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
   "Not <name>?", sits at the top of the wall and the pick screen.
 - **The pails.** The gore question shows four pail pictures, spotless to
   overflowing, each with its answer's words beneath it as text.
-- **The pick, as one motion.** It takes about 3.7 s on a desktop from the start
-  of the glide to the poster at rest, and nothing on screen stops except for one
-  beat in the light.
-  1. *Land.* The wall glides far across its floor in a random direction (1.4
-     s; up to 760 px across and 620 px deep on desktop, 190 and 480 on a phone,
-     inside the floor's spare edge so no edge shows), as if going to fetch one
-     poster. A searchlight rides in with the floor: one soft pool of warm
-     light, with no beam and no source, wide and faint over the landing place
-     at first, gathering to small and bright as the floor comes to rest where
-     the poster will lift. Its centre travels with the floor and moves once. While the floor still
-     coasts, 0.55 s into the glide, the poster appears in that light, lying in
-     the floor at the floor's angle (in the right two-thirds on
-     desktop, the upper half on a phone), blurred and dim, and moves with the
-     floor until it stops. It peels away at once, brightening as the light
-     finds it, pulls free toward the viewer in one movement, swings a little
-     past and eases back into the spotlight (1.55 s in all). "Here. Watch this
-     one." types meanwhile. A poster whose
-     picture arrives after that moment appears when it arrives.
-  2. *Reveal.* The poster holds in the light for 0.4 s after its lift ends. Then
-     the wall fades nearly away and the lit poster slides to where it rests (1.3
-     s). It is the same picture, and the move starts from exactly where it hung,
-     without a jump. On a desktop that is the foot of the left
-     column, as large as the height left there allows at 2:3 (never under 160
-     px), while the film's backdrop rises on the right, fading into the title,
-     year and synopsis, shown without a tap. On a phone the poster fills the
-     width at the top, the details follow without a backdrop, and after 2.2
-     seconds the page scrolls gently to them. The left column hangs from the
-     top of the screen: the line, then `Not that one`, a "More on Seerr" link to
-     the film's page on the configured Seerr and `Start over` in one row, then
-     the correction link. The line's words never change, so `Not that one`
-     stays in one place from film to film. With reduced motion the lit poster
-     appears in place, holds in the light for 2 s, and then it and the scroll
-     move without animation, and the searchlight is there at once, in place.
-     The searchlight fades out in the first 0.4 s of the move to rest; where the poster has no
-     picture, it fades once the picture fails. Leaving the pick by a trail answer or the name tag,
-     at any point from the moment the pick is asked for, ends it there: a pick
-     the viewer has left changes nothing further on the page.
+- **The pick, as one motion.** On a desktop it takes about 3.8 s from the
+  start of the glide to the poster at rest: 0.55 s of glide, the poster's
+  1.55 s lift, a 0.4 s beat and the 1.3 s move to rest. Nothing on screen
+  holds still except for that one beat. On a phone the turning point of the
+  poster's swing also pauses, for under 0.1 s.
+  1. *Land.* The floor glides far in a random direction (1.4 s; up to 760 px
+     across and 620 px deep on desktop, 190 and 480 on a phone, inside the
+     floor's spare edge so no edge shows), as if going to fetch one poster,
+     and the wall's frost deepens. A searchlight rides in with the floor from
+     the glide's first frame. It is one soft pool of warm light, with no beam
+     and no source. It starts wide and faint over the landing place, at 2.2
+     times its landing size and 0.3 of its full strength, and gathers to small
+     and bright on the glide's own easing. Its centre travels with the floor
+     in one direction and comes to rest on the landing place as the floor
+     does. The landing place is in the right two-thirds of the screen on a
+     desktop and in the upper half on a phone, and four places take turns.
+     While the floor still coasts, 0.55 s into the glide, the poster appears
+     in the searchlight, lying in the floor at the floor's angle, blurred and
+     dim. From that moment it lifts: it peels away while it still rides the
+     floor, brightening as the searchlight finds it, pulls free toward the
+     viewer in one movement, swings a little past and eases back into the
+     searchlight (1.55 s in all). "Here. Watch this one." types from the
+     moment the poster appears.
+  2. *Reveal.* The poster holds in the searchlight for 0.4 s after its lift
+     ends, and longer only while the line still types or the film's details
+     or a desktop's backdrop are still arriving. Then the wall fades nearly
+     away and the lit poster slides to where it rests (1.3 s). It is the same
+     picture, and the move starts from exactly where it hung, without a jump.
+     On a desktop that is the foot of the left column, as large as the height
+     left there allows at 2:3 (never under 160 px), while the film's backdrop
+     rises on the right, fading into the title, year and synopsis, shown
+     without a tap. On a phone the poster fills the width at the top, the
+     details follow without a backdrop, and after 2.2 seconds the page scrolls
+     gently to them. The left column hangs from the top of the screen: the
+     line, then `Not that one`, a "More on Seerr" link to the film's page on
+     the configured Seerr and `Start over` in one row, then the correction
+     link. The line's words never change, so `Not that one` stays in one place
+     from film to film.
+
+  The searchlight fades out over the first 0.4 s of the move to rest and is
+  then removed.
 
   The pick fetches the lit poster's picture, and on a desktop the backdrop, as
-  soon as it knows the film. The lit poster shows only once its picture can be
-  drawn, and the backdrop rises only once it has loaded, so neither shows as an
-  empty box. A late picture appears late: the wait ends when Matinee's server
-  gives up on it (10 s). With no poster picture the pick goes from the glide
-  straight to the film, with no lit poster and no poster at rest; a backdrop
-  that fails is left out. A phone's resting page shows no backdrop, so a phone
-  fetches none.
+  soon as it knows the film. Where the check turned the first film away, the
+  fetch starts once the line has said why. The lit poster shows only once its
+  picture can be drawn, and the backdrop rises only once it has loaded, so
+  neither shows as an empty box. A late picture appears late: the wait ends
+  when Matinee's server gives up on it (10 s). With no poster picture there
+  is no lit poster and no poster at rest: the searchlight fades once the
+  picture fails (never before 0.55 s into the glide), and the pick waits for
+  the floor to stop and goes to the resting page. A backdrop that fails is
+  left out. A phone's resting page shows no backdrop, so a phone fetches none.
+
+  With reduced motion the floor takes its new place without the glide. The
+  searchlight is there at once, in place, at full strength. The lit poster
+  appears in place as soon as its picture can be drawn and holds in the
+  searchlight for 2 s. Then the poster moves to rest and the page scrolls,
+  both without animation, and the searchlight goes at once.
+
+  Leaving the pick by a trail answer or the name tag ends it: once the next
+  screen replaces the pick screen, the pick changes nothing further on the
+  page, and its searchlight and lit poster leave with its screen. A known gap
+  remains in the wall, not promised and due for repair: a trail answer taken
+  after the glide has started re-asks its question over a wall that keeps the
+  pick's deeper frost, or, from the resting page, stays faded nearly away,
+  until the next pick, a return to the first question, or the box office.
 
   While a DoesTheDogDie check runs, the page types "One moment. Let me check
   this one against your list." and shuffles the wall.
@@ -1038,7 +1058,7 @@ as the code stood on 2026-09-27.
 # Part 2 — Map
 
 A pointer to where each part lives, never proof of what it does. Every entry was
-verified against the source on **2026-09-26**. Line numbers drift; search by the
+verified against the source on the date in its row. Line numbers drift; search by the
 symbol when one does not match.
 
 ### Boundaries and the library
@@ -1218,22 +1238,48 @@ symbol when one does not match.
 | `src/matinee/web/static/js/door.js::bulbs` | `src/matinee/web/static/js/door.js:31` | 2026-09-26 |
 | `src/matinee/web/static/js/door.js::BULBS` | `src/matinee/web/static/js/door.js:12` | 2026-09-26 |
 | `src/matinee/web/static/js/iris.js::closeIris` / `openIris` | `src/matinee/web/static/js/iris.js:14` | 2026-09-26 |
-| `src/matinee/web/static/js/wall.js::Wall` / `across` | `src/matinee/web/static/js/wall.js:34` | 2026-09-26 |
-| `src/matinee/web/static/js/main.js::start` | `src/matinee/web/static/js/main.js:186` | 2026-09-26 |
-| `src/matinee/web/static/js/main.js::step` | `src/matinee/web/static/js/main.js:225` | 2026-09-26 |
-| `src/matinee/web/static/js/main.js::pickNow` / `checking` | `src/matinee/web/static/js/main.js:272` | 2026-09-26 |
-| `src/matinee/web/static/js/main.js::trail` / `backTo` | `src/matinee/web/static/js/main.js:71` | 2026-09-26 |
-| `src/matinee/web/static/js/main.js::lockStage` / `nameTag` | `src/matinee/web/static/js/main.js:42` | 2026-09-26 |
-| `src/matinee/web/static/js/pick.js::showNoFilm` | `src/matinee/web/static/js/pick.js:93` | 2026-09-26 |
-| `src/matinee/web/static/js/pick.js::showPick` | `src/matinee/web/static/js/pick.js:113` | 2026-09-26 |
-| `src/matinee/web/static/js/pick.js::firstPickReveal` | `src/matinee/web/static/js/pick.js:70` | 2026-09-26 |
+| `src/matinee/web/static/js/wall.js::across` | `src/matinee/web/static/js/wall.js:24` | 2026-09-28 |
+| `src/matinee/web/static/js/wall.js::locate` | `src/matinee/web/static/js/wall.js:42` | 2026-09-28 |
+| `src/matinee/web/static/js/wall.js::Wall` | `src/matinee/web/static/js/wall.js:64` | 2026-09-28 |
+| `src/matinee/web/static/js/wall.js::Wall.probeLayer` | `src/matinee/web/static/js/wall.js:98` | 2026-09-28 |
+| `src/matinee/web/static/js/wall.js::Wall.show` | `src/matinee/web/static/js/wall.js:117` | 2026-09-28 |
+| `src/matinee/web/static/js/wall.js::Wall.hold` | `src/matinee/web/static/js/wall.js:132` | 2026-09-28 |
+| `src/matinee/web/static/js/wall.js::Wall.travel` | `src/matinee/web/static/js/wall.js:162` | 2026-09-28 |
+| `src/matinee/web/static/js/wall.js::Wall.arriving` | `src/matinee/web/static/js/wall.js:182` | 2026-09-28 |
+| `src/matinee/web/static/js/wall.js::Wall.tile` | `src/matinee/web/static/js/wall.js:218` | 2026-09-28 |
+| `src/matinee/web/static/js/main.js::start` | `src/matinee/web/static/js/main.js:185` | 2026-09-28 |
+| `src/matinee/web/static/js/main.js::step` | `src/matinee/web/static/js/main.js:222` | 2026-09-28 |
+| `src/matinee/web/static/js/main.js::pickNow` / `checking` | `src/matinee/web/static/js/main.js:272` | 2026-09-28 |
+| `src/matinee/web/static/js/main.js::trail` / `backTo` | `src/matinee/web/static/js/main.js:70` | 2026-09-28 |
+| `src/matinee/web/static/js/main.js::lockStage` / `nameTag` | `src/matinee/web/static/js/main.js:41` | 2026-09-28 |
+| `src/matinee/web/static/js/pick.js::showPick` | `src/matinee/web/static/js/pick.js:316` | 2026-09-28 |
+| `src/matinee/web/static/js/pick.js::sayWhySwapped` | `src/matinee/web/static/js/pick.js:307` | 2026-09-28 |
+| `src/matinee/web/static/js/pick.js::picture` | `src/matinee/web/static/js/pick.js:45` | 2026-09-28 |
+| `src/matinee/web/static/js/pick.js::nextPlace` / `placed` | `src/matinee/web/static/js/pick.js:56` | 2026-09-28 |
+| `src/matinee/web/static/js/pick.js::land` | `src/matinee/web/static/js/pick.js:220` | 2026-09-28 |
+| `src/matinee/web/static/js/pick.js::searchlight` / `glideEase` | `src/matinee/web/static/js/pick.js:76` | 2026-09-28 |
+| `src/matinee/web/static/js/pick.js::ride` | `src/matinee/web/static/js/pick.js:197` | 2026-09-28 |
+| `src/matinee/web/static/js/pick.js::spotlight` | `src/matinee/web/static/js/pick.js:69` | 2026-09-28 |
+| `src/matinee/web/static/js/pick.js::inTheLight` | `src/matinee/web/static/js/pick.js:245` | 2026-09-28 |
+| `src/matinee/web/static/js/pick.js::inTheLightThen` | `src/matinee/web/static/js/pick.js:295` | 2026-09-28 |
+| `src/matinee/web/static/js/pick.js::rest` | `src/matinee/web/static/js/pick.js:273` | 2026-09-28 |
+| `src/matinee/web/static/js/pick.js::settle` | `src/matinee/web/static/js/pick.js:110` | 2026-09-28 |
+| `src/matinee/web/static/js/pick.js::fadeAway` | `src/matinee/web/static/js/pick.js:93` | 2026-09-28 |
+| `src/matinee/web/static/js/pick.js::feature` | `src/matinee/web/static/js/pick.js:135` | 2026-09-28 |
+| `src/matinee/web/static/js/pick.js::choices` | `src/matinee/web/static/js/pick.js:260` | 2026-09-28 |
+| `src/matinee/web/static/js/pick.js::leave` | `src/matinee/web/static/js/pick.js:301` | 2026-09-28 |
+| `src/matinee/web/static/js/pick.js::showNoFilm` | `src/matinee/web/static/js/pick.js:175` | 2026-09-28 |
+| `src/matinee/web/static/js/pick.js::firstPickReveal` | `src/matinee/web/static/js/pick.js:152` | 2026-09-28 |
 | `src/matinee/web/static/js/correct.js::GATED_NOTE` | `src/matinee/web/static/js/correct.js:10` | 2026-09-26 |
 | `src/matinee/web/static/js/correct.js::correctionLink` / `ensureProfile` | `src/matinee/web/static/js/correct.js:91` | 2026-09-26 |
 | `src/matinee/web/static/js/credits.js::credits` | `src/matinee/web/static/js/credits.js:23` | 2026-09-26 |
 | `src/matinee/web/static/js/dom.js::h` (text nodes only) | `src/matinee/web/static/js/dom.js:12` | 2026-09-26 |
 | `src/matinee/web/static/js/type.js::typeLine` | `src/matinee/web/static/js/type.js:10` | 2026-09-26 |
 | `src/matinee/web/static/manifest.webmanifest` | `src/matinee/web/static/manifest.webmanifest:1` | 2026-09-26 |
-| `src/matinee/web/static/css/matinee.css` reduced-motion rules | `src/matinee/web/static/css/matinee.css:848` | 2026-09-26 |
+| `src/matinee/web/static/css/matinee.css` reduced-motion rules | `src/matinee/web/static/css/matinee.css:979` | 2026-09-28 |
+| `src/matinee/web/static/css/matinee.css` `@keyframes rip` (the poster's lift) | `src/matinee/web/static/css/matinee.css:577` | 2026-09-28 |
+| `src/matinee/web/static/css/matinee.css` `.spot`, `.searchlight` | `src/matinee/web/static/css/matinee.css:538` | 2026-09-28 |
+| `src/matinee/web/static/css/matinee.css` `--glide-ease` (the floor's glide, read by the searchlight) | `src/matinee/web/static/css/matinee.css:45` | 2026-09-28 |
 
 ### Deployment
 

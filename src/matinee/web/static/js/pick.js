@@ -1,6 +1,6 @@
 // The pick, as one motion. The wall glides far across its floor, as if going to fetch one poster.
-// While the floor still coasts, that poster appears lying in it and moves with it, then tears loose,
-// leaving a gap, and lifts into a spotlight while "Here. Watch this one." types out. It holds in the
+// While the floor still coasts, that poster appears lying in it and moves with it, then tears loose
+// and lifts into the searchlight while "Here. Watch this one." types out. It holds in the
 // light for a beat, then travels to its resting place as the wall fades nearly away. On a desktop that
 // is the foot of the left column, as large as the space allows, while the film's backdrop rises on the
 // right with its title, year and synopsis. On a phone the poster fills the screen, then the page
