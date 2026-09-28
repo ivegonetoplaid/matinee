@@ -842,7 +842,16 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
   phone, at 1,200 films or more, down to 10, or 5.2, at 40 or fewer, with a
   14 px gap, or 8 px. The answer that ends the questions brings the posters to
   10 across, or 5.2, the size they keep through the pick; "Just pick one!"
-  keeps the size the wall has. The wall drifts upward at 10 px a second,
+  keeps the size the wall has. Each answer re-sorts the wall in place: the
+  page waits up to 0.6 s for the pictures of the posters the new layout puts
+  on screen, then, over 0.8 s, each of them slides from the nearest place its
+  film stood on screen, or in from the screen's edge toward its film's old
+  place, or grows in place when its film is new to the wall; the posters of
+  dropped films shrink to half size and fade where they stand, and a film
+  still in the running whose new place is off screen slides away toward it.
+  The new layout centres the new place of the surviving film that stood
+  nearest the screen's centre. The wall never dims between answers, and under
+  reduced motion it changes without sliding. The wall drifts upward at 10 px a second,
   timed by the clock, and stands still under reduced motion. Each poster uses
   the smallest picture (160, 320 or 640 px wide) that covers its cell at the
   screen's pixel density; while it loads, a picture of the same film already

@@ -129,6 +129,7 @@ button {
   border-radius: 3px;
   background: #161826;
   opacity: var(--tile);
+  transform-origin: 0 0;
   user-select: none;
 }
 
