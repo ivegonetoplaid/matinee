@@ -7,6 +7,7 @@ import { Door } from "./door.js";
 import { closeIris, openIris } from "./iris.js";
 import { clear, h, prefersLessMotion, sentenceCase, wait } from "./dom.js";
 import { showPick } from "./pick.js";
+import { Deck, dealBeneath, dealPair, setFor } from "./quips.js";
 import { typeLine } from "./type.js";
 import { Wall } from "./wall.js";
 
@@ -34,6 +35,14 @@ function countText(n, first) {
   const films = `${n.toLocaleString("en")} ${n === 1 ? "film" : "films"}`;
   return first ? `${films} in the running` : `${films} still in the running`;
 }
+
+// The pick's lines, fetched once per page; null until they arrive, or when they could not be read.
+let quips = null;
+const deck = new Deck(); // one per visit: no line repeats until its set has run out
+get("/api/quips").then((res) => {
+  if (res.ok) quips = res.data;
+  else console.warn("the pick's lines could not be read; picks show no line", res.data);
+});
 
 const TALK_FADE_MS = 350; // the question's words fade out as a pick begins
 const READ_MS = 1000; // Matinee's reply to the last answer stays whole this long before the hunt fades it
@@ -277,6 +286,21 @@ async function fadeTalk() {
   await wait(TALK_FADE_MS);
 }
 
+// The lines for a pick, from the set of the category the first answer led to. After "Not that one" a
+// nope line and a reveal line are dealt together under the combined cap; otherwise a reveal line alone.
+// `beneath(fixed)` redeals only the reveal line to fit beneath `fixed`, the check's explanation.
+function pickLines(again) {
+  if (!quips) return { nope: null, reveal: "", beneath: () => "" };
+  const revealSet = setFor(quips, visit.tree, "reveal");
+  const cap = quips.caps.pair;
+  const pair = again ? dealPair(deck, setFor(quips, visit.tree, "nope"), revealSet, cap) : { nope: null, reveal: deck.deal(revealSet) };
+  const beneath = (fixed) => {
+    deck.remaining(revealSet).push(pair.reveal);
+    return dealBeneath(deck, fixed, revealSet, cap);
+  };
+  return { ...pair, beneath };
+}
+
 // What the screen gives up as a pick begins: a question's words fade out, or, on "Not that one", the
 // resting poster goes back to its cell on the wall.
 async function clearForPick(again) {
@@ -290,14 +314,16 @@ function requestPick(risk) {
   return post("/api/pick", { tree: visit.tree, answers: visit.answers, viewer: visit.viewer, seen, risk });
 }
 
-// Opens the pick screen and types `opening`, the reply to the last answer, when there is one. Resolves
-// to the frame and the time until which that reply should stay whole (0 without one).
-async function openPick(opening) {
+// Opens the pick screen and types a line in gold: after "Not that one" the nope line, which stays
+// through the wait and the hunt, or else `opening`, the reply to the last answer. Resolves to the frame
+// and the time until which a reply should stay whole before the hunt fades it (0 when none fades).
+async function openPick(opening, nope) {
   stage.classList.remove("revealed");
   const frame = pickFrame();
-  if (!opening) return { frame, readUntil: 0 };
-  await typeLine(frame.line, opening, "");
-  return { frame, readUntil: performance.now() + READ_MS };
+  const gold = nope || opening;
+  if (!gold) return { frame, readUntil: 0 };
+  await typeLine(frame.line, gold, "");
+  return { frame, readUntil: nope ? 0 : performance.now() + READ_MS };
 }
 
 // Every film the pick showed or the check turned away is seen, so "Not that one" never draws it again.
@@ -312,8 +338,9 @@ async function pickNow(opening = "", risk = false, again = false) {
   const round = wall.round;
   // The pick is asked for first, so the check and the fetch run while the words fade and the line types.
   const request = requestPick(risk);
+  const lines = pickLines(again);
   await clearForPick(again);
-  const { frame, readUntil } = await openPick(opening);
+  const { frame, readUntil } = await openPick(opening, lines.nope);
   // The check's line types only on a checked pick that is not "Not that one".
   if (hasTopics() && !(risk || again)) await checking(frame);
   const res = await request;
@@ -327,6 +354,7 @@ async function pickNow(opening = "", risk = false, again = false) {
     result: res.data,
     frame,
     readUntil,
+    lines,
     actions: {
       notThatOne: () => {
         lockStage();

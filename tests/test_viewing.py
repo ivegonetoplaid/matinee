@@ -146,6 +146,15 @@ def test_topics_carry_the_credit_and_fail_in_words(site: Any) -> None:
     assert resp.json() == {"error": "topics_unavailable", "message": "I can't load the list of topics right now."}
 
 
+def test_the_page_is_given_the_pick_lines_and_caps(site: Any) -> None:
+    client, _store, _dtdd = site
+    body = client.get("/api/quips").json()
+    assert body["caps"] == {"line": 64, "pair": 76}
+    assert body["borrow"] == {"standup": "comedy"}
+    assert set(body["categories"]) == {"universal", "horror", "comedy"}
+    assert "How about this one?" in body["categories"]["universal"]["reveal"]
+
+
 def test_matinee_exclusions_are_listed(site: Any) -> None:
     client, _, _ = site
     assert client.get("/api/exclusions").json() == [

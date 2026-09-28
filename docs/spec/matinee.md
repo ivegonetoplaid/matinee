@@ -891,8 +891,8 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
   picked film. Over the last hop's pause the landed poster brightens to full
   strength while the rest of the wall dims halfway to 12 per cent; then, over
   0.75 s, it grows about its centre to 2.4 times a resting-size poster
-  (whatever the wall's poster size) while the wall dims to 12 per cent and
-  "Here. Watch this one." types. As it grows it glows in its strongest colour:
+  (whatever the wall's poster size) while the wall dims to 12 per cent and the
+  pick's reveal line types in the text colour. As it grows it glows in its strongest colour:
   its picture is read at 32 by 48 pixels, near-black (brightest channel under
   0.22), grey and near-white (saturation under 0.3) pixels are dropped, the
   rest are grouped into 24 hue bands weighted by saturation times brightness,
@@ -921,12 +921,34 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
   loaded, else a decoded copy of the wall's own picture of the film, replaced
   by the sharp picture when it arrives; with neither, no poster rests. A backdrop that fails is left out, and a phone fetches none.
 
+  The pick's line is a quip from `data/quips.json`, served by `GET /api/quips`
+  and read once per page. A pick draws from the category the first answer led
+  to: its own lines, or those of the category it borrows (standup borrows
+  comedy's), each set falling back on its own to universal's; "Just pick
+  one!" before a category draws universal. Each set deals like a shuffled
+  deck for the page's visit and is reshuffled only when every line has been
+  dealt. The line is set in Big Shoulders Display at 28 px to 40 px
+  (`clamp(28px, min(4vw, 6vh), 40px)`) with four lines reserved, so the
+  buttons beneath it stay in place from pick to pick. On a first pick no line
+  shows during the hunt and the reveal line types while the poster grows. On
+  `Not that one` a nope line and a reveal line are dealt together within the
+  combined cap (76 characters; the longer line of a pair over it goes back
+  unshown and its set deals the next that fits, and a set with none left
+  that fits gives its shortest line); the nope line types in gold at the tap
+  and stays through the wait and the hunt, and the reveal line types beneath
+  it in the text colour as the new poster grows. Where the check turned a
+  film away, its reason types in gold in the nope line's place and stays, and
+  only the reveal line is redealt to fit beneath it; the resting page keeps
+  the credit and the "What were you going to show me?" link. A pick with no
+  film speaks no quip.
+
   `Not that one` asks for the next film at the tap and carries the resting
   poster back from where it rests to its cell on the wall, at the wall's size
   and strength, over 0.45 s while the wall's dimming lifts (at once under
   reduced motion; with no poster at rest the dimming alone lifts over 0.45 s).
   The wall then drifts, and the returned poster rests in its cell, until the
-  next film is known; the check's line does not type. The next hunt starts
+  next film is known; the check's line does not type, and the nope line holds
+  the screen. The next hunt starts
   from where the wall stands, by every rule above. "Roll again", after three
   films in a row were turned away, is a new pick: its check line types.
 

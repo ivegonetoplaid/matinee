@@ -6,8 +6,9 @@ import { h, prefersLessMotion, sentenceCase } from "./dom.js";
 const CHARS_PER_TICK = 2;
 const TICK_MS = 24;
 
-// Renders the line into `el` and resolves when the whole line is shown.
-export function typeLine(el, ack, ask) {
+// Renders the line into `el` and resolves when the whole line is shown. `shown` characters are on
+// screen already and are not typed again: a gold line typed earlier stays while the rest types below it.
+export function typeLine(el, ack, ask, { shown = 0 } = {}) {
   const gold = sentenceCase(ack || "");
   const white = sentenceCase(ask || "");
   const ackEl = h("span", { class: "ack" });
@@ -31,7 +32,8 @@ export function typeLine(el, ack, ask) {
       resolve();
       return;
     }
-    let n = 0;
+    let n = Math.min(shown, total);
+    paint(n);
     const timer = setInterval(() => {
       n = Math.min(total, n + CHARS_PER_TICK);
       paint(n);

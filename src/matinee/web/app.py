@@ -24,6 +24,7 @@ from matinee.dtdd import Dtdd
 from matinee.engine import EngineError
 from matinee.library import ImageKind, LibraryError
 from matinee.pick import DeviceCap, Picker
+from matinee.quips import Quips, load_quips
 from matinee.store import Locked, Store, StoreError
 from matinee.table import TableError
 from matinee.web.common import (
@@ -221,6 +222,13 @@ def add_page(app: FastAPI) -> None:
         return response
 
 
+def add_quip_routes(app: FastAPI, quips: Quips) -> None:
+    @app.get("/api/quips")
+    def pick_lines() -> Quips:
+        """Matinee's lines for a pick and their caps, as data/quips.json holds them."""
+        return quips
+
+
 def create_app(
     config: Config,
     theatre: Theatre,
@@ -228,7 +236,9 @@ def create_app(
     dtdd: Dtdd,
     clock: Callable[[], float] = time.time,
     picker: Picker | None = None,
+    quips: Quips | None = None,
 ) -> FastAPI:
+    """The app. `quips` defaults to data/quips.json, read now, so a malformed file stops the start."""
     app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
     add_error_handlers(app, clock)
     add_film_routes(app, theatre, config.seerr_url)
@@ -238,5 +248,6 @@ def create_app(
     add_pick_routes(app, theatre, store, picker or Picker(dtdd, DeviceCap()))
     add_correction_routes(app, theatre, store)
     add_note_routes(app, theatre, store)
+    add_quip_routes(app, quips or load_quips())
     app.state.config = config
     return app

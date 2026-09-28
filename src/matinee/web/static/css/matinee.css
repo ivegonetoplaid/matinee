@@ -499,9 +499,11 @@ button {
   flex-direction: column;
 }
 
+/* The pick's line: at most 40 px on a desktop, so every approved line fits in three lines there; four
+   lines are reserved, so `Not that one` and the links below it stay in place from pick to pick. */
 .pick-line {
-  font-size: clamp(40px, min(4.4vw, 7vh), 64px);
-  min-height: 0;
+  font-size: clamp(28px, min(4vw, 6vh), 40px);
+  min-height: calc(4 * 0.98em);
 }
 
 /* Matinee's words fade out as a pick begins and while the wall hunts. */
