@@ -30,6 +30,7 @@ if [[ ! -x "$SCRIPT_DIR/node_modules/.bin/eslint" ]]; then
     exit 1
 fi
 "$SCRIPT_DIR/node_modules/.bin/eslint" src/matinee/web/static
+node --test "tests/js/*.test.mjs"
 
 "$PYTHON_BIN" -m mypy
 if [[ -d tests ]]; then

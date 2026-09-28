@@ -28,7 +28,6 @@ const visit = {
   trees: [],
 };
 
-const CHECK_SHUFFLE_MS = 900;
 const CHECKING = "One moment. Let me check this one against your list.";
 
 function countText(n, first) {
@@ -165,10 +164,9 @@ async function boot(opts = {}) {
   const [door, first] = await Promise.all([get("/api/door"), post("/api/first", { viewer: {} })]);
   if (!door.ok) return problem(door.data, () => boot(opts));
   stage.classList.remove("revealed");
-  wall.root.classList.remove("spotlit", "revealed");
   stage.classList.add("at-door");
   wall.root.classList.add("at-door");
-  if (first.ok) wall.show(first.data.pool, { shuffle: false });
+  if (first.ok) wall.show(first.data.pool);
   await new Door({ stage, onEnter: enter }).open({ door: door.data, ...opts });
 }
 
@@ -196,8 +194,7 @@ async function start({ reveal = null } = {}) {
     trees: res.data.options,
   });
   stage.classList.remove("revealed");
-  wall.root.classList.remove("spotlit", "revealed");
-  wall.show(visit.pool, { shuffle: false });
+  wall.show(visit.pool);
   const [greeting, question] = res.data.lines;
   const name = res.data.name;
   const ack = name ? greeting.replace(/\.$/, `, ${name}.`) : greeting;
@@ -224,7 +221,7 @@ async function step() {
   if (!res.ok) return problem(res.data, start);
   visit.pool = res.data.pool;
   const q = res.data.question;
-  // The last answer's shuffle brings the posters to the size they keep through the pick.
+  // The last answer brings the posters to the size they keep through the pick.
   wall.show(visit.pool, { resting: !q });
   if (!q) return pickNow(res.data.line);
   const picture = q.presentation === "pails" && q.options.every((o) => o.image);
@@ -259,11 +256,9 @@ function hasTopics() {
   return Boolean(visit.viewer.profile_id ? visit.profileTopics : visit.viewer.topics?.length);
 }
 
-async function checking(frame) {
-  wall.root.classList.remove("spotlit", "revealed");
-  await typeLine(frame.line, CHECKING, "");
-  const timer = setInterval(() => wall.move(), CHECK_SHUFFLE_MS);
-  return () => clearInterval(timer);
+// While the check runs the line says so and the wall keeps drifting; nothing else on it moves.
+function checking(frame) {
+  return typeLine(frame.line, CHECKING, "");
 }
 
 const SEEN_MAX = 200; // PickIn.seen's max_length on the server
@@ -271,16 +266,14 @@ const SEEN_MAX = 200; // PickIn.seen's max_length on the server
 // `risk` is "Just pick one" after three films tripped the list: nothing is checked or turned away.
 async function pickNow(opening = "", risk = false) {
   stage.classList.remove("revealed");
-  wall.root.classList.remove("spotlit", "revealed");
   const frame = pickFrame();
   if (opening) await typeLine(frame.line, opening, "");
   // The check runs while the checking line types, not after it.
   const seen = visit.seen.slice(-SEEN_MAX); // the server takes at most SEEN_MAX; the oldest may come round again
   const body = { tree: visit.tree, answers: visit.answers, viewer: visit.viewer, seen, risk };
   const request = post("/api/pick", body);
-  const stopChecking = hasTopics() && !risk ? await checking(frame) : () => {};
+  if (hasTopics() && !risk) await checking(frame);
   const res = await request;
-  stopChecking();
   if (!frame.showing.isConnected) return undefined; // the viewer took a way back out while the pick was fetched
   if (!res.ok) return problem(res.data, start);
   // Every film the check turned away is seen too, so "Not that one" never draws it again.
@@ -288,7 +281,6 @@ async function pickNow(opening = "", risk = false) {
   visit.seen.push(...res.data.turned_away);
   await showPick({
     stage,
-    wall,
     result: res.data,
     frame,
     actions: {

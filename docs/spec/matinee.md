@@ -831,19 +831,23 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
   black (0.6 s) and the poster wall opens from a growing one (0.75 s). The first
   line starts typing 0.52 s into the opening. It is the only transition through
   black. Under reduced motion it is instant.
-- **The poster wall.** The posters of the films still in the pool, laid on a
-  floor in perspective, blurred on the poster layer itself (never a backdrop
-  blur) under a dark frost. Poster size follows the pool: from 22 across on
-  desktop, or 14 on a phone, at 1,200 films or more, down to 9, or 6, at 40 or
-  fewer. Each answer shuffles the floor with a short motion blur. The answer
-  that ends the questions brings the posters to 9 across, or 6, the size they
-  keep through the pick; "Just pick one!" keeps the size the wall has. Only a
-  new pool re-deals the floor. A shuffle while a check runs moves the floor
-  without re-dealing it, and so do "Not that one" and "Roll again". From the
-  glide's start the floor holds as it is drawn: it keeps the same posters in
-  the same places, and a poster that finishes loading meanwhile is drawn only
-  when the next pool is shown or the window changes size. Nothing in the pick
-  waits on the wall's posters. The wall never dims to black between answers.
+- **The poster wall.** A flat grid of the posters of the films still in the
+  pool, each its own image element, sharp and upright, held at 35 per cent
+  strength (26 per cent behind the box office), with no backing behind
+  Matinee's words. Along a row the films run in the page's order, which is
+  drawn at random once per page load; each row starts a fixed number of films
+  on from the row above, chosen so a film's repeats sit as far apart as the
+  pool's size allows, and the wall repeats in both directions so no edge ever
+  shows. Poster size follows the pool: from 22 across on desktop, or 14 on a
+  phone, at 1,200 films or more, down to 10, or 5.2, at 40 or fewer, with a
+  14 px gap, or 8 px. The answer that ends the questions brings the posters to
+  10 across, or 5.2, the size they keep through the pick; "Just pick one!"
+  keeps the size the wall has. The wall drifts upward at 10 px a second,
+  timed by the clock, and stands still under reduced motion. Each poster uses
+  the smallest picture (160, 320 or 640 px wide) that covers its cell at the
+  screen's pixel density; while it loads, a picture of the same film already
+  loaded at another size stands in, and with none the cell is dark. The
+  posters ignore taps and clicks.
 - **Questions.** Matinee's line types out (an acknowledgement, then the
   question), and the answers appear once it finishes. The line and the answers
   keep apart, and nothing re-centres as the line types or the answers appear:
@@ -923,7 +927,7 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
   until the next pick, a return to the first question, or the box office.
 
   While a DoesTheDogDie check runs, the page types "One moment. Let me check
-  this one against your list." and shuffles the wall.
+  this one against your list." and the wall keeps drifting.
 - **Credits.** The bottom bar of the wall and pick screens carries "Posters and
   film data from TMDB [logo] · Tag genome by MovieLens · Powered by
   DoesTheDogDie.com", each linked. The box office counter carries the same line

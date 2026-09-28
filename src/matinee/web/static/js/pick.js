@@ -1,7 +1,5 @@
-// The pick, as one motion. The wall glides far across its floor, as if going to fetch one poster.
-// While the floor still coasts, that poster appears lying in it and moves with it, then tears loose
-// and lifts into the searchlight while "Here. Watch this one." types out. It holds in the
-// light for a beat, then travels to its resting place as the wall fades nearly away. On a desktop that
+// The pick. The film's poster appears in a searchlight and lifts into it while "Here. Watch this
+// one." types out. It holds in the light for a beat, then travels to its resting place. On a desktop that
 // is the foot of the left column, as large as the space allows, while the film's backdrop rises on the
 // right with its title, year and synopsis. On a phone the poster fills the screen, then the page
 // scrolls gently to the details.
@@ -11,9 +9,6 @@ import { get } from "./api.js";
 import { h, isPhone, prefersLessMotion, sentenceCase, wait } from "./dom.js";
 import { typeLine } from "./type.js";
 
-const APPEAR_MS = 550; // into the glide, while the floor still coasts
-const LIGHT_WIDE = 2.2; // the light's size while it travels, against its size where it lands
-const LIGHT_FAINT = 0.3; // the light's strength while it travels
 const LIGHT_FADE_MS = 400; // the light leaves early in the move to rest, before the backdrop rises over it
 const BEAT_MS = 400; // the poster holds in the light once the lift ends, the pick's one deliberate stop
 const STILL_HOLD_MS = 2000; // under reduced motion there is no lift; the poster holds in the light about as long
@@ -71,18 +66,10 @@ function spotlight(poster, place) {
   return placed(h("div", { class: "spot", "aria-hidden": "true" }, poster), place);
 }
 
-// The searchlight: one soft pool of warm light that travels in with the floor, wide and faint, and
-// tightens to small and bright as the floor comes to rest where the poster lifts.
-function searchlight(place, glide) {
+// The searchlight: one soft pool of warm light over the landing place.
+function searchlight(place) {
   const pool = h("div", { class: "spot-glow" });
-  const light = placed(h("div", { class: "searchlight", "aria-hidden": "true" }, pool), place);
-  if (glide) {
-    const ease = glideEase();
-    // The pool tightens inside a box that keeps its size, so the pool stays centred on where it lands.
-    pool.animate([{ scale: LIGHT_WIDE }, { scale: 1 }], { duration: glide, easing: ease });
-    light.animate([{ opacity: LIGHT_FAINT }, { opacity: 1 }], { duration: glide, easing: ease });
-  }
-  return light;
+  return placed(h("div", { class: "searchlight", "aria-hidden": "true" }, pool), place);
 }
 
 function glideEase() {
@@ -191,52 +178,23 @@ async function showNoFilm(result, { line, aside }, actions) {
   );
 }
 
-// Carries riders with the floor point that the glide brings to `place`, until `until`, so the light and
-// the poster lying in the floor travel with the floor and come to rest at `place` as it stops. Returns
-// the function that takes on a rider, placed at once where the point is.
-function ride(wall, place, until) {
-  const point = wall.arriving(...place);
-  const riders = new Set();
-  const carry = (el) => {
-    const [x, y] = point();
-    el.style.translate = `${x - place[0]}px ${y - place[1]}px`;
-  };
-  const follow = () => {
-    riders.forEach(carry);
-    if (performance.now() < until) requestAnimationFrame(follow);
-  };
-  requestAnimationFrame(follow);
-  return (el) => {
-    riders.add(el);
-    carry(el);
-  };
-}
-
-// Land: the glide brings the searchlight in with the floor, and while the floor still coasts, the lit
-// poster appears in the light and starts its lift. A poster whose picture arrives late appears late.
-// Resolves to the spot and the light; the spot is null when the poster has no picture (then there is
-// nothing to lift, the light fades, and the pick goes straight to the film) or when `left()` says the
-// viewer has left the pick while the picture was on its way.
-async function land(stage, wall, posterReady, left) {
-  wall.root.classList.add("spotlit");
-  wall.hold();
+// Land: the searchlight comes up at the landing place and the lit poster appears in it and starts
+// its lift. A poster whose picture arrives late appears late. Resolves to the spot and the light; the
+// spot is null when the poster has no picture (then there is nothing to lift, the light fades, and the
+// pick goes straight to the film) or when `left()` says the viewer has left the pick while the picture
+// was on its way.
+async function land(stage, posterReady, left) {
   const place = nextPlace();
-  const glide = wall.travel();
-  const glideEnd = performance.now() + glide;
-  const light = searchlight(place, glide);
+  const light = searchlight(place);
   stage.append(light);
-  const carry = glide ? ride(wall, place, glideEnd) : () => {};
-  carry(light);
-  const [poster] = await Promise.all([posterReady, wait(Math.min(APPEAR_MS, glide))]);
+  const poster = await posterReady;
   if (left()) return { spot: null, light };
   if (!poster) {
     fadeAway(light, LIGHT_FADE_MS);
-    await wait(glideEnd - performance.now());
     return { spot: null, light: null };
   }
   const spot = spotlight(poster, place);
   stage.append(spot);
-  if (performance.now() < glideEnd) carry(spot);
   return { spot, light };
 }
 
@@ -268,10 +226,9 @@ function choices(info, film, result, actions) {
   return [buttons, result.swapped ? firstPickReveal(result) : null, actions.correction(film)].filter(Boolean);
 }
 
-// The resting page: the wall fades nearly away, the film's details rise, and the lit poster, where
+// The resting page: the film's details rise, and the lit poster, where
 // there is one, moves to its place.
-async function rest({ stage, wall, frame, film, result, actions, info, backdrop, spot, light }) {
-  wall.root.classList.add("revealed");
+async function rest({ stage, frame, film, result, actions, info, backdrop, spot, light }) {
   stage.classList.add("revealed");
   const shown = feature(info, film, result, backdrop);
   frame.showing.append(shown);
@@ -313,7 +270,7 @@ async function sayWhySwapped(line, result) {
 // The page's pick screen. `actions` holds notThatOne, justPick, startOver, failed and the correction
 // panel's builder. After every wait the pick checks that its screen is still showing: a trail answer or
 // the name tag can replace it at any moment, and a pick the viewer has left changes nothing further.
-export async function showPick({ stage, wall, result, frame, actions }) {
+export async function showPick({ stage, result, frame, actions }) {
   const film = result.film;
   if (!film) return showNoFilm(result, frame, actions);
   const left = () => !frame.showing.isConnected;
@@ -322,12 +279,12 @@ export async function showPick({ stage, wall, result, frame, actions }) {
   const cardRequest = get(`/api/film/${film.tmdb}`);
   const posterReady = picture(`/img/poster/${film.tmdb}/l`, `${film.title} poster`);
   const backdropReady = isPhone() ? null : picture(`/img/backdrop/${film.tmdb}/l`, `${film.title}, a still from the film`);
-  const { spot, light } = await land(stage, wall, posterReady, left);
+  const { spot, light } = await land(stage, posterReady, left);
   const [card, backdrop] = left() ? [] : await inTheLightThen(frame.line, spot, [cardRequest, backdropReady]);
   if (left()) return leave(spot, light);
   if (!card.ok) {
     leave(spot, light);
     return actions.failed(card.data);
   }
-  return rest({ stage, wall, frame, film, result, actions, info: card.data, backdrop, spot, light });
+  return rest({ stage, frame, film, result, actions, info: card.data, backdrop, spot, light });
 }

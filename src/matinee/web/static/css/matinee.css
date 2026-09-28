@@ -31,33 +31,19 @@
   --body: "DM Sans", system-ui, sans-serif;
   --pad: 48px;
 
-  /* the poster wall, desktop */
-  --wall-perspective: 1400px;
-  --plane-w: 4600px;
-  --plane-h: 3900px;
-  --plane-bottom: -300px;
+  /* the lit poster's tear from the wall */
   --lay: 50deg;
   --tilt: -12deg;
   --blur: 6px;
-  --edge-blur: 14px;
-  --frost: 0.7;
-  --shuffle: 1.2s;
-  --glide-ease: cubic-bezier(0.2, 0.7, 0.2, 1); /* the floor's glide; the searchlight travels on it too */
-  --settle: 0.7s;
+  --glide-ease: cubic-bezier(0.2, 0.7, 0.2, 1); /* the searchlight's fade */
 }
 
 @media (max-width: 600px) {
   :root {
     --pad: 20px;
-    --wall-perspective: 1100px;
-    --plane-w: 1100px;
-    --plane-h: 2700px;
-    --plane-bottom: -150px;
     --lay: 40deg;
     --tilt: -6deg;
     --blur: 3px;
-    --edge-blur: 9px;
-    --frost: 0.64;
   }
 }
 
@@ -112,95 +98,38 @@ button {
   inset: 0;
   overflow: hidden;
   background: var(--base);
+  pointer-events: none;
+  --tile: 0.35;
 }
 
-.floor {
+/* The box office keeps the wall darker behind the booth. */
+.wall.at-door {
+  --tile: 0.26;
+}
+
+/* Every poster rides this one layer, which the camera moves; each poster is its own element. */
+.wall-tiles {
   position: absolute;
-  inset: 0;
-  perspective: var(--wall-perspective);
-  perspective-origin: 50% 40%;
-  filter: blur(var(--blur)) saturate(0.85);
-  transition: filter 0.32s ease;
+  left: 0;
+  top: 0;
+  will-change: transform;
 }
 
-.floor.edges {
-  filter: blur(calc(var(--blur) + var(--edge-blur))) saturate(0.85);
-  mask-image: linear-gradient(180deg, #000 0%, transparent 46%, transparent 70%, #000 100%);
+.wall-tiles[hidden] {
+  display: none;
 }
 
-.wall.moving .floor {
-  filter: blur(calc(var(--blur) + 3px)) saturate(0.85);
-}
-
-.wall.moving .floor.edges {
-  filter: blur(calc(var(--blur) + var(--edge-blur) + 3px)) saturate(0.85);
-}
-
-.plane {
+/* A poster whose picture has not loaded is this dark cell. */
+.tile {
   position: absolute;
-  left: 50%;
-  bottom: var(--plane-bottom);
-  width: var(--plane-w);
-  height: var(--plane-h);
-  margin-left: calc(var(--plane-w) / -2);
-  transform-origin: 50% 100%;
-  transform: rotateX(var(--lay));
-}
-
-.grid {
-  position: absolute;
-  left: -20%;
-  top: -20%;
-  width: 140%;
-  height: 140%;
-  transform: rotate(calc(var(--tilt) + var(--turn, 0deg))) translate(var(--gx, 0px), var(--gy, 0px));
-  transition: transform var(--shuffle) var(--glide-ease);
-}
-
-.floor-probe {
-  visibility: hidden;
-}
-
-.floor-probe > i {
-  position: absolute;
-  width: 0;
-  height: 0;
-}
-
-.floor-ahead {
-  transition: none;
-}
-
-.wall-fade {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(180deg, rgba(7, 8, 13, 0.92) 0%, rgba(7, 8, 13, 0) 34%);
-}
-
-.wall-frost {
-  position: absolute;
-  inset: 0;
-  background: rgba(8, 10, 20, var(--frost));
-  transition: background 0.6s ease;
-}
-
-.wall-scrim {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(
-    90deg,
-    rgba(5, 6, 12, 0) 18%,
-    rgba(5, 6, 12, 0.62) 34%,
-    rgba(5, 6, 12, 0.62) 66%,
-    rgba(5, 6, 12, 0) 82%
-  );
-  transition: opacity 0.6s ease;
-}
-
-@media (max-width: 600px) {
-  .wall-scrim {
-    background: linear-gradient(180deg, rgba(5, 6, 12, 0.15) 0%, rgba(5, 6, 12, 0.55) 30%, rgba(5, 6, 12, 0.72) 100%);
-  }
+  left: 0;
+  top: 0;
+  display: block;
+  object-fit: cover;
+  border-radius: 3px;
+  background: #161826;
+  opacity: var(--tile);
+  user-select: none;
 }
 
 /* ---------- the stage the questions sit on ---------- */
@@ -522,18 +451,6 @@ button {
 }
 
 /* ---------- the pick ---------- */
-
-.wall.spotlit {
-  --frost: 0.84;
-}
-
-.wall.revealed {
-  --frost: 0.93;
-}
-
-.wall.revealed .wall-scrim {
-  opacity: 0;
-}
 
 .spot,
 .searchlight {
@@ -994,10 +911,6 @@ button {
 .stage.at-door {
   padding: 0;
   overflow: hidden;
-}
-
-.wall.at-door {
-  --frost: 0.74;
 }
 
 .booth {
