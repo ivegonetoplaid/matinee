@@ -205,6 +205,7 @@ def add_page(app: FastAPI) -> None:
 
     The page and its static files are served `no-cache`: a browser or an edge cache may keep a copy but must
     revalidate it, so a deploy reaches every viewer on the next load and a page never mixes old and new files.
+    Every `/api/` reply is served `no-store`: several read the device's cookie, so no cache may keep any copy.
     """
     app.mount("/static", StaticFiles(directory=STATIC), name="static")
 
@@ -219,6 +220,8 @@ def add_page(app: FastAPI) -> None:
             response.headers.setdefault(name, value)
         if request.url.path.startswith("/static/"):
             response.headers.setdefault("Cache-Control", "no-cache")
+        if request.url.path.startswith("/api/"):
+            response.headers["Cache-Control"] = "no-store"
         return response
 
 

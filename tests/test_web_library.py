@@ -301,6 +301,12 @@ def test_the_page_and_its_static_files_revalidate_so_a_deploy_is_never_half_seen
         assert client.get(path).headers["cache-control"] == "no-cache", path
 
 
+def test_no_api_reply_may_be_stored_since_the_door_depends_on_the_device(world: Any) -> None:
+    client, _, _, _ = world
+    for path in ("/api/door", "/api/film/5", "/api/quips", "/api/exclusions", "/api/film/12345"):
+        assert client.get(path).headers["cache-control"] == "no-store", path
+
+
 def test_the_install_manifest_names_icons_that_exist() -> None:
     manifest = json.loads((STATIC / "manifest.webmanifest").read_text())
     assert manifest["start_url"] == "/" and manifest["icons"]

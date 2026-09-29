@@ -780,6 +780,10 @@ A correction says a film is not really the kind of film the tree offered it as.
 The routes serve Matinee's own page. They are not a public API. The interactive
 documentation, ReDoc and the OpenAPI schema are all disabled.
 
+Every `/api/` reply carries `Cache-Control: no-store`. The door's reply lists the
+profiles the asking device holds, so a copy kept by a browser or an edge cache
+would hand one device's profiles to another.
+
 | Method | Path | Does |
 |---|---|---|
 | GET | `/` | the page (`Cache-Control: no-cache`) |
