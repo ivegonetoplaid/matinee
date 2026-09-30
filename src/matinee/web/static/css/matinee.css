@@ -92,11 +92,6 @@ button {
   --tile: 0.35;
 }
 
-/* The box office keeps the wall darker behind the booth. */
-.wall.at-door {
-  --tile: 0.26;
-}
-
 /* Every poster rides this one layer, which the camera moves; each poster is its own element. */
 .wall-tiles {
   position: absolute;
@@ -932,55 +927,73 @@ button {
   }
 }
 
-/* ---------- the box office ---------- */
+/* ---------- the front door ---------- */
 
-/* The booth fills the screen: crown, sign, the back wall between two velvet
-   columns, and the counter. It is a column of rows, so the back wall takes
-   whatever height the crown and sign leave. */
+/* The door is a column: the marquee at the top centre, then the wall below it where
+   Matinee's words are typed, with nothing behind them. The corner credit line sits
+   in the bottom right corner. */
 .stage.at-door {
   padding: 0;
+  gap: 0;
   overflow: hidden;
 }
 
-.booth {
-  --booth-w: min(1160px, calc(100vw - 32px));
+/* The marquee: the crown over the lit sign, free-standing over the poster wall. A
+   soft dark fade behind it, across the top of the screen, lets the sign read against
+   the posters; it belongs to the door and leaves with the marquee. */
+.marquee {
   --crown-w: 560px;
   --crown-h: 96px;
+  --sign-w: min(1120px, calc(100vw - 32px));
   --sign-h: 150px;
-  --sign-gap: 14px;
-  --column-w: 44px;
-  --column-in: 36px;
-  --counter-h: 94px;
+  --shade-h: 420px;
   position: relative;
-  flex-grow: 1;
-  width: var(--booth-w);
-  min-height: 0;
-  align-self: center;
+  isolation: isolate;
+  flex: 0 0 auto;
   display: flex;
   flex-direction: column;
-  padding-top: 12px;
+  align-items: center;
+  padding-top: 26px;
 }
 
+.marquee::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: var(--shade-h);
+  background: linear-gradient(180deg, rgba(7, 8, 13, 0.55), rgba(7, 8, 13, 0));
+  pointer-events: none;
+}
+
+.marquee-glow {
+  position: absolute;
+  z-index: -1;
+  left: 50%;
+  top: -44px;
+  width: calc(var(--sign-w) + 260px);
+  max-width: 100vw;
+  height: calc(var(--crown-h) + var(--sign-h) + 240px);
+  transform: translateX(-50%);
+  background: radial-gradient(closest-side, rgba(224, 86, 107, 0.34), rgba(224, 86, 107, 0));
+  pointer-events: none;
+  transition: opacity 0.6s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+/* A window too short for the full marquee scales it down, so the door's words and
+   the picker fit without the page scrolling. */
 @media (max-height: 820px) and (min-width: 601px) {
-  .booth {
-    --crown-h: 64px;
-    --crown-w: 380px;
-    --sign-h: 120px;
-    --counter-h: 70px;
+  .marquee {
+    zoom: 0.8;
   }
 }
 
-.booth-glow {
-  position: absolute;
-  left: 50%;
-  top: -28px;
-  width: 900px;
-  max-width: 100vw;
-  height: 420px;
-  transform: translateX(-50%);
-  background: radial-gradient(closest-side, rgba(224, 86, 107, 0.42), rgba(224, 86, 107, 0));
-  pointer-events: none;
-  transition: opacity 0.6s cubic-bezier(0.2, 0.7, 0.2, 1);
+@media (max-height: 700px) and (min-width: 601px) {
+  .marquee {
+    zoom: 0.62;
+  }
 }
 
 /* The crown: three stepped tiers, a sunburst fan, and three gilded spires. */
@@ -1083,7 +1096,7 @@ button {
 .sign {
   position: relative;
   flex: 0 0 auto;
-  margin: 0 20px;
+  width: var(--sign-w);
   height: var(--sign-h);
   border-radius: 10px;
   background: #1a1410;
@@ -1150,28 +1163,6 @@ button {
   letter-spacing: 0.04em;
 }
 
-@media (max-height: 820px) and (min-width: 601px) {
-  .sign-face {
-    gap: 4px;
-  }
-
-  .sign-name {
-    font-size: 24px;
-  }
-
-  .letterboard {
-    padding: 6px 24px 8px;
-  }
-
-  .board-big {
-    font-size: 44px;
-  }
-
-  .board-small {
-    font-size: 20px;
-  }
-}
-
 .bulbs {
   position: absolute;
   inset: 0;
@@ -1228,68 +1219,14 @@ button {
   }
 }
 
-/* The middle: two velvet columns with the back wall between them. */
-.booth-middle {
-  flex: 1 1 auto;
-  min-height: 0;
-  margin-top: var(--sign-gap);
-  display: grid;
-  grid-template-columns: var(--column-w) 1fr var(--column-w);
-  gap: 12px;
-  padding: 0 var(--column-in);
-  transition: margin-top 0.6s cubic-bezier(0.2, 0.7, 0.2, 1);
-}
-
-.column {
-  background: repeating-linear-gradient(90deg, #6e1b29 0, #6e1b29 11px, #8a2638 11px, #8a2638 22px);
-  box-shadow: inset 0 12px 20px rgba(0, 0, 0, 0.5);
-}
-
-.backwall,
 .topic-pills {
   scrollbar-color: rgba(242, 179, 61, 0.45) transparent;
-}
-
-.backwall {
-  min-height: 0;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  padding: 30px 40px 26px;
-  background: linear-gradient(180deg, rgba(22, 25, 40, 0.94), rgba(10, 11, 19, 0.96));
-  box-shadow: inset 0 18px 30px rgba(0, 0, 0, 0.55);
-}
-
-.counter {
-  flex: 0 0 auto;
-  min-height: var(--counter-h);
-  margin: 0 -20px;
-  display: flex;
-  flex-direction: column;
-}
-
-.counter-top {
-  height: 14px;
-  border-radius: 3px;
-  background: linear-gradient(180deg, #e0bd72, #7a5a26);
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.6);
-}
-
-.counter-front {
-  flex-grow: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 8px 12px;
-  background: linear-gradient(180deg, #15110e, #0b0907);
-  border-left: 1px solid rgba(242, 179, 61, 0.25);
-  border-right: 1px solid rgba(242, 179, 61, 0.25);
 }
 
 .credits {
   margin: 0;
   font-size: 13px;
-  color: rgba(239, 233, 220, 0.45);
+  color: var(--dim);
   text-align: center;
 }
 
@@ -1307,7 +1244,6 @@ button {
 .bottombar .credits {
   max-width: 560px;
   text-align: right;
-  color: var(--dim);
 }
 
 /* "About" in the credit line: a button that reads as one of the line's links. */
@@ -1455,28 +1391,49 @@ button {
   }
 }
 
-/* What is said at the door: the line, then its controls. */
-.door-talk {
-  flex-grow: 1;
+/* The wall below the marquee, where the door's words are typed. It takes the height the
+   marquee leaves and scrolls only when a screen's content cannot fit, such as a long
+   list of names on a short window. */
+.door-wall {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  justify-content: center;
-  gap: 24px;
-  width: min(720px, 100%);
+  padding: 44px var(--pad) 70px;
+  overflow-y: auto;
+  scrollbar-color: rgba(242, 179, 61, 0.45) transparent;
+}
+
+/* What is said at the door: the line, then its controls, hanging from the top. */
+.door-talk {
+  display: flex;
+  flex-direction: column;
+  gap: 26px;
+  width: min(680px, 100%);
   align-self: center;
 }
 
+/* The corner credit line on the door: the bottom right on a desktop. */
+.door-foot {
+  position: absolute;
+  right: var(--pad);
+  bottom: 30px;
+}
+
+.door-foot .credits {
+  text-align: right;
+}
+
 .line.door-line {
-  font-size: 44px;
+  font-size: 52px;
   line-height: 1;
-  min-height: 2em;
 }
 
 .door-controls {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  min-height: 190px;
   animation: fade 0.5s ease both;
 }
 
@@ -1558,14 +1515,17 @@ button {
 }
 
 /* The trigger picker: the question and saving on the left, the topics on the right.
-   It never shrinks below its content; when the booth is short, the back wall
-   scrolls, and the topic list keeps at least three rows of its own scroll box. */
+   It takes the wall's height below the marquee; the topic list scrolls in its own box
+   and keeps at least three rows. */
 .picker {
-  flex: 1 0 auto;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: min(1000px, 100%);
+  align-self: center;
   display: grid;
   grid-template-columns: 360px minmax(0, 1fr);
   grid-template-rows: auto auto 1fr auto auto auto;
-  column-gap: 40px;
+  column-gap: 44px;
   row-gap: 14px;
   animation: fade 0.5s ease both;
 }
@@ -1574,10 +1534,12 @@ button {
   grid-column: 1;
 }
 
+/* The heading keeps its whole height when the picker is short (the base line's 2em floor would let
+   its grid row collapse under it); the topic list gives up room first. */
 .picker .door-line {
   grid-row: 1;
   font-size: 40px;
-  min-height: 0;
+  min-height: auto;
 }
 
 .picker-lead {
@@ -1648,6 +1610,11 @@ button {
 .note.small {
   font-size: 12px;
   color: rgba(239, 233, 220, 0.45);
+}
+
+/* Under the picker's topics, on the bare wall, the tally reads a little stronger. */
+.picker .note.small {
+  color: rgba(239, 233, 220, 0.55);
 }
 
 .note.small a {
@@ -1733,22 +1700,13 @@ button {
 }
 
 @media (max-width: 600px) {
-  .booth {
-    --booth-w: calc(100vw - 16px);
+  .marquee {
     --crown-w: 240px;
     --crown-h: 58px;
+    --sign-w: calc(100vw - 32px);
     --sign-h: 116px;
-    --sign-gap: 10px;
-    --column-w: 8px;
-    --column-in: 10px;
-    --counter-h: 48px;
-    padding-top: 8px;
-  }
-
-  .booth-glow {
-    width: 420px;
-    height: 260px;
-    top: -32px;
+    --shade-h: 260px;
+    padding-top: 16px;
   }
 
   .crown .sunburst {
@@ -1760,7 +1718,6 @@ button {
   }
 
   .sign {
-    margin: 0 8px;
     gap: 0;
     padding: 0 16px;
   }
@@ -1792,26 +1749,6 @@ button {
     font-size: 36px;
   }
 
-  .booth-middle {
-    gap: 0;
-  }
-
-  .column {
-    background: repeating-linear-gradient(90deg, #6e1b29 0, #6e1b29 4px, #8a2638 4px, #8a2638 8px);
-  }
-
-  .backwall {
-    padding: 18px 16px 14px;
-  }
-
-  .counter {
-    margin: 0;
-  }
-
-  .counter-top {
-    height: 10px;
-  }
-
   .credits {
     font-size: 11px;
   }
@@ -1823,23 +1760,40 @@ button {
     text-align: center;
   }
 
+  /* On a phone the line hangs under the marquee and the answers sit at the foot, under the thumb. */
+  .door-wall {
+    padding: 26px var(--pad) 50px;
+  }
+
   .door-talk {
+    flex-grow: 1;
     gap: 18px;
   }
 
+  .door-foot {
+    left: 0;
+    right: 0;
+    bottom: 14px;
+  }
+
+  .door-foot .credits {
+    text-align: center;
+  }
+
   .line.door-line {
-    font-size: 32px;
-    min-height: 3em;
+    font-size: 34px;
   }
 
   .door-controls {
+    margin-top: auto;
+    justify-content: flex-end;
     gap: 8px;
-    min-height: 150px;
   }
 
   .door-controls .answer {
-    font-size: 15px;
-    padding: 11px 16px;
+    font-size: 18px;
+    padding: 10px 14px;
+    border-width: 2px;
   }
 
   .picker {
@@ -1864,43 +1818,43 @@ button {
   }
 
   /* While the picker is open the crown fades and the sign shrinks to a lit strip. */
-  .booth.compact {
+  .marquee.compact {
     --sign-h: 40px;
     padding-top: 10px;
   }
 
-  .booth.compact .crown {
+  .marquee.compact .crown {
     height: 0;
     opacity: 0;
     transform: translateY(-40px) scale(0.6);
   }
 
-  .booth.compact .booth-glow {
+  .marquee.compact .marquee-glow {
     opacity: 0;
   }
 
-  .booth.compact .sign-name {
+  .marquee.compact .sign-name {
     display: none;
   }
 
-  .booth.compact .letterboard {
+  .marquee.compact .letterboard {
     flex-direction: row;
     align-items: baseline;
     gap: 8px;
     padding: 4px 14px;
   }
 
-  .booth.compact .board-small {
+  .marquee.compact .board-small {
     font-size: 11px;
     letter-spacing: 0.22em;
   }
 
-  .booth.compact .board-big {
+  .marquee.compact .board-big {
     font-size: 19px;
   }
 
-  .booth.compact .booth-middle {
-    margin-top: 8px;
+  .marquee.compact + .door-wall {
+    padding-top: 12px;
   }
 }
 
@@ -1954,36 +1908,47 @@ button {
   }
 }
 
-/* A short phone: a smaller crown and sign leave the back wall room for its choices. */
+/* A short phone: the marquee scales down and leaves the wall room for the door's choices; in the
+   picker the topic list may shrink to one scrolling row so "Save and continue" stays on screen. */
 @media (max-width: 600px) and (max-height: 640px) {
-  .booth {
-    --crown-w: 180px;
-    --crown-h: 40px;
-    --sign-h: 88px;
+  .marquee {
+    zoom: 0.75;
   }
 
-  .sign-name {
-    font-size: 16px;
+  .door-wall {
+    padding-bottom: 30px;
   }
 
-  .board-big {
-    font-size: 26px;
+  .picker {
+    row-gap: 4px;
+  }
+
+  .picker .door-line {
+    font-size: 24px;
+  }
+
+  .picker > .picker-topics {
+    gap: 6px;
+  }
+
+  .picker-topics .field {
+    min-height: 40px;
+    padding: 8px 14px;
+  }
+
+  .topic-pills {
+    min-height: 40px;
   }
 
   .line.door-line {
     font-size: 26px;
-    min-height: 0;
-  }
-
-  .door-controls {
-    min-height: 0;
   }
 }
 
-/* A short desktop: the back wall and the picker's heading tighten so the picker fits without scrolling. */
+/* A short desktop: the picker's heading tightens so the picker fits without scrolling. */
 @media (max-height: 820px) and (min-width: 601px) {
-  .backwall {
-    padding: 20px 40px 16px;
+  .door-wall {
+    padding-top: 28px;
   }
 
   .picker .door-line {

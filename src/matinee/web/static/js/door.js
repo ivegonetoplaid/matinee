@@ -1,7 +1,7 @@
-// The box office: an art deco booth with a lit sign, where Matinee greets a
-// viewer before the poster wall. Every question at the door is asked on the
-// booth's back wall, between the velvet columns; the booth never leaves the
-// screen until the viewer goes in.
+// The front door: the marquee, a stepped crown over a lit sign, stands at the top
+// centre over the poster wall, and Matinee greets a viewer on the wall below it.
+// Every question at the door types straight onto the wall, with nothing behind
+// Matinee's words; the marquee stays until the viewer goes in.
 
 import { get, post, put } from "./api.js";
 import { credits } from "./credits.js";
@@ -87,7 +87,7 @@ function field(props) {
   return h("input", { class: "field", autocomplete: "off", spellcheck: "false", ...props });
 }
 
-// The booth and what it asks. `onEnter` takes the viewer into the theatre.
+// The door and what it asks. `onEnter` takes the viewer into the theatre.
 export class Door {
   constructor({ stage, onEnter }) {
     this.stage = stage;
@@ -97,20 +97,17 @@ export class Door {
     this.excluded = new Set();
   }
 
-  // Build the booth and open on the screen this device's tokens call for, or on `screen` when given.
+  // Build the door and open on the screen this device's tokens call for, or on `screen` when given.
   async open({ door, screen = null, profileId = null }) {
     this.held = door.profiles;
-    this.wall = h("div", { class: "backwall" });
-    this.booth = h(
-      "div",
-      { class: "booth" },
-      h("div", { class: "booth-glow", "aria-hidden": "true" }),
-      crown(),
-      sign(door.now_showing),
-      h("div", { class: "booth-middle" }, h("div", { class: "column", "aria-hidden": "true" }), this.wall, h("div", { class: "column", "aria-hidden": "true" })),
-      h("footer", { class: "counter" }, h("div", { class: "counter-top", "aria-hidden": "true" }), h("div", { class: "counter-front" }, credits())),
+    this.wall = h("div", { class: "door-wall" });
+    this.marquee = h("div", { class: "marquee" }, h("div", { class: "marquee-glow", "aria-hidden": "true" }), crown(), sign(door.now_showing));
+    clear(this.stage).append(
+      h("h1", { class: "sr-only" }, "Matinee box office"),
+      this.marquee,
+      this.wall,
+      h("footer", { class: "door-foot" }, credits()),
     );
-    clear(this.stage).append(h("h1", { class: "sr-only" }, "Matinee box office"), this.booth);
     if (screen === "known") return this.known();
     const profile = this.held.find((p) => p.id === profileId);
     if (screen === "list" && profile) return this.picker({ editing: profile });
@@ -123,9 +120,9 @@ export class Door {
     return this.first();
   }
 
-  // One question on the back wall: the line types out, then its controls appear.
+  // One question on the wall: the line types out, then its controls appear.
   async talk(ack, ask, controls) {
-    this.booth.classList.remove("compact");
+    this.marquee.classList.remove("compact");
     const line = h("p", { class: "line door-line", "aria-live": "polite" });
     const below = h("div", { class: "door-controls", hidden: true }, controls);
     clear(this.wall).append(h("div", { class: "door-talk" }, line, below));
@@ -243,7 +240,7 @@ export class Door {
   }
 
   enter({ viewer = {}, name = null, profileTopics = false }) {
-    for (const b of this.booth.querySelectorAll("button, input")) b.disabled = true;
+    for (const b of this.stage.querySelectorAll("button, input")) b.disabled = true;
     this.onEnter({ viewer, name, profileTopics });
   }
 
@@ -251,7 +248,7 @@ export class Door {
   async picker({ editing = null }) {
     this.picked = new Set(editing ? editing.topics : []);
     this.excluded = new Set(editing ? editing.exclusions : []);
-    this.booth.classList.add("compact");
+    this.marquee.classList.add("compact");
     const heading = h(
       "p",
       { class: "line door-line done" },

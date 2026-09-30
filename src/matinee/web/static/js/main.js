@@ -180,7 +180,6 @@ async function boot(opts = {}) {
   if (!door.ok) return problem(door.data, () => boot(opts));
   stage.classList.remove("revealed");
   stage.classList.add("at-door");
-  wall.root.classList.add("at-door");
   if (first.ok) wall.show(first.data.pool);
   await new Door({ stage, onEnter: enter }).open({ door: door.data, ...opts });
 }
@@ -190,7 +189,6 @@ async function enter({ viewer, name, profileTopics }) {
   await closeIris();
   clear(stage);
   stage.classList.remove("at-door");
-  wall.root.classList.remove("at-door");
   await start({ reveal: openIris });
   openIris(); // a start that ended on a problem screen still opens
 }
