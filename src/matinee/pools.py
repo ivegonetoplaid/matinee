@@ -19,8 +19,8 @@ The kids tree is gated and fails closed: a film enters only with a passing
 certificate, and sorts into three age bands. A film in the same TMDB collection
 as a kids film joins when its certificate and adult signal allow. A kids film
 stays in the adult trees too, except that one with no genome entry is kids-only,
-and one offered to little ones or the whole family never counts as adult horror
-or thriller.
+and one offered to little ones or the whole family never counts as adult horror,
+thriller or crime (`FOR_GROWN_UPS`), whatever its labels say.
 """
 
 from __future__ import annotations
@@ -44,6 +44,7 @@ THRILLER_GENRES = {"Thriller", "Mystery"}
 STANDUP_KEYWORD = "stand-up comedy"
 CONCERT_KEYWORDS = {"concert", "concert film"}
 ADULT_TREES = ("horror", "comedy", "action", "fantasy", "thriller")
+FOR_GROWN_UPS = ("horror", "thriller", "crime")  # trees no film for little ones or the whole family joins
 SLEEP_ENCHANTMENT, SLEEP_EDGE = 0.55, 0.40
 KIDS_GENRES = {"Animation", "Family"}
 LITTLE_CERTS = {"G", "TV-Y", "TV-Y7", "TV-G", "E"}
@@ -235,7 +236,8 @@ def specials(table: FilmTable, house: House) -> Mask:
 def build_pools(table: FilmTable, house: House) -> dict[str, Mask]:
     """Every tree's and mode's pool, plus the kids bands as `kids:little`, `kids:family`, `kids:franchise`.
 
-    `kids:only` marks the kids-only films, which no other tree takes.
+    `kids:only` marks the kids-only films, which no other tree takes, and `kids:young` the films for little
+    ones or the whole family, which no `FOR_GROWN_UPS` tree takes.
     """
     s = scores(table)
     tag = {name: _genre(table, name) for name in ("Horror", "Comedy", "Action", "Adventure", "Fantasy", "Drama")}
@@ -264,9 +266,10 @@ def build_pools(table: FilmTable, house: House) -> dict[str, Mask]:
     ) & ~kids_only
     tense = ~s["thrill"].lt(EFFECT_FLOOR["thrill"]).fillna(False).astype(bool)
     pools["thriller"] = _any_genre(table, THRILLER_GENRES) & tense & ~young_kids & ~kids_only
-    pools["crime"] = _genre(table, "Crime") & ~kids_only  # not in ADULT_TREES: it claims no stray
+    pools["crime"] = _genre(table, "Crime") & ~young_kids  # not in ADULT_TREES: it claims no stray
     pools["kids:franchise"] = bands["franchise"]
     pools["kids:only"] = kids_only  # films only the kids tree may hold; not a home of its own
+    pools["kids:young"] = young_kids  # films for little ones or the whole family; no FOR_GROWN_UPS tree holds one
     pinned = _ids(table, frozenset().union(*house.tree_pins.values()))
     strays = _any_genre(table, DRAMA_STRAYS) & ~_claimed(pools) & ~pinned & ~kids_only
     adult = {name: pools[name] for name in ADULT_TREES}

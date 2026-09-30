@@ -97,3 +97,12 @@ def test_the_crime_pool_takes_every_crime_film_and_claims_no_stray() -> None:
     assert pools["drama"][1]  # a Crime film no other tree claims stays a drama stray beside the crime pool
     assert pools["action"][2]  # a Crime film exciting enough stays in action beside the crime pool
     assert not pools["action"][1]
+
+
+def test_the_crime_pool_leaves_out_a_film_for_the_whole_family() -> None:
+    table = make_table(
+        [film(1, "Animation|Crime|Family", "PG", None), film(2, "Animation|Crime", "PG-13", None)], {1: {}, 2: {}}
+    )
+    pools = build_pools(table, NO_PINS)
+    assert pools["kids:young"][1] and not pools["crime"][1]
+    assert pools["crime"][2]  # an older kids' film may still be crime

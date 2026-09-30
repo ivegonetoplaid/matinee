@@ -74,6 +74,23 @@ def test_a_label_never_brings_a_kids_only_film_into_another_tree(tmp_path: Path)
     assert cat.pools["horror"][ids.index(3)]  # any other labelled film still joins
 
 
+def test_a_label_never_brings_a_film_for_the_whole_family_behind_a_grown_ups_door(tmp_path: Path) -> None:
+    table = make_table()
+    genres = table.films.genres.copy()
+    genres[3] = frozenset({"Animation", "Comedy", "Western"})  # PG, with genome: the kids tree's family band
+    table.films["genres"] = genres
+    root = write_data(tmp_path, labelled_tree())
+    (root / "trees" / "west.json").write_text(json.dumps({**labelled_tree(), "pool": "horror"}))
+    laughs = {"pool": "fantasy", "opening": "ha.", "flavours": {"ghost": {"labelled": True}}}
+    (root / "trees" / "laughs.json").write_text(json.dumps(laughs))
+    lab = Labels({t: TreeLabels({3: frozenset({"ghost"})}) for t in ("west", "laughs")})
+    cat = load_catalog(table, root, reference(), lab)
+    ids = list(cat.ids)
+    assert cat.pools["kids:young"][ids.index(3)] and not cat.pools["kids:only"][ids.index(3)]
+    assert not cat.pools["horror"][ids.index(3)]  # horror is for grown-ups
+    assert cat.pools["fantasy"][ids.index(3)]  # a family film may still be labelled into fantasy
+
+
 def test_a_film_labelled_out_leaves_only_when_another_tree_holds_it(tmp_path: Path) -> None:
     root = write_data(tmp_path, labelled_tree())
     (root / "trees" / "laughs.json").write_text(json.dumps({"pool": "comedy", "opening": "ha."}))

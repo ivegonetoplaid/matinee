@@ -1224,6 +1224,39 @@
         "crime"
       ],
       "note": "a kids-only film the labels place under crime's heists; only the kids tree holds a kids-only film (the operator, 2026-09-30)"
+    },
+    {
+      "title": "The Bad Guys",
+      "tmdb": 629542,
+      "must_reach": [
+        "kids"
+      ],
+      "must_not": [
+        "crime"
+      ],
+      "note": "a film for the whole family never counts as crime (the operator, 2026-09-30)"
+    },
+    {
+      "title": "Hoodwinked!",
+      "tmdb": 10982,
+      "must_reach": [
+        "kids"
+      ],
+      "must_not": [
+        "crime"
+      ],
+      "note": "a film for the whole family never counts as crime (the operator, 2026-09-30)"
+    },
+    {
+      "title": "The Pink Panther",
+      "tmdb": 12096,
+      "must_reach": [
+        "kids"
+      ],
+      "must_not": [
+        "crime"
+      ],
+      "note": "a film for the whole family never counts as crime (the operator, 2026-09-30)"
     }
   ]
 }

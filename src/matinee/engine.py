@@ -49,7 +49,7 @@ import numpy.typing as npt
 import pandas as pd
 
 from matinee.labels import Labels
-from matinee.pools import House, build_pools, load_house, specials
+from matinee.pools import FOR_GROWN_UPS, House, build_pools, load_house, specials
 from matinee.reference import DATA, Reference, load_reference, load_specs, problems
 from matinee.scales import film_scores, membership, offered, scale_of
 from matinee.table import FilmTable
@@ -388,19 +388,24 @@ def _apply_labels(cat: Catalog) -> None:
     """Check the labels against the trees, then settle every tree's pool by them at once.
 
     Every labelled film joins the pool, whatever the pool rules said, except a kids-only film, which only
-    the kids tree holds. Then a film labelled out of a tree
+    the kids tree holds, and a film for little ones or the whole family, which no grown-ups' tree (horror,
+    thriller, crime) holds. Then a film labelled out of a tree
     leaves it only where another tree keeps it: holds it and does not label it out too. A film every tree
     holding it labels out stays in all of them, so no film is left with no way in. A film the house pins
     to a tree never leaves it: a house pin is the operator's own placement. The order of the entries in
     the labels file changes nothing.
     """
     index = cat.table.films.index
-    kids_only = cat.pools.get("kids:only", np.zeros(len(index), dtype=bool))
+    none = np.zeros(len(index), dtype=bool)
+    kids_only, young = cat.pools.get("kids:only", none), cat.pools.get("kids:young", none)
     leaving: dict[str, Mask] = {}
     for tree_id, labels in cat.labels.trees.items():
         tree = _labelled_tree(cat, tree_id, labels.kinds)
         if tree.pool in cat.pools:
-            cat.pools[tree.pool] = cat.pools[tree.pool] | (index.isin(list(labels.kinds)) & ~kids_only)
+            barred = kids_only.copy()
+            if tree.pool in FOR_GROWN_UPS:
+                barred |= young
+            cat.pools[tree.pool] = cat.pools[tree.pool] | (index.isin(list(labels.kinds)) & ~barred)
             pinned = index.isin(list(cat.house.tree_pins.get(tree.pool, frozenset())))
             leaving[tree.pool] = index.isin(list(labels.out)) & ~pinned
     keeps = {t.pool: cat.pools[t.pool].copy() for t in cat.trees.values() if t.pool in cat.pools}
