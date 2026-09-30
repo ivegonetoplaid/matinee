@@ -10,7 +10,7 @@ import pytest
 
 from matinee.engine import Answer, EngineError, Viewer, load_catalog, walk
 from matinee.labels import Labels, LabelsError, TreeLabels, load_labels
-from matinee.trees import TreeError
+from matinee.trees import TreeError, load_trees
 from test_engine import TREE, make_table, reference, write_data
 
 
@@ -67,6 +67,41 @@ def test_a_film_labelled_out_leaves_only_when_another_tree_holds_it(tmp_path: Pa
     ids = list(cat.ids)
     assert not cat.pools["western"][ids.index(3)]  # a Comedy film: the comedy tree holds it
     assert cat.pools["western"][ids.index(2)]  # a Horror film: no other tree holds it, so it stays
+
+
+@pytest.mark.parametrize("order", [("west", "scary"), ("scary", "west")])
+def test_labels_settle_the_same_whatever_order_the_file_lists_them(tmp_path: Path, order: tuple[str, str]) -> None:
+    root = write_data(tmp_path, labelled_tree())
+    scary = {"pool": "horror", "opening": "boo.", "flavours": {"ghost": {"labelled": True}}}
+    (root / "trees" / "scary.json").write_text(json.dumps(scary))
+    entries = {
+        "west": TreeLabels({1: frozenset()}, frozenset({3, 4})),  # 3 is labelled into scary; 4 is out of both
+        "scary": TreeLabels({3: frozenset()}, frozenset({4})),
+    }
+    pools = load_catalog(make_table(), root, reference(), Labels({t: entries[t] for t in order})).pools
+    ids = list(make_table().films.index)
+    assert pools["horror"][ids.index(3)] and not pools["western"][ids.index(3)]  # its labels place it in scary
+    assert pools["western"][ids.index(4)] and pools["horror"][ids.index(4)]  # every door holding it labels it out
+
+
+def test_a_film_the_house_pins_to_a_tree_stays_there_whatever_its_labels_say(tmp_path: Path) -> None:
+    root = write_data(tmp_path, labelled_tree())
+    (root / "trees" / "laughs.json").write_text(json.dumps({"pool": "comedy", "opening": "ha."}))
+    house = json.loads((root / "house_overrides.json").read_text())
+    (root / "house_overrides.json").write_text(json.dumps({**house, "trees": [{"tmdb": 3, "tree": "western"}]}))
+    cat = load_catalog(make_table(), root, reference(), labels({}, out=(3, 5)))
+    ids = list(cat.ids)
+    assert cat.pools["western"][ids.index(3)]  # pinned: the comedy tree holds it too, and it stays
+    assert not cat.pools["western"][ids.index(5)]  # unpinned, held by comedy: it leaves
+
+
+def test_the_shipped_thriller_door_offers_its_kinds_in_order_and_only_spies_self_destructs() -> None:
+    thriller = load_trees()["thriller"]
+    (question,) = thriller.questions
+    flavours = [o.filter.flavour for o in question.options]
+    assert flavours == ["keep_guessing", "trapped", "mind_games", "spies", "serial_killers", "erotic", None]
+    assert [o.self_destruct for o in question.options] == [None, None, None, 5, None, None, None]
+    assert all(thriller.flavours[f]["labelled"] for f in flavours if f)
 
 
 @pytest.mark.parametrize(

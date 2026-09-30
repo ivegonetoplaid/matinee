@@ -15,7 +15,12 @@
       "cult classic"
     ]
   },
-  "hidden": [],
+  "hidden": [
+    [
+      "thriller",
+      "erotic"
+    ]
+  ],
   "films": [
     {
       "title": "Hubie Halloween",
@@ -184,7 +189,13 @@
       "note": "crime, mystery and thriller with no Drama tag; its home is the thriller tree",
       "must_not": [
         "drama"
-      ]
+      ],
+      "flavour_in": {
+        "thriller": [
+          "mind_games",
+          "serial_killers"
+        ]
+      }
     },
     {
       "title": "Memento",
@@ -194,7 +205,12 @@
       ],
       "must_not": [
         "drama"
-      ]
+      ],
+      "flavour_in": {
+        "thriller": [
+          "mind_games"
+        ]
+      }
     },
     {
       "title": "Vertigo",
@@ -712,7 +728,10 @@
         "horror"
       ],
       "gore_band": "rip",
-      "note": "gore acceptance (decision 59)"
+      "note": "gore acceptance (decision 59)",
+      "must_not": [
+        "thriller"
+      ]
     },
     {
       "title": "The Texas Chain Saw Massacre",
@@ -900,6 +919,124 @@
           "standup"
         ]
       }
+    },
+    {
+      "title": "Gone Girl",
+      "tmdb": 210577,
+      "must_reach": [
+        "thriller"
+      ],
+      "flavour_in": {
+        "thriller": [
+          "keep_guessing",
+          "mind_games"
+        ]
+      },
+      "note": "one of the Thriller door's signed-off examples (2026-09-30)"
+    },
+    {
+      "title": "The Prestige",
+      "tmdb": 1124,
+      "must_reach": [
+        "thriller"
+      ],
+      "flavour_in": {
+        "thriller": [
+          "keep_guessing",
+          "mind_games"
+        ]
+      },
+      "note": "one of the Thriller door's signed-off examples (2026-09-30)"
+    },
+    {
+      "title": "Zodiac",
+      "tmdb": 1949,
+      "must_reach": [
+        "thriller"
+      ],
+      "flavour_in": {
+        "thriller": [
+          "keep_guessing",
+          "serial_killers"
+        ]
+      },
+      "note": "one of the Thriller door's signed-off examples (2026-09-30)"
+    },
+    {
+      "title": "Room",
+      "tmdb": 264644,
+      "must_reach": [
+        "thriller"
+      ],
+      "flavour_in": {
+        "thriller": [
+          "trapped"
+        ]
+      },
+      "note": "one of the Thriller door's signed-off examples (2026-09-30)"
+    },
+    {
+      "title": "Die Hard",
+      "tmdb": 562,
+      "must_reach": [
+        "thriller"
+      ],
+      "flavour_in": {
+        "thriller": [
+          "trapped"
+        ]
+      },
+      "note": "one of the Thriller door's signed-off examples (2026-09-30)"
+    },
+    {
+      "title": "Gravity",
+      "tmdb": 49047,
+      "must_reach": [
+        "thriller"
+      ],
+      "flavour_in": {
+        "thriller": [
+          "trapped"
+        ]
+      },
+      "note": "one of the Thriller door's signed-off examples (2026-09-30)"
+    },
+    {
+      "title": "Fight Club",
+      "tmdb": 550,
+      "must_reach": [
+        "thriller"
+      ],
+      "flavour_in": {
+        "thriller": [
+          "mind_games"
+        ]
+      },
+      "note": "one of the Thriller door's signed-off examples (2026-09-30)"
+    },
+    {
+      "title": "Casino Royale",
+      "tmdb": 36557,
+      "must_reach": [
+        "thriller"
+      ],
+      "flavour_in": {
+        "thriller": [
+          "spies"
+        ]
+      },
+      "note": "one of the Thriller door's signed-off examples (2026-09-30)"
+    },
+    {
+      "title": "The Godfather",
+      "tmdb": 238,
+      "must_reach": [
+        "drama"
+      ],
+      "must_not": [
+        "thriller"
+      ],
+      "note": "a franchise stray the labels place behind no thriller kind; Drama holds it, so it leaves Thriller"
     }
   ]
 }

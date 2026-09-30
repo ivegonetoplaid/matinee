@@ -400,6 +400,24 @@ def check_sample(full: Catalog, name: str, share: float, seed: int, report: Repo
     report.prefix = ""
 
 
+def report_kept(cat: Catalog, tree_id: str, report: Report) -> None:
+    """Name the films labelled out of a tree that stay in it, each under the reason it stays."""
+    index = cat.table.films.index
+    pool = cat.trees[tree_id].pool
+    kept = cat.pools[pool] & index.isin(list(cat.labels.of(tree_id).out))
+    pinned = index.isin(list(cat.house.tree_pins.get(pool, frozenset())))
+    apart = cat.apart.get(tree_id, np.zeros(len(index), dtype=bool))
+    reasons = (
+        ("the house pins it there", kept & pinned),
+        ("held apart there", kept & ~pinned & apart),
+        ("no other door keeps it", kept & ~pinned & ~apart),
+    )
+    for reason, films in reasons:
+        if films.any():
+            names = "; ".join(_label(cat.table, int(t)) for t in index[films])
+            report.say(f"  labelled out of {tree_id} but kept there, {reason}: {names}")
+
+
 def check_hidden(cat: Catalog, key: dict[str, Any], report: Report) -> None:
     """The kinds the bar hides in this library must be exactly the answer key's `hidden` list of [tree, kind] pairs.
 
@@ -466,10 +484,7 @@ def main() -> int:
     report.say(f"built {table.built_at:%Y-%m-%d %H:%M}, genome {table.release}")
     for tree_id, labels in cat.labels.trees.items():
         report.say(f"labels: {len(labels.kinds)} films labelled in {tree_id}, {len(labels.out)} labelled out of it")
-        kept = table.films.index[pools[cat.trees[tree_id].pool] & table.films.index.isin(list(labels.out))]
-        if len(kept):
-            names = "; ".join(_label(table, int(t)) for t in kept)
-            report.say(f"  labelled out of {tree_id} but kept there, having no other home: {names}")
+        report_kept(cat, tree_id, report)
     check_hidden(cat, key, report)
     added = table.films.index[pools["kids:franchise"]]
     report.say(f"franchise rule added {len(added)} films to kids: " + "; ".join(sorted(table.films.loc[added, "name"])))

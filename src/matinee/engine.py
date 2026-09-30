@@ -372,33 +372,44 @@ def _first_option(o: dict[str, str]) -> FirstOption:
     return FirstOption(o["say"], o["tree"], o["label"])
 
 
-def _elsewhere(cat: Catalog, tree: Tree) -> Mask:
-    """Films held by the pool of any tree other than `tree`."""
-    held = np.zeros(len(cat.table.films), dtype=bool)
-    for other in cat.trees.values():
-        if other.pool != tree.pool and other.pool in cat.pools:
-            held |= cat.pools[other.pool]
-    return held
+def _labelled_tree(cat: Catalog, tree_id: str, kinds: Mapping[int, frozenset[str]]) -> Tree:
+    """The tree a labels entry names; raises when no tree file defines it or it does not label a kind given."""
+    tree = cat.trees.get(tree_id)
+    if tree is None:
+        raise EngineError(f"the labels name tree '{tree_id}', which no tree file defines")
+    known = {name for name, spec in tree.flavours.items() if spec.get("labelled")}
+    unknown = set().union(*kinds.values()) - known
+    if unknown:
+        raise EngineError(f"the labels give tree '{tree_id}' kinds it does not label: {sorted(unknown)}")
+    return tree
 
 
 def _apply_labels(cat: Catalog) -> None:
-    """Check the labels against the trees, then settle each tree's pool by them.
+    """Check the labels against the trees, then settle every tree's pool by them at once.
 
-    Every labelled film joins the pool, whatever the pool rules said. A film labelled out leaves only
-    when another tree holds it, so no film is left with no way in.
+    Every labelled film joins the pool, whatever the pool rules said. Then a film labelled out of a tree
+    leaves it only where another tree keeps it: holds it and does not label it out too. A film every tree
+    holding it labels out stays in all of them, so no film is left with no way in. A film the house pins
+    to a tree never leaves it: a house pin is the operator's own placement. The order of the entries in
+    the labels file changes nothing.
     """
+    index = cat.table.films.index
+    leaving: dict[str, Mask] = {}
     for tree_id, labels in cat.labels.trees.items():
-        tree = cat.trees.get(tree_id)
-        if tree is None:
-            raise EngineError(f"the labels name tree '{tree_id}', which no tree file defines")
-        known = {name for name, spec in tree.flavours.items() if spec.get("labelled")}
-        unknown = set().union(*labels.kinds.values()) - known
-        if unknown:
-            raise EngineError(f"the labels give tree '{tree_id}' kinds it does not label: {sorted(unknown)}")
+        tree = _labelled_tree(cat, tree_id, labels.kinds)
         if tree.pool in cat.pools:
-            index = cat.table.films.index
-            held, out = index.isin(list(labels.kinds)), index.isin(list(labels.out))
-            cat.pools[tree.pool] = (cat.pools[tree.pool] | held) & ~(out & _elsewhere(cat, tree))
+            cat.pools[tree.pool] = cat.pools[tree.pool] | index.isin(list(labels.kinds))
+            pinned = index.isin(list(cat.house.tree_pins.get(tree.pool, frozenset())))
+            leaving[tree.pool] = index.isin(list(labels.out)) & ~pinned
+    keeps = {t.pool: cat.pools[t.pool].copy() for t in cat.trees.values() if t.pool in cat.pools}
+    for pool, out in leaving.items():
+        keeps[pool] &= ~out
+    for pool, out in leaving.items():
+        elsewhere = np.zeros(len(index), dtype=bool)
+        for other, kept in keeps.items():
+            if other != pool:
+                elsewhere |= kept
+        cat.pools[pool] = cat.pools[pool] & ~(out & elsewhere)
 
 
 def _hold_apart(cat: Catalog) -> None:

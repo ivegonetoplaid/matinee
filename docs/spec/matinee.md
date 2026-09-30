@@ -202,8 +202,8 @@ asterisk on "anything" are not shown either.
 standardised with the reference mean and standard deviation for that tree
 (section 3). A film belongs to its strongest payoff. Where the tree sets an
 overlap, it also belongs to every other payoff whose standardised score reaches
-that overlap. The overlap is 0.75 in the drama, fantasy, kids, thriller and
-western trees. The action tree sets none, so an action film has one payoff.
+that overlap. The overlap is 0.75 in the drama, fantasy, kids and western
+trees. The action tree sets none, so an action film has one payoff.
 A payoff may instead be a raw threshold that never counts as strongest: the
 kids tree's spooky answer needs a spooky score of at least 0.30. A film with no
 genome entry is placed by its genre where the tree lists genres (the western and
@@ -292,8 +292,9 @@ non-zero exit, on any of these:
 Separately, the engine refuses to prepare when the shipped reference statistics
 do not cover the tree files (section 3). The checker reports that as a failure.
 The checker reads the labels file beside the film table unless `--labels` names
-another, and reports each film labelled out of a tree but kept there for having
-no other home, and each answer a small kind hides. On the full library it fails
+another, and reports each film labelled out of a tree but kept there, with the
+reason (a house pin, held apart, or no other door keeps it), and each answer a
+small kind hides. On the full library it fails
 when the kinds the bar hides differ from the answer key's `hidden` list of
 `[tree, kind]` pairs, so a kind that starts hiding, or stops, is never silent.
 
@@ -314,9 +315,14 @@ committed, because it lists the films one library holds. Its shape:
   pool, whatever the pool rules said: a horror comedy the rules sent to comedy
   alone is in horror too once labelled.
 - A film absent from `kinds` is unlabelled and sits under no kind.
-- `out` lists films carrying the tree's genre that belong elsewhere. Such a film
-  leaves the tree's pool only when another tree's pool holds it; otherwise it
-  stays, so no film loses its way in.
+- `out` lists films that belong elsewhere. Every labelled film first joins its
+  trees' pools. Then a film labelled out of a tree leaves it only where another
+  tree keeps it (holds it and does not label it out too), and never when the
+  house pins it to this tree. A film every tree holding it labels out stays in
+  all of them, so no film loses its way in, and the order of the entries in the
+  file changes nothing. A film the list names outside the tree's pool changes
+  nothing, so a list may name every labelled film not behind the door
+  (thriller's does).
 - An absent file means no film is labelled, and the server logs a warning. A
   malformed file, a tree no file defines, or a kind the tree does not label
   stops the server at start-up.
