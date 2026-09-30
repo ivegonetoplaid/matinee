@@ -1394,25 +1394,25 @@ symbol when one does not match.
 | `src/matinee/trees.py::parse_filter` | `src/matinee/trees.py:172` | 2026-09-30 |
 | `src/matinee/trees.py::Payoffs` | `src/matinee/trees.py:78` | 2026-09-30 |
 | `src/matinee/engine.py::STOP_UNDER` | `src/matinee/engine.py:58` | 2026-09-30 |
-| `src/matinee/engine.py::load_catalog` | `src/matinee/engine.py:453` | 2026-09-30 |
+| `src/matinee/engine.py::load_catalog` | `src/matinee/engine.py:460` | 2026-09-30 |
 | `src/matinee/engine.py::_first_option` (label required) | `src/matinee/engine.py:369` | 2026-09-30 |
-| `src/matinee/engine.py::first_question` | `src/matinee/engine.py:624` | 2026-09-30 |
-| `src/matinee/engine.py::base_pool` (order of corrections, exclusions, topic skip) | `src/matinee/engine.py:487` | 2026-09-30 |
-| `src/matinee/engine.py::walk` | `src/matinee/engine.py:572` | 2026-09-30 |
-| `src/matinee/engine.py::_gate` (`only_if_pool_over`, `skip_if_topics`) | `src/matinee/engine.py:555` | 2026-09-30 |
-| `src/matinee/engine.py::_shown` (empty answers hidden, `not_after`, small kinds hidden) | `src/matinee/engine.py:532` | 2026-09-30 |
+| `src/matinee/engine.py::first_question` | `src/matinee/engine.py:631` | 2026-09-30 |
+| `src/matinee/engine.py::base_pool` (order of corrections, exclusions, topic skip) | `src/matinee/engine.py:494` | 2026-09-30 |
+| `src/matinee/engine.py::walk` | `src/matinee/engine.py:579` | 2026-09-30 |
+| `src/matinee/engine.py::_gate` (`only_if_pool_over`, `skip_if_topics`) | `src/matinee/engine.py:562` | 2026-09-30 |
+| `src/matinee/engine.py::_shown` (empty answers hidden, `not_after`, small kinds hidden) | `src/matinee/engine.py:539` | 2026-09-30 |
 | `src/matinee/engine.py::KIND_MIN_FILMS` | `src/matinee/engine.py:59` | 2026-09-30 |
-| `src/matinee/engine.py::_too_small` (`always_shown`, a kind another answer leaves out) | `src/matinee/engine.py:428` | 2026-09-30 |
-| `src/matinee/engine.py::_answer_masks` / `Catalog.small` | `src/matinee/engine.py:444` | 2026-09-30 |
-| `src/matinee/engine.py::_hold_apart` / `Catalog.apart` | `src/matinee/engine.py:415` | 2026-09-30 |
-| `src/matinee/engine.py::opening_pool` | `src/matinee/engine.py:513` | 2026-09-30 |
-| `src/matinee/engine.py::_served` (apart films stay out until their answer) | `src/matinee/engine.py:521` | 2026-09-30 |
-| `src/matinee/engine.py::_asked` / `Asked.footnote` (footnote and asterisks dropped with the apart answer) | `src/matinee/engine.py:542` | 2026-09-30 |
+| `src/matinee/engine.py::_too_small` (`always_shown`, a kind another answer leaves out) | `src/matinee/engine.py:435` | 2026-09-30 |
+| `src/matinee/engine.py::_answer_masks` / `Catalog.small` | `src/matinee/engine.py:451` | 2026-09-30 |
+| `src/matinee/engine.py::_hold_apart` / `Catalog.apart` | `src/matinee/engine.py:422` | 2026-09-30 |
+| `src/matinee/engine.py::opening_pool` | `src/matinee/engine.py:520` | 2026-09-30 |
+| `src/matinee/engine.py::_served` (apart films stay out until their answer) | `src/matinee/engine.py:528` | 2026-09-30 |
+| `src/matinee/engine.py::_asked` / `Asked.footnote` (footnote and asterisks dropped with the apart answer) | `src/matinee/engine.py:549` | 2026-09-30 |
 | `src/matinee/web/viewing.py::everything` (the first question's pool) | `src/matinee/web/viewing.py:172` | 2026-09-30 |
 | `src/matinee/web/viewing.py::QuestionOut.footnote` | `src/matinee/web/viewing.py:82` | 2026-09-30 |
 | `src/matinee/engine.py::_plain_mask` / `_range_mask` (unknown values pass) | `src/matinee/engine.py:312` | 2026-09-30 |
 | `src/matinee/engine.py::payoff_members` | `src/matinee/engine.py:217` | 2026-09-30 |
-| `src/matinee/engine.py::walk_ends` / `reachable` | `src/matinee/engine.py:598` | 2026-09-30 |
+| `src/matinee/engine.py::walk_ends` / `reachable` | `src/matinee/engine.py:605` | 2026-09-30 |
 | `data/trees/comedy.json` room question (ceilings) | `data/trees/comedy.json:7` | 2026-09-27 |
 | `data/trees/comedy.json` kind question (standup answer, footnote), `standup` flavour, `apart` | `data/trees/comedy.json:49` | 2026-09-30 |
 | `data/trees/thriller.json` kind question (spies `self_destruct`) | `data/trees/thriller.json:6` | 2026-09-30 |
@@ -1457,13 +1457,13 @@ symbol when one does not match.
 
 | Handle | Where | Verified |
 |---|---|---|
-| `src/matinee/pools.py::build_pools` (comedy holds the specials; the crime pool claims no stray) | `src/matinee/pools.py:235` | 2026-09-30 |
+| `src/matinee/pools.py::build_pools` (comedy holds the specials; the crime pool claims no stray) | `src/matinee/pools.py:236` | 2026-09-30 |
 | `src/matinee/pools.py::EFFECT_FLOOR` and the other thresholds | `src/matinee/pools.py:40` | 2026-09-30 |
-| `src/matinee/pools.py::SCORES` | `src/matinee/pools.py:69` | 2026-09-30 |
-| `src/matinee/pools.py::kids_bands` | `src/matinee/pools.py:175` | 2026-09-30 |
-| `src/matinee/pools.py::standup_specials` | `src/matinee/pools.py:213` | 2026-09-30 |
-| `src/matinee/pools.py::specials` (the rule plus `specials` pins) | `src/matinee/pools.py:230` | 2026-09-30 |
-| `src/matinee/pools.py::_strays_follow_franchise` | `src/matinee/pools.py:201` | 2026-09-30 |
+| `src/matinee/pools.py::SCORES` | `src/matinee/pools.py:70` | 2026-09-30 |
+| `src/matinee/pools.py::kids_bands` | `src/matinee/pools.py:176` | 2026-09-30 |
+| `src/matinee/pools.py::standup_specials` | `src/matinee/pools.py:214` | 2026-09-30 |
+| `src/matinee/pools.py::specials` (the rule plus `specials` pins) | `src/matinee/pools.py:231` | 2026-09-30 |
+| `src/matinee/pools.py::_strays_follow_franchise` | `src/matinee/pools.py:202` | 2026-09-30 |
 | `src/matinee/reference.py::reference_films` | `src/matinee/reference.py:157` | 2026-09-26 |
 | `src/matinee/reference.py::compute_tree` | `src/matinee/reference.py:176` | 2026-09-26 |
 | `src/matinee/reference.py::problems` | `src/matinee/reference.py:252` | 2026-09-26 |
@@ -1487,7 +1487,7 @@ symbol when one does not match.
 | `src/matinee/labels.py::load_labels` | `src/matinee/labels.py:64` | 2026-09-27 |
 | `src/matinee/engine.py::_apply_labels` (labelled films join, but for kids-only films and, behind horror, thriller or crime, young kids films; out films leave only where another tree keeps them; house tree pins stay) | `src/matinee/engine.py:387` | 2026-09-30 |
 | `src/matinee/engine.py::_labelled_tree` (unknown tree or kind refused) | `src/matinee/engine.py:375` | 2026-09-30 |
-| `src/matinee/pools.py::load_house` / `House` (`House.specials`) | `src/matinee/pools.py:112` | 2026-09-30 |
+| `src/matinee/pools.py::load_house` / `House` (`House.specials`) | `src/matinee/pools.py:113` | 2026-09-30 |
 | `src/matinee/engine.py::house_flavour` (a `specials` flavour holds the standup specials) | `src/matinee/engine.py:190` | 2026-09-30 |
 | `data/house_overrides.json` scale pins | `data/house_overrides.json:104` | 2026-09-30 |
 | `data/house_overrides.json` `specials` pins | `data/house_overrides.json:73` | 2026-09-30 |
@@ -1543,11 +1543,11 @@ symbol when one does not match.
 | `src/matinee/dtdd.py::Dtdd.get` / `_pace` (`BURST`, `RATE_PER_S`) | `src/matinee/dtdd.py:106` | 2026-09-26 |
 | `src/matinee/dtdd.py::Dtdd._check_holds` / `_refused` / `_note_remaining` (`REQUESTS_PER_HOUR`, `MONTH_RESERVE`, `RESERVE_HOLD_S`, `BACKOFF_S`) | `src/matinee/dtdd.py:123` | 2026-09-26 |
 | `src/matinee/dtdd.py::Dtdd.topics` (`TOPICS_REFRESH_S`, `TOPICS_KEEP_S`) | `src/matinee/dtdd.py:178` | 2026-09-26 |
-| `src/matinee/pick.py::failing` (`MIN_VOTES`) | `src/matinee/pick.py:73` | 2026-09-26 |
-| `src/matinee/pick.py::ItemIds` (`ID_KEEP_S`) | `src/matinee/pick.py:113` | 2026-09-26 |
-| `src/matinee/pick.py::look_up` (`LOOKUP_S`) | `src/matinee/pick.py:142` | 2026-09-26 |
-| `src/matinee/pick.py::DeviceCap` (`LOOKUPS_PER_HOUR`) | `src/matinee/pick.py:178` | 2026-09-26 |
-| `src/matinee/pick.py::candidates` | `src/matinee/pick.py:211` | 2026-09-26 |
+| `src/matinee/pick.py::failing` (`MIN_VOTES`) | `src/matinee/pick.py:74` | 2026-09-26 |
+| `src/matinee/pick.py::ItemIds` (`ID_KEEP_S`) | `src/matinee/pick.py:114` | 2026-09-26 |
+| `src/matinee/pick.py::look_up` (`LOOKUP_S`) | `src/matinee/pick.py:143` | 2026-09-26 |
+| `src/matinee/pick.py::DeviceCap` (`LOOKUPS_PER_HOUR`) | `src/matinee/pick.py:179` | 2026-09-26 |
+| `src/matinee/pick.py::candidates` | `src/matinee/pick.py:212` | 2026-09-26 |
 | `src/matinee/engine.py::gentlest` | `src/matinee/engine.py:271` | 2026-09-30 |
 | `src/matinee/pick.py::Picker.pick` (`PICK_TRIES`) | `src/matinee/pick.py:234` | 2026-09-26 |
 | `src/matinee/web/viewing.py::device_id` / `DEVICE_COOKIE` | `src/matinee/web/viewing.py:232` | 2026-09-30 |
@@ -1561,10 +1561,10 @@ symbol when one does not match.
 |---|---|---|
 | `src/matinee/web/main.py::build` (reads the quips) | `src/matinee/web/main.py:27` | 2026-09-28 |
 | `src/matinee/web/config.py::from_env` | `src/matinee/web/config.py:47` | 2026-09-26 |
-| `src/matinee/web/app.py::create_app` (docs disabled) | `src/matinee/web/app.py:232` | 2026-09-28 |
+| `src/matinee/web/app.py::create_app` (docs disabled) | `src/matinee/web/app.py:235` | 2026-09-28 |
 | `src/matinee/web/app.py::SECURITY_HEADERS` | `src/matinee/web/app.py:191` | 2026-09-28 |
 | `src/matinee/web/app.py::add_page` | `src/matinee/web/app.py:203` | 2026-09-28 |
-| `src/matinee/web/app.py::add_quip_routes` (`GET /api/quips`) | `src/matinee/web/app.py:225` | 2026-09-28 |
+| `src/matinee/web/app.py::add_quip_routes` (`GET /api/quips`) | `src/matinee/web/app.py:228` | 2026-09-28 |
 | `src/matinee/web/app.py::add_film_routes` / `IMAGE_WIDTHS` | `src/matinee/web/app.py:124` | 2026-09-28 |
 | `src/matinee/web/app.py::held` | `src/matinee/web/app.py:84` | 2026-09-28 |
 | `src/matinee/web/app.py::add_door_routes` | `src/matinee/web/app.py:156` | 2026-09-28 |
