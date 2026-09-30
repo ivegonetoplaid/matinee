@@ -12,6 +12,7 @@ from matinee.engine import Answer, Catalog, Viewer, load_catalog, opening_pool, 
 from matinee.labels import Labels, TreeLabels
 from matinee.table import FilmTable
 from matinee.trees import TreeError, parse_tree
+from matinee.web.viewing import everything
 from test_engine import TREE, make_table, reference, write_data
 
 SPECIALS = {31, 33, 35}  # 31 and 33 carry the stand-up keyword; 35 is pinned by the house. All are rated R.
@@ -65,7 +66,8 @@ def catalog(
     for name, doc in (also or {}).items():
         (data / "trees" / f"{name}.json").write_text(json.dumps(doc))
     house = json.loads((data / "house_overrides.json").read_text())
-    house["trees"] = [{"tmdb": 35, "tree": "standup"}, *pins]
+    house["trees"] = list(pins)
+    house["specials"] = [{"tmdb": 35}]
     (data / "house_overrides.json").write_text(json.dumps(house))
     return load_catalog(table(), data, reference(), labels)
 
@@ -92,6 +94,7 @@ def test_no_pool_before_the_standup_answer_holds_a_special(tmp_path: Path) -> No
     assert not set(after_room.pool) & SPECIALS
     assert not {int(t) for t in cat.ids[opening_pool(cat, "west", Viewer())]} & SPECIALS
     assert "a mic." in [o.say for o in after_room.question.options]
+    assert not set(everything(cat, Viewer())) & SPECIALS  # "Just pick one!" at the first question
 
 
 def test_the_certificate_ceiling_keeps_specials_and_their_answer_from_the_kids_path(tmp_path: Path) -> None:

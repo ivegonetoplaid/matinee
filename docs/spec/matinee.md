@@ -161,7 +161,9 @@ of the tree.
 **A flavour held apart.** A tree may hold one flavour `apart`. Its films always
 sit in the tree's pool, whatever the labels say. No pool the walk offers holds
 them until the answer naming the flavour is given, so every other answer, and
-`Just pick one!` anywhere in that tree, leaves them out.
+`Just pick one!` anywhere in that tree, leaves them out. No other door's pool
+holds them either (the checker fails otherwise), so `Just pick one!` at the
+first question never picks one.
 
 Horror's flavours are all labelled: supernatural, killers, monsters, slowburn,
 comedy and found_footage. A film may sit in two. A film played mainly for laughs
@@ -236,7 +238,8 @@ film onto the pinned payoff and off every other.
 ### 2.5 Every film stays reachable
 
 Every film in the library must be reachable through at least one complete path
-of answers in some tree or mode, and through a tree its own genres point at.
+of answers in some tree or mode a first-question answer leads to, and through a
+tree its own genres point at. A tree no door leads to is no film's home.
 `tools/check_trees.py` holds the trees to this. It reads the film table the
 nightly rebuild writes, builds every tree through the engine, and fails, with a
 non-zero exit, on any of these:
@@ -248,7 +251,7 @@ non-zero exit, on any of these:
    of that tree's answers, or a path ends on no film. It also reports how many
    questions each tree asks.
 4. **House pins.** A pin has no answer-key fixture asserting the pinned
-   placement.
+   placement. A `specials` pin's fixture asserts comedy's standup flavour.
 5. **Fixtures.** A fixture film in `data/answer_key.json`,
    `data/fixtures/horror.json` or `data/fixtures/comedy.json` misses a tree it
    must reach, reaches one it must not, or lands in the wrong kids band or gore
@@ -265,7 +268,8 @@ non-zero exit, on any of these:
    relevance 0.8 or above, except `afi 100 (laughs)` at 0.5. No copy of any
    published list is kept. Lists never filter, rank or gate what Matinee offers.
 8. **Expected homes and reachability.** A film is reachable through no tree its
-   own genres point at, or through no tree at all.
+   own genres point at, or through no tree at all. A film a tree holds apart
+   (section 2.3) sits in another door's pool.
 9. **Smaller libraries.** The same trees are rebuilt against a random third of
    the library (seed 3) and a random tenth (seed 10). Each must keep every film
    reachable. A film both libraries hold in a tree's pool must reach the same
@@ -499,12 +503,13 @@ question and is treated as "None. I'm squeamish.": 188, 296, 331, 203, 250,
 
 `data/house_overrides.json` holds this installation's hand-set placements,
 applied for everyone. A pin is keyed by TMDB id with its title and a note. It
-takes one of five forms:
+takes one of six forms:
 
 | Form | Places a film |
 |---|---|
 | `kids` | in the kids pool, in the named band |
-| `trees` | in a tree's pool (a film pinned to standup counts as a standup special: it sits in comedy's standup answer and leaves non-fiction) |
+| `trees` | in a tree's pool |
+| `specials` | among the standup specials: in comedy's standup answer and out of non-fiction |
 | `payoffs` | on one payoff of one tree, and off its others |
 | `scales` | in one band of one scale, and out of its others |
 | `flavours` | in one flavour of one tree (`member` true) or out of it (`member` false) |
@@ -1005,9 +1010,8 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
   The pick's line is a quip from `data/quips.json` (section 2.7), served by
   `GET /api/quips` and read once per page load. When the lines cannot be
   read, the page logs a warning and its picks show no line. A pick draws from
-  the category the first answer led to: its own lines, or those of the
-  category it borrows (standup borrows comedy's), each set falling back on its
-  own to universal's; "Just pick one!" before a category draws universal. The
+  the category the first answer led to: its own lines, each set falling back on
+  its own to universal's; "Just pick one!" before a category draws universal. The
   film's own genres play no part. Each set deals like a shuffled deck, one
   deck per page load, and is reshuffled only when every line has been dealt.
   The line is set in Big Shoulders Display, scaling with the screen between

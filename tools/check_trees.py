@@ -1,11 +1,13 @@
 """Check Matinee's trees against the answer key and the reachability rule.
 
 Reads the offline film table the nightly rebuild writes and builds every tree
-through the engine (the same module the web page uses). A tree with a file counts
-as a film's home only where some complete path of its answers reaches the film.
-It reports:
+through the engine (the same module the web page uses). A home is a tree or mode
+some first-question answer leads to, and it counts as a film's home only where
+some complete path of its answers reaches the film. A tree no door leads to is
+no film's home. It reports:
 
-1. Reachability: every film must have at least one home.
+1. Reachability: every film must have at least one home. A film a tree holds
+   apart (comedy's standup specials) must sit in no other home.
 2. Expected homes: every film must be reachable through a tree its own genre tags
    point at, not only by accident.
 3. The answer key: list films (genome list tags) and hand fixtures in
@@ -51,7 +53,7 @@ GORE_PROMISES = ("spotless", "rip")  # pails an unknown film could break the pro
 # Trees a film's genre tag is expected to lead to.
 EXPECTED = {
     "Horror": {"horror"},
-    "Comedy": {"comedy", "standup"},
+    "Comedy": {"comedy"},
     "Action": {"action"},
     "Adventure": {"action", "drama", "kids", "sleep", "fantasy"},
     "Drama": {"drama"},
@@ -64,13 +66,14 @@ EXPECTED = {
     "War": {"drama", "action"},
     "History": {"drama", "action"},
     "Western": {"western"},
-    "Documentary": {"nonfiction", "standup"},
+    "Documentary": {"nonfiction"},
     "Animation": {"kids"},
     "Family": {"kids"},
     "Music": {"drama", "comedy", "nonfiction"},
     "TV Movie": {"horror", "comedy", "action", "drama", "kids"},
 }
 Pools = dict[str, pd.Series]
+SPECIALS_KIND = ("comedy", "standup")  # the tree and flavour a house specials pin places a film in
 
 
 @dataclass
@@ -120,6 +123,25 @@ def check_reachability(table: FilmTable, pools: Pools, report: Report) -> None:
     for tmdb in table.films.index[~reached]:
         genres = "/".join(sorted(table.films.loc[tmdb].genres)) or "none"
         report.fail(f"unreachable: {_label(table, tmdb)} genres={genres}")
+
+
+def door_pools(cat: Catalog, pools: Pools) -> Pools:
+    """The homes among `pools`: the pools of trees and modes a first-question answer leads to, plus the kids bands."""
+    doors = {cat.trees[o.tree].pool for o in cat.first_options if o.tree in cat.trees}
+    return {name: pool for name, pool in pools.items() if ":" in name or name in doors}
+
+
+def check_apart(cat: Catalog, pools: Pools, report: Report) -> None:
+    """A film a tree holds apart sits in no other home, so only that tree's own answer offers it."""
+    for tree_id, apart in cat.apart.items():
+        own = cat.trees[tree_id].pool
+        for name, pool in pools.items():
+            if ":" in name or name == own:
+                continue
+            for tmdb in cat.table.films.index[pool.to_numpy() & apart]:
+                report.fail(
+                    f"held apart: {_label(cat.table, int(tmdb))} is held apart in {tree_id} but {name} holds it"
+                )
 
 
 def check_expected(table: FilmTable, pools: Pools, report: Report) -> None:
@@ -254,6 +276,9 @@ def check_pins_in_key(house: House, key: dict[str, Any], report: Report) -> None
     for (_, _, band), ids in house.scale_pins.items():
         wants += [(t, f"gore_band {band}", fixture.get(t, {}).get("gore_band") == band) for t in ids]
     wants += _flavour_pin_wants(house, fixture)
+    tree, kind = SPECIALS_KIND
+    for t in house.specials:
+        wants.append((t, f"flavour_in {tree} {kind}", kind in fixture.get(t, {}).get("flavour_in", {}).get(tree, [])))
     for tmdb, want, held in sorted(wants):
         if not held:
             report.fail(f"house pin tmdb {tmdb} needs an answer-key fixture asserting {want}")
@@ -338,6 +363,19 @@ def check_same_answers(full: Catalog, sample: Catalog, report: Report) -> None:
             )
 
 
+def check_homes(cat: Catalog, pools: Pools, report: Report) -> Pools:
+    """Answer coverage, then every film's homes: only the doors' pools count, as reached through their answers.
+
+    Returns the homes, each door's pool replaced by the films its answers reach, for the checks that follow.
+    """
+    reached = {**pools, **check_answer_coverage(cat, pools, report)}
+    homes = door_pools(cat, reached)
+    check_apart(cat, homes, report)
+    check_expected(cat.table, homes, report)
+    check_reachability(cat.table, homes, report)
+    return homes
+
+
 def check_sample(full: Catalog, name: str, share: float, seed: int, report: Report, data: Path = DATA) -> None:
     """Build every tree against a random share of the library and hold it to reachability and placements."""
     ids = full.table.films.index.to_numpy()
@@ -348,10 +386,8 @@ def check_sample(full: Catalog, name: str, share: float, seed: int, report: Repo
     report.prefix = f"[{name}] "
     report.say(f"\n######## {name} of the library: {len(table.films)} films, seed {seed} ########")
     pools = {n: pd.Series(mask, index=table.films.index) for n, mask in cat.pools.items()}
-    pools.update(check_answer_coverage(cat, pools, report))
+    check_homes(cat, pools, report)
     check_same_answers(full, cat, report)
-    check_expected(table, pools, report)
-    check_reachability(table, pools, report)
     report.prefix = ""
 
 
@@ -411,15 +447,13 @@ def main() -> int:
     check_data(table, report)
     check_first_question(cat, report)
     check_quips(cat, report)
-    pools.update(check_answer_coverage(cat, pools, report))
+    pools = check_homes(cat, pools, report)
     check_pins_in_key(house, key, report)
     entries = key["films"] + tree_fixture_entries(table, report)
     check_fixtures(table, pools, gore, entries, report)
     check_flavour_fixtures(cat, entries, report)
     check_gore(table, pools, house, gore, report)
     check_lists(table, pools, key, report)
-    check_expected(table, pools, report)
-    check_reachability(table, pools, report)
     for name, share, seed in SAMPLES:
         check_sample(cat, name, share, seed, report)
     print("\n".join(report.lines))

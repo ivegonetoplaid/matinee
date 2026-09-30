@@ -26,11 +26,10 @@ def test_the_caps_are_the_measured_ones() -> None:
     assert load_quips().caps == Caps(line=64, pair=76)
 
 
-def test_the_file_holds_every_approved_line_and_standup_borrows_comedy() -> None:
+def test_the_file_holds_every_approved_line() -> None:
     quips = load_quips()
     counts = {name: (len(s.reveal), len(s.nope)) for name, s in quips.categories.items()}
     assert counts == {"universal": (16, 22), "horror": (18, 19), "comedy": (22, 29)}
-    assert quips.borrow == {"standup": "comedy"}
 
 
 @pytest.mark.parametrize(
@@ -56,13 +55,10 @@ def test_emphasis_i_and_a_line_at_the_cap_pass(line: str) -> None:
     assert quip_problems(_with(line), CATEGORIES) == []
 
 
-def test_a_category_or_a_borrowing_that_is_not_a_tree_or_mode_is_refused() -> None:
-    quips = _with(borrow={"cartoons": "universal", "standup": "sitcom"})
+def test_a_category_that_is_not_a_tree_or_mode_is_refused() -> None:
+    quips = _with()
     quips = quips.model_copy(update={"categories": {**quips.categories, "sitcom2": QuipSet(reveal=("Fine.",))}})
-    problems = quip_problems(quips, CATEGORIES)
-    assert "category 'sitcom2' is not a tree or mode" in problems
-    assert "borrowing category 'cartoons' is not a tree or mode" in problems
-    assert "'standup' borrows from 'sitcom', which holds no lines" in problems
+    assert quip_problems(quips, CATEGORIES) == ["category 'sitcom2' is not a tree or mode"]
 
 
 @pytest.mark.parametrize("universal", [None, {"reveal": ["There we are."]}, {"nope": ["Fine."]}])

@@ -646,13 +646,12 @@
       "title": "Kevin Smith: Silent but Deadly",
       "tmdb": 517792,
       "must_reach": [
-        "standup",
         "comedy"
       ],
       "must_not": [
         "nonfiction"
       ],
-      "note": "house pin",
+      "note": "house pin: a standup special",
       "flavour_in": {
         "comedy": [
           "standup"
@@ -866,7 +865,6 @@
       "title": "Andrew Dice Clay: One Night with Dice",
       "tmdb": 37876,
       "must_reach": [
-        "standup",
         "comedy"
       ],
       "note": "house pin: a standup special",
@@ -880,7 +878,6 @@
       "title": "Andrew Dice Clay: The Diceman Cometh",
       "tmdb": 83709,
       "must_reach": [
-        "standup",
         "comedy"
       ],
       "note": "house pin: a standup special",
@@ -894,7 +891,6 @@
       "title": "Stavros Halkias: Fat Rascal",
       "tmdb": 1200108,
       "must_reach": [
-        "standup",
         "comedy"
       ],
       "note": "house pin: a standup special",

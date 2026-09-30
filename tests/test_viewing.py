@@ -150,7 +150,7 @@ def test_the_page_is_given_the_pick_lines_and_caps(site: Any) -> None:
     client, _store, _dtdd = site
     body = client.get("/api/quips").json()
     assert body["caps"] == {"line": 64, "pair": 76}
-    assert body["borrow"] == {"standup": "comedy"}
+    assert "borrow" not in body
     assert set(body["categories"]) == {"universal", "horror", "comedy"}
     assert "How about this one?" in body["categories"]["universal"]["reveal"]
 

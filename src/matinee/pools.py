@@ -11,8 +11,8 @@ bar. A film no tree claims joins every tree holding another film of its TMDB
 collection (the franchise rule for strays); the films still unclaimed fall to
 the drama tree. Standup specials join the comedy tree, where only its stand-up
 answer offers them, and are held out of the non-fiction tree. House
-pins add single films to a tree or a kids band; a film pinned to standup counts
-as a special.
+pins add single films to a tree or a kids band, or count a film as a standup
+special.
 
 The kids tree is gated and fails closed: a film enters only with a passing
 certificate, and sorts into three age bands. A film in the same TMDB collection
@@ -88,7 +88,6 @@ TREES = (
     "kids",
     "western",
     "nonfiction",
-    "standup",
     "fantasy",
     "thriller",
     "drama",
@@ -105,6 +104,7 @@ class House:
     payoff_pins: Mapping[tuple[str, str], frozenset[int]]
     scale_pins: Mapping[tuple[str, str, str], frozenset[int]]
     flavour_pins: Mapping[tuple[str, str], Mapping[int, bool]] = field(default_factory=dict)
+    specials: frozenset[int] = frozenset()  # films counted as standup specials whatever the rule says
 
 
 def load_house(path: Path = DATA / "house_overrides.json") -> House:
@@ -127,6 +127,7 @@ def load_house(path: Path = DATA / "house_overrides.json") -> House:
         payoff_pins={k: frozenset(ids) for k, ids in payoffs.items()},
         scale_pins={k: frozenset(ids) for k, ids in scales.items()},
         flavour_pins=flavours,
+        specials=frozenset(int(p["tmdb"]) for p in doc.get("specials", [])),
     )
 
 
@@ -225,8 +226,8 @@ def standup_specials(table: FilmTable) -> Mask:
 
 
 def specials(table: FilmTable, house: House) -> Mask:
-    """Standup specials: the films the rule finds, plus the films the house pins to standup."""
-    return standup_specials(table) | _ids(table, house.tree_pins.get("standup", frozenset()))
+    """Standup specials: the films the rule finds, plus the films the house counts as specials."""
+    return standup_specials(table) | _ids(table, house.specials)
 
 
 def build_pools(table: FilmTable, house: House) -> dict[str, Mask]:
@@ -251,7 +252,6 @@ def build_pools(table: FilmTable, house: House) -> dict[str, Mask]:
         "kids:family": bands["family"],
         "western": tag["Western"] & ~kids_only,
         "nonfiction": tag["Documentary"] & ~standup & ~kids_only,
-        "standup": standup,
     }
     pools["fantasy"] = (
         ((tag["Fantasy"] | tag["Adventure"]) & (over(s["wonder"], WONDER_BAR) | over(s["explore"], EXPLORE_BAR)))

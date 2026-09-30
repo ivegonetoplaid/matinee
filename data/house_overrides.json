@@ -1,5 +1,5 @@
 {
-  "note": "House pins: single films the rules place wrong, fixed for everyone on this installation. A pattern of three or more films going wrong for one reason is a rule to fix, not a pin to add. Each pin is also a fixture in data/answer_key.json, so the checker guards it. A flavour pin puts a film in one flavour of a tree (member true) or takes it out (member false); a film pinned into a flavour stays in answers that leave another flavour out, so a funny film pinned into monsters is offered under the scary answers too. Personal corrections (per profile) layer on top of these.",
+  "note": "House pins: single films the rules place wrong, fixed for everyone on this installation. A pattern of three or more films going wrong for one reason is a rule to fix, not a pin to add. Each pin is also a fixture in data/answer_key.json, so the checker guards it. A flavour pin puts a film in one flavour of a tree (member true) or takes it out (member false); a film pinned into a flavour stays in answers that leave another flavour out, so a funny film pinned into monsters is offered under the scary answers too. A specials pin counts a film as a standup special, which only comedy's stand-up answer offers. Personal corrections (per profile) layer on top of these.",
   "kids": [
     {
       "title": "The School of Rock",
@@ -21,24 +21,6 @@
     }
   ],
   "trees": [
-    {
-      "title": "Andrew Dice Clay: One Night with Dice",
-      "tmdb": 37876,
-      "tree": "standup",
-      "note": "a standup special the standup rule misses (no stand-up keyword); found in the comedy review, 2026-09-27"
-    },
-    {
-      "title": "Andrew Dice Clay: The Diceman Cometh",
-      "tmdb": 83709,
-      "tree": "standup",
-      "note": "a standup special the standup rule misses (no stand-up keyword); found in the comedy review, 2026-09-27"
-    },
-    {
-      "title": "Stavros Halkias: Fat Rascal",
-      "tmdb": 1200108,
-      "tree": "standup",
-      "note": "a standup special the standup rule misses (no stand-up keyword); found in the comedy review, 2026-09-27"
-    },
     {
       "title": "The Batman",
       "tmdb": 414906,
@@ -82,16 +64,32 @@
       "note": "a time-cop B movie tagged Crime and Science Fiction with excitement 0.28"
     },
     {
-      "title": "Kevin Smith: Silent but Deadly",
-      "tmdb": 517792,
-      "tree": "standup",
-      "note": "a standup special with no TMDB keywords, so the standup rule misses it"
-    },
-    {
       "title": "Simulation Theory",
       "tmdb": 731971,
       "tree": "nonfiction",
       "note": "a Muse concert film tagged only Music; it fell to drama"
+    }
+  ],
+  "specials": [
+    {
+      "title": "Andrew Dice Clay: One Night with Dice",
+      "tmdb": 37876,
+      "note": "a standup special the standup rule misses (no stand-up keyword); found in the comedy review, 2026-09-27"
+    },
+    {
+      "title": "Andrew Dice Clay: The Diceman Cometh",
+      "tmdb": 83709,
+      "note": "a standup special the standup rule misses (no stand-up keyword); found in the comedy review, 2026-09-27"
+    },
+    {
+      "title": "Stavros Halkias: Fat Rascal",
+      "tmdb": 1200108,
+      "note": "a standup special the standup rule misses (no stand-up keyword); found in the comedy review, 2026-09-27"
+    },
+    {
+      "title": "Kevin Smith: Silent but Deadly",
+      "tmdb": 517792,
+      "note": "a standup special with no TMDB keywords, so the standup rule misses it"
     }
   ],
   "payoffs": [

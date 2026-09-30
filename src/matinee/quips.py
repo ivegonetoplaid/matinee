@@ -1,7 +1,7 @@
 """Matinee's lines for a pick, read from data/quips.json, and the rules every line keeps.
 
 Each category (universal, or a tree or mode by its file name) may hold reveal lines and nope lines.
-A category may borrow another's lines. The caps are character counts: no single line may exceed
+The caps are character counts: no single line may exceed
 `line`, and a nope line and a reveal line shown together may not exceed `pair`.
 """
 
@@ -45,7 +45,6 @@ class Quips(BaseModel):
 
     note: str = ""
     caps: Caps
-    borrow: dict[str, str] = {}
     categories: dict[str, QuipSet]
 
     @model_validator(mode="after")
@@ -93,11 +92,6 @@ def quip_problems(quips: Quips, categories: set[str]) -> list[str]:
     that exist, by file name."""
     known = categories | {UNIVERSAL}
     problems = [f"category {name!r} is not a tree or mode" for name in quips.categories if name not in known]
-    for name, source in quips.borrow.items():
-        if name not in known:
-            problems.append(f"borrowing category {name!r} is not a tree or mode")
-        if source not in quips.categories:
-            problems.append(f"{name!r} borrows from {source!r}, which holds no lines")
     for sets in quips.categories.values():
         for line in (*sets.reveal, *sets.nope):
             problems.extend(line_problems(line, quips.caps.line))

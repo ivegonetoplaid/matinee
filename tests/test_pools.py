@@ -80,7 +80,7 @@ def test_a_standup_special_joins_comedy_and_stays_out_of_nonfiction() -> None:
     special = {**film(1, "Comedy|Documentary", "TV-MA", None), "keywords": frozenset({"stand-up comedy"})}
     pinned = film(2, "Documentary", "R", None)
     table = make_table([special, pinned, film(3, "Documentary", "R", None)], {})
-    house = House(kids_pins={}, tree_pins={"standup": frozenset({2})}, payoff_pins={}, scale_pins={})
+    house = House(kids_pins={}, tree_pins={}, payoff_pins={}, scale_pins={}, specials=frozenset({2}))
     pools = build_pools(table, house)
     assert pools["comedy"].to_dict() == {1: True, 2: True, 3: False}
     assert pools["nonfiction"].to_dict() == {1: False, 2: False, 3: True}
