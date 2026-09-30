@@ -20,7 +20,15 @@ third of a pool on that scale, which the pick draws from first.
 A tree's flavours are found by keyword, genome and genre signals, or, for a
 flavour marked `labelled`, read from the labels file (`matinee.labels`), which
 also settles which films a tree's pool holds. An answer leaving one
-flavour out keeps films that also sit in another flavour of the tree.
+flavour out keeps films that also sit in another flavour of the tree. An answer
+offering a labelled flavour shows only when that flavour holds at least
+`KIND_MIN_FILMS` films of the tree's pool in the loaded library, counted before
+any answer narrows it, unless the flavour is marked `always_shown` or another
+answer of the question leaves it out; the rule changes whether the answer shows,
+never which films it holds. A tree may
+hold one flavour apart (comedy's stand-up specials): its films always sit in the
+tree's pool, and no pool a viewer is offered holds them until the answer naming
+the flavour is given.
 
 Unknown values are inclusive: a film with no runtime, rating, year, language,
 collection or score passes a filter on it, because a wrongly included film costs
@@ -41,13 +49,14 @@ import numpy.typing as npt
 import pandas as pd
 
 from matinee.labels import Labels
-from matinee.pools import House, build_pools, load_house
+from matinee.pools import FOR_GROWN_UPS, House, build_pools, load_house, specials
 from matinee.reference import DATA, Reference, load_reference, load_specs, problems
 from matinee.scales import film_scores, membership, offered, scale_of
 from matinee.table import FilmTable
 from matinee.trees import Filter, Option, Question, Tree, TreeError, load_trees
 
 STOP_UNDER = 12
+KIND_MIN_FILMS = 30  # a labelled kind holding fewer films in the loaded library is not offered
 Mask = npt.NDArray[np.bool_]
 
 
@@ -90,6 +99,7 @@ class Asked:
     ask: str
     options: tuple[Shown, ...]
     presentation: str | None
+    footnote: str | None = None
 
 
 @dataclass(frozen=True)
@@ -126,6 +136,8 @@ class Catalog:
     labels: Labels = field(default_factory=Labels)
     pools: dict[str, Mask] = field(default_factory=dict)
     masks: dict[tuple[str, str, int], Mask] = field(default_factory=dict)
+    apart: dict[str, Mask] = field(default_factory=dict)  # per tree id, the films its apart flavour holds
+    small: set[tuple[str, str, int]] = field(default_factory=set)  # answers whose labelled kind is under the bar
 
     @property
     def ids(self) -> npt.NDArray[np.int64]:
@@ -178,10 +190,16 @@ def _labelled(cat: Catalog, tree: Tree, name: str) -> Mask:
 def house_flavour(cat: Catalog, tree: Tree, name: str) -> Mask:
     """The flavour's films after house pins: a film pinned in joins it, a film pinned out leaves it.
 
-    A flavour marked `labelled` takes its films from the labels; any other is found by its signals.
+    A flavour marked `labelled` takes its films from the labels, one marked `specials` takes the standup
+    specials, and any other is found by its signals.
     """
-    labelled = bool(tree.flavours.get(name, {}).get("labelled"))
-    hit = _labelled(cat, tree, name) if labelled else _flavour(cat.table, tree, name)
+    spec = tree.flavours.get(name, {})
+    if spec.get("labelled"):
+        hit = _labelled(cat, tree, name)
+    elif spec.get("specials"):
+        hit = _bool(specials(cat.table, cat.house))
+    else:
+        hit = _flavour(cat.table, tree, name)
     for tmdb, member in cat.house.flavour_pins.get((tree.id, name), {}).items():
         hit[cat.table.films.index == tmdb] = member
     return hit
@@ -354,33 +372,89 @@ def _first_option(o: dict[str, str]) -> FirstOption:
     return FirstOption(o["say"], o["tree"], o["label"])
 
 
-def _elsewhere(cat: Catalog, tree: Tree) -> Mask:
-    """Films held by the pool of any tree other than `tree`."""
-    held = np.zeros(len(cat.table.films), dtype=bool)
-    for other in cat.trees.values():
-        if other.pool != tree.pool and other.pool in cat.pools:
-            held |= cat.pools[other.pool]
-    return held
+def _labelled_tree(cat: Catalog, tree_id: str, kinds: Mapping[int, frozenset[str]]) -> Tree:
+    """The tree a labels entry names; raises when no tree file defines it or it does not label a kind given."""
+    tree = cat.trees.get(tree_id)
+    if tree is None:
+        raise EngineError(f"the labels name tree '{tree_id}', which no tree file defines")
+    known = {name for name, spec in tree.flavours.items() if spec.get("labelled")}
+    unknown = set().union(*kinds.values()) - known
+    if unknown:
+        raise EngineError(f"the labels give tree '{tree_id}' kinds it does not label: {sorted(unknown)}")
+    return tree
 
 
 def _apply_labels(cat: Catalog) -> None:
-    """Check the labels against the trees, then settle each tree's pool by them.
+    """Check the labels against the trees, then settle every tree's pool by them at once.
 
-    Every labelled film joins the pool, whatever the pool rules said. A film labelled out leaves only
-    when another tree holds it, so no film is left with no way in.
+    Every labelled film joins the pool, whatever the pool rules said, except a kids-only film, which only
+    the kids tree holds, and a film for little ones or the whole family, which no grown-ups' tree (horror,
+    thriller, crime) holds. Then a film labelled out of a tree
+    leaves it only where another tree keeps it: holds it and does not label it out too. A film every tree
+    holding it labels out stays in all of them, so no film is left with no way in. A film the house pins
+    to a tree never leaves it: a house pin is the operator's own placement. The order of the entries in
+    the labels file changes nothing.
     """
+    index = cat.table.films.index
+    none = np.zeros(len(index), dtype=bool)
+    kids_only, young = cat.pools.get("kids:only", none), cat.pools.get("kids:young", none)
+    leaving: dict[str, Mask] = {}
     for tree_id, labels in cat.labels.trees.items():
-        tree = cat.trees.get(tree_id)
-        if tree is None:
-            raise EngineError(f"the labels name tree '{tree_id}', which no tree file defines")
-        known = {name for name, spec in tree.flavours.items() if spec.get("labelled")}
-        unknown = set().union(*labels.kinds.values()) - known
-        if unknown:
-            raise EngineError(f"the labels give tree '{tree_id}' kinds it does not label: {sorted(unknown)}")
+        tree = _labelled_tree(cat, tree_id, labels.kinds)
         if tree.pool in cat.pools:
-            index = cat.table.films.index
-            held, out = index.isin(list(labels.kinds)), index.isin(list(labels.out))
-            cat.pools[tree.pool] = (cat.pools[tree.pool] | held) & ~(out & _elsewhere(cat, tree))
+            barred = kids_only.copy()
+            if tree.pool in FOR_GROWN_UPS:
+                barred |= young
+            cat.pools[tree.pool] = cat.pools[tree.pool] | (index.isin(list(labels.kinds)) & ~barred)
+            pinned = index.isin(list(cat.house.tree_pins.get(tree.pool, frozenset())))
+            leaving[tree.pool] = index.isin(list(labels.out)) & ~pinned
+    keeps = {t.pool: cat.pools[t.pool].copy() for t in cat.trees.values() if t.pool in cat.pools}
+    for pool, out in leaving.items():
+        keeps[pool] &= ~out
+    for pool, out in leaving.items():
+        elsewhere = np.zeros(len(index), dtype=bool)
+        for other, kept in keeps.items():
+            if other != pool:
+                elsewhere |= kept
+        cat.pools[pool] = cat.pools[pool] & ~(out & elsewhere)
+
+
+def _hold_apart(cat: Catalog) -> None:
+    """Put each tree's apart flavour in its pool, whatever the labels said, and remember its films."""
+    for tree in cat.trees.values():
+        if tree.apart is not None and tree.pool in cat.pools:
+            cat.apart[tree.id] = house_flavour(cat, tree, tree.apart)
+            cat.pools[tree.pool] |= cat.apart[tree.id]
+
+
+def _opens(tree: Tree, option: Option) -> bool:
+    """True where the answer offers the tree's apart flavour."""
+    return tree.apart is not None and option.filter.flavour == tree.apart
+
+
+def _too_small(cat: Catalog, tree: Tree, q: Question, option: Option) -> bool:
+    """True where the answer offers a labelled kind holding under KIND_MIN_FILMS of the tree's pool films.
+
+    A kind marked `always_shown` is exempt, and so is a kind another answer of the question leaves out
+    (horror's "anything scary" leaves comedy out): hiding it would leave its films no answer at all.
+    """
+    name = option.filter.flavour
+    spec = tree.flavours.get(name or "", {})
+    if name is None or not spec.get("labelled") or spec.get("always_shown"):
+        return False
+    if any(o.filter.flavour_none == name for o in q.options):
+        return False
+    held = house_flavour(cat, tree, name) & cat.pools[tree.pool]
+    return int(held.sum()) < KIND_MIN_FILMS
+
+
+def _answer_masks(cat: Catalog, tree: Tree) -> None:
+    """Every answer's films, and which answers offer a kind too small to show."""
+    for q in tree.questions:
+        for i, option in enumerate(q.options):
+            cat.masks[(tree.id, q.id, i)] = option_mask(cat, tree, option)
+            if _too_small(cat, tree, q, option):
+                cat.small.add((tree.id, q.id, i))
 
 
 def load_catalog(
@@ -409,12 +483,11 @@ def load_catalog(
             raise EngineError(f"house flavour pin names tree '{tree_id}' flavour '{flavour}', which no tree defines")
     cat.pools = {name: np.array(pool, dtype=bool) for name, pool in build_pools(table, cat.house).items()}
     _apply_labels(cat)
+    _hold_apart(cat)
     for tree in cat.trees.values():
         if tree.pool not in cat.pools:
             raise EngineError(f"tree '{tree.id}' names pool '{tree.pool}', which no pool rule builds")
-        for q in tree.questions:
-            for i, option in enumerate(q.options):
-                cat.masks[(tree.id, q.id, i)] = option_mask(cat, tree, option)
+        _answer_masks(cat, tree)
     return cat
 
 
@@ -444,6 +517,21 @@ def base_pool(cat: Catalog, tree_id: str, viewer: Viewer) -> Mask:
     return pool
 
 
+def opening_pool(cat: Catalog, tree_id: str, viewer: Viewer) -> Mask:
+    """The films the tree offers this viewer before any answer: its pool, less the flavour it holds apart."""
+    pool = base_pool(cat, tree_id, viewer)
+    if tree_id in cat.apart:
+        pool &= ~cat.apart[tree_id]
+    return pool
+
+
+def _served(cat: Catalog, tree_id: str, pool: Mask, opened: bool) -> tuple[int, ...]:
+    """The films a walk offers: the apart flavour's films stay out until the answer naming it is given."""
+    if not opened and tree_id in cat.apart:
+        pool = pool & ~cat.apart[tree_id]
+    return tuple(int(t) for t in cat.ids[pool])
+
+
 def _visible(option: Option, history: Mapping[str, int]) -> bool:
     return not any(history.get(q) in picked for q, picked in option.not_after.items())
 
@@ -452,12 +540,23 @@ def _shown(cat: Catalog, tree: Tree, q: Question, pool: Mask, history: Mapping[s
     return [
         i
         for i, o in enumerate(q.options)
-        if _visible(o, history) and bool((pool & cat.masks[(tree.id, q.id, i)]).any())
+        if _visible(o, history)
+        and (tree.id, q.id, i) not in cat.small
+        and bool((pool & cat.masks[(tree.id, q.id, i)]).any())
     ]
 
 
-def _asked(q: Question, shown: Sequence[int]) -> Asked:
-    return Asked(q.id, q.ask, tuple(Shown(i, q.options[i].say, q.options[i].image) for i in shown), q.presentation)
+def _asked(tree: Tree, q: Question, shown: Sequence[int]) -> Asked:
+    """The question as the viewer sees it.
+
+    Where the answer offering the tree's apart flavour is not shown, the footnote and the asterisks that
+    point at that answer are dropped, so the page never names an answer it does not offer.
+    """
+    missing = any(_opens(tree, o) for i, o in enumerate(q.options) if i not in shown)
+    options = tuple(
+        Shown(i, q.options[i].say.rstrip("*") if missing else q.options[i].say, q.options[i].image) for i in shown
+    )
+    return Asked(q.id, q.ask, options, q.presentation, None if missing else q.footnote)
 
 
 def _gate(
@@ -481,7 +580,7 @@ def walk(cat: Catalog, tree_id: str, viewer: Viewer, answers: Sequence[Answer]) 
     """Apply `answers` in order and return where the walk stands; raises EngineError when one does not fit."""
     pool = base_pool(cat, tree_id, viewer)
     tree = cat.trees[tree_id]
-    line, prefer, destruct = tree.opening, None, None
+    line, prefer, destruct, opened = tree.opening, None, None, False
     history: dict[str, int] = {}
     pending = list(answers)
     for q in tree.questions:
@@ -491,15 +590,16 @@ def walk(cat: Catalog, tree_id: str, viewer: Viewer, answers: Sequence[Answer]) 
         if not shown:
             continue
         if not pending:
-            return Step(tree_id, line, _asked(q, shown), tuple(int(t) for t in cat.ids[pool]), prefer)
+            return Step(tree_id, line, _asked(tree, q, shown), _served(cat, tree_id, pool, opened), prefer)
         answer = pending.pop(0)
         pool = _answer(cat, tree, q, shown, answer, pool)
         option = q.options[answer.option]
         line, prefer, destruct = option.reply, option.filter.prefer or prefer, option.self_destruct
+        opened = opened or _opens(tree, option)
         history[q.id] = answer.option
     if pending:
         raise EngineError(f"{len(pending)} answers left over after the last question of '{tree_id}'")
-    return Step(tree_id, line, None, tuple(int(t) for t in cat.ids[pool]), prefer, destruct)
+    return Step(tree_id, line, None, _served(cat, tree_id, pool, opened), prefer, destruct)
 
 
 def walk_ends(cat: Catalog, tree_id: str, viewer: Viewer | None = None) -> list[tuple[tuple[Answer, ...], Step]]:

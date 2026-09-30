@@ -71,6 +71,7 @@ class Question:
     skip_if_topics: frozenset[int] = frozenset()
     treat_as: int | None = None
     presentation: str | None = None
+    footnote: str | None = None  # a line the viewer sees beneath the answers
 
 
 @dataclass(frozen=True)
@@ -103,6 +104,7 @@ class Tree:
     genome_threshold: float
     payoffs: Payoffs | None
     scales: Mapping[str, Mapping[str, Any]]
+    apart: str | None = None  # a flavour whose films only the answer naming it offers
 
 
 FILTER_KEYS = {
@@ -127,7 +129,17 @@ FILTER_KEYS = {
     "sort",
 }
 OPTION_KEYS = {"say", "reply", "filter", "note", "pail", "image", "not_after", "self_destruct"}
-QUESTION_KEYS = {"id", "ask", "options", "only_if_pool_over", "presentation", "note", "skip_if_topics", "treat_as"}
+QUESTION_KEYS = {
+    "id",
+    "ask",
+    "options",
+    "only_if_pool_over",
+    "presentation",
+    "note",
+    "footnote",
+    "skip_if_topics",
+    "treat_as",
+}
 KIDS_BANDS = {"little", "family", "older"}
 FLAVOUR_SIGNALS = {"keywords_any", "genome_any", "genres_any"}
 
@@ -224,6 +236,7 @@ def parse_question(raw: Mapping[str, Any], tree: str) -> Question:
         skip_if_topics=frozenset(int(t) for t in raw.get("skip_if_topics", [])),
         treat_as=None if treat_as is None else int(treat_as),
         presentation=raw.get("presentation"),
+        footnote=raw.get("footnote"),
     )
 
 
@@ -252,23 +265,32 @@ def _payoffs(doc: Mapping[str, Any], tree: str) -> Payoffs | None:
     )
 
 
+SOLE_SIGNALS = ("labelled", "specials")  # a flavour marked with one of these takes nothing else
+
+
+def _check_signals(what: str, spec: Mapping[str, Any], scores: Mapping[str, Any]) -> None:
+    """A flavour found by its signals names at least one, and its floors name defined scores."""
+    floors = spec.get("score_at_least", {})
+    if not isinstance(floors, dict) or not all(isinstance(v, int | float) for v in floors.values()):
+        raise TreeError(f"{what} score_at_least must map score names to numbers")
+    unknown = set(floors) - set(scores)
+    if unknown:
+        raise TreeError(f"{what} score_at_least names undefined scores {sorted(unknown)}")
+    if not FLAVOUR_SIGNALS & set(spec):
+        raise TreeError(f"{what} names no keywords, genome tags or genres, and is not labelled")
+
+
 def _check_flavours(tree: str, flavours: Mapping[str, Any], scores: Mapping[str, Any]) -> None:
     for name, spec in flavours.items():
-        _check_keys(spec, FLAVOUR_SIGNALS | {"note", "score_at_least", "labelled"}, f"tree '{tree}' flavour '{name}'")
-        if spec.get("labelled") is True:
-            if set(spec) - {"labelled", "note"}:
-                raise TreeError(f"tree '{tree}' flavour '{name}' is labelled, so it takes no signals or floors")
-            continue
-        floors = spec.get("score_at_least", {})
-        if not isinstance(floors, dict) or not all(isinstance(v, int | float) for v in floors.values()):
-            raise TreeError(f"tree '{tree}' flavour '{name}' score_at_least must map score names to numbers")
-        unknown = set(floors) - set(scores)
-        if unknown:
-            raise TreeError(f"tree '{tree}' flavour '{name}' score_at_least names undefined scores {sorted(unknown)}")
-        if not FLAVOUR_SIGNALS & set(spec):
-            raise TreeError(
-                f"tree '{tree}' flavour '{name}' names no keywords, genome tags or genres, and is not labelled"
-            )
+        what = f"tree '{tree}' flavour '{name}'"
+        _check_keys(spec, FLAVOUR_SIGNALS | {"note", "score_at_least", "always_shown", *SOLE_SIGNALS}, what)
+        sole = [key for key in SOLE_SIGNALS if spec.get(key) is True]
+        if "always_shown" in spec and (sole != ["labelled"] or spec["always_shown"] is not True):
+            raise TreeError(f"{what}: only a labelled flavour may be always_shown, and only as true")
+        if not sole:
+            _check_signals(what, spec, scores)
+        elif set(spec) - {sole[0], "note", "always_shown"}:
+            raise TreeError(f"{what} is {sole[0]}, so it takes no other signals or floors")
 
 
 def parse_tree(tree: str, doc: Mapping[str, Any]) -> Tree:
@@ -276,6 +298,9 @@ def parse_tree(tree: str, doc: Mapping[str, Any]) -> Tree:
         if key not in doc:
             raise TreeError(f"tree '{tree}' has no '{key}'")
     _check_flavours(tree, doc.get("flavours", {}), doc.get("scores", {}))
+    apart = doc.get("apart")
+    if apart is not None and apart not in doc.get("flavours", {}):
+        raise TreeError(f"tree '{tree}' holds apart flavour '{apart}', which it does not define")
     return Tree(
         id=tree,
         pool=str(doc["pool"]),
@@ -286,6 +311,7 @@ def parse_tree(tree: str, doc: Mapping[str, Any]) -> Tree:
         genome_threshold=float(doc.get("genome", {}).get("threshold", 0.6)),
         payoffs=_payoffs(doc, tree),
         scales=doc.get("scales", {}),
+        apart=apart,
     )
 
 

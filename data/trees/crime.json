@@ -1,0 +1,87 @@
+{
+  "genre": "Crime",
+  "pool": "crime",
+  "opening": "I didn't see anything.",
+  "note": "Decisions 80 and 86, and the Thriller and Crime build's decisions 1 and 3: the door holds every film tagged Crime and every film the labels place behind it, and runs on the model labels. One question, its kinds, then \"anything\". A film labelled behind the door with no kind, or not yet labelled, is reached through \"anything\" and \"Just pick one!\". The crime pool claims no stray, so a Crime film Drama or Action holds keeps that door. A kind under 30 films in the library is not offered (prison, in the operator's library).",
+  "questions": [
+    {
+      "id": "kind",
+      "ask": "so what are you in for?",
+      "options": [
+        {
+          "say": "cops and detectives. somebody has to work the case.",
+          "reply": "coffee's on. it's going to be a long night.",
+          "filter": {
+            "flavour": "cops"
+          }
+        },
+        {
+          "say": "gangsters, crews, and organized crime. strictly business.",
+          "reply": "of course. I know a guy.",
+          "filter": {
+            "flavour": "gangsters"
+          }
+        },
+        {
+          "say": "heists, cons, and one last job.",
+          "reply": "excellent. nobody touches the money until I say so.",
+          "filter": {
+            "flavour": "heists"
+          }
+        },
+        {
+          "say": "crime, consequences, and the people caught in the wreckage.",
+          "reply": "no clean getaway from this one.",
+          "filter": {
+            "flavour": "crime_drama"
+          }
+        },
+        {
+          "say": "serial killers. the case, or the killer's side of it.",
+          "reply": "I'll pull the case files. don't read them alone.",
+          "filter": {
+            "flavour": "serial_killers"
+          }
+        },
+        {
+          "say": "prison. doing time, or breaking out.",
+          "reply": "good. I'll check the bars. you check the exits.",
+          "filter": {
+            "flavour": "prison"
+          }
+        },
+        {
+          "say": "anything criminal. surprise me.",
+          "reply": "very well. I'll make a few calls.",
+          "filter": {}
+        }
+      ]
+    }
+  ],
+  "flavours": {
+    "cops": {
+      "labelled": true,
+      "note": "cops and detectives; the law or a detective works the case (The Departed, Knives Out, Fargo)."
+    },
+    "gangsters": {
+      "labelled": true,
+      "note": "gangsters and the mob; organised crime from the inside (The Godfather, GoodFellas, City of God)."
+    },
+    "heists": {
+      "labelled": true,
+      "note": "heists and cons; the plan, the crew, the job, the swindle (Ocean's Eleven, Baby Driver)."
+    },
+    "crime_drama": {
+      "labelled": true,
+      "note": "crime seen as a human story more than a thrill; shared with the drama door's crime dramas."
+    },
+    "serial_killers": {
+      "labelled": true,
+      "note": "the hunt for, or the mind of, a serial killer; shared with the thriller door, so a film behind both doors holds it at both or neither."
+    },
+    "prison": {
+      "labelled": true,
+      "note": "prison and escape (The Shawshank Redemption, Escape from Alcatraz). Under the 30-film bar in the operator's library, so hidden there."
+    }
+  }
+}

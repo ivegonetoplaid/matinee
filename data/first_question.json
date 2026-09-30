@@ -1,62 +1,62 @@
 {
-  "note": "Decision 57: the first question on the poster wall. Each answer leads to the tree or mode named by its file; an answer whose tree or mode holds no film for the viewer is not shown. Each answer's label names its tree where a short name is needed, such as the correction link.",
+  "note": "Decisions 57 and 86: the first question on the poster wall offers each door by its plain name, in decision 86's order, one per door whose tree or mode exists. Each answer leads to the tree or mode named by its file; an answer whose tree or mode holds no film for the viewer is not shown. Each answer's label is the door's short name where one is needed, such as the correction link. A door whose tree does not exist yet (Sci-fi, Romance, Animation, War) is added here with its tree.",
   "lines": [
     "Right this way.",
     "So, what are we in the mood for?"
   ],
   "options": [
     {
-      "say": "I want to be scared.",
-      "tree": "horror",
-      "label": "Horror"
-    },
-    {
-      "say": "I need a laugh.",
+      "say": "Comedy",
       "tree": "comedy",
       "label": "Comedy"
     },
     {
-      "say": "Get my heart pumping.",
+      "say": "Action and adventure",
       "tree": "action",
-      "label": "Action"
+      "label": "Action and adventure"
     },
     {
-      "say": "Keep me on the edge of my seat.",
-      "tree": "thriller",
-      "label": "Thriller"
-    },
-    {
-      "say": "Give me a story that sticks with me.",
+      "say": "Drama",
       "tree": "drama",
       "label": "Drama"
     },
     {
-      "say": "Take me somewhere else.",
+      "say": "Thriller",
+      "tree": "thriller",
+      "label": "Thriller"
+    },
+    {
+      "say": "Crime",
+      "tree": "crime",
+      "label": "Crime"
+    },
+    {
+      "say": "Horror",
+      "tree": "horror",
+      "label": "Horror"
+    },
+    {
+      "say": "Fantasy",
       "tree": "fantasy",
-      "label": "Fantasy and adventure"
+      "label": "Fantasy"
     },
     {
-      "say": "I'm in a cowboy mood.",
+      "say": "Westerns",
       "tree": "western",
-      "label": "Western"
+      "label": "Westerns"
     },
     {
-      "say": "Tell me something true.",
-      "tree": "nonfiction",
-      "label": "Non-fiction"
-    },
-    {
-      "say": "Just someone funny with a mic.",
-      "tree": "standup",
-      "label": "Standup"
-    },
-    {
-      "say": "Something for the kids.",
+      "say": "For the kids",
       "tree": "kids",
-      "label": "Kids"
+      "label": "For the kids"
     },
     {
-      "say": "Something I can fall asleep to.",
+      "say": "Documentaries",
+      "tree": "nonfiction",
+      "label": "Documentaries"
+    },
+    {
+      "say": "Something to fall asleep to",
       "tree": "fall-asleep",
       "label": "Something to fall asleep to"
     }

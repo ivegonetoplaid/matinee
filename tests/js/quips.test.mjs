@@ -12,7 +12,6 @@ function seeded(seed) {
 }
 
 const QUIPS = {
-  borrow: { standup: "comedy" },
   categories: {
     universal: { reveal: ["U reveal one.", "U reveal two."], nope: ["U nope."] },
     horror: { reveal: ["H reveal."], nope: ["H nope."] },
@@ -20,10 +19,9 @@ const QUIPS = {
   },
 };
 
-test("a category draws only its own lines, a borrower draws its lender's, and each set falls back on its own", () => {
+test("a category draws only its own lines, and each set falls back on universal's", () => {
   assert.deepEqual(setFor(QUIPS, "horror", "reveal").lines, ["H reveal."]);
   assert.deepEqual(setFor(QUIPS, "horror", "nope").lines, ["H nope."]);
-  assert.deepEqual(setFor(QUIPS, "standup", "reveal").lines, ["C reveal."]);
   // comedy has reveal lines but no nope lines: its nope lines come from universal
   assert.deepEqual(setFor(QUIPS, "comedy", "nope").lines, ["U nope."]);
   assert.deepEqual(setFor(QUIPS, "drama", "reveal").lines, ["U reveal one.", "U reveal two."]);
@@ -76,7 +74,7 @@ test("beneath an explanation only the reveal line is redealt to fit", () => {
 test("with the real lines and caps, no pair ever exceeds the cap", async () => {
   const { readFileSync } = await import("node:fs");
   const real = JSON.parse(readFileSync(new URL("../../data/quips.json", import.meta.url), "utf8"));
-  for (const category of [null, "horror", "comedy", "standup", "drama"]) {
+  for (const category of [null, "horror", "comedy", "drama"]) {
     const deck = new Deck(seeded(9));
     for (let k = 0; k < 200; k += 1) {
       const { nope, reveal } = dealPair(deck, setFor(real, category, "nope"), setFor(real, category, "reveal"), real.caps.pair);

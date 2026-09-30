@@ -264,7 +264,8 @@
     },
     "found_footage": {
       "labelled": true,
-      "note": "a format, labelled beside the kind: presented as recovered tapes, a documentary, a livestream or screen recordings. Shown at 24 films, under the usual bar of about 30."
+      "note": "a format, labelled beside the kind: presented as recovered tapes, a documentary, a livestream or screen recordings. Always shown by the operator's ruling (decision §4), though it holds fewer than the 30 films a labelled kind needs to show.",
+      "always_shown": true
     }
   }
 }

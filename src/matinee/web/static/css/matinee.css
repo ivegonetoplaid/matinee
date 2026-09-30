@@ -354,6 +354,17 @@ button {
   width: min(1180px, 100%);
 }
 
+/* A question's footnote: one small line beneath the answers, above "Just pick one!". */
+.talk > .footnote {
+  margin: -14px 0 0;
+  font-size: 15px;
+  color: var(--dim);
+}
+
+.talk > .footnote[hidden] {
+  display: none;
+}
+
 /* "Just pick one!" stands last, beneath the answers: under the strips on the left, under the pails in the middle. */
 .talk > .just-pick {
   align-self: flex-start;

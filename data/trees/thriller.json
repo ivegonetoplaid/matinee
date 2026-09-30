@@ -1,109 +1,88 @@
 {
   "genre": "Thriller",
   "pool": "thriller",
-  "opening": "a thriller. lock the doors.",
-  "note": "Decision 51. Thriller aims at anxiety about the outcome. One question, then a roll. Each answer is a payoff standardised against the thriller reference; a film belongs to its strongest payoff and to any other reaching 0.75. One-question trees roll straight to the pick, so the answers carry no reply of their own (decision 57).",
-  "scores": {
-    "thrill": [
-      "tense",
-      "suspense",
-      "suspenseful",
-      "intense"
-    ]
-  },
-  "reference": {
-    "movielens_genres": [
-      "Thriller",
-      "Mystery"
-    ],
-    "floor_any": {
-      "thrill": 0.2
-    }
-  },
-  "payoffs": {
-    "guessing": [
-      "twist ending",
-      "plot twist",
-      "twists & turns",
-      "surprise ending",
-      "murder mystery",
-      "mystery"
-    ],
-    "hunt": [
-      "serial killer",
-      "police investigation",
-      "detective",
-      "investigation"
-    ],
-    "trapped": [
-      "claustrophobic",
-      "kidnapping",
-      "hostage",
-      "survival",
-      "stranded"
-    ],
-    "trust": [
-      "conspiracy",
-      "paranoia",
-      "espionage",
-      "political",
-      "corruption",
-      "conspiracy theory",
-      "spies"
-    ],
-    "bend": [
-      "psychological",
-      "mindfuck",
-      "cerebral",
-      "enigmatic",
-      "surreal",
-      "time travel",
-      "alternate reality"
-    ]
-  },
-  "payoff_rule": {
-    "overlap": 0.75,
-    "no_genome": {
-      "default": "all"
-    },
-    "note": "a film with no genome score is offered under every answer: no decision gives it one, and a missing score never removes a film"
-  },
+  "opening": "good. I was getting far too comfortable.",
+  "note": "Decisions 80 and 86, and the Thriller and Crime build's decision 3: the door runs on the model labels (the labels file in Matinee's state directory). One question, its kinds, then \"anything\". A film sits under every kind it is labelled with; a film labelled behind the door with no kind, or not yet labelled, is reached through \"anything\" and \"Just pick one!\". The spies reply self-destructs, and no other answer may. A kind under 30 films in the library is not offered (erotic, in the operator's library).",
   "questions": [
     {
-      "id": "payoff",
-      "ask": "what's got you on edge?",
+      "id": "kind",
+      "ask": "so, what kind of trouble are we in?",
       "options": [
         {
-          "say": "keep me guessing.",
+          "say": "whodunits and conspiracies. give me a mystery that needs working out.",
+          "reply": "splendid. trust no one. including me.",
           "filter": {
-            "payoff": "guessing"
+            "flavour": "keep_guessing"
           }
         },
         {
-          "say": "hunt down a killer.",
+          "say": "trapped, hunted, or held hostage. no way out.",
+          "reply": "lovely. I'll lock the door behind you.",
           "filter": {
-            "payoff": "hunt"
+            "flavour": "trapped"
           }
         },
         {
-          "say": "trap me in there with them.",
+          "say": "mind games, manipulation, and misdirection. don't let me see it coming.",
+          "reply": "good. let's see who gets inside whose head.",
           "filter": {
-            "payoff": "trapped"
+            "flavour": "mind_games"
           }
         },
         {
-          "say": "trust no one.",
+          "say": "spies, secret agents, and international intrigue. give me the briefing.",
+          "reply": "your assignment is classified. this message will self-destruct in five seconds.",
           "filter": {
-            "payoff": "trust"
+            "flavour": "spies"
+          },
+          "self_destruct": 5
+        },
+        {
+          "say": "serial killers. the hunt, or the mind behind it.",
+          "reply": "careful. you may just forget which side of the glass you're on...",
+          "filter": {
+            "flavour": "serial_killers"
           }
         },
         {
-          "say": "bend my brain.",
+          "say": "erotic thrillers. desire is the dangerous part.",
+          "reply": "I'll be in the other room.",
           "filter": {
-            "payoff": "bend"
+            "flavour": "erotic"
           }
+        },
+        {
+          "say": "anything. just keep me on the edge of my seat.",
+          "reply": "very well. no relaxing until the credits.",
+          "filter": {}
         }
       ]
     }
-  ]
+  ],
+  "flavours": {
+    "keep_guessing": {
+      "labelled": true,
+      "note": "mysteries, whodunits and conspiracies; the pleasure is working it out (Gone Girl, The Prestige, Zodiac)."
+    },
+    "trapped": {
+      "labelled": true,
+      "note": "trapped, hunted or held hostage; a few people against a threat with no way out (Room, Die Hard, Gravity)."
+    },
+    "mind_games": {
+      "labelled": true,
+      "note": "a battle of minds: manipulation, cat and mouse, deliberate misdirection, psychological warfare and unreliable minds (Fight Club, Memento, Se7en)."
+    },
+    "spies": {
+      "labelled": true,
+      "note": "secret agents and espionage; shared with the action door's spies."
+    },
+    "serial_killers": {
+      "labelled": true,
+      "note": "the hunt for, or the mind of, a serial killer; shared with the crime door, so a film behind both doors holds it at both or neither."
+    },
+    "erotic": {
+      "labelled": true,
+      "note": "erotic thrillers; desire is the danger (Basic Instinct, Body Heat). Under the 30-film bar in the operator's library, so hidden there."
+    }
+  }
 }

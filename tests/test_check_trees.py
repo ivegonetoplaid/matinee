@@ -17,13 +17,19 @@ from check_trees import (
     Report,
     _check_gore,
     check_answer_coverage,
+    check_apart,
     check_first_question,
     check_gore,
+    check_hidden,
+    check_homes,
     check_pins_in_key,
+    check_reachability,
     check_same_answers,
     check_sample,
+    door_pools,
 )
 from matinee.engine import load_catalog
+from matinee.labels import Labels, TreeLabels
 from matinee.pools import House
 from matinee.reference import Reference, Stat
 from matinee.table import FilmTable
@@ -79,19 +85,28 @@ def test_every_pin_needs_a_fixture_asserting_its_placement() -> None:
         tree_pins={"action": frozenset({11})},
         payoff_pins={("western", "showdown"): frozenset({12})},
         scale_pins={("horror", "gore", "rip"): frozenset({13})},
+        specials=frozenset({14}),
     )
     good = [
         {"tmdb": 10, "kids_band": "older"},
         {"tmdb": 11, "must_reach": ["action"]},
         {"tmdb": 12, "must_reach": ["western"]},
         {"tmdb": 13, "gore_band": "rip"},
+        {"tmdb": 14, "flavour_in": {"comedy": ["standup"]}},
     ]
     report = Report()
     check_pins_in_key(house, {"films": good}, report)
     assert report.failures == []
-    weak = [{"tmdb": 10}, {"tmdb": 11, "must_reach": ["drama"]}, {"tmdb": 12}, {"tmdb": 13, "gore_band": "some"}]
+    weak = [
+        {"tmdb": 10},
+        {"tmdb": 11, "must_reach": ["drama"]},
+        {"tmdb": 12},
+        {"tmdb": 13, "gore_band": "some"},
+        {"tmdb": 14, "must_reach": ["comedy"]},
+    ]
+    report = Report()
     check_pins_in_key(house, {"films": weak}, report)
-    assert len(report.failures) == 4
+    assert len(report.failures) == 5
 
 
 def test_a_sample_keeps_every_answer(tmp_path: Path) -> None:
@@ -140,7 +155,7 @@ def test_an_answer_that_depends_on_the_library_fails(tmp_path: Path) -> None:
 
 def test_a_path_ending_on_no_film_fails(tmp_path: Path) -> None:
     tree = json.loads(json.dumps(TREE))
-    tree["pool"] = "standup"
+    tree["pool"] = "nonfiction"  # no film in the constructed table is a documentary
     cat = load_catalog(make_table(), write_data(tmp_path, tree), reference())
     pools = {n: pd.Series(m, index=cat.table.films.index) for n, m in cat.pools.items()}
     report = Report()
@@ -181,3 +196,87 @@ def test_first_question_answers_must_name_a_tree(tmp_path: Path) -> None:
     report = Report()
     check_first_question(cat, report)
     assert report.failures == ["first question: 'No.' leads to 'none', which names no tree or mode file"]
+
+
+def test_a_film_held_only_by_a_tree_no_door_leads_to_has_no_home(tmp_path: Path) -> None:
+    data = write_data(tmp_path)
+    (data / "trees" / "orphan.json").write_text(json.dumps({"pool": "horror", "opening": "boo."}))
+    cat = load_catalog(make_table(), data, reference())
+    index = cat.table.films.index
+    pools = {"western": pd.Series(index != 2, index=index), "horror": pd.Series(index == 2, index=index)}
+    pools["kids:little"] = pd.Series(False, index=index)
+    doors = door_pools(cat, pools)
+    assert set(doors) == {"western", "kids:little"}  # only "Cowboys." leads anywhere
+    report = Report()
+    check_reachability(cat.table, doors, report)
+    assert report.failures == ["unreachable: Film 2 (1972) genres=Animation/Horror/Western"]
+
+
+def test_a_film_held_apart_fails_when_another_door_holds_it(tmp_path: Path) -> None:
+    tree = json.loads(json.dumps(TREE))
+    tree["flavours"]["standup"] = {"specials": True}
+    tree["apart"] = "standup"
+    cat = load_catalog(make_table(), write_data(tmp_path, tree), reference())
+    cat.apart["west"][:] = cat.table.films.index == 5
+    index = cat.table.films.index
+    pools = {"western": pd.Series(True, index=index), "horror": pd.Series(index == 5, index=index)}
+    report = Report()
+    check_apart(cat, pools, report)
+    assert report.failures == ["held apart: Film 5 (1975) is held apart in west but horror holds it"]
+    report = Report()
+    check_apart(cat, {**pools, "horror": pd.Series(False, index=index)}, report)
+    assert report.failures == []
+
+
+def test_a_sample_counts_only_the_doors_pools_as_homes(tmp_path: Path) -> None:
+    tree = json.loads(json.dumps(TREE))
+    tree["pool"] = "horror"  # the door ("Cowboys.") now holds only the even, Horror-tagged films
+    data = write_data(tmp_path, tree)
+    (data / "trees" / "orphan.json").write_text(json.dumps({"pool": "western", "opening": "howdy."}))
+    full = load_catalog(make_table(), data, reference())
+    report = Report()
+    check_sample(full, "all", 1.0, 1, report, data)
+    assert "[all] unreachable: Film 3 (1973) genres=Comedy/Western" in report.failures  # held only by the orphan
+    pools = {n: pd.Series(m, index=full.table.films.index) for n, m in full.pools.items()}
+    homes = check_homes(full, pools, Report())
+    assert "western" not in homes and "horror" in homes and "kids:little" in homes
+
+
+def test_the_homes_check_fails_a_special_another_door_holds(tmp_path: Path) -> None:
+    tree = json.loads(json.dumps(TREE))
+    tree["flavours"]["standup"] = {"specials": True}
+    tree["apart"] = "standup"
+    data = write_data(tmp_path, tree)
+    (data / "trees" / "scary.json").write_text(json.dumps({"pool": "horror", "opening": "boo."}))
+    first = json.loads((data / "first_question.json").read_text())
+    first["options"].append({"say": "Scary.", "tree": "scary", "label": "Scary"})
+    (data / "first_question.json").write_text(json.dumps(first))
+    house = json.loads((data / "house_overrides.json").read_text())
+    (data / "house_overrides.json").write_text(json.dumps({**house, "specials": [{"tmdb": 5}]}))
+    cat = load_catalog(make_table(), data, reference())  # film 5 is Comedy-tagged; pinned a special
+    index = cat.table.films.index
+    pools = {n: pd.Series(m, index=index) for n, m in cat.pools.items()}
+    report = Report()
+    check_homes(cat, pools, report)
+    assert not [f for f in report.failures if f.startswith("held apart")]
+    pools["horror"] = pools["horror"] | pd.Series(index == 5, index=index)
+    cat.pools["horror"] = pools["horror"].to_numpy()
+    report = Report()
+    check_homes(cat, pools, report)
+    assert "held apart: Film 5 (1975) is held apart in west but horror holds it" in report.failures
+
+
+def test_the_hidden_kinds_must_be_the_ones_the_key_expects(tmp_path: Path) -> None:
+    tree = json.loads(json.dumps(TREE))
+    tree["flavours"]["ghost"] = {"labelled": True}
+    tree["questions"][0]["options"].append({"say": "ghosts.", "reply": "", "filter": {"flavour": "ghost"}})
+    lab = Labels({"west": TreeLabels({1: frozenset({"ghost"})})})
+    cat = load_catalog(make_table(), write_data(tmp_path, tree), reference(), lab)  # ghost holds 1 film
+    report = Report()
+    check_hidden(cat, {"hidden": [["west", "ghost"]]}, report)
+    assert report.failures == []
+    check_hidden(cat, {"hidden": []}, report)
+    assert report.failures == ["hidden: west kind ghost is hidden, and the answer key does not expect it to be"]
+    report = Report()
+    check_hidden(cat, {"hidden": [["west", "ghost"], ["west", "heroic"]]}, report)
+    assert report.failures == ["hidden: west kind heroic shows, and the answer key expects it hidden"]

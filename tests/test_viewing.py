@@ -37,7 +37,7 @@ from matinee.table import FilmTable
 from matinee.web.app import create_app
 from matinee.web.config import Config
 from matinee.web.theatre import Theatre
-from test_engine import reference, write_data
+from test_engine import TREE, reference, write_data
 from test_web_library import SECRET_KEY, SECRET_URL, FakeLibrary, write_film_table
 
 TOPICS = [
@@ -150,7 +150,7 @@ def test_the_page_is_given_the_pick_lines_and_caps(site: Any) -> None:
     client, _store, _dtdd = site
     body = client.get("/api/quips").json()
     assert body["caps"] == {"line": 64, "pair": 76}
-    assert body["borrow"] == {"standup": "comedy"}
+    assert "borrow" not in body
     assert set(body["categories"]) == {"universal", "horror", "comedy"}
     assert "How about this one?" in body["categories"]["universal"]["reveal"]
 
@@ -436,3 +436,14 @@ def test_the_topic_list_is_kept_twenty_nine_days_and_served_stale_to_thirty() ->
     clock.now += TOPICS_KEEP_S - TOPICS_REFRESH_S
     with pytest.raises(DtddError):
         client.topics()  # past 30 days nothing is served
+
+
+def test_a_question_footnote_reaches_the_page(site: Any, tmp_path: Path) -> None:
+    tree = json.loads(json.dumps(TREE))
+    tree["questions"][0]["footnote"] = "*specials have their own answer."
+    (tmp_path / "data" / "trees" / "west.json").write_text(json.dumps(tree))
+    client, _, _ = site
+    assert (
+        client.post("/api/walk", json={"tree": "west"}).json()["question"]["footnote"]
+        == tree["questions"][0]["footnote"]
+    )

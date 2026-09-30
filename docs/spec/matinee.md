@@ -52,28 +52,32 @@ contract is listed under [Known gaps](#known-gaps).
 
 The poster wall opens by typing "Right this way." and "So, what are we in the
 mood for?". When the viewer has a profile, the first line carries the name:
-"Right this way, <name>.". The answers, their order and the tree or mode each
-leads to are data in `data/first_question.json`:
+"Right this way, <name>.". Each answer is a door, offered by its plain name.
+The answers, their order and the tree or mode each leads to are data in
+`data/first_question.json`:
 
-| Answer | Leads to | Label |
-|---|---|---|
-| I want to be scared. | `horror` | Horror |
-| I need a laugh. | `comedy` | Comedy |
-| Get my heart pumping. | `action` | Action |
-| Keep me on the edge of my seat. | `thriller` | Thriller |
-| Give me a story that sticks with me. | `drama` | Drama |
-| Take me somewhere else. | `fantasy` | Fantasy and adventure |
-| I'm in a cowboy mood. | `western` | Western |
-| Tell me something true. | `nonfiction` | Non-fiction |
-| Just someone funny with a mic. | `standup` | Standup |
-| Something for the kids. | `kids` | Kids |
-| Something I can fall asleep to. | `fall-asleep` (a mode) | Something to fall asleep to |
+| Answer | Leads to |
+|---|---|
+| Comedy | `comedy` |
+| Action and adventure | `action` |
+| Drama | `drama` |
+| Thriller | `thriller` |
+| Crime | `crime` |
+| Horror | `horror` |
+| Fantasy | `fantasy` |
+| Westerns | `western` |
+| For the kids | `kids` |
+| Documentaries | `nonfiction` |
+| Something to fall asleep to | `fall-asleep` (a mode) |
 
 - An answer is shown only when its tree or mode holds at least one film for this
   viewer, after the viewer's corrections and exclusions.
 - Every answer must carry a `label`. The engine refuses to load a first question
-  whose answer lacks one. The label names the tree where a short name is needed,
-  such as the correction panel.
+  whose answer lacks one. The label names the door where a short name is needed,
+  such as the correction panel. Each door's label is its name.
+- Matinee's reply to a door is the opening line of the tree or mode it leads to.
+- Stand-up specials are not a door. They are an answer under Comedy (section
+  2.3).
 - A mode is what the viewer is doing rather than a genre. The viewer is never
   asked to know whether they chose a genre or a mode.
 
@@ -87,15 +91,15 @@ on. The engine carries the behaviour. Adding a genre means adding a file.
 | File | Pool | Questions, in order |
 |---|---|---|
 | `trees/horror.json` | horror | flavour (kinds read from the labels; section 2.3); gore (pictures); era (only above 40 films) |
-| `trees/comedy.json` | comedy | room (certificate ceilings); kind (labels; animated by genre; section 2.3) |
+| `trees/comedy.json` | comedy | room (certificate ceilings); kind (labels; animated by genre; the standup specials held apart; section 2.3) |
 | `trees/action.json` | action | payoff; thrill |
-| `trees/thriller.json` | thriller | payoff |
+| `trees/thriller.json` | thriller | kind (labels; section 2.3) |
+| `trees/crime.json` | crime | kind (labels; section 2.3) |
 | `trees/drama.json` | drama | payoff |
 | `trees/fantasy.json` | fantasy | payoff |
 | `trees/western.json` | western | payoff |
 | `trees/kids.json` | kids | age; kind |
 | `trees/nonfiction.json` | nonfiction | none; it rolls from the whole pool |
-| `trees/standup.json` | standup | none; it rolls from the whole pool |
 | `modes/fall-asleep.json` | sleep | none; it rolls from the whole pool |
 
 Loading is strict:
@@ -108,6 +112,10 @@ Loading is strict:
 - A tree naming a pool no pool rule builds is refused.
 - `sequel` may only be `false`. `sort` may only be `rating`. `kids_band` must be
   `little`, `family` or `older`. `treat_as` must name an answer the question has.
+- A tree may name one flavour it defines as `apart`; naming a flavour it does not
+  define is refused. A flavour marked `labelled` or `specials` takes no other
+  signal or floor. Only a labelled flavour may be marked `always_shown`, and
+  only as `true`.
 - An answer may carry `self_destruct`, a whole number of seconds from 1 to 9. Any
   other value is refused, and so is a second answer carrying it anywhere across
   the trees and modes: the self-destructing reply is a one-off.
@@ -127,7 +135,7 @@ these signals, and no others:
 | `certificate_in` | Films whose certificate is listed; an absent certificate is the empty string |
 | `genres_any`, `genre_also` | Films carrying any listed media-server genre |
 | `genres_none` | Films carrying none of the listed genres |
-| `flavour` | Films in a named flavour the tree defines: matched by keyword, genome or genre, or read from the labels |
+| `flavour` | Films in a named flavour the tree defines: matched by keyword, genome or genre, read from the labels, or the standup specials |
 | `flavour_none` | Films outside a named flavour, plus films also in another flavour of the tree (house pins included) |
 | `payoff` | Films placed on a named payoff (see below) |
 | `bands` | Films in any of the listed bands of a named scale (see section 4) |
@@ -151,8 +159,26 @@ excluded one is invisible. One signal is the exception:
 `score_at_least`: a film then matches only when each named score reaches its
 floor, and a film with no score passes the floor. A flavour marked `labelled`
 takes no signals: its films are those the labels file names with it (section
-2.6). An answer leaving a flavour out keeps every film that also sits in another
-flavour of the tree.
+2.6). A flavour marked `specials` holds the standup specials (section 3.1). An
+answer leaving a flavour out keeps every film that also sits in another flavour
+of the tree.
+
+**A flavour held apart.** A tree may hold one flavour `apart`. Its films always
+sit in the tree's pool, whatever the pool rules and the labels say. No pool the
+walk offers holds them until the answer naming the flavour is given, so every
+other answer, and `Just pick one!` anywhere in that tree, leaves them out. No
+other door's pool holds them either (the checker fails otherwise).
+
+**A small kind is not offered.** An answer offering a labelled kind shows only
+when that kind holds at least 30 films of the tree's pool in the library the
+server loaded, counted before any answer narrows it. A kind is exempt when it
+is marked `always_shown` (horror's found footage), or when another answer of the
+same question leaves it out (horror's "anything scary" leaves comedy out, so
+hiding comedy would leave its films no answer). The bar changes whether an
+answer shows, never which films it holds, so a hidden kind's films stay
+reachable through the door's "anything" answer and `Just pick one!`. A kind
+found by signals is never held to the bar. Nor is an answer that filters on
+anything but a labelled kind.
 
 Horror's flavours are all labelled: supernatural, killers, monsters, slowburn,
 comedy and found_footage. A film may sit in two. A film played mainly for laughs
@@ -167,14 +193,36 @@ TMDB's Animation genre; its labels give an animated film no other kind, so an
 animated comedy sits only under animated. The labelled kinds are slapstick,
 feelgood, dark, action, horror, teen and romcom. Its horror kind holds the
 horror tree's comedy films, so both trees offer the same horror comedies, and
-each is labelled into both. "anything" has no filter.
+each is labelled into both. Comedy holds its standup flavour apart: the answer
+"just someone funny with a mic." offers only the standup specials, and sits just
+above "anything. surprise me.*", which offers every other film. That question's
+footnote reads "*stand-up specials have their own answer." The room answers'
+certificate ceilings apply to the specials as to any film. A special whose
+certificate a ceiling does not list is offered only after "no witnesses.
+anything goes.". Where the standup answer
+is not shown, the footnote and the asterisk on "anything" are not shown either.
+A pick on a special came through Comedy, so it speaks comedy's lines (section
+2.7).
+
+Thriller's and Crime's flavours are all labelled, and each tree asks one
+question: its kinds, in the order named here, then "anything", which has no
+filter. Thriller's kinds are keep_guessing, trapped, mind_games, spies,
+serial_killers and erotic. Its spies answer carries `self_destruct` of 5
+seconds (section 12), the one answer that does. Crime's kinds are cops,
+gangsters, heists, crime_drama, serial_killers and prison. A film may sit in
+several kinds. Both trees label a serial_killers kind. The labels are written
+to give a film behind both doors that kind at both or at neither, and Matinee
+does not enforce it. A film labelled behind either door with no kind, or not yet labelled, is
+reached through "anything" and `Just pick one!`. In the operator's library the
+30-film bar hides Thriller's erotic answer and Crime's prison answer, as the
+answer key's `hidden` list records.
 
 **Payoffs.** A payoff score is the mean genome relevance of its tags,
 standardised with the reference mean and standard deviation for that tree
 (section 3). A film belongs to its strongest payoff. Where the tree sets an
 overlap, it also belongs to every other payoff whose standardised score reaches
-that overlap. The overlap is 0.75 in the drama, fantasy, kids, thriller and
-western trees. The action tree sets none, so an action film has one payoff.
+that overlap. The overlap is 0.75 in the drama, fantasy, kids and western
+trees. The action tree sets none, so an action film has one payoff.
 A payoff may instead be a raw threshold that never counts as strongest: the
 kids tree's spooky answer needs a spooky score of at least 0.30. A film with no
 genome entry is placed by its genre where the tree lists genres (the western and
@@ -197,6 +245,9 @@ film onto the pinned payoff and off every other.
   it.
 - **An answer that would leave the pool empty is not shown.** A question with no
   answer to show is skipped.
+- A question may carry a `footnote`, a line the viewer sees in small type beneath
+  its answers and above `Just pick one!` (`footnote` in `/api/walk`). A question's
+  `note` is maintainer documentation and is never shown.
 - An answer marked `not_after` is hidden when the viewer gave a named earlier
   answer.
 - A walk that ends on an answer carrying `self_destruct` reports its seconds
@@ -207,8 +258,9 @@ film onto the pinned payoff and off every other.
   the pick (section 9).
 - **`Just pick one!`** is on screen from the first question onward, as the last
   choice beneath each question's answers. It ends the questions and picks from
-  the pool as it stands. Pressed at the first question,
-  it picks from every film some first answer offers this viewer.
+  the pool as it stands. Pressed at the first question, it picks from each
+  door's pool for this viewer before any answer, less the flavour that door's
+  tree holds apart.
 - **The trail.** On each question after the first, and on the pick screen, the
   page lists the viewer's answers so far, first to last, in gold at the bottom
   centre. Choosing one asks its question again
@@ -218,7 +270,8 @@ film onto the pinned payoff and off every other.
 ### 2.5 Every film stays reachable
 
 Every film in the library must be reachable through at least one complete path
-of answers in some tree or mode, and through a tree its own genres point at.
+of answers in some tree or mode a first-question answer leads to, and through a
+tree its own genres point at. A tree no door leads to is no film's home.
 `tools/check_trees.py` holds the trees to this. It reads the film table the
 nightly rebuild writes, builds every tree through the engine, and fails, with a
 non-zero exit, on any of these:
@@ -230,7 +283,7 @@ non-zero exit, on any of these:
    of that tree's answers, or a path ends on no film. It also reports how many
    questions each tree asks.
 4. **House pins.** A pin has no answer-key fixture asserting the pinned
-   placement.
+   placement. A `specials` pin's fixture asserts comedy's standup flavour.
 5. **Fixtures.** A fixture film in `data/answer_key.json`,
    `data/fixtures/horror.json` or `data/fixtures/comedy.json` misses a tree it
    must reach, reaches one it must not, or lands in the wrong kids band or gore
@@ -247,7 +300,8 @@ non-zero exit, on any of these:
    relevance 0.8 or above, except `afi 100 (laughs)` at 0.5. No copy of any
    published list is kept. Lists never filter, rank or gate what Matinee offers.
 8. **Expected homes and reachability.** A film is reachable through no tree its
-   own genres point at, or through no tree at all.
+   own genres point at, or through no tree at all. A film a tree holds apart
+   (section 2.3) sits in another door's pool.
 9. **Smaller libraries.** The same trees are rebuilt against a random third of
    the library (seed 3) and a random tenth (seed 10). Each must keep every film
    reachable. A film both libraries hold in a tree's pool must reach the same
@@ -258,8 +312,11 @@ non-zero exit, on any of these:
 Separately, the engine refuses to prepare when the shipped reference statistics
 do not cover the tree files (section 3). The checker reports that as a failure.
 The checker reads the labels file beside the film table unless `--labels` names
-another, and reports each film labelled out of a tree but kept there for having
-no other home.
+another, and reports each film labelled out of a tree but kept there, with the
+reason (a house pin, held apart, or no other door keeps it), and each answer a
+small kind hides. On the full library it fails
+when the kinds the bar hides differ from the answer key's `hidden` list of
+`[tree, kind]` pairs, so a kind that starts hiding, or stops, is never silent.
 
 ### 2.6 Labels
 
@@ -276,19 +333,26 @@ committed, because it lists the films one library holds. Its shape:
 - `kinds` maps a TMDB id to the kinds the film clearly fits. An empty list means
   the film was labelled and fits no kind. Every film in `kinds` joins the tree's
   pool, whatever the pool rules said: a horror comedy the rules sent to comedy
-  alone is in horror too once labelled.
+  alone is in horror too once labelled. Two exceptions hold whatever the labels
+  say: a kids-only film (section 3.2) sits only in the kids tree, and a film the
+  kids tree offers to little ones or the whole family never sits behind horror,
+  thriller or crime.
 - A film absent from `kinds` is unlabelled and sits under no kind.
-- `out` lists films carrying the tree's genre that belong elsewhere. Such a film
-  leaves the tree's pool only when another tree's pool holds it; otherwise it
-  stays, so no film loses its way in.
+- `out` lists films that belong elsewhere. Every labelled film first joins its
+  trees' pools. Then a film labelled out of a tree leaves it only where another
+  tree or mode keeps it (holds it and does not label it out too), and never when the
+  house pins it to this tree. A film every tree holding it labels out stays in
+  all of them, so no film loses its way in, and the order of the entries in the
+  file changes nothing. A film the list names outside the tree's pool changes
+  nothing, so a list may name every labelled film not behind the door.
 - An absent file means no film is labelled, and the server logs a warning. A
   malformed file, a tree no file defines, or a kind the tree does not label
   stops the server at start-up.
 - The server reads the file once at start-up. Replacing it takes a restart.
 
-The horror labels were written by a language model against one rule per kind,
-with the operator's calls laid over them. The kinds' rules are the `note` of
-each flavour in `data/trees/horror.json`.
+Each labelled flavour's `note` in its tree file states the rule its kind
+follows. The labels were written by a language model against those rules, with
+the operator's calls laid over them.
 
 ### 2.7 The pick's lines
 
@@ -300,7 +364,6 @@ page reads it through `GET /api/quips`, which returns the file as loaded
 ```json
 {"note": "…",
  "caps": {"line": 64, "pair": 76},
- "borrow": {"standup": "comedy"},
  "categories": {"universal": {"reveal": ["How about this one?", "…"], "nope": ["…"]},
                 "horror": {"reveal": ["…"], "nope": ["…"]},
                 "comedy": {"reveal": ["…"], "nope": ["…"]}}}
@@ -309,9 +372,9 @@ page reads it through `GET /api/quips`, which returns the file as loaded
 - A category is `universal`, or a tree or mode by its file name. It may hold
   `reveal` lines, said as a film arrives, and `nope` lines, said after
   `Not that one`. The shipped file holds universal (16 reveal, 22 nope),
-  horror (18, 19) and comedy (22, 29).
-- `borrow` names a category that draws from another's lines. Standup draws
-  comedy's.
+  horror (18, 19) and comedy (22, 29). A tree or mode with no category of its
+  own, such as thriller or crime, draws universal's lines. No category draws
+  another tree's lines.
 - `caps.line` is the most characters one line may hold. `caps.pair` is the
   most a nope line and a reveal line shown together may hold. Both were set by
   rendering every line as the pick line, on a 360 px phone and on the widest
@@ -328,8 +391,7 @@ page reads it through `GET /api/quips`, which returns the file as loaded
   case. A line is in title case when it has at least two words after its
   first, not counting words in capitals for emphasis or "I" and its
   contractions, and every one of them is capitalised. They also refuse a
-  category or a borrowing category that is neither universal nor a tree or
-  mode, and a borrowing from a category that holds no lines.
+  category that is neither universal nor a tree or mode.
 - The pair cap is held when the page deals lines (section 12), not by the
   checker.
 
@@ -345,14 +407,14 @@ it has another home.
 | Tree | Starts from | Leaves when |
 |---|---|---|
 | horror | Horror | fear under 0.20 and tagged Comedy; or a young kids film |
-| comedy | Comedy | a standup special; or kids-only |
+| comedy | Comedy, plus every standup special | kids-only, unless a standup special |
 | action | Action; any of Adventure, Thriller, Crime, Mystery, Science Fiction or War with excitement at 0.60 or above; Adventure with no genome entry | excitement under 0.30 and tagged Comedy; or kids-only |
 | thriller | Thriller or Mystery with tension at 0.20 or above, or no genome entry | a young kids film; or kids-only |
+| crime | Crime | a young kids film |
 | drama | Drama, plus every unclaimed stray | weight under 0.13 and tagged Comedy; or kids-only |
 | fantasy | Fantasy or Adventure with wonder or explore at 0.45 or above; Fantasy with no genome entry | kids-only |
 | western | Western | kids-only |
 | nonfiction | Documentary | a standup special; or kids-only |
-| standup | standup specials, plus films pinned to standup | — |
 | kids | the gated kids pool (below) | — |
 | sleep | enchantment at 0.55 or above and edge under 0.40; a film with no genome entry is never in it | — |
 
@@ -369,15 +431,26 @@ it has another home.
 - **Standup specials.** A title is a standup special when it carries the TMDB
   keyword `stand-up comedy`, or when it is tagged Comedy and either is a TV Movie
   carrying `comedian`, `concert` or `concert film`, or carries `comedian` and a
-  concert keyword together. A concert keyword alone never marks a special.
-  Unknown TMDB keywords never mark a special.
+  concert keyword together, or when the house counts it as one (a `specials`
+  pin, section 4.2). A concert keyword alone never marks a special. Unknown TMDB
+  keywords never mark a special. Every special joins the comedy pool, where only
+  its standup answer offers it (section 2.3), and stays out of non-fiction.
 - **Strays.** A stray is a film tagged Crime, Mystery, Thriller, Romance, War,
   History, Music, Science Fiction, Fantasy or Adventure that no horror, comedy,
   action, fantasy or thriller pool holds, that no house tree pin places, and
   that is not kids-only. A stray joins each of those five trees that holds
   another film of its TMDB collection. Membership is read before any stray is
-  added, so it never chains. A stray still unclaimed joins drama.
+  added, so it never chains. A stray still unclaimed joins drama. The crime
+  pool, which takes every film tagged Crime, claims no stray: a Crime film
+  keeps whatever home the rules above give it (action by excitement, a tree
+  holding its TMDB collection, or drama) and sits behind the crime door as well.
 - **House tree pins** add single films to a tree after every rule above.
+- **The labels come after.** Once these rules have run, the labels settle the
+  pool of every tree they name (section 2.6): a labelled film joins whatever
+  the rules above said, unless it is kids-only or, behind horror, thriller or
+  crime, a film for little ones or the whole family; and a film labelled out leaves only where another tree
+  or mode keeps it. Comedy's standup specials then return to its pool, whatever
+  the pool rules and the labels said (section 2.3).
 
 ### 3.2 The kids pool
 
@@ -442,8 +515,10 @@ reads.
 | fantasy | Fantasy or Adventure | wonder or explore ≥ 0.45 | 381 |
 | horror | Horror | fear ≥ 0.20 | 1,572 |
 | kids | Children or Animation | none | 1,505 |
-| thriller | Thriller or Mystery | tension ≥ 0.20 | 2,871 |
 | western | Western | none | 302 |
+
+Comedy, thriller, crime and non-fiction name no reference, because none of
+their answers is a payoff or a scale.
 
 The shipped release is "MovieLens ml-latest, generated July 20, 2023".
 
@@ -481,12 +556,13 @@ question and is treated as "None. I'm squeamish.": 188, 296, 331, 203, 250,
 
 `data/house_overrides.json` holds this installation's hand-set placements,
 applied for everyone. A pin is keyed by TMDB id with its title and a note. It
-takes one of five forms:
+takes one of six forms:
 
 | Form | Places a film |
 |---|---|
 | `kids` | in the kids pool, in the named band |
-| `trees` | in a tree's pool (a film pinned to standup also leaves comedy and non-fiction) |
+| `trees` | in a tree's pool |
+| `specials` | among the standup specials: in comedy's standup answer and out of non-fiction |
 | `payoffs` | on one payoff of one tree, and off its others |
 | `scales` | in one band of one scale, and out of its others |
 | `flavours` | in one flavour of one tree (`member` true) or out of it (`member` false) |
@@ -964,7 +1040,9 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
   the line hangs from the top of the screen with three lines reserved, so on
   desktop the answers start at the same height on every question whose line
   fits in three; on a phone the answers sit at the foot of the screen. On
-  desktop and on a phone the answers are letter-board strips, smaller on a phone. The first action on a screen
+  desktop and on a phone the answers are letter-board strips, smaller on a phone.
+  A question's footnote appears with the answers, in small dim type beneath
+  them and above "Just pick one!". The first action on a screen
   disables every button on it. The profile's name tag, with "Edit my list" and
   "Not <name>?", sits at the top of the wall and the pick screen.
 - **The pails.** The gore question shows four pail pictures, spotless to
@@ -1030,9 +1108,8 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
   The pick's line is a quip from `data/quips.json` (section 2.7), served by
   `GET /api/quips` and read once per page load. When the lines cannot be
   read, the page logs a warning and its picks show no line. A pick draws from
-  the category the first answer led to: its own lines, or those of the
-  category it borrows (standup borrows comedy's), each set falling back on its
-  own to universal's; "Just pick one!" before a category draws universal. The
+  the category the first answer led to: its own lines, each set (reveal, nope)
+  falling back separately to universal's; "Just pick one!" before a category draws universal. The
   film's own genres play no part. Each set deals like a shuffled deck, one
   deck per page load, and is reshuffled only when every line has been dealt.
   The line is set in Big Shoulders Display, scaling with the screen between
@@ -1076,7 +1153,8 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
   The wall's geometry and re-sort plan, the hop plan and its speed limit, the
   glow colour and the quip deal are modules that touch no page. Their tests
   under `tests/js/` run with `node --test` from `./check.sh`.
-- **The self-destructing reply.** When the last answer carries `self_destruct`,
+- **The self-destructing reply.** When the last answer carries `self_destruct`
+  (the thriller tree's spies answer),
   its reply types in gold as usual, then counts down on its own one-second
   clock, whatever the hunt is doing: a large gold number beneath the reply
   shows each second in turn, fading in and out in the same place. One second
@@ -1215,7 +1293,7 @@ Not part of this build, and not to be added until asked:
 # Known gaps
 
 Behaviour that is deliberately absent, still open, or short of the contract,
-as the code stood on 2026-09-27; gaps 9 and 10 as it stood on 2026-09-30.
+as the code stood on 2026-09-30.
 
 **Short of the contract:**
 
@@ -1226,7 +1304,7 @@ as the code stood on 2026-09-27; gaps 9 and 10 as it stood on 2026-09-30.
    create an empty profile. Any caller may still do this until the cap of 50
    fills. (`src/matinee/web/app.py:171`, `src/matinee/store.py:207`)
 2. **A film with no genres fails reachability.** It is not set apart as a
-   metadata fault. (`tools/check_trees.py:120`)
+   metadata fault. (`tools/check_trees.py:132`)
 
 **Deliberately absent or open:**
 
@@ -1236,7 +1314,7 @@ as the code stood on 2026-09-27; gaps 9 and 10 as it stood on 2026-09-30.
    (`src/matinee/store.py:281`, `src/matinee/store.py:296`)
 4. **The per-device allowance is per cookie.** A client that discards
    `matinee_device` is issued a new one with a fresh allowance. The
-   installation's hourly ceiling still bounds it. (`src/matinee/web/viewing.py:226`)
+   installation's hourly ceiling still bounds it. (`src/matinee/web/viewing.py:232`)
 5. **"Slow" is timed per request, not per film.** A film lookup is two
    requests. Each may wait up to 3 seconds for its turn, then pause for the
    pacing allowance, then allow 3 seconds for an answer. One check can therefore
@@ -1255,15 +1333,29 @@ as the code stood on 2026-09-27; gaps 9 and 10 as it stood on 2026-09-30.
 8. **Validation failures use the framework's error shape.** A request body
    that fails validation answers 422 with `{"detail": [...]}`, not Matinee's
    `{"error", "message"}` shape. (`src/matinee/web/app.py:87`)
+9. **Four doors have no tree.** Sci-fi, Romance, Animation and War are door
+   names with no tree file, so the first question does not list them. The
+   checker fails an answer that leads to no file. (`data/first_question.json:2`)
+10. **A label outranks the pool rules' exclusions.** Every labelled film joins
+    its tree's pool, but for the kids exceptions of section 2.6, so a label can
+    bring in a film the pool rule leaves out and offer it under a kind. (`src/matinee/engine.py:387`)
+11. **An apart flavour no answer offers loads.** The loader checks only that
+    the tree defines the flavour it holds apart. The server starts with such a
+    tree, whose held-apart films no answer offers; only the checker's
+    answer-coverage rule fails it.
+    (`src/matinee/trees.py:301`)
+12. **Nothing ties a kind to its answer's words.** An answer may filter on any
+    labelled flavour of its tree, so an answer worded for heists that names the
+    cops flavour loads and passes the checker. (`tools/check_trees.py:328`)
 
 **Short of the contract, in the page:**
 
-9. **The door can be entered while About is open over it.** A late answer to
+13. **The door can be entered while About is open over it.** A late answer to
    the name lookup or a profile opening, or the keyboard reaching the door's
    controls during the name's flight, can take the viewer in behind the panel.
    Closing About then flies the full-size name back over the theatre.
    (`src/matinee/web/static/js/door.js::Door.bringBack`)
-10. **The name's home on the sign is measured once.** A resize or a phone
+14. **The name's home on the sign is measured once.** A resize or a phone
     rotation while About is open over the door lands the returning name where
     the sign's letters stood before, not where they stand now.
     (`src/matinee/web/static/js/door.js::Door.leave`)
@@ -1292,68 +1384,92 @@ symbol when one does not match.
 
 | Handle | Where | Verified |
 |---|---|---|
-| `data/first_question.json` (lines, answers, labels) | `data/first_question.json:3` | 2026-09-26 |
-| `src/matinee/trees.py::parse_tree` | `src/matinee/trees.py:263` | 2026-09-26 |
-| `src/matinee/trees.py::load_trees` (duplicate names refused) | `src/matinee/trees.py:281` | 2026-09-26 |
-| `src/matinee/trees.py::FILTER_KEYS` / `OPTION_KEYS` / `QUESTION_KEYS` | `src/matinee/trees.py:107` | 2026-09-26 |
-| `src/matinee/trees.py::parse_filter` | `src/matinee/trees.py:159` | 2026-09-26 |
-| `src/matinee/trees.py::Payoffs` | `src/matinee/trees.py:76` | 2026-09-26 |
-| `src/matinee/engine.py::STOP_UNDER` | `src/matinee/engine.py:50` | 2026-09-26 |
-| `src/matinee/engine.py::load_catalog` | `src/matinee/engine.py:385` | 2026-09-26 |
-| `src/matinee/engine.py::_first_option` (label required) | `src/matinee/engine.py:350` | 2026-09-26 |
-| `src/matinee/engine.py::first_question` | `src/matinee/engine.py:530` | 2026-09-26 |
-| `src/matinee/engine.py::base_pool` (order of corrections, exclusions, topic skip) | `src/matinee/engine.py:420` | 2026-09-26 |
-| `src/matinee/engine.py::walk` | `src/matinee/engine.py:479` | 2026-09-26 |
-| `src/matinee/engine.py::_gate` (`only_if_pool_over`, `skip_if_topics`) | `src/matinee/engine.py:462` | 2026-09-26 |
-| `src/matinee/engine.py::_shown` (empty answers hidden, `not_after`) | `src/matinee/engine.py:450` | 2026-09-26 |
-| `src/matinee/engine.py::_plain_mask` / `_range_mask` (unknown values pass) | `src/matinee/engine.py:293` | 2026-09-26 |
-| `src/matinee/engine.py::payoff_members` | `src/matinee/engine.py:198` | 2026-09-26 |
-| `src/matinee/engine.py::walk_ends` / `reachable` | `src/matinee/engine.py:504` | 2026-09-26 |
+| `data/first_question.json` (lines, answers, labels) | `data/first_question.json:3` | 2026-09-30 |
+| `src/matinee/trees.py::parse_tree` | `src/matinee/trees.py:296` | 2026-09-30 |
+| `src/matinee/trees.py::Tree.apart` (a flavour the tree does not define is refused) | `src/matinee/trees.py:107` | 2026-09-30 |
+| `src/matinee/trees.py::Question.footnote` | `src/matinee/trees.py:74` | 2026-09-30 |
+| `src/matinee/trees.py::SOLE_SIGNALS` / `_check_flavours` / `_check_signals` (`labelled`, `specials`, `always_shown`) | `src/matinee/trees.py:268` | 2026-09-30 |
+| `src/matinee/trees.py::load_trees` (duplicate names refused) | `src/matinee/trees.py:318` | 2026-09-30 |
+| `src/matinee/trees.py::FILTER_KEYS` / `OPTION_KEYS` / `QUESTION_KEYS` | `src/matinee/trees.py:110` | 2026-09-30 |
+| `src/matinee/trees.py::parse_filter` | `src/matinee/trees.py:172` | 2026-09-30 |
+| `src/matinee/trees.py::Payoffs` | `src/matinee/trees.py:78` | 2026-09-30 |
+| `src/matinee/engine.py::STOP_UNDER` | `src/matinee/engine.py:58` | 2026-09-30 |
+| `src/matinee/engine.py::load_catalog` | `src/matinee/engine.py:453` | 2026-09-30 |
+| `src/matinee/engine.py::_first_option` (label required) | `src/matinee/engine.py:369` | 2026-09-30 |
+| `src/matinee/engine.py::first_question` | `src/matinee/engine.py:624` | 2026-09-30 |
+| `src/matinee/engine.py::base_pool` (order of corrections, exclusions, topic skip) | `src/matinee/engine.py:487` | 2026-09-30 |
+| `src/matinee/engine.py::walk` | `src/matinee/engine.py:572` | 2026-09-30 |
+| `src/matinee/engine.py::_gate` (`only_if_pool_over`, `skip_if_topics`) | `src/matinee/engine.py:555` | 2026-09-30 |
+| `src/matinee/engine.py::_shown` (empty answers hidden, `not_after`, small kinds hidden) | `src/matinee/engine.py:532` | 2026-09-30 |
+| `src/matinee/engine.py::KIND_MIN_FILMS` | `src/matinee/engine.py:59` | 2026-09-30 |
+| `src/matinee/engine.py::_too_small` (`always_shown`, a kind another answer leaves out) | `src/matinee/engine.py:428` | 2026-09-30 |
+| `src/matinee/engine.py::_answer_masks` / `Catalog.small` | `src/matinee/engine.py:444` | 2026-09-30 |
+| `src/matinee/engine.py::_hold_apart` / `Catalog.apart` | `src/matinee/engine.py:415` | 2026-09-30 |
+| `src/matinee/engine.py::opening_pool` | `src/matinee/engine.py:513` | 2026-09-30 |
+| `src/matinee/engine.py::_served` (apart films stay out until their answer) | `src/matinee/engine.py:521` | 2026-09-30 |
+| `src/matinee/engine.py::_asked` / `Asked.footnote` (footnote and asterisks dropped with the apart answer) | `src/matinee/engine.py:542` | 2026-09-30 |
+| `src/matinee/web/viewing.py::everything` (the first question's pool) | `src/matinee/web/viewing.py:172` | 2026-09-30 |
+| `src/matinee/web/viewing.py::QuestionOut.footnote` | `src/matinee/web/viewing.py:82` | 2026-09-30 |
+| `src/matinee/engine.py::_plain_mask` / `_range_mask` (unknown values pass) | `src/matinee/engine.py:312` | 2026-09-30 |
+| `src/matinee/engine.py::payoff_members` | `src/matinee/engine.py:217` | 2026-09-30 |
+| `src/matinee/engine.py::walk_ends` / `reachable` | `src/matinee/engine.py:598` | 2026-09-30 |
 | `data/trees/comedy.json` room question (ceilings) | `data/trees/comedy.json:7` | 2026-09-27 |
+| `data/trees/comedy.json` kind question (standup answer, footnote), `standup` flavour, `apart` | `data/trees/comedy.json:49` | 2026-09-30 |
+| `data/trees/thriller.json` kind question (spies `self_destruct`) | `data/trees/thriller.json:6` | 2026-09-30 |
+| `data/trees/crime.json` kind question | `data/trees/crime.json:6` | 2026-09-30 |
 | `data/modes/fall-asleep.json` | `data/modes/fall-asleep.json:3` | 2026-09-26 |
 
 ### The checker
 
 | Handle | Where | Verified |
 |---|---|---|
-| `tools/check_trees.py::main` | `tools/check_trees.py:387` | 2026-09-28 |
-| `tools/check_trees.py::SAMPLES` | `tools/check_trees.py:49` | 2026-09-28 |
-| `tools/check_trees.py::check_answer_coverage` | `tools/check_trees.py:296` | 2026-09-28 |
-| `tools/check_trees.py::check_same_answers` | `tools/check_trees.py:325` | 2026-09-28 |
-| `tools/check_trees.py::check_sample` | `tools/check_trees.py:343` | 2026-09-28 |
-| `tools/check_trees.py::check_pins_in_key` | `tools/check_trees.py:247` | 2026-09-28 |
-| `tools/check_trees.py::check_gore` | `tools/check_trees.py:285` | 2026-09-28 |
-| `tools/check_trees.py::check_lists` | `tools/check_trees.py:137` | 2026-09-28 |
-| `tools/check_trees.py::check_data` | `tools/check_trees.py:377` | 2026-09-28 |
-| `tools/check_trees.py::check_quips` | `tools/check_trees.py:367` | 2026-09-28 |
-| `data/answer_key.json` list tags | `data/answer_key.json:3` | 2026-09-26 |
+| `tools/check_trees.py::main` | `tools/check_trees.py:467` | 2026-09-30 |
+| `tools/check_trees.py::SAMPLES` | `tools/check_trees.py:60` | 2026-09-30 |
+| `tools/check_trees.py::check_answer_coverage` | `tools/check_trees.py:328` | 2026-09-30 |
+| `tools/check_trees.py::check_same_answers` | `tools/check_trees.py:357` | 2026-09-30 |
+| `tools/check_trees.py::check_sample` | `tools/check_trees.py:388` | 2026-09-30 |
+| `tools/check_trees.py::check_homes` | `tools/check_trees.py:375` | 2026-09-30 |
+| `tools/check_trees.py::door_pools` (only doors are homes) | `tools/check_trees.py:137` | 2026-09-30 |
+| `tools/check_trees.py::check_apart` | `tools/check_trees.py:143` | 2026-09-30 |
+| `tools/check_trees.py::EXPECTED` | `tools/check_trees.py:63` | 2026-09-30 |
+| `tools/check_trees.py::check_hidden` | `tools/check_trees.py:421` | 2026-09-30 |
+| `tools/check_trees.py::report_kept` (the reasons) | `tools/check_trees.py:403` | 2026-09-30 |
+| `tools/check_trees.py::check_pins_in_key` | `tools/check_trees.py:276` | 2026-09-30 |
+| `tools/check_trees.py::SPECIALS_KIND` (a `specials` pin's fixture) | `tools/check_trees.py:85` | 2026-09-30 |
+| `tools/check_trees.py::check_gore` | `tools/check_trees.py:317` | 2026-09-30 |
+| `tools/check_trees.py::check_lists` | `tools/check_trees.py:168` | 2026-09-30 |
+| `tools/check_trees.py::check_data` | `tools/check_trees.py:457` | 2026-09-30 |
+| `tools/check_trees.py::check_quips` | `tools/check_trees.py:447` | 2026-09-30 |
+| `data/answer_key.json` list tags | `data/answer_key.json:3` | 2026-09-30 |
+| `data/answer_key.json` `hidden` | `data/answer_key.json:18` | 2026-09-30 |
 
 ### The pick's lines
 
 | Handle | Where | Verified |
 |---|---|---|
-| `data/quips.json` (caps, borrow, categories) | `data/quips.json:3` | 2026-09-28 |
-| `src/matinee/quips.py::Quips` / `QuipSet` / `Caps` (universal must hold both sets) | `src/matinee/quips.py:43` | 2026-09-28 |
-| `src/matinee/quips.py::load_quips` / `QuipsError` | `src/matinee/quips.py:62` | 2026-09-28 |
-| `src/matinee/quips.py::quip_problems` / `line_problems` / `in_title_case` | `src/matinee/quips.py:91` | 2026-09-28 |
+| `data/quips.json` (caps, categories) | `data/quips.json:3` | 2026-09-30 |
+| `src/matinee/quips.py::Quips` / `QuipSet` / `Caps` (universal must hold both sets) | `src/matinee/quips.py:43` | 2026-09-30 |
+| `src/matinee/quips.py::load_quips` / `QuipsError` | `src/matinee/quips.py:61` | 2026-09-30 |
+| `src/matinee/quips.py::quip_problems` / `line_problems` / `in_title_case` | `src/matinee/quips.py:90` | 2026-09-30 |
 | `tests/test_quips.py::test_the_caps_are_the_measured_ones` | `tests/test_quips.py:24` | 2026-09-28 |
 
 ### Pools and reference statistics
 
 | Handle | Where | Verified |
 |---|---|---|
-| `src/matinee/pools.py::build_pools` | `src/matinee/pools.py:227` | 2026-09-26 |
-| `src/matinee/pools.py::EFFECT_FLOOR` and the other thresholds | `src/matinee/pools.py:39` | 2026-09-26 |
-| `src/matinee/pools.py::SCORES` | `src/matinee/pools.py:68` | 2026-09-26 |
-| `src/matinee/pools.py::kids_bands` | `src/matinee/pools.py:172` | 2026-09-26 |
-| `src/matinee/pools.py::standup_specials` | `src/matinee/pools.py:210` | 2026-09-26 |
-| `src/matinee/pools.py::_strays_follow_franchise` | `src/matinee/pools.py:198` | 2026-09-26 |
+| `src/matinee/pools.py::build_pools` (comedy holds the specials; the crime pool claims no stray) | `src/matinee/pools.py:235` | 2026-09-30 |
+| `src/matinee/pools.py::EFFECT_FLOOR` and the other thresholds | `src/matinee/pools.py:40` | 2026-09-30 |
+| `src/matinee/pools.py::SCORES` | `src/matinee/pools.py:69` | 2026-09-30 |
+| `src/matinee/pools.py::kids_bands` | `src/matinee/pools.py:175` | 2026-09-30 |
+| `src/matinee/pools.py::standup_specials` | `src/matinee/pools.py:213` | 2026-09-30 |
+| `src/matinee/pools.py::specials` (the rule plus `specials` pins) | `src/matinee/pools.py:230` | 2026-09-30 |
+| `src/matinee/pools.py::_strays_follow_franchise` | `src/matinee/pools.py:201` | 2026-09-30 |
 | `src/matinee/reference.py::reference_films` | `src/matinee/reference.py:157` | 2026-09-26 |
 | `src/matinee/reference.py::compute_tree` | `src/matinee/reference.py:176` | 2026-09-26 |
 | `src/matinee/reference.py::problems` | `src/matinee/reference.py:252` | 2026-09-26 |
 | `src/matinee/reference.py::LICENCE` | `src/matinee/reference.py:29` | 2026-09-26 |
 | `tools/build_reference.py::main` | `tools/build_reference.py:25` | 2026-09-26 |
-| `data/reference.json` (horror gore cuts) | `data/reference.json:335` | 2026-09-26 |
+| `data/reference.json` (horror gore cuts) | `data/reference.json:335` | 2026-09-30 |
 | `tests/test_reference.py::test_shipped_reference_covers_every_tree` | `tests/test_reference.py:132` | 2026-09-26 |
 
 ### Scales and pins
@@ -1364,15 +1480,17 @@ symbol when one does not match.
 | `src/matinee/scales.py::film_scores` (bonus only with a genome entry) | `src/matinee/scales.py:65` | 2026-09-26 |
 | `src/matinee/scales.py::band_index` | `src/matinee/scales.py:75` | 2026-09-26 |
 | `src/matinee/scales.py::membership` (unscored bands, pins) | `src/matinee/scales.py:81` | 2026-09-26 |
-| `src/matinee/engine.py::scale_members` | `src/matinee/engine.py:233` | 2026-09-26 |
+| `src/matinee/engine.py::scale_members` | `src/matinee/engine.py:252` | 2026-09-30 |
 | `data/trees/horror.json` gore scale | `data/trees/horror.json:38` | 2026-09-26 |
 | `data/trees/horror.json` gore question, `skip_if_topics`, `treat_as` | `data/trees/horror.json:134` | 2026-09-27 |
-| `data/trees/horror.json` labelled flavours (the kinds' rules) | `data/trees/horror.json:241` | 2026-09-27 |
+| `data/trees/horror.json` labelled flavours (the kinds' rules) | `data/trees/horror.json:244` | 2026-09-30 |
 | `src/matinee/labels.py::load_labels` | `src/matinee/labels.py:64` | 2026-09-27 |
-| `src/matinee/engine.py::_apply_labels` (out films leave only with another home) | `src/matinee/engine.py:365` | 2026-09-27 |
-| `src/matinee/pools.py::load_house` / `House` | `src/matinee/pools.py:110` | 2026-09-26 |
-| `src/matinee/engine.py::house_flavour` | `src/matinee/engine.py:177` | 2026-09-26 |
-| `data/house_overrides.json` scale pins | `data/house_overrides.json:94` | 2026-09-26 |
+| `src/matinee/engine.py::_apply_labels` (labelled films join, but for kids-only films and, behind horror, thriller or crime, young kids films; out films leave only where another tree keeps them; house tree pins stay) | `src/matinee/engine.py:387` | 2026-09-30 |
+| `src/matinee/engine.py::_labelled_tree` (unknown tree or kind refused) | `src/matinee/engine.py:375` | 2026-09-30 |
+| `src/matinee/pools.py::load_house` / `House` (`House.specials`) | `src/matinee/pools.py:112` | 2026-09-30 |
+| `src/matinee/engine.py::house_flavour` (a `specials` flavour holds the standup specials) | `src/matinee/engine.py:190` | 2026-09-30 |
+| `data/house_overrides.json` scale pins | `data/house_overrides.json:104` | 2026-09-30 |
+| `data/house_overrides.json` `specials` pins | `data/house_overrides.json:73` | 2026-09-30 |
 
 ### Film table and nightly rebuild
 
@@ -1409,19 +1527,19 @@ symbol when one does not match.
 | `src/matinee/store.py::Store.correct` / `corrections` | `src/matinee/store.py:281` | 2026-09-26 |
 | `src/matinee/web/common.py::set_tokens` / `TOKENS_COOKIE` / `MAX_TOKENS` | `src/matinee/web/common.py:81` | 2026-09-26 |
 | `src/matinee/web/common.py::Suggestion` | `src/matinee/web/common.py:38` | 2026-09-26 |
-| `src/matinee/web/viewing.py::held_profile` | `src/matinee/web/viewing.py:178` | 2026-09-26 |
-| `src/matinee/web/viewing.py::resolve` | `src/matinee/web/viewing.py:192` | 2026-09-26 |
-| `src/matinee/web/viewing.py::add_note_routes` / `answer_says` | `src/matinee/web/viewing.py:352` | 2026-09-26 |
-| `src/matinee/web/viewing.py::add_correction_routes` | `src/matinee/web/viewing.py:322` | 2026-09-26 |
-| `src/matinee/web/viewing.py::banded` | `src/matinee/web/viewing.py:317` | 2026-09-26 |
+| `src/matinee/web/viewing.py::held_profile` | `src/matinee/web/viewing.py:183` | 2026-09-30 |
+| `src/matinee/web/viewing.py::resolve` | `src/matinee/web/viewing.py:197` | 2026-09-30 |
+| `src/matinee/web/viewing.py::add_note_routes` / `answer_says` | `src/matinee/web/viewing.py:373` | 2026-09-30 |
+| `src/matinee/web/viewing.py::add_correction_routes` | `src/matinee/web/viewing.py:343` | 2026-09-30 |
+| `src/matinee/web/viewing.py::banded` | `src/matinee/web/viewing.py:338` | 2026-09-30 |
 
 ### Exclusions and the DoesTheDogDie check
 
 | Handle | Where | Verified |
 |---|---|---|
 | `data/exclusions.json` | `data/exclusions.json:4` | 2026-09-26 |
-| `src/matinee/engine.py::_exclusion` | `src/matinee/engine.py:338` | 2026-09-26 |
-| `src/matinee/web/viewing.py::check_exclusions` | `src/matinee/web/viewing.py:186` | 2026-09-26 |
+| `src/matinee/engine.py::_exclusion` | `src/matinee/engine.py:357` | 2026-09-30 |
+| `src/matinee/web/viewing.py::check_exclusions` | `src/matinee/web/viewing.py:191` | 2026-09-30 |
 | `src/matinee/dtdd.py::Dtdd.get` / `_pace` (`BURST`, `RATE_PER_S`) | `src/matinee/dtdd.py:106` | 2026-09-26 |
 | `src/matinee/dtdd.py::Dtdd._check_holds` / `_refused` / `_note_remaining` (`REQUESTS_PER_HOUR`, `MONTH_RESERVE`, `RESERVE_HOLD_S`, `BACKOFF_S`) | `src/matinee/dtdd.py:123` | 2026-09-26 |
 | `src/matinee/dtdd.py::Dtdd.topics` (`TOPICS_REFRESH_S`, `TOPICS_KEEP_S`) | `src/matinee/dtdd.py:178` | 2026-09-26 |
@@ -1430,12 +1548,12 @@ symbol when one does not match.
 | `src/matinee/pick.py::look_up` (`LOOKUP_S`) | `src/matinee/pick.py:142` | 2026-09-26 |
 | `src/matinee/pick.py::DeviceCap` (`LOOKUPS_PER_HOUR`) | `src/matinee/pick.py:178` | 2026-09-26 |
 | `src/matinee/pick.py::candidates` | `src/matinee/pick.py:211` | 2026-09-26 |
-| `src/matinee/engine.py::gentlest` | `src/matinee/engine.py:252` | 2026-09-26 |
+| `src/matinee/engine.py::gentlest` | `src/matinee/engine.py:271` | 2026-09-30 |
 | `src/matinee/pick.py::Picker.pick` (`PICK_TRIES`) | `src/matinee/pick.py:234` | 2026-09-26 |
-| `src/matinee/web/viewing.py::device_id` / `DEVICE_COOKIE` | `src/matinee/web/viewing.py:226` | 2026-09-26 |
-| `src/matinee/web/viewing.py::SWAP_LINE` / `UNCHECKED_LINES` / `EXHAUSTED` / `TIRED` | `src/matinee/web/viewing.py:202` | 2026-09-26 |
-| `src/matinee/web/viewing.py::pick_pool` | `src/matinee/web/viewing.py:366` | 2026-09-26 |
-| `src/matinee/web/viewing.py::add_pick_routes` | `src/matinee/web/viewing.py:376` | 2026-09-26 |
+| `src/matinee/web/viewing.py::device_id` / `DEVICE_COOKIE` | `src/matinee/web/viewing.py:232` | 2026-09-30 |
+| `src/matinee/web/viewing.py::SWAP_LINE` / `UNCHECKED_LINES` / `EXHAUSTED` / `TIRED` | `src/matinee/web/viewing.py:207` | 2026-09-30 |
+| `src/matinee/web/viewing.py::pick_pool` | `src/matinee/web/viewing.py:387` | 2026-09-30 |
+| `src/matinee/web/viewing.py::add_pick_routes` | `src/matinee/web/viewing.py:397` | 2026-09-30 |
 
 ### Web surface
 
@@ -1452,8 +1570,8 @@ symbol when one does not match.
 | `src/matinee/web/app.py::add_door_routes` | `src/matinee/web/app.py:156` | 2026-09-28 |
 | `src/matinee/web/app.py::add_error_handlers` | `src/matinee/web/app.py:93` | 2026-09-28 |
 | `src/matinee/web/common.py::Problem` | `src/matinee/web/common.py:102` | 2026-09-26 |
-| `src/matinee/web/viewing.py::add_viewing_routes` | `src/matinee/web/viewing.py:257` | 2026-09-26 |
-| `src/matinee/web/viewing.py::WalkIn` / `PickIn` (request caps) | `src/matinee/web/viewing.py:48` | 2026-09-26 |
+| `src/matinee/web/viewing.py::add_viewing_routes` | `src/matinee/web/viewing.py:269` | 2026-09-30 |
+| `src/matinee/web/viewing.py::WalkIn` / `PickIn` (request caps) | `src/matinee/web/viewing.py:48` | 2026-09-30 |
 
 ### The page
 
@@ -1490,9 +1608,9 @@ symbol when one does not match.
 | `src/matinee/web/static/js/hunt-plan.js::planHunt` (first hop, no reversal) | `src/matinee/web/static/js/hunt-plan.js:118` | 2026-09-28 |
 | `src/matinee/web/static/js/hunt-plan.js::hopCell` / `placeLanding` | `src/matinee/web/static/js/hunt-plan.js:138` | 2026-09-28 |
 | `src/matinee/web/static/js/glow.js::posterGlow` / `GOLD` | `src/matinee/web/static/js/glow.js:19` | 2026-09-28 |
-| `src/matinee/web/static/js/quips.js::setFor` | `src/matinee/web/static/js/quips.js:9` | 2026-09-28 |
-| `src/matinee/web/static/js/quips.js::Deck` | `src/matinee/web/static/js/quips.js:20` | 2026-09-28 |
-| `src/matinee/web/static/js/quips.js::dealPair` / `dealBeneath` | `src/matinee/web/static/js/quips.js:52` | 2026-09-28 |
+| `src/matinee/web/static/js/quips.js::setFor` | `src/matinee/web/static/js/quips.js:9` | 2026-09-30 |
+| `src/matinee/web/static/js/quips.js::Deck` | `src/matinee/web/static/js/quips.js:19` | 2026-09-30 |
+| `src/matinee/web/static/js/quips.js::dealPair` / `dealBeneath` | `src/matinee/web/static/js/quips.js:51` | 2026-09-30 |
 | `src/matinee/web/static/js/wall.js::Wall` | `src/matinee/web/static/js/wall.js:81` | 2026-09-28 |
 | `src/matinee/web/static/js/wall.js::Wall.show` / `clear` / `whenStill` | `src/matinee/web/static/js/wall.js:123` | 2026-09-28 |
 | `src/matinee/web/static/js/wall.js::Wall.endPick` | `src/matinee/web/static/js/wall.js:167` | 2026-09-28 |
@@ -1510,15 +1628,16 @@ symbol when one does not match.
 | `src/matinee/web/static/js/wall.js::Wall.resort` / `slide` / `depart` | `src/matinee/web/static/js/wall.js:635` | 2026-09-28 |
 | `src/matinee/web/static/js/main.js::lockStage` / `leaveTo` / `nameTag` | `src/matinee/web/static/js/main.js:56` | 2026-09-30 |
 | `src/matinee/web/static/js/main.js::trail` | `src/matinee/web/static/js/main.js:100` | 2026-09-30 |
-| `src/matinee/web/static/js/main.js::start` | `src/matinee/web/static/js/main.js:212` | 2026-09-30 |
-| `src/matinee/web/static/js/main.js::backTo` / `step` | `src/matinee/web/static/js/main.js:240` | 2026-09-30 |
-| `src/matinee/web/static/js/main.js::checking` / `fadeTalk` (`READ_MS`) | `src/matinee/web/static/js/main.js:289` | 2026-09-30 |
-| `src/matinee/web/static/js/main.js::pickLines` | `src/matinee/web/static/js/main.js:307` | 2026-09-30 |
-| `src/matinee/web/static/js/main.js::clearForPick` / `requestPick` / `openPick` | `src/matinee/web/static/js/main.js:321` | 2026-09-30 |
-| `src/matinee/web/static/js/main.js::pickNow` (`notThatOne`, `rollAgain`, `justPick`) | `src/matinee/web/static/js/main.js:365` | 2026-09-30 |
-| `src/matinee/web/static/js/main.js::enter` (the start asked at the tap, the question after the landing) | `src/matinee/web/static/js/main.js:202` | 2026-09-30 |
+| `src/matinee/web/static/js/main.js::frame` / `ask` (the footnote) | `src/matinee/web/static/js/main.js:122` | 2026-09-30 |
+| `src/matinee/web/static/js/main.js::start` | `src/matinee/web/static/js/main.js:214` | 2026-09-30 |
+| `src/matinee/web/static/js/main.js::backTo` / `step` | `src/matinee/web/static/js/main.js:242` | 2026-09-30 |
+| `src/matinee/web/static/js/main.js::checking` / `fadeTalk` (`READ_MS`) | `src/matinee/web/static/js/main.js:292` | 2026-09-30 |
+| `src/matinee/web/static/js/main.js::pickLines` | `src/matinee/web/static/js/main.js:310` | 2026-09-30 |
+| `src/matinee/web/static/js/main.js::clearForPick` / `requestPick` / `openPick` | `src/matinee/web/static/js/main.js:324` | 2026-09-30 |
+| `src/matinee/web/static/js/main.js::pickNow` (`notThatOne`, `rollAgain`, `justPick`) | `src/matinee/web/static/js/main.js:368` | 2026-09-30 |
+| `src/matinee/web/static/js/main.js::enter` (the start asked at the tap, the question after the landing) | `src/matinee/web/static/js/main.js:204` | 2026-09-30 |
 | `src/matinee/web/static/js/main.js::topbar` (settles a landed name) | `src/matinee/web/static/js/main.js:70` | 2026-09-30 |
-| `src/matinee/web/static/js/main.js::problem` (`keep`: the failed start's posters) | `src/matinee/web/static/js/main.js:175` | 2026-09-30 |
+| `src/matinee/web/static/js/main.js::problem` (`keep`: the failed start's posters) | `src/matinee/web/static/js/main.js:177` | 2026-09-30 |
 | `src/matinee/web/static/js/pick.js::showPick` | `src/matinee/web/static/js/pick.js:239` | 2026-09-30 |
 | `src/matinee/web/static/js/pick.js::goldLine` | `src/matinee/web/static/js/pick.js:193` | 2026-09-30 |
 | `src/matinee/web/static/js/pick.js::bringOut` | `src/matinee/web/static/js/pick.js:217` | 2026-09-30 |
@@ -1528,7 +1647,7 @@ symbol when one does not match.
 | `src/matinee/web/static/js/pick.js::rest` | `src/matinee/web/static/js/pick.js:154` | 2026-09-30 |
 | `src/matinee/web/static/js/pick.js::settle` / `fit` | `src/matinee/web/static/js/pick.js:42` | 2026-09-30 |
 | `src/matinee/web/static/js/fuse.js::lightFuse` / `fuseTimeline` | `src/matinee/web/static/js/fuse.js:37` | 2026-09-30 |
-| `src/matinee/trees.py::_self_destruct` / `_one_self_destruct` | `src/matinee/trees.py:191` | 2026-09-30 |
+| `src/matinee/trees.py::_self_destruct` / `_one_self_destruct` | `src/matinee/trees.py:203` | 2026-09-30 |
 | `src/matinee/web/static/js/pick.js::feature` | `src/matinee/web/static/js/pick.js:65` | 2026-09-30 |
 | `src/matinee/web/static/js/pick.js::choices` | `src/matinee/web/static/js/pick.js:141` | 2026-09-30 |
 | `src/matinee/web/static/js/pick.js::showNoFilm` | `src/matinee/web/static/js/pick.js:116` | 2026-09-30 |
@@ -1541,17 +1660,18 @@ symbol when one does not match.
 | `src/matinee/web/static/js/dom.js::h` (text nodes only) | `src/matinee/web/static/js/dom.js:12` | 2026-09-26 |
 | `src/matinee/web/static/js/type.js::typeLine` (`shown`: a gold line kept while the rest types beneath) | `src/matinee/web/static/js/type.js:11` | 2026-09-28 |
 | `src/matinee/web/static/manifest.webmanifest` | `src/matinee/web/static/manifest.webmanifest:1` | 2026-09-26 |
-| `src/matinee/web/static/css/matinee.css` reduced-motion rules (the marquee and the door's words change at once) | `src/matinee/web/static/css/matinee.css:920` | 2026-09-30 |
-| `src/matinee/web/static/css/matinee.css` `.wall`, `.wall-tiles`, `.tile` (`--tile`, the one strength; the dark cell) | `src/matinee/web/static/css/matinee.css:86` | 2026-09-30 |
-| `src/matinee/web/static/css/matinee.css` `.marquee` (its measures as properties, the top fade, the short windows' scaling) | `src/matinee/web/static/css/matinee.css:952` | 2026-09-30 |
-| `src/matinee/web/static/css/matinee.css` `.marquee.lifted`, `.stage.leaving`, `.flying-name` (going in) | `src/matinee/web/static/css/matinee.css:982` | 2026-09-30 |
-| `src/matinee/web/static/css/matinee.css` `.sign`, `.bulb`, `@keyframes chase` | `src/matinee/web/static/css/matinee.css:1156` | 2026-09-30 |
-| `src/matinee/web/static/css/matinee.css` `.door-wall`, `.door-talk`, `.door-foot` | `src/matinee/web/static/css/matinee.css:1493` | 2026-09-30 |
-| `src/matinee/web/static/css/matinee.css` `.picker` | `src/matinee/web/static/css/matinee.css:1616` | 2026-09-30 |
-| `src/matinee/web/static/css/matinee.css` phone door: `.marquee` sizes, `.marquee.compact` (the lit strip) | `src/matinee/web/static/css/matinee.css:1799` | 2026-09-30 |
-| `src/matinee/web/static/css/matinee.css` `.credits`, `.tmdb-logo`, `.bottombar .credits`, `.inline-link` | `src/matinee/web/static/css/matinee.css:1306` | 2026-09-30 |
-| `src/matinee/web/static/css/matinee.css` `.stage.behind-about`, `.about`, `.about-wordmark`, `.about-panel` | `src/matinee/web/static/css/matinee.css:1347` | 2026-09-30 |
-| `src/matinee/web/static/css/matinee.css` `.pick-line` (size, four lines reserved), `.hushed` | `src/matinee/web/static/css/matinee.css:479` | 2026-09-30 |
+| `src/matinee/web/static/css/matinee.css` reduced-motion rules (the marquee and the door's words change at once) | `src/matinee/web/static/css/matinee.css:931` | 2026-09-30 |
+| `src/matinee/web/static/css/matinee.css` `.wall`, `.wall-tiles`, `.tile` (`--tile`, the one strength; the dark cell) | `src/matinee/web/static/css/matinee.css:97` | 2026-09-30 |
+| `src/matinee/web/static/css/matinee.css` `.marquee` (its measures as properties, the top fade, the short windows' scaling) | `src/matinee/web/static/css/matinee.css:963` | 2026-09-30 |
+| `src/matinee/web/static/css/matinee.css` `.marquee.lifted`, `.stage.leaving`, `.flying-name` (going in) | `src/matinee/web/static/css/matinee.css:993` | 2026-09-30 |
+| `src/matinee/web/static/css/matinee.css` `.sign`, `.bulb`, `@keyframes chase` | `src/matinee/web/static/css/matinee.css:1167` | 2026-09-30 |
+| `src/matinee/web/static/css/matinee.css` `.door-wall`, `.door-talk`, `.door-foot` | `src/matinee/web/static/css/matinee.css:1504` | 2026-09-30 |
+| `src/matinee/web/static/css/matinee.css` `.picker` | `src/matinee/web/static/css/matinee.css:1627` | 2026-09-30 |
+| `src/matinee/web/static/css/matinee.css` phone door: `.marquee` sizes, `.marquee.compact` (the lit strip) | `src/matinee/web/static/css/matinee.css:1810` | 2026-09-30 |
+| `src/matinee/web/static/css/matinee.css` `.credits`, `.tmdb-logo`, `.bottombar .credits`, `.inline-link` | `src/matinee/web/static/css/matinee.css:1317` | 2026-09-30 |
+| `src/matinee/web/static/css/matinee.css` `.stage.behind-about`, `.about`, `.about-wordmark`, `.about-panel` | `src/matinee/web/static/css/matinee.css:1358` | 2026-09-30 |
+| `src/matinee/web/static/css/matinee.css` `.pick-line` (size, four lines reserved), `.hushed` | `src/matinee/web/static/css/matinee.css:490` | 2026-09-30 |
+| `src/matinee/web/static/css/matinee.css` `.talk > .footnote` | `src/matinee/web/static/css/matinee.css:358` | 2026-09-30 |
 | `src/matinee/web/static/blank.svg` (a tile with no picture) | `src/matinee/web/static/blank.svg:1` | 2026-09-28 |
 
 ### Deployment

@@ -1,5 +1,5 @@
 {
-  "note": "The answer key the trees are checked against. A tree passes a film when the film is in its pool; overlap between trees is expected. must_reach names a tree a film must be in; must_not names a tree it must not be in. The lists are read from genome list tags at check time, so they need no copy of any published list.",
+  "note": "The answer key the trees are checked against. A tree passes a film when the film is in its pool; overlap between trees is expected. must_reach names a tree a film must be in; must_not names a tree it must not be in. The lists are read from genome list tags at check time, so they need no copy of any published list. hidden lists every [tree, kind] pair the 30-film bar hides in this library; the checker fails when the hidden kinds differ from it.",
   "list_tags": {
     "threshold": 0.8,
     "thresholds": {
@@ -15,6 +15,16 @@
       "cult classic"
     ]
   },
+  "hidden": [
+    [
+      "thriller",
+      "erotic"
+    ],
+    [
+      "crime",
+      "prison"
+    ]
+  ],
   "films": [
     {
       "title": "Hubie Halloween",
@@ -178,12 +188,22 @@
       "title": "Se7en",
       "tmdb": 807,
       "must_reach": [
-        "thriller"
+        "thriller",
+        "crime"
       ],
       "note": "crime, mystery and thriller with no Drama tag; its home is the thriller tree",
       "must_not": [
         "drama"
-      ]
+      ],
+      "flavour_in": {
+        "thriller": [
+          "mind_games",
+          "serial_killers"
+        ],
+        "crime": [
+          "serial_killers"
+        ]
+      }
     },
     {
       "title": "Memento",
@@ -193,7 +213,12 @@
       ],
       "must_not": [
         "drama"
-      ]
+      ],
+      "flavour_in": {
+        "thriller": [
+          "mind_games"
+        ]
+      }
     },
     {
       "title": "Vertigo",
@@ -216,8 +241,14 @@
       "title": "GoodFellas",
       "tmdb": 769,
       "must_reach": [
-        "drama"
-      ]
+        "drama",
+        "crime"
+      ],
+      "flavour_in": {
+        "crime": [
+          "gangsters"
+        ]
+      }
     },
     {
       "title": "Schindler's List",
@@ -646,12 +677,17 @@
       "title": "Kevin Smith: Silent but Deadly",
       "tmdb": 517792,
       "must_reach": [
-        "standup"
+        "comedy"
       ],
       "must_not": [
         "nonfiction"
       ],
-      "note": "house pin"
+      "note": "house pin: a standup special",
+      "flavour_in": {
+        "comedy": [
+          "standup"
+        ]
+      }
     },
     {
       "title": "Simulation Theory",
@@ -706,7 +742,10 @@
         "horror"
       ],
       "gore_band": "rip",
-      "note": "gore acceptance (decision 59)"
+      "note": "gore acceptance (decision 59)",
+      "must_not": [
+        "thriller"
+      ]
     },
     {
       "title": "The Texas Chain Saw Massacre",
@@ -860,34 +899,364 @@
       "title": "Andrew Dice Clay: One Night with Dice",
       "tmdb": 37876,
       "must_reach": [
-        "standup"
-      ],
-      "must_not": [
         "comedy"
       ],
-      "note": "house pin: a standup special"
+      "note": "house pin: a standup special",
+      "flavour_in": {
+        "comedy": [
+          "standup"
+        ]
+      }
     },
     {
       "title": "Andrew Dice Clay: The Diceman Cometh",
       "tmdb": 83709,
       "must_reach": [
-        "standup"
-      ],
-      "must_not": [
         "comedy"
       ],
-      "note": "house pin: a standup special"
+      "note": "house pin: a standup special",
+      "flavour_in": {
+        "comedy": [
+          "standup"
+        ]
+      }
     },
     {
       "title": "Stavros Halkias: Fat Rascal",
       "tmdb": 1200108,
       "must_reach": [
-        "standup"
-      ],
-      "must_not": [
         "comedy"
       ],
-      "note": "house pin: a standup special"
+      "note": "house pin: a standup special",
+      "flavour_in": {
+        "comedy": [
+          "standup"
+        ]
+      }
+    },
+    {
+      "title": "Gone Girl",
+      "tmdb": 210577,
+      "must_reach": [
+        "thriller"
+      ],
+      "flavour_in": {
+        "thriller": [
+          "keep_guessing",
+          "mind_games"
+        ]
+      },
+      "note": "one of the Thriller door's signed-off examples (2026-09-30)"
+    },
+    {
+      "title": "The Prestige",
+      "tmdb": 1124,
+      "must_reach": [
+        "thriller"
+      ],
+      "flavour_in": {
+        "thriller": [
+          "keep_guessing",
+          "mind_games"
+        ]
+      },
+      "note": "one of the Thriller door's signed-off examples (2026-09-30)"
+    },
+    {
+      "title": "Zodiac",
+      "tmdb": 1949,
+      "must_reach": [
+        "thriller",
+        "crime"
+      ],
+      "flavour_in": {
+        "thriller": [
+          "keep_guessing",
+          "serial_killers"
+        ],
+        "crime": [
+          "serial_killers"
+        ]
+      },
+      "note": "one of the Thriller door's signed-off examples (2026-09-30)"
+    },
+    {
+      "title": "Room",
+      "tmdb": 264644,
+      "must_reach": [
+        "thriller"
+      ],
+      "flavour_in": {
+        "thriller": [
+          "trapped"
+        ]
+      },
+      "note": "one of the Thriller door's signed-off examples (2026-09-30)"
+    },
+    {
+      "title": "Die Hard",
+      "tmdb": 562,
+      "must_reach": [
+        "thriller"
+      ],
+      "flavour_in": {
+        "thriller": [
+          "trapped"
+        ]
+      },
+      "note": "one of the Thriller door's signed-off examples (2026-09-30)"
+    },
+    {
+      "title": "Gravity",
+      "tmdb": 49047,
+      "must_reach": [
+        "thriller"
+      ],
+      "flavour_in": {
+        "thriller": [
+          "trapped"
+        ]
+      },
+      "note": "one of the Thriller door's signed-off examples (2026-09-30)"
+    },
+    {
+      "title": "Fight Club",
+      "tmdb": 550,
+      "must_reach": [
+        "thriller"
+      ],
+      "flavour_in": {
+        "thriller": [
+          "mind_games"
+        ]
+      },
+      "note": "one of the Thriller door's signed-off examples (2026-09-30)"
+    },
+    {
+      "title": "Casino Royale",
+      "tmdb": 36557,
+      "must_reach": [
+        "thriller"
+      ],
+      "flavour_in": {
+        "thriller": [
+          "spies"
+        ]
+      },
+      "note": "one of the Thriller door's signed-off examples (2026-09-30)"
+    },
+    {
+      "title": "The Godfather",
+      "tmdb": 238,
+      "must_reach": [
+        "drama",
+        "crime"
+      ],
+      "must_not": [
+        "thriller"
+      ],
+      "note": "a franchise stray the labels place behind no thriller kind; Drama holds it, so it leaves Thriller",
+      "flavour_in": {
+        "crime": [
+          "gangsters"
+        ]
+      }
+    },
+    {
+      "title": "The Departed",
+      "tmdb": 1422,
+      "must_reach": [
+        "crime"
+      ],
+      "flavour_in": {
+        "crime": [
+          "cops",
+          "gangsters"
+        ]
+      },
+      "note": "one of the Crime door's signed-off examples (2026-09-30)"
+    },
+    {
+      "title": "Knives Out",
+      "tmdb": 546554,
+      "must_reach": [
+        "crime"
+      ],
+      "flavour_in": {
+        "crime": [
+          "cops"
+        ]
+      },
+      "note": "one of the Crime door's signed-off examples (2026-09-30)"
+    },
+    {
+      "title": "Fargo",
+      "tmdb": 275,
+      "must_reach": [
+        "crime"
+      ],
+      "flavour_in": {
+        "crime": [
+          "cops",
+          "crime_drama"
+        ]
+      },
+      "note": "one of the Crime door's signed-off examples (2026-09-30)"
+    },
+    {
+      "title": "City of God",
+      "tmdb": 598,
+      "must_reach": [
+        "crime"
+      ],
+      "flavour_in": {
+        "crime": [
+          "crime_drama",
+          "gangsters"
+        ]
+      },
+      "note": "one of the Crime door's signed-off examples (2026-09-30)"
+    },
+    {
+      "title": "Ocean's Eleven",
+      "tmdb": 161,
+      "must_reach": [
+        "crime"
+      ],
+      "flavour_in": {
+        "crime": [
+          "heists"
+        ]
+      },
+      "note": "one of the Crime door's signed-off examples (2026-09-30)"
+    },
+    {
+      "title": "Baby Driver",
+      "tmdb": 339403,
+      "must_reach": [
+        "crime",
+        "action"
+      ],
+      "flavour_in": {
+        "crime": [
+          "heists"
+        ]
+      },
+      "note": "one of the Crime door's signed-off examples (2026-09-30)"
+    },
+    {
+      "title": "Just Cause",
+      "tmdb": 9061,
+      "must_reach": [
+        "thriller"
+      ],
+      "must_not": [
+        "crime"
+      ],
+      "note": "a serial-killer thriller behind no crime door: the shared kind never adds a door"
+    },
+    {
+      "title": "Disturbia",
+      "tmdb": 8271,
+      "must_reach": [
+        "thriller"
+      ],
+      "must_not": [
+        "crime"
+      ],
+      "note": "a serial-killer thriller behind no crime door: the shared kind never adds a door"
+    },
+    {
+      "title": "A Clockwork Orange",
+      "tmdb": 185,
+      "must_reach": [
+        "drama"
+      ],
+      "note": "a Crime film Drama holds only as a leftover stray; the crime door must not take Drama from it"
+    },
+    {
+      "title": "Knockaround Guys",
+      "tmdb": 7501,
+      "must_reach": [
+        "drama"
+      ],
+      "note": "a Crime film Drama holds only as a leftover stray; the crime door must not take Drama from it"
+    },
+    {
+      "title": "The Great Mouse Detective",
+      "tmdb": 9994,
+      "must_reach": [
+        "drama"
+      ],
+      "note": "a Crime film Drama holds only as a leftover stray; the crime door must not take Drama from it"
+    },
+    {
+      "title": "Deliver Us from Evil",
+      "tmdb": 13364,
+      "must_reach": [
+        "drama"
+      ],
+      "note": "a Crime film Drama holds only as a leftover stray; the crime door must not take Drama from it"
+    },
+    {
+      "title": "Inside Job",
+      "tmdb": 44639,
+      "must_reach": [
+        "drama"
+      ],
+      "note": "a Crime film Drama holds only as a leftover stray; the crime door must not take Drama from it"
+    },
+    {
+      "title": "Mr. Right",
+      "tmdb": 333385,
+      "must_reach": [
+        "action"
+      ],
+      "note": "the one film Action holds only through a Crime film's excitement; the crime door must not take Action from it"
+    },
+    {
+      "title": "The Bad Guys 2",
+      "tmdb": 1175942,
+      "must_reach": [
+        "kids"
+      ],
+      "must_not": [
+        "crime"
+      ],
+      "note": "a kids-only film the labels place under crime's heists; only the kids tree holds a kids-only film (the operator, 2026-09-30)"
+    },
+    {
+      "title": "The Bad Guys",
+      "tmdb": 629542,
+      "must_reach": [
+        "kids"
+      ],
+      "must_not": [
+        "crime"
+      ],
+      "note": "a film for the whole family never counts as crime (the operator, 2026-09-30)"
+    },
+    {
+      "title": "Hoodwinked!",
+      "tmdb": 10982,
+      "must_reach": [
+        "kids"
+      ],
+      "must_not": [
+        "crime"
+      ],
+      "note": "a film for the whole family never counts as crime (the operator, 2026-09-30)"
+    },
+    {
+      "title": "The Pink Panther",
+      "tmdb": 12096,
+      "must_reach": [
+        "kids"
+      ],
+      "must_not": [
+        "crime"
+      ],
+      "note": "a film for the whole family never counts as crime (the operator, 2026-09-30)"
     }
   ]
 }
