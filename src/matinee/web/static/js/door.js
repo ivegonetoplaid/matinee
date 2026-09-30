@@ -108,7 +108,7 @@ export class Door {
       crown(),
       sign(door.now_showing),
       h("div", { class: "booth-middle" }, h("div", { class: "column", "aria-hidden": "true" }), this.wall, h("div", { class: "column", "aria-hidden": "true" })),
-      h("footer", { class: "counter" }, h("div", { class: "counter-top", "aria-hidden": "true" }), h("div", { class: "counter-front" }, credits({ full: true }))),
+      h("footer", { class: "counter" }, h("div", { class: "counter-top", "aria-hidden": "true" }), h("div", { class: "counter-front" }, credits())),
     );
     clear(this.stage).append(h("h1", { class: "sr-only" }, "Matinee box office"), this.booth);
     if (screen === "known") return this.known();

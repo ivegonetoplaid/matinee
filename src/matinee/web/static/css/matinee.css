@@ -1288,7 +1288,7 @@ button {
 
 .credits {
   margin: 0;
-  font-size: 12px;
+  font-size: 13px;
   color: rgba(239, 233, 220, 0.45);
   text-align: center;
 }
@@ -1302,12 +1302,6 @@ button {
   height: 0.7em;
   width: auto;
   vertical-align: 0;
-}
-
-.credits-full {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
 }
 
 .bottombar .credits {
@@ -1819,7 +1813,14 @@ button {
   }
 
   .credits {
-    font-size: 10px;
+    font-size: 11px;
+  }
+
+  /* On a phone the corner credit line is centred at the foot of the screen. */
+  .bottombar .credits {
+    flex-basis: 100%;
+    max-width: none;
+    text-align: center;
   }
 
   .door-talk {

@@ -78,8 +78,17 @@ function credit(result) {
   return h("a", { href: result.link, target: "_blank", rel: "noopener noreferrer" }, result.credit);
 }
 
-// Why the first pick was turned away, and "What were you going to show me?", which reveals it.
-function firstPickReveal(result) {
+// DoesTheDogDie's credit beneath the line in `aside`, placed before a line built on its data starts to
+// type, so the credit is on screen for as long as that line is. At rest it moves beneath the buttons.
+function creditBeneath(aside, result) {
+  const note = h("div", { class: "swap-note" }, h("p", { class: "note" }, credit(result)));
+  aside.append(note);
+  return note;
+}
+
+// Adds "What were you going to show me?", which reveals the film the check turned away, to `note`, the
+// swap reason's credit.
+function firstPickReveal(result, note) {
   const swapped = result.swapped;
   const shown = h("p", { class: "note", hidden: true });
   shown.textContent = `${swapped.film.title}${swapped.film.year ? ` (${swapped.film.year})` : ""}: ${swapped.topics
@@ -98,16 +107,19 @@ function firstPickReveal(result) {
     swapped.reveal,
   );
   // The reason itself is the pick's line; the note carries its credit and the way to see the film.
-  return h("div", { class: "swap-note" }, h("p", { class: "note" }, credit(result)), ask, shown);
+  note.append(ask, shown);
+  return note;
 }
 
 // No film: every film left tripped the list, or three in a row did and the viewer
 // may roll again or have one picked without the check turning any away.
 async function showNoFilm(result, { line, aside }, actions) {
+  const note = h("p", { class: "note" }, credit(result));
+  aside.append(note);
   await typeLine(line, result.tired || result.exhausted, "");
   const startOver = h("button", { class: "pill gold", type: "button", onclick: actions.startOver }, "Start over");
   if (!result.tired) {
-    aside.append(startOver, h("p", { class: "note" }, credit(result)));
+    aside.append(startOver, note);
     return;
   }
   aside.append(
@@ -118,14 +130,15 @@ async function showNoFilm(result, { line, aside }, actions) {
       h("button", { class: "pill velvet", type: "button", onclick: actions.justPick }, "Just pick one"),
     ),
     h("button", { class: "link-button", type: "button", onclick: actions.startOver }, "Start over"),
-    h("p", { class: "note" }, credit(result)),
+    note,
   );
 }
 
 // What sits under the line on the resting page. The buttons come straight after the line, which keeps
 // four lines of room whatever its words, so "Not that one" sits in the same place for every film. The
-// answers so far are in the trail at the foot of the screen.
-function choices(info, film, result, actions) {
+// swap reason's credit, `note`, moves beneath them. The answers so far are in the trail at the foot of
+// the screen.
+function choices(info, film, result, actions, note) {
   const buttons = h(
     "div",
     { class: "choices" },
@@ -133,7 +146,7 @@ function choices(info, film, result, actions) {
     info.seerr ? h("a", { class: "seerr", href: info.seerr, target: "_blank", rel: "noopener noreferrer" }, "More on Seerr") : null,
     h("button", { class: "link-button", type: "button", onclick: actions.startOver }, "Start over"),
   );
-  return [buttons, result.swapped ? firstPickReveal(result) : null, actions.correction(film)].filter(Boolean);
+  return [buttons, note ? firstPickReveal(result, note) : null, actions.correction(film)].filter(Boolean);
 }
 
 // The resting page: the film's details rise, and the landed poster, where there is one, moves from the
@@ -142,7 +155,7 @@ async function rest({ stage, wall, frame, film, result, actions, info, backdrop,
   stage.classList.add("revealed");
   const shown = feature(info, film, result, backdrop);
   frame.showing.append(shown);
-  frame.aside.append(...choices(info, film, result, actions));
+  frame.aside.append(...choices(info, film, result, actions, frame.aside.querySelector(".swap-note")));
   // Measured once the aside is whole, so the poster takes only the height left beneath it.
   const from = wall.landedTile()?.img.getBoundingClientRect();
   if (poster && from) {
@@ -174,13 +187,14 @@ async function restingPoster(sharp, wall, film) {
 }
 
 // Where the check turned the first pick away, the line says so before the new pick lands.
-// Where the check turned a film away, its reason takes the nope line's place in gold at once, and only the
-// reveal line is redealt to fit beneath it. Resolves to the gold line that stays through the hunt: the
-// reason, or the nope line, or "" when nothing stays.
-async function goldLine(line, result, lines, fuse) {
+// Where the check turned a film away, its reason takes the nope line's place in gold at once, with
+// DoesTheDogDie's credit beneath it, and only the reveal line is redealt to fit beneath it. Resolves to
+// the gold line that stays through the hunt: the reason, or the nope line, or "" when nothing stays.
+async function goldLine({ line, aside }, result, lines, fuse) {
   if (!result.swapped) return lines.nope || "";
   fuse?.cancel();
   lines.reveal = lines.beneath(result.swapped.line);
+  creditBeneath(aside, result);
   await typeLine(line, result.swapped.line, "");
   return result.swapped.line;
 }
@@ -230,7 +244,7 @@ export async function showPick({ stage, wall, result, frame, readUntil = 0, line
   }
   const round = wall.round;
   const left = () => !frame.showing.isConnected || wall.round !== round;
-  const gold = await goldLine(frame.line, result, lines, fuse);
+  const gold = await goldLine(frame, result, lines, fuse);
   if (left()) return undefined;
   const { cardRequest, posterReady, backdropReady } = fetchFilm(film);
   // The words fade as the drift stops; a gold line (a nope line, or why a film was turned away) stays.
