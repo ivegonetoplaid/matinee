@@ -322,6 +322,32 @@ def test_misspelt_filter_refuses_to_load(tmp_path: Path) -> None:
         load_catalog(make_table(), write_data(tmp_path, tree), reference())
 
 
+def test_a_self_destructing_reply_reaches_the_walks_end(tmp_path: Path) -> None:
+    tree = json.loads(json.dumps(TREE))
+    tree["questions"][2]["options"][0]["self_destruct"] = 5
+    cat = load_catalog(make_table(), write_data(tmp_path, tree), reference())
+    fast = walk(cat, "west", Viewer(), [Answer("era", 1), Answer("gore", 1), Answer("payoff", 0)])
+    slow = walk(cat, "west", Viewer(), [Answer("era", 1), Answer("gore", 1), Answer("payoff", 1)])
+    assert (fast.question, fast.line, fast.self_destruct) == (None, "zoom.", 5)
+    assert slow.self_destruct is None
+
+
+@pytest.mark.parametrize("seconds", [0, 10, 2.5, "5", True])
+def test_a_bad_self_destruct_refuses_to_load(tmp_path: Path, seconds: Any) -> None:
+    tree = json.loads(json.dumps(TREE))
+    tree["questions"][2]["options"][0]["self_destruct"] = seconds
+    with pytest.raises(ValueError, match="self_destruct"):
+        load_catalog(make_table(), write_data(tmp_path, tree), reference())
+
+
+def test_only_one_answer_may_self_destruct(tmp_path: Path) -> None:
+    tree = json.loads(json.dumps(TREE))
+    tree["questions"][2]["options"][0]["self_destruct"] = 5
+    tree["questions"][2]["options"][1]["self_destruct"] = 5
+    with pytest.raises(ValueError, match="only one answer may self-destruct"):
+        load_catalog(make_table(), write_data(tmp_path, tree), reference())
+
+
 def mask_of(cat: Catalog, **kw: Any) -> list[int]:
     films = option_mask(cat, cat.trees["west"], Option("x", "", Filter(**kw)))
     return [int(t) for t in cat.ids[films]]

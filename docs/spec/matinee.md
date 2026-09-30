@@ -108,6 +108,9 @@ Loading is strict:
 - A tree naming a pool no pool rule builds is refused.
 - `sequel` may only be `false`. `sort` may only be `rating`. `kids_band` must be
   `little`, `family` or `older`. `treat_as` must name an answer the question has.
+- An answer may carry `self_destruct`, a whole number of seconds from 1 to 9. Any
+  other value is refused, and so is a second answer carrying it anywhere across
+  the trees and modes: the self-destructing reply is a one-off.
 
 ### 2.3 Answers are filters
 
@@ -196,6 +199,8 @@ film onto the pinned payoff and off every other.
   answer to show is skipped.
 - An answer marked `not_after` is hidden when the viewer gave a named earlier
   answer.
+- A walk that ends on an answer carrying `self_destruct` reports its seconds
+  with the reply (`self_destruct` in `/api/walk`); every other walk reports none.
 - An answer that does not fit the question being asked is refused. The page is
   told to start over.
 - Pool counts never include DoesTheDogDie exclusions. Those are checked only at
@@ -1026,6 +1031,17 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
   The wall's geometry and re-sort plan, the hop plan and its speed limit, the
   glow colour and the quip deal are modules that touch no page. Their tests
   under `tests/js/` run with `node --test` from `./check.sh`.
+- **The self-destructing reply.** When the last answer carries `self_destruct`,
+  its reply types in gold as usual, then counts down on its own one-second
+  clock, whatever the hunt is doing: a large gold number beneath the reply
+  shows each second in turn, fading in and out in the same place. One second
+  after the last number the reply burns away from the left, glowing orange,
+  over 1.4 s, and leaves a dark scorch where it stood. The line holds no other
+  text for that pick: the check's line does not type over it and no reveal line
+  follows, so the film rests beneath the scorch. When the check turns a film
+  away, the fuse is put out and the explanation types as usual. Under reduced
+  motion the numbers change without fading and the reply goes at once, leaving
+  the scorch. "Not that one" and every later pick speak as usual.
 - **Credits.** The bottom bar of the wall and pick screens carries "Posters and
   film data from TMDB [logo] · Tag genome by MovieLens · Powered by
   DoesTheDogDie.com", each linked. The box office counter carries the same line
@@ -1401,6 +1417,8 @@ symbol when one does not match.
 | `src/matinee/web/static/js/pick.js::restingPoster` | `src/matinee/web/static/js/pick.js:161` | 2026-09-28 |
 | `src/matinee/web/static/js/pick.js::rest` | `src/matinee/web/static/js/pick.js:139` | 2026-09-28 |
 | `src/matinee/web/static/js/pick.js::settle` / `fit` | `src/matinee/web/static/js/pick.js:41` | 2026-09-28 |
+| `src/matinee/web/static/js/fuse.js::lightFuse` / `fuseTimeline` | `src/matinee/web/static/js/fuse.js:37` | 2026-09-30 |
+| `src/matinee/trees.py::_self_destruct` / `_one_self_destruct` | `src/matinee/trees.py:191` | 2026-09-30 |
 | `src/matinee/web/static/js/pick.js::feature` | `src/matinee/web/static/js/pick.js:63` | 2026-09-28 |
 | `src/matinee/web/static/js/pick.js::choices` | `src/matinee/web/static/js/pick.js:126` | 2026-09-28 |
 | `src/matinee/web/static/js/pick.js::showNoFilm` | `src/matinee/web/static/js/pick.js:104` | 2026-09-28 |

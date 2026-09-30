@@ -177,18 +177,30 @@ async function restingPoster(sharp, wall, film) {
 // Where the check turned a film away, its reason takes the nope line's place in gold at once, and only the
 // reveal line is redealt to fit beneath it. Resolves to the gold line that stays through the hunt: the
 // reason, or the nope line, or "" when nothing stays.
-async function goldLine(line, result, lines) {
+async function goldLine(line, result, lines, fuse) {
   if (!result.swapped) return lines.nope || "";
+  fuse?.cancel();
   lines.reveal = lines.beneath(result.swapped.line);
   await typeLine(line, result.swapped.line, "");
   return result.swapped.line;
+}
+
+// The line as the poster lands. A reply read before the hunt is cleared before the line comes back, so it
+// never shows again; a gold line that stayed through the hunt stays, and the reveal line types beneath it
+// after `wait` ms. A lit fuse owns the line: it counts down and burns on its own clock, and no reveal
+// line follows. Resolves once the line is whole.
+function revealLine({ line, gold, lines, wait: ms, fuse }) {
+  line.classList.remove("hushed");
+  if (fuse?.lit()) return Promise.resolve();
+  if (!gold) line.replaceChildren();
+  return wait(ms).then(() => typeLine(line, gold, lines.reveal, { shown: gold.length }));
 }
 
 // From the landing to the grown poster. The sharp picture takes the wall picture's place as soon as it
 // can be drawn, on the wall and later at rest. A poster that landed without a picture waits for its
 // sharp one; with neither, nothing grows and the wall steps back for the resting page. The line types
 // while the poster grows. Resolves to { shown, sharp, typing }, or null when the viewer left.
-async function bringOut({ wall, frame, pause, posterReady, left, lines, gold }) {
+async function bringOut({ wall, frame, pause, posterReady, left, lines, gold, fuse }) {
   const sharp = { img: null, resting: null };
   const sharpShown = posterReady.then(async (img) => {
     if (!img || left()) return;
@@ -199,13 +211,7 @@ async function bringOut({ wall, frame, pause, posterReady, left, lines, gold }) 
   if (!wall.landedHasPicture()) await sharpShown;
   if (left()) return null;
   const shown = wall.landedHasPicture();
-  // A reply read before the hunt is cleared before the line comes back, so it never shows again; a gold
-  // line that stayed through the hunt stays, and the reveal line types beneath it.
-  if (!gold) frame.line.replaceChildren();
-  frame.line.classList.remove("hushed");
-  const typing = wait(prefersLessMotion() || !shown ? 0 : pause * 1000).then(() =>
-    typeLine(frame.line, gold, lines.reveal, { shown: gold.length }),
-  );
+  const typing = revealLine({ line: frame.line, gold, lines, wait: prefersLessMotion() || !shown ? 0 : pause * 1000, fuse });
   if (!shown) wall.stepBack();
   else if (!(await wall.bringForward(pause))) return null;
   return { shown, sharp, typing };
@@ -216,21 +222,24 @@ async function bringOut({ wall, frame, pause, posterReady, left, lines, gold }) 
 // been read. After every wait the pick checks that its screen is still showing and that the pick was
 // not ended on the wall: a trail answer or the name tag can end it at any moment, and a pick the viewer
 // has left changes nothing further.
-export async function showPick({ stage, wall, result, frame, readUntil = 0, lines, actions }) {
+export async function showPick({ stage, wall, result, frame, readUntil = 0, lines, fuse = null, actions }) {
   const film = result.film;
-  if (!film) return showNoFilm(result, frame, actions);
+  if (!film) {
+    fuse?.cancel();
+    return showNoFilm(result, frame, actions);
+  }
   const round = wall.round;
   const left = () => !frame.showing.isConnected || wall.round !== round;
-  const gold = await goldLine(frame.line, result, lines);
+  const gold = await goldLine(frame.line, result, lines, fuse);
   if (left()) return undefined;
   const { cardRequest, posterReady, backdropReady } = fetchFilm(film);
   // The words fade as the drift stops; a gold line (a nope line, or why a film was turned away) stays.
   const onStop = () => {
-    if (!gold) frame.line.classList.add("hushed");
+    if (!gold && !fuse?.lit()) frame.line.classList.add("hushed");
   };
   const pause = await wall.hunt(film.tmdb, { notBefore: readUntil, onStop });
   if (pause === null || left()) return undefined;
-  const out = await bringOut({ wall, frame, pause, posterReady, left, lines, gold });
+  const out = await bringOut({ wall, frame, pause, posterReady, left, lines, gold, fuse });
   if (!out) return undefined;
   return toRest({ stage, wall, frame, film, result, actions, left, out, cardRequest, backdropReady });
 }

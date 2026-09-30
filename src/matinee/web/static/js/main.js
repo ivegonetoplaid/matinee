@@ -8,6 +8,7 @@ import { closeIris, openIris } from "./iris.js";
 import { clear, h, prefersLessMotion, sentenceCase, wait } from "./dom.js";
 import { showPick } from "./pick.js";
 import { Deck, dealBeneath, dealPair, setFor } from "./quips.js";
+import { lightFuse } from "./fuse.js";
 import { typeLine } from "./type.js";
 import { Wall } from "./wall.js";
 
@@ -237,7 +238,7 @@ async function step() {
   const q = res.data.question;
   // The last answer brings the posters to the size they keep through the pick.
   wall.show(visit.pool, { resting: !q });
-  if (!q) return pickNow(res.data.line);
+  if (!q) return pickNow(res.data.line, false, false, res.data.self_destruct);
   const picture = q.presentation === "pails" && q.options.every((o) => o.image);
   const options = q.options.map((o) => ({
     say: o.say,
@@ -332,17 +333,31 @@ function markSeen(data) {
   visit.seen.push(...data.turned_away);
 }
 
+// A fuse on the reply typed in `frame`, when the last answer self-destructs after `destruct` seconds; it
+// goes out once the viewer leaves the pick. Otherwise null.
+function fuseOn(frame, reply, destruct, round) {
+  if (!destruct || !reply) return null;
+  return lightFuse(frame.line, destruct, () => frame.showing.isConnected && wall.round === round);
+}
+
+// Whether the check's line types: on a checked pick that is not "Not that one" or rushed, with no fuse lit.
+function checksAloud(risk, again, fuse) {
+  return hasTopics() && !risk && !again && !fuse;
+}
+
 // `again` is "Not that one": the resting poster goes back to the wall while the next film is fetched,
-// and the check's line does not type.
-async function pickNow(opening = "", risk = false, again = false) {
+// and the check's line does not type. `destruct` (seconds) lights a fuse on the reply: it counts down and
+// burns away on its own clock, and the check's line does not type over it.
+async function pickNow(opening = "", risk = false, again = false, destruct = null) {
   const round = wall.round;
   // The pick is asked for first, so the check and the fetch run while the words fade and the line types.
   const request = requestPick(risk);
   const lines = pickLines(again);
   await clearForPick(again);
   const { frame, readUntil } = await openPick(opening, lines.nope);
-  // The check's line types only on a checked pick that is not "Not that one".
-  if (hasTopics() && !(risk || again)) await checking(frame);
+  const fuse = fuseOn(frame, opening, destruct, round);
+  // The check's line types only on a checked pick that is not "Not that one", and never over a fuse.
+  if (checksAloud(risk, again, fuse)) await checking(frame);
   const res = await request;
   // The viewer took a way back out while the pick was fetched.
   if (!frame.showing.isConnected || wall.round !== round) return undefined;
@@ -355,6 +370,7 @@ async function pickNow(opening = "", risk = false, again = false) {
     frame,
     readUntil,
     lines,
+    fuse,
     actions: {
       notThatOne: () => {
         lockStage();

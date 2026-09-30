@@ -101,6 +101,7 @@ class Step:
     question: Asked | None
     pool: tuple[int, ...]
     prefer: str | None = None
+    self_destruct: int | None = None  # the line counts down this many seconds, then burns away
 
 
 @dataclass(frozen=True)
@@ -480,7 +481,7 @@ def walk(cat: Catalog, tree_id: str, viewer: Viewer, answers: Sequence[Answer]) 
     """Apply `answers` in order and return where the walk stands; raises EngineError when one does not fit."""
     pool = base_pool(cat, tree_id, viewer)
     tree = cat.trees[tree_id]
-    line, prefer = tree.opening, None
+    line, prefer, destruct = tree.opening, None, None
     history: dict[str, int] = {}
     pending = list(answers)
     for q in tree.questions:
@@ -494,11 +495,11 @@ def walk(cat: Catalog, tree_id: str, viewer: Viewer, answers: Sequence[Answer]) 
         answer = pending.pop(0)
         pool = _answer(cat, tree, q, shown, answer, pool)
         option = q.options[answer.option]
-        line, prefer = option.reply, option.filter.prefer or prefer
+        line, prefer, destruct = option.reply, option.filter.prefer or prefer, option.self_destruct
         history[q.id] = answer.option
     if pending:
         raise EngineError(f"{len(pending)} answers left over after the last question of '{tree_id}'")
-    return Step(tree_id, line, None, tuple(int(t) for t in cat.ids[pool]), prefer)
+    return Step(tree_id, line, None, tuple(int(t) for t in cat.ids[pool]), prefer, destruct)
 
 
 def walk_ends(cat: Catalog, tree_id: str, viewer: Viewer | None = None) -> list[tuple[tuple[Answer, ...], Step]]:

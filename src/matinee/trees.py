@@ -59,6 +59,7 @@ class Option:
     filter: Filter
     not_after: Mapping[str, frozenset[int]] = field(default_factory=dict)
     image: str | None = None
+    self_destruct: int | None = None  # seconds the reply counts down before it burns away
 
 
 @dataclass(frozen=True)
@@ -125,7 +126,7 @@ FILTER_KEYS = {
     "kids_band",
     "sort",
 }
-OPTION_KEYS = {"say", "reply", "filter", "note", "pail", "image", "not_after"}
+OPTION_KEYS = {"say", "reply", "filter", "note", "pail", "image", "not_after", "self_destruct"}
 QUESTION_KEYS = {"id", "ask", "options", "only_if_pool_over", "presentation", "note", "skip_if_topics", "treat_as"}
 KIDS_BANDS = {"little", "family", "older"}
 FLAVOUR_SIGNALS = {"keywords_any", "genome_any", "genres_any"}
@@ -187,6 +188,15 @@ def parse_filter(raw: Mapping[str, Any], what: str) -> Filter:
     )
 
 
+def _self_destruct(value: Any, what: str) -> int | None:
+    """A countdown of whole seconds, 1 to 9, or None."""
+    if value is None:
+        return None
+    if isinstance(value, bool) or not isinstance(value, int) or not 1 <= value <= 9:
+        raise TreeError(f"{what}: self_destruct must be a whole number of seconds from 1 to 9, got {value!r}")
+    return value
+
+
 def parse_question(raw: Mapping[str, Any], tree: str) -> Question:
     what = f"tree '{tree}' question '{raw.get('id')}'"
     _check_keys(raw, QUESTION_KEYS, what)
@@ -200,6 +210,7 @@ def parse_question(raw: Mapping[str, Any], tree: str) -> Question:
                 filter=parse_filter(o.get("filter", {}), f"{what} option {i}"),
                 not_after={q: frozenset(ix) for q, ix in o.get("not_after", {}).items()},
                 image=o.get("image"),
+                self_destruct=_self_destruct(o.get("self_destruct"), f"{what} option {i}"),
             )
         )
     treat_as = raw.get("treat_as")
@@ -286,4 +297,18 @@ def load_trees(dirs: Sequence[Path] = (DATA / "trees", DATA / "modes")) -> dict[
             if path.stem in trees:
                 raise TreeError(f"two tree or mode files are named '{path.stem}'")
             trees[path.stem] = parse_tree(path.stem, json.loads(path.read_text(encoding="utf-8")))
+    _one_self_destruct(trees)
     return trees
+
+
+def _one_self_destruct(trees: Mapping[str, Tree]) -> None:
+    """The self-destructing reply is a one-off: at most one answer across every tree may carry it."""
+    carriers = [
+        f"{t.id}/{q.id}/{i}"
+        for t in trees.values()
+        for q in t.questions
+        for i, o in enumerate(q.options)
+        if o.self_destruct
+    ]
+    if len(carriers) > 1:
+        raise TreeError(f"only one answer may self-destruct; found {len(carriers)}: {', '.join(carriers)}")

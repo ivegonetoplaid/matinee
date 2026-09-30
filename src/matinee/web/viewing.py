@@ -87,6 +87,7 @@ class StepOut(BaseModel):
     question: QuestionOut | None
     pool: list[int]
     prefer: str | None
+    self_destruct: int | None = None
 
 
 class FirstOptionOut(BaseModel):
@@ -315,7 +316,14 @@ def add_viewing_routes(app: FastAPI, theatre: Theatre, store: Store, dtdd: Dtdd)
             q = step.question
             options = [OptionOut(index=o.index, say=o.say, image=o.image) for o in q.options]
             question = QuestionOut(id=q.id, ask=q.ask, options=options, presentation=q.presentation)
-        return StepOut(tree=step.tree, line=step.line, question=question, pool=list(step.pool), prefer=step.prefer)
+        return StepOut(
+            tree=step.tree,
+            line=step.line,
+            question=question,
+            pool=list(step.pool),
+            prefer=step.prefer,
+            self_destruct=step.self_destruct,
+        )
 
 
 CORRECTED = "Got it. I'll remember that for you."
