@@ -21,7 +21,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from matinee.dtdd import Dtdd, DtddError
-from matinee.engine import Answer, Catalog, Correction, Viewer, base_pool, first_question, gentlest, walk
+from matinee.engine import Answer, Catalog, Correction, Viewer, first_question, gentlest, opening_pool, walk
 from matinee.pick import Pick, Picker, candidates
 from matinee.store import Note, Profile, Store
 from matinee.trees import Tree
@@ -79,6 +79,7 @@ class QuestionOut(BaseModel):
     ask: str
     options: list[OptionOut]
     presentation: str | None
+    footnote: str | None = None
 
 
 class StepOut(BaseModel):
@@ -169,10 +170,13 @@ class PickOut(BaseModel):
 
 
 def everything(cat: Catalog, viewer: Viewer) -> list[int]:
-    """Every film some first-question answer offers this viewer: the pool before anything is chosen."""
+    """Every film some first-question answer offers this viewer before anything is chosen.
+
+    A flavour a tree holds apart (the standup specials) is not among them: only its own answer offers it.
+    """
     every = np.zeros(len(cat.ids), dtype=bool)
     for option in first_question(cat, viewer):
-        every |= base_pool(cat, option.tree, viewer)
+        every |= opening_pool(cat, option.tree, viewer)
     return [int(t) for t in cat.ids[every]]
 
 
@@ -315,7 +319,9 @@ def add_viewing_routes(app: FastAPI, theatre: Theatre, store: Store, dtdd: Dtdd)
         if step.question is not None:
             q = step.question
             options = [OptionOut(index=o.index, say=o.say, image=o.image) for o in q.options]
-            question = QuestionOut(id=q.id, ask=q.ask, options=options, presentation=q.presentation)
+            question = QuestionOut(
+                id=q.id, ask=q.ask, options=options, presentation=q.presentation, footnote=q.footnote
+            )
         return StepOut(
             tree=step.tree,
             line=step.line,

@@ -9,10 +9,10 @@ for a missing score. A film tagged Adventure, Thriller, Crime, Mystery, Science
 Fiction or War joins the action tree when its excitement reaches the Adventure
 bar. A film no tree claims joins every tree holding another film of its TMDB
 collection (the franchise rule for strays); the films still unclaimed fall to
-the drama tree. Standup specials are held apart from the comedy and non-fiction
-trees, and reached on their own path. House
-pins add single films to a tree or a kids band; a film pinned to standup also
-leaves the non-fiction tree.
+the drama tree. Standup specials join the comedy tree, where only its stand-up
+answer offers them, and are held out of the non-fiction tree. House
+pins add single films to a tree or a kids band; a film pinned to standup counts
+as a special.
 
 The kids tree is gated and fails closed: a film enters only with a passing
 certificate, and sorts into three age bands. A film in the same TMDB collection
@@ -224,6 +224,11 @@ def standup_specials(table: FilmTable) -> Mask:
     return pd.Series([special(k, g) for k, g in zip(films.keywords, films.genres, strict=True)], index=films.index)
 
 
+def specials(table: FilmTable, house: House) -> Mask:
+    """Standup specials: the films the rule finds, plus the films the house pins to standup."""
+    return standup_specials(table) | _ids(table, house.tree_pins.get("standup", frozenset()))
+
+
 def build_pools(table: FilmTable, house: House) -> dict[str, Mask]:
     """Every tree's and mode's pool, plus the kids bands as `kids:little`, `kids:family`, `kids:franchise`."""
     s = scores(table)
@@ -233,13 +238,13 @@ def build_pools(table: FilmTable, house: House) -> dict[str, Mask]:
     bands = kids_bands(table, s, house.kids_pins)
     young_kids = bands["tagged"] & (bands["little"] | bands["family"])
     kids_only = young_kids & ~has_genome
-    standup = standup_specials(table) | _ids(table, house.tree_pins.get("standup", frozenset()))
+    standup = specials(table, house)
     exciting = (tag["Adventure"] & s["excite"].isna()) | (
         _any_genre(table, ACTION_BY_EXCITEMENT) & over(s["excite"], ACTION_EXCITEMENT)
     )
     pools = {
         "horror": tag["Horror"] & ~young_kids & ~leaves_for_comedy(table, s, "fear"),
-        "comedy": tag["Comedy"] & ~kids_only & ~standup,
+        "comedy": (tag["Comedy"] | standup) & ~kids_only,
         "action": (tag["Action"] | exciting) & ~kids_only & ~leaves_for_comedy(table, s, "excite"),
         "kids": bands["older"],
         "kids:little": bands["little"],

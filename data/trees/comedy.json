@@ -48,7 +48,7 @@
     {
       "id": "kind",
       "ask": "so, what manner of foolishness are we watching?",
-      "note": "Each answer holds the films the labels place in it (the labels file in Matinee's state directory, one rule per answer quoting its words). Animated comedies are their own answer by TMDB's Animation genre and are labelled with no other kind. Horror comedy is the horror tree's comedy kind. A film no answer clearly fits, or not yet labelled, is reached through \"anything\" and \"Just pick one!\".",
+      "note": "Each answer holds the films the labels place in it (the labels file in Matinee's state directory, one rule per answer quoting its words). Animated comedies are their own answer by TMDB's Animation genre and are labelled with no other kind. Horror comedy is the horror tree's comedy kind. Stand-up specials are held apart: only the stand-up answer offers them, and no other answer or \"Just pick one!\" in this tree picks one. A film no answer clearly fits, or not yet labelled, is reached through \"anything\" and \"Just pick one!\".",
       "options": [
         {
           "say": "slapstick, spoofs, and complete nonsense.",
@@ -107,19 +107,21 @@
           }
         },
         {
-          "say": "anything. surprise me.",
+          "say": "just someone funny with a mic.",
+          "reply": "one mic, no plot. coming right up.",
+          "filter": {
+            "flavour": "standup"
+          }
+        },
+        {
+          "say": "anything. surprise me.*",
           "reply": "very well. I shall fetch the wheel of nonsense.",
           "filter": {}
         }
-      ]
+      ],
+      "footnote": "*stand-up specials have their own answer."
     }
   ],
-  "excluded": {
-    "standup": {
-      "rule": "TMDB keyword 'stand-up comedy' (id 9716)",
-      "note": "14 films. Excluded from film results and reachable on its own. A runtime check guards against a feature film about a comedian, such as Man on the Moon at 118 minutes against 57 to 90 for specials."
-    }
-  },
   "flavours": {
     "slapstick": {
       "labelled": true,
@@ -154,6 +156,11 @@
     "romcom": {
       "labelled": true,
       "note": "falling in love is the plot, and it is played for laughs."
+    },
+    "standup": {
+      "specials": true,
+      "note": "standup specials: the TMDB 'stand-up comedy' keyword, or tagged Comedy and either a TV Movie carrying 'comedian' or 'concert', or carrying both 'comedian' and a concert keyword; plus the films the house pins to standup. Held apart, so only this answer offers them."
     }
-  }
+  },
+  "apart": "standup"
 }

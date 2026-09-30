@@ -105,10 +105,11 @@ function trail() {
   return h("nav", { class: "trail", "aria-label": "Your answers so far" }, h("ol", {}, crumbs));
 }
 
-// A question screen. "Just pick one!" stands last, beneath the answers, and shows with them.
-function frame({ count }) {
+// A question screen. "Just pick one!" stands last, beneath the answers and any footnote, and shows with them.
+function frame({ count, footnote }) {
   const line = h("h1", { class: "line", "aria-live": "polite" });
   const answers = h("div", { class: "answers", role: "group", "aria-label": "Your answers", hidden: true });
+  const note = footnote ? h("p", { class: "footnote", hidden: true }, footnote) : null;
   const pick = h(
     "button",
     {
@@ -125,10 +126,10 @@ function frame({ count }) {
   );
   clear(stage).append(
     h("header", { class: "topbar" }, h("div", { class: "wordmark" }, "Matinee"), nameTag(), h("div", { class: "count" }, count)),
-    h("section", { class: "talk" }, line, answers, pick),
+    h("section", { class: "talk" }, line, answers, note, pick),
     h("div", { class: "bottombar" }, trail(), h("span"), credits()),
   );
-  return { line, answers, pick };
+  return { line, answers, note, pick };
 }
 
 // A picture question (the gore pails) shows each answer as its image, with the answer's words beneath it.
@@ -147,8 +148,8 @@ function answerButton(o, picture) {
 }
 
 // `reveal` runs once the screen is built and before the line types (the iris opening onto the wall).
-async function ask({ ack, question, options, count, many = false, picture = false, reveal = null }) {
-  const { line, answers, pick } = frame({ count });
+async function ask({ ack, question, options, count, many = false, picture = false, reveal = null, footnote = null }) {
+  const { line, answers, note, pick } = frame({ count, footnote });
   const buttons = options.map((o) => answerButton(o, picture));
   answers.classList.toggle("many", many);
   answers.classList.toggle("pails", picture);
@@ -156,6 +157,7 @@ async function ask({ ack, question, options, count, many = false, picture = fals
   if (reveal) await reveal();
   await typeLine(line, ack, question);
   answers.hidden = false;
+  if (note) note.hidden = false;
   pick.hidden = false;
 }
 
@@ -249,7 +251,8 @@ async function step() {
       step();
     },
   }));
-  await ask({ ack: res.data.line, question: q.ask, options, count: countText(visit.pool.length, false), picture });
+  const count = countText(visit.pool.length, false);
+  await ask({ ack: res.data.line, question: q.ask, options, count, picture, footnote: q.footnote });
 }
 
 // The pick screen. The aside hangs from the top of the left column, so nothing re-centres as the film

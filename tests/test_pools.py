@@ -74,3 +74,13 @@ def test_a_kids_only_film_stays_out_of_western_and_nonfiction() -> None:
     pools = build_pools(table, NO_PINS)
     assert pools["kids"][1] and pools["kids"][2]
     assert not pools["western"][1] and not pools["nonfiction"][2]
+
+
+def test_a_standup_special_joins_comedy_and_stays_out_of_nonfiction() -> None:
+    special = {**film(1, "Comedy|Documentary", "TV-MA", None), "keywords": frozenset({"stand-up comedy"})}
+    pinned = film(2, "Documentary", "R", None)
+    table = make_table([special, pinned, film(3, "Documentary", "R", None)], {})
+    house = House(kids_pins={}, tree_pins={"standup": frozenset({2})}, payoff_pins={}, scale_pins={})
+    pools = build_pools(table, house)
+    assert pools["comedy"].to_dict() == {1: True, 2: True, 3: False}
+    assert pools["nonfiction"].to_dict() == {1: False, 2: False, 3: True}

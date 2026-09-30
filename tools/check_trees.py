@@ -199,9 +199,8 @@ def tmdb_by_title(title: str, table: FilmTable, report: Report) -> int | None:
 def tree_fixture_entries(table: FilmTable, report: Report) -> list[dict[str, Any]]:
     """The horror and comedy fixture films as must_reach entries for their own tree.
 
-    A comedy fixture expecting standup must reach the standup path instead, since standup specials are
-    held out of the comedy tree (decision 26). Each fixture's expected and must_not kinds ride along as
-    flavour_in and flavour_out, checked only in a tree that defines flavours.
+    Each fixture's expected and must_not kinds ride along as flavour_in and flavour_out, checked only in a
+    tree that defines flavours. A comedy fixture expecting standup is a special, held in comedy's standup kind.
     """
     entries = []
     for fname, tree in (("horror.json", "horror"), ("comedy.json", "comedy")):
@@ -213,13 +212,12 @@ def tree_fixture_entries(table: FilmTable, report: Report) -> list[dict[str, Any
 
 
 def _tree_fixture(f: dict[str, Any], tree: str, tmdb: int) -> dict[str, Any]:
-    """One fixture-file film as an answer-key entry; standup is where it must reach, not a kind."""
-    expect = f.get("expect", [])
+    """One fixture-file film as an answer-key entry for its own tree and kinds."""
     return {
         "title": f["title"],
         "tmdb": tmdb,
-        "must_reach": ["standup" if "standup" in expect else tree],
-        "flavour_in": {tree: [e for e in expect if e != "standup"]},
+        "must_reach": [tree],
+        "flavour_in": {tree: f.get("expect", [])},
         "flavour_out": {tree: f.get("must_not", [])},
     }
 

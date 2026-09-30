@@ -108,6 +108,9 @@ Loading is strict:
 - A tree naming a pool no pool rule builds is refused.
 - `sequel` may only be `false`. `sort` may only be `rating`. `kids_band` must be
   `little`, `family` or `older`. `treat_as` must name an answer the question has.
+- A tree may name one flavour it defines as `apart`; naming a flavour it does not
+  define is refused. A flavour marked `labelled` or `specials` takes no other
+  signal or floor.
 - An answer may carry `self_destruct`, a whole number of seconds from 1 to 9. Any
   other value is refused, and so is a second answer carrying it anywhere across
   the trees and modes: the self-destructing reply is a one-off.
@@ -151,8 +154,14 @@ excluded one is invisible. One signal is the exception:
 `score_at_least`: a film then matches only when each named score reaches its
 floor, and a film with no score passes the floor. A flavour marked `labelled`
 takes no signals: its films are those the labels file names with it (section
-2.6). An answer leaving a flavour out keeps every film that also sits in another
-flavour of the tree.
+2.6). A flavour marked `specials` holds the standup specials (section 3.1). An
+answer leaving a flavour out keeps every film that also sits in another flavour
+of the tree.
+
+**A flavour held apart.** A tree may hold one flavour `apart`. Its films always
+sit in the tree's pool, whatever the labels say. No pool the walk offers holds
+them until the answer naming the flavour is given, so every other answer, and
+`Just pick one!` anywhere in that tree, leaves them out.
 
 Horror's flavours are all labelled: supernatural, killers, monsters, slowburn,
 comedy and found_footage. A film may sit in two. A film played mainly for laughs
@@ -167,7 +176,13 @@ TMDB's Animation genre; its labels give an animated film no other kind, so an
 animated comedy sits only under animated. The labelled kinds are slapstick,
 feelgood, dark, action, horror, teen and romcom. Its horror kind holds the
 horror tree's comedy films, so both trees offer the same horror comedies, and
-each is labelled into both. "anything" has no filter.
+each is labelled into both. Comedy holds its standup flavour apart: the answer
+"just someone funny with a mic." offers only the standup specials, and sits just
+above "anything. surprise me.*", which offers every other film. That question's
+footnote reads "*stand-up specials have their own answer." Every standup special
+is rated R, TV-MA or unrated, so only "no witnesses. anything goes." leads to the
+standup answer. Where the standup answer is not shown, the footnote and the
+asterisk on "anything" are not shown either.
 
 **Payoffs.** A payoff score is the mean genome relevance of its tags,
 standardised with the reference mean and standard deviation for that tree
@@ -197,6 +212,9 @@ film onto the pinned payoff and off every other.
   it.
 - **An answer that would leave the pool empty is not shown.** A question with no
   answer to show is skipped.
+- A question may carry a `footnote`, a line the viewer sees in small type beneath
+  its answers and above `Just pick one!` (`footnote` in `/api/walk`). A question's
+  `note` is maintainer documentation and is never shown.
 - An answer marked `not_after` is hidden when the viewer gave a named earlier
   answer.
 - A walk that ends on an answer carrying `self_destruct` reports its seconds
@@ -486,7 +504,7 @@ takes one of five forms:
 | Form | Places a film |
 |---|---|
 | `kids` | in the kids pool, in the named band |
-| `trees` | in a tree's pool (a film pinned to standup also leaves comedy and non-fiction) |
+| `trees` | in a tree's pool (a film pinned to standup counts as a standup special: it sits in comedy's standup answer and leaves non-fiction) |
 | `payoffs` | on one payoff of one tree, and off its others |
 | `scales` | in one band of one scale, and out of its others |
 | `flavours` | in one flavour of one tree (`member` true) or out of it (`member` false) |
