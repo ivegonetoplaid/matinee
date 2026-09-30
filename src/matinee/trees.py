@@ -283,11 +283,13 @@ def _check_signals(what: str, spec: Mapping[str, Any], scores: Mapping[str, Any]
 def _check_flavours(tree: str, flavours: Mapping[str, Any], scores: Mapping[str, Any]) -> None:
     for name, spec in flavours.items():
         what = f"tree '{tree}' flavour '{name}'"
-        _check_keys(spec, FLAVOUR_SIGNALS | {"note", "score_at_least", *SOLE_SIGNALS}, what)
+        _check_keys(spec, FLAVOUR_SIGNALS | {"note", "score_at_least", "always_shown", *SOLE_SIGNALS}, what)
         sole = [key for key in SOLE_SIGNALS if spec.get(key) is True]
+        if "always_shown" in spec and (sole != ["labelled"] or spec["always_shown"] is not True):
+            raise TreeError(f"{what}: only a labelled flavour may be always_shown, and only as true")
         if not sole:
             _check_signals(what, spec, scores)
-        elif set(spec) - {sole[0], "note"}:
+        elif set(spec) - {sole[0], "note", "always_shown"}:
             raise TreeError(f"{what} is {sole[0]}, so it takes no other signals or floors")
 
 

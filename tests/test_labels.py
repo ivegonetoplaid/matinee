@@ -34,7 +34,10 @@ def pool_after(cat: Any, option: int) -> set[int]:
     return set(walk(cat, "west", Viewer(), [Answer("era", option)]).pool)
 
 
-def test_a_labelled_kind_holds_the_films_labelled_with_it_and_a_film_may_sit_in_two(tmp_path: Path) -> None:
+def test_a_labelled_kind_holds_the_films_labelled_with_it_and_a_film_may_sit_in_two(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("matinee.engine.KIND_MIN_FILMS", 1)  # which films a kind holds, not whether it shows
     lab = labels({1: ["ghost"], 2: ["ghost", "laughs"], 3: ["laughs"], 4: []})
     cat = load_catalog(make_table(), write_data(tmp_path, labelled_tree()), reference(), lab)
     assert pool_after(cat, 0) == {1, 2}
@@ -106,3 +109,60 @@ def test_a_malformed_labels_file_refuses_to_load(tmp_path: Path, doc: dict[str, 
     path.write_text(json.dumps(doc))
     with pytest.raises(LabelsError):
         load_labels(path)
+
+
+def shown_says(cat: Any) -> list[str]:
+    step = walk(cat, "west", Viewer(), [])
+    return [o.say for o in step.question.options] if step.question else []
+
+
+def bar_tree() -> dict[str, Any]:
+    tree = labelled_tree()
+    tree["questions"][0]["options"].append({"say": "anything.", "reply": "", "filter": {}})
+    tree["flavours"]["heroic"] = {"keywords_any": ["superhero"]}
+    tree["questions"][0]["options"].append({"say": "heroes.", "reply": "", "filter": {"flavour": "heroic"}})
+    return tree
+
+
+@pytest.mark.parametrize(("ghosts", "shown"), [(29, False), (30, True)])
+def test_a_labelled_kind_shows_from_thirty_films_and_a_hidden_one_keeps_its_films(
+    tmp_path: Path, ghosts: int, shown: bool
+) -> None:
+    lab = labels({t: ["ghost", "laughs"] if t <= ghosts else ["laughs"] for t in range(1, 31)})
+    cat = load_catalog(make_table(), write_data(tmp_path, bar_tree()), reference(), lab)
+    says = shown_says(cat)
+    assert ("ghosts." in says) is shown  # ghost has no answer leaving it out, so the bar alone decides
+    assert "anything but laughs." in says
+    assert "heroes." in says  # a kind found by signals is not held to the bar
+    assert int(cat.masks[("west", "era", 0)].sum()) == ghosts  # the bar never changes which films it holds
+    anything = set(walk(cat, "west", Viewer(), [Answer("era", 3)]).pool)
+    assert set(range(1, ghosts + 1)) <= anything
+
+
+def test_an_always_shown_kind_shows_under_thirty_films(tmp_path: Path) -> None:
+    tree = bar_tree()
+    tree["flavours"]["ghost"]["always_shown"] = True
+    cat = load_catalog(make_table(), write_data(tmp_path, tree), reference(), labels({1: ["ghost"], 2: ["ghost"]}))
+    assert "ghosts." in shown_says(cat)
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        lambda t: t["flavours"]["heroic"].update({"always_shown": True}),
+        lambda t: t["flavours"]["laughs"].update({"always_shown": "yes"}),
+    ],
+)
+def test_always_shown_is_only_for_a_labelled_kind_and_only_true(tmp_path: Path, change: Any) -> None:
+    tree = bar_tree()
+    change(tree)
+    with pytest.raises(TreeError):
+        load_catalog(make_table(), write_data(tmp_path, tree), reference())
+
+
+def test_a_small_kind_another_answer_leaves_out_still_shows(tmp_path: Path) -> None:
+    lab = labels({t: ["laughs"] for t in range(1, 5)})  # laughs 4; "anything but laughs." leaves them out
+    tree = bar_tree()
+    tree["questions"][0]["options"] = [o for o in tree["questions"][0]["options"] if o["say"] != "anything."]
+    cat = load_catalog(make_table(), write_data(tmp_path, tree), reference(), lab)
+    assert "laughs." in shown_says(cat)  # hiding it would leave films 1-4 no answer

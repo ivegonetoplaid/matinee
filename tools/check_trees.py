@@ -40,7 +40,16 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
-from matinee.engine import Catalog, EngineError, house_flavour, load_catalog, reachable, scale_members, walk_ends
+from matinee.engine import (
+    KIND_MIN_FILMS,
+    Catalog,
+    EngineError,
+    house_flavour,
+    load_catalog,
+    reachable,
+    scale_members,
+    walk_ends,
+)
 from matinee.labels import LabelsError, load_labels
 from matinee.pools import House
 from matinee.quips import QuipsError, load_quips, quip_problems
@@ -391,6 +400,25 @@ def check_sample(full: Catalog, name: str, share: float, seed: int, report: Repo
     report.prefix = ""
 
 
+def check_hidden(cat: Catalog, key: dict[str, Any], report: Report) -> None:
+    """The kinds the bar hides in this library must be exactly the answer key's `hidden` list of [tree, kind] pairs.
+
+    A kind hidden that the key does not list, or listed and shown, fails: a wrongly hidden answer is otherwise
+    silent. Checked on the full library only, since a sample hides more.
+    """
+    hidden: set[tuple[str, str]] = set()
+    for tree_id, question, option in sorted(cat.small):
+        q = next(q for q in cat.trees[tree_id].questions if q.id == question)
+        kind = str(q.options[option].filter.flavour)
+        hidden.add((tree_id, kind))
+        report.say(f"hidden: {tree_id} '{q.options[option].say}', a labelled kind under {KIND_MIN_FILMS} films")
+    expected = {(str(t), str(k)) for t, k in key.get("hidden", [])}
+    for tree_id, kind in sorted(hidden - expected):
+        report.fail(f"hidden: {tree_id} kind {kind} is hidden, and the answer key does not expect it to be")
+    for tree_id, kind in sorted(expected - hidden):
+        report.fail(f"hidden: {tree_id} kind {kind} shows, and the answer key expects it hidden")
+
+
 def check_first_question(cat: Catalog, report: Report) -> None:
     """Every answer of the first question must name a tree or mode file, or it would be silently hidden."""
     for option in cat.first_options:
@@ -442,6 +470,7 @@ def main() -> int:
         if len(kept):
             names = "; ".join(_label(table, int(t)) for t in kept)
             report.say(f"  labelled out of {tree_id} but kept there, having no other home: {names}")
+    check_hidden(cat, key, report)
     added = table.films.index[pools["kids:franchise"]]
     report.say(f"franchise rule added {len(added)} films to kids: " + "; ".join(sorted(table.films.loc[added, "name"])))
     check_data(table, report)

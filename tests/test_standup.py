@@ -76,7 +76,10 @@ def ends(cat: Catalog) -> dict[tuple[int, ...], set[int]]:
     return {tuple(a.option for a in answers): set(step.pool) for answers, step in walk_ends(cat, "west")}
 
 
-def test_only_the_standup_answer_offers_a_special_and_it_offers_nothing_else(tmp_path: Path) -> None:
+def test_only_the_standup_answer_offers_a_special_and_it_offers_nothing_else(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("matinee.engine.KIND_MIN_FILMS", 1)  # the ghost kind holds one film here
     paths = ends(catalog(tmp_path, Labels({"west": TreeLabels({31: frozenset({"ghost"}), 2: frozenset({"ghost"})})})))
     assert paths[(1, 1)] == SPECIALS
     for path, pool in paths.items():

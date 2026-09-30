@@ -20,7 +20,12 @@ third of a pool on that scale, which the pick draws from first.
 A tree's flavours are found by keyword, genome and genre signals, or, for a
 flavour marked `labelled`, read from the labels file (`matinee.labels`), which
 also settles which films a tree's pool holds. An answer leaving one
-flavour out keeps films that also sit in another flavour of the tree. A tree may
+flavour out keeps films that also sit in another flavour of the tree. An answer
+offering a labelled flavour shows only when that flavour holds at least
+`KIND_MIN_FILMS` films of the tree's pool in the loaded library, counted before
+any answer narrows it, unless the flavour is marked `always_shown` or another
+answer of the question leaves it out; the rule changes whether the answer shows,
+never which films it holds. A tree may
 hold one flavour apart (comedy's stand-up specials): its films always sit in the
 tree's pool, and no pool a viewer is offered holds them until the answer naming
 the flavour is given.
@@ -51,6 +56,7 @@ from matinee.table import FilmTable
 from matinee.trees import Filter, Option, Question, Tree, TreeError, load_trees
 
 STOP_UNDER = 12
+KIND_MIN_FILMS = 30  # a labelled kind holding fewer films in the loaded library is not offered
 Mask = npt.NDArray[np.bool_]
 
 
@@ -131,6 +137,7 @@ class Catalog:
     pools: dict[str, Mask] = field(default_factory=dict)
     masks: dict[tuple[str, str, int], Mask] = field(default_factory=dict)
     apart: dict[str, Mask] = field(default_factory=dict)  # per tree id, the films its apart flavour holds
+    small: set[tuple[str, str, int]] = field(default_factory=set)  # answers whose labelled kind is under the bar
 
     @property
     def ids(self) -> npt.NDArray[np.int64]:
@@ -407,6 +414,31 @@ def _opens(tree: Tree, option: Option) -> bool:
     return tree.apart is not None and option.filter.flavour == tree.apart
 
 
+def _too_small(cat: Catalog, tree: Tree, q: Question, option: Option) -> bool:
+    """True where the answer offers a labelled kind holding under KIND_MIN_FILMS of the tree's pool films.
+
+    A kind marked `always_shown` is exempt, and so is a kind another answer of the question leaves out
+    (horror's "anything scary" leaves comedy out): hiding it would leave its films no answer at all.
+    """
+    name = option.filter.flavour
+    spec = tree.flavours.get(name or "", {})
+    if name is None or not spec.get("labelled") or spec.get("always_shown"):
+        return False
+    if any(o.filter.flavour_none == name for o in q.options):
+        return False
+    held = house_flavour(cat, tree, name) & cat.pools[tree.pool]
+    return int(held.sum()) < KIND_MIN_FILMS
+
+
+def _answer_masks(cat: Catalog, tree: Tree) -> None:
+    """Every answer's films, and which answers offer a kind too small to show."""
+    for q in tree.questions:
+        for i, option in enumerate(q.options):
+            cat.masks[(tree.id, q.id, i)] = option_mask(cat, tree, option)
+            if _too_small(cat, tree, q, option):
+                cat.small.add((tree.id, q.id, i))
+
+
 def load_catalog(
     table: FilmTable, data: Path = DATA, reference: Reference | None = None, labels: Labels | None = None
 ) -> Catalog:
@@ -437,9 +469,7 @@ def load_catalog(
     for tree in cat.trees.values():
         if tree.pool not in cat.pools:
             raise EngineError(f"tree '{tree.id}' names pool '{tree.pool}', which no pool rule builds")
-        for q in tree.questions:
-            for i, option in enumerate(q.options):
-                cat.masks[(tree.id, q.id, i)] = option_mask(cat, tree, option)
+        _answer_masks(cat, tree)
     return cat
 
 
@@ -492,7 +522,9 @@ def _shown(cat: Catalog, tree: Tree, q: Question, pool: Mask, history: Mapping[s
     return [
         i
         for i, o in enumerate(q.options)
-        if _visible(o, history) and bool((pool & cat.masks[(tree.id, q.id, i)]).any())
+        if _visible(o, history)
+        and (tree.id, q.id, i) not in cat.small
+        and bool((pool & cat.masks[(tree.id, q.id, i)]).any())
     ]
 
 

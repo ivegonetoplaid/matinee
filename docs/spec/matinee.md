@@ -110,7 +110,8 @@ Loading is strict:
   `little`, `family` or `older`. `treat_as` must name an answer the question has.
 - A tree may name one flavour it defines as `apart`; naming a flavour it does not
   define is refused. A flavour marked `labelled` or `specials` takes no other
-  signal or floor.
+  signal or floor. Only a labelled flavour may be marked `always_shown`, and
+  only as `true`.
 - An answer may carry `self_destruct`, a whole number of seconds from 1 to 9. Any
   other value is refused, and so is a second answer carrying it anywhere across
   the trees and modes: the self-destructing reply is a one-off.
@@ -164,6 +165,17 @@ them until the answer naming the flavour is given, so every other answer, and
 `Just pick one!` anywhere in that tree, leaves them out. No other door's pool
 holds them either (the checker fails otherwise), so `Just pick one!` at the
 first question never picks one.
+
+**A small kind is not offered.** An answer offering a labelled kind shows only
+when that kind holds at least 30 films of the tree's pool in the library the
+server loaded, counted before any answer narrows it. Two kinds are exempt: one
+marked `always_shown` (horror's found footage, 23 films in the operator's
+library), and one another answer of the same question leaves out (horror's
+"anything scary" leaves comedy out, so hiding comedy would leave its films no
+answer). The bar changes whether an answer shows, never which films it holds, so
+a hidden kind's films stay reachable through the door's "anything" answer and
+`Just pick one!`. A kind found by signals, and an answer filtering on anything
+but a labelled kind, is never held to the bar.
 
 Horror's flavours are all labelled: supernatural, killers, monsters, slowburn,
 comedy and found_footage. A film may sit in two. A film played mainly for laughs
@@ -281,7 +293,9 @@ Separately, the engine refuses to prepare when the shipped reference statistics
 do not cover the tree files (section 3). The checker reports that as a failure.
 The checker reads the labels file beside the film table unless `--labels` names
 another, and reports each film labelled out of a tree but kept there for having
-no other home.
+no other home, and each answer a small kind hides. On the full library it fails
+when the kinds the bar hides differ from the answer key's `hidden` list of
+`[tree, kind]` pairs, so a kind that starts hiding, or stops, is never silent.
 
 ### 2.6 Labels
 

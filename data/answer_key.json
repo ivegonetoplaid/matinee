@@ -1,5 +1,5 @@
 {
-  "note": "The answer key the trees are checked against. A tree passes a film when the film is in its pool; overlap between trees is expected. must_reach names a tree a film must be in; must_not names a tree it must not be in. The lists are read from genome list tags at check time, so they need no copy of any published list.",
+  "note": "The answer key the trees are checked against. A tree passes a film when the film is in its pool; overlap between trees is expected. must_reach names a tree a film must be in; must_not names a tree it must not be in. The lists are read from genome list tags at check time, so they need no copy of any published list. hidden lists every [tree, kind] pair the 30-film bar hides in this library; the checker fails when the hidden kinds differ from it.",
   "list_tags": {
     "threshold": 0.8,
     "thresholds": {
@@ -15,6 +15,7 @@
       "cult classic"
     ]
   },
+  "hidden": [],
   "films": [
     {
       "title": "Hubie Halloween",

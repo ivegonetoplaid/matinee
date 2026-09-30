@@ -20,6 +20,7 @@ from check_trees import (
     check_apart,
     check_first_question,
     check_gore,
+    check_hidden,
     check_homes,
     check_pins_in_key,
     check_reachability,
@@ -28,6 +29,7 @@ from check_trees import (
     door_pools,
 )
 from matinee.engine import load_catalog
+from matinee.labels import Labels, TreeLabels
 from matinee.pools import House
 from matinee.reference import Reference, Stat
 from matinee.table import FilmTable
@@ -262,3 +264,19 @@ def test_the_homes_check_fails_a_special_another_door_holds(tmp_path: Path) -> N
     report = Report()
     check_homes(cat, pools, report)
     assert "held apart: Film 5 (1975) is held apart in west but horror holds it" in report.failures
+
+
+def test_the_hidden_kinds_must_be_the_ones_the_key_expects(tmp_path: Path) -> None:
+    tree = json.loads(json.dumps(TREE))
+    tree["flavours"]["ghost"] = {"labelled": True}
+    tree["questions"][0]["options"].append({"say": "ghosts.", "reply": "", "filter": {"flavour": "ghost"}})
+    lab = Labels({"west": TreeLabels({1: frozenset({"ghost"})})})
+    cat = load_catalog(make_table(), write_data(tmp_path, tree), reference(), lab)  # ghost holds 1 film
+    report = Report()
+    check_hidden(cat, {"hidden": [["west", "ghost"]]}, report)
+    assert report.failures == []
+    check_hidden(cat, {"hidden": []}, report)
+    assert report.failures == ["hidden: west kind ghost is hidden, and the answer key does not expect it to be"]
+    report = Report()
+    check_hidden(cat, {"hidden": [["west", "ghost"], ["west", "heroic"]]}, report)
+    assert report.failures == ["hidden: west kind heroic shows, and the answer key expects it hidden"]
