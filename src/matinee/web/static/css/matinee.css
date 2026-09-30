@@ -1316,6 +1316,151 @@ button {
   color: var(--dim);
 }
 
+/* "About" in the credit line: a button that reads as one of the line's links. */
+.inline-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: rgba(242, 179, 61, 0.75);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.inline-link:hover {
+  color: var(--gold-hover);
+}
+
+/* ---------- the About page ---------- */
+
+/* The screen underneath keeps its layout and its state while About covers it; it is only not drawn. */
+.stage.behind-about {
+  visibility: hidden;
+}
+
+/* Over the wall and the hidden screen; it scrolls when the panel is taller than the screen. */
+.about {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: rgba(242, 179, 61, 0.45) transparent;
+}
+
+/* Where the theatre's wordmark stands, so opening About from inside moves nothing. It stays put while
+   the panel scrolls only where the panel clears it; on a narrower screen it scrolls away with the page
+   rather than sit over the text. */
+.about-wordmark {
+  position: absolute;
+  top: var(--pad);
+  left: var(--pad);
+  z-index: 1;
+  line-height: 1.2;
+}
+
+@media (min-width: 1400px) {
+  .about-wordmark {
+    position: fixed;
+  }
+}
+
+.about-panel {
+  width: min(1040px, calc(100% - 32px));
+  margin: 112px auto 96px;
+  padding: 72px 96px 80px;
+  display: flex;
+  flex-direction: column;
+  gap: 56px;
+  background: rgba(9, 10, 16, 0.65);
+  border: 1px solid rgba(242, 179, 61, 0.28);
+  border-radius: 14px;
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+  animation: fade 0.5s ease both;
+}
+
+.about-head,
+.about-section {
+  display: flex;
+  flex-direction: column;
+}
+
+.about-head {
+  gap: 14px;
+}
+
+.about-section {
+  gap: 18px;
+}
+
+.about-back {
+  min-height: 32px;
+  font-size: 16px;
+}
+
+.about-title {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 68px;
+  line-height: 0.98;
+}
+
+.about-lead {
+  margin: 0;
+  font-size: 23px;
+  line-height: 1.45;
+}
+
+.about h2 {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 32px;
+  line-height: 1;
+  color: var(--gold);
+}
+
+.about-section p {
+  margin: 0;
+  font-size: 19px;
+  line-height: 1.7;
+  color: rgba(239, 233, 220, 0.9);
+}
+
+.about-section p.about-cite {
+  font-size: 14px;
+  line-height: 1.55;
+  color: rgba(239, 233, 220, 0.6);
+}
+
+/* TMDB's logo at 14 px, well below the 30 px wordmark. */
+.about-tmdb {
+  height: 14px;
+  width: auto;
+}
+
+/* A phone: the panel takes the width less a 16 px gutter each side, and nothing scrolls sideways. */
+@media (max-width: 600px) {
+  .about-panel {
+    margin: 72px auto 40px;
+    padding: 28px 22px 36px;
+    gap: 40px;
+  }
+
+  .about-title {
+    font-size: min(68px, 13vw);
+  }
+
+  .about-lead {
+    font-size: 20px;
+  }
+
+  .about-section p {
+    font-size: 17px;
+  }
+}
+
 /* What is said at the door: the line, then its controls. */
 .door-talk {
   flex-grow: 1;

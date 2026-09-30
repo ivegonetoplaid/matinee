@@ -2,6 +2,7 @@
 // counter of the box office carries it in full, with TMDB's notice and the
 // MovieLens papers. The TMDB logo is always smaller than Matinee's own mark.
 
+import { openAbout } from "./about.js";
 import { h } from "./dom.js";
 
 const TMDB_NOTICE = "This product uses the TMDB API but is not endorsed or certified by TMDB.";
@@ -19,7 +20,13 @@ function tmdbLogo() {
   );
 }
 
-// "Posters and film data from TMDB [logo] · Tag genome by MovieLens · Powered by DoesTheDogDie.com"
+// Opens the About page, which gives the focus back to this link when it closes.
+function aboutLink() {
+  const button = h("button", { class: "inline-link", type: "button", onclick: () => openAbout(button) }, "About");
+  return button;
+}
+
+// "Posters and film data from TMDB [logo] · Tag genome by MovieLens · Powered by DoesTheDogDie.com · About"
 export function credits({ full = false } = {}) {
   const line = h(
     "p",
@@ -30,6 +37,8 @@ export function credits({ full = false } = {}) {
     link("https://grouplens.org/datasets/movielens/", "MovieLens"),
     " · ",
     link("https://www.doesthedogdie.com", "Powered by DoesTheDogDie.com"),
+    " · ",
+    aboutLink(),
   );
   if (!full) return line;
   return h("div", { class: "credits-full" }, line, h("p", { class: "credits small" }, TMDB_NOTICE, " ", MOVIELENS));
