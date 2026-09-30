@@ -1195,7 +1195,8 @@ button {
   pointer-events: none;
 }
 
-/* Each bulb twinkles on its own beat; the chase darkens one bulb at a time, clockwise. */
+/* Each bulb twinkles on its own beat; the chase darkens it twice a lap, half a lap apart, so two dark
+   bulbs travel clockwise opposite each other. */
 .bulb {
   position: absolute;
   width: var(--bulb);
@@ -1203,7 +1204,7 @@ button {
   margin: calc(var(--bulb) / -2) 0 0 calc(var(--bulb) / -2);
   border-radius: 50%;
   background: radial-gradient(circle, #fff6d8 0, #ffd27a 55%, #c98a2a 100%);
-  box-shadow: 0 0 7px 2px rgba(255, 200, 110, 0.55);
+  box-shadow: 0 0 8px 2px rgba(255, 200, 110, 0.55);
   animation-name: chase, twinkle;
   animation-timing-function: linear, ease-in-out;
   animation-iteration-count: infinite, infinite;
@@ -1213,16 +1214,19 @@ button {
 }
 
 @keyframes chase {
-  0% {
+  0%,
+  50% {
     opacity: 0.1;
     box-shadow: none;
   }
 
-  1.6% {
+  1.6%,
+  51.6% {
     opacity: 1;
-    box-shadow: 0 0 7px 2px rgba(255, 200, 110, 0.55);
+    box-shadow: 0 0 8px 2px rgba(255, 200, 110, 0.55);
   }
 
+  49.99%,
   100% {
     opacity: 1;
   }

@@ -8,9 +8,10 @@ import { credits } from "./credits.js";
 import { clear, h, isPhone, sentenceCase } from "./dom.js";
 import { typeLine } from "./type.js";
 
-// Bulbs round the sign and the gap between them, as on the design boards; one dark bulb chases clockwise.
+// Bulbs round the sign and the gap between them, as on the design boards. Two dark bulbs chase clockwise,
+// half a lap apart, one lap every CHASE_S seconds.
 const BULBS = { desktop: { count: 156, inset: 9 }, phone: { count: 64, inset: 6 } };
-const CHASE_S = 7;
+const CHASE_S = 12;
 const LOOKUP_AFTER_MS = 200;
 const PIN_LENGTH = 4;
 
@@ -28,20 +29,34 @@ function ringAt(k, n, w, h, inset) {
   return [inset, inset + rh - (s - 2 * rw - rh)];
 }
 
+// Each bulb's place in the chase. A lap starts with the dark bulbs at the top and bottom middles: the
+// top middle lies `start` of the way round the ring from the top left, where bulb 0 sits. Set once,
+// from the sign's first size, so the chase keeps its step when a phone's picker shrinks the sign.
+function time(spans, w, hgt, inset) {
+  const rw = w - 2 * inset;
+  const rh = hgt - 2 * inset;
+  const start = rw / 2 / (2 * (rw + rh));
+  spans.forEach((b, k) => {
+    const twinkle = (1.3 + ((k * 7) % 13) / 10).toFixed(2);
+    const lap = (((k / spans.length - start) % 1) + 1) % 1;
+    b.style.animationDuration = `${CHASE_S}s, ${twinkle}s`;
+    b.style.animationDelay = `${(lap * CHASE_S - CHASE_S).toFixed(3)}s, ${(-((k * 5) % 11) / 10).toFixed(2)}s`;
+  });
+}
+
 function bulbs(sign) {
   const { count, inset } = isPhone() ? BULBS.phone : BULBS.desktop;
   const layer = h("div", { class: "bulbs", "aria-hidden": "true" });
-  const spans = Array.from({ length: count }, (_, k) => {
-    const b = h("span", { class: "bulb" });
-    const twinkle = (1.3 + ((k * 7) % 13) / 10).toFixed(2);
-    b.style.animationDuration = `${CHASE_S}s, ${twinkle}s`;
-    b.style.animationDelay = `${((k / count) * CHASE_S - CHASE_S).toFixed(3)}s, ${(-((k * 5) % 11) / 10).toFixed(2)}s`;
-    return b;
-  });
+  const spans = Array.from({ length: count }, () => h("span", { class: "bulb" }));
   layer.append(...spans);
+  let timed = false;
   const place = () => {
     const w = sign.clientWidth;
     const hgt = sign.clientHeight;
+    if (!timed && w > 0) {
+      time(spans, w, hgt, inset);
+      timed = true;
+    }
     spans.forEach((b, k) => {
       const [x, y] = ringAt(k, count, w, hgt, inset);
       b.style.left = `${Math.round(x)}px`;
