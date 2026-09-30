@@ -369,9 +369,15 @@ export class Wall {
   // in with it, so a phone's glow stays around the poster.
   glowShadow(box) {
     const g = this.grown > 1 ? Math.min(1, Math.max(0, (this.look.scale - 1) / (this.grown - 1))) : 1;
+    return this.glowAt(box.w, g);
+  }
+
+  // The landed poster's glow for a poster `w` px wide, at `g` (0 to 1) of its full strength. The poster
+  // at rest keeps it at full strength.
+  glowAt(w, g = 1) {
     const [r, gr, b] = this.glow;
-    const blur = Math.round(box.w * GLOW_BLUR * g);
-    const spread = Math.round(box.w * GLOW_SPREAD * g);
+    const blur = Math.round(w * GLOW_BLUR * g);
+    const spread = Math.round(w * GLOW_SPREAD * g);
     return `0 0 ${blur}px ${spread}px rgba(${r}, ${gr}, ${b}, ${(GLOW_ALPHA * g).toFixed(3)})`;
   }
 

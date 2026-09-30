@@ -916,7 +916,7 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
   the line hangs from the top of the screen with three lines reserved, so on
   desktop the answers start at the same height on every question whose line
   fits in three; on a phone the answers sit at the foot of the screen. On
-  desktop the answers are letter-board strips, on a phone dark pills. The first action on a screen
+  desktop and on a phone the answers are letter-board strips, smaller on a phone. The first action on a screen
   disables every button on it. The profile's name tag, with "Edit my list" and
   "Not <name>?", sits at the top of the wall and the pick screen.
 - **The pails.** The gore question shows four pail pictures, spotless to
@@ -967,7 +967,7 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
   motion), once the line has typed and the film's details (and on a desktop
   its backdrop) have arrived, the poster moves from exactly where it hangs to
   its resting place (1.3 s) as the details rise, leaving its cell empty while
-  it rests. The wall stays at 12 per cent behind the resting page. On a
+  it rests. It keeps its glow at rest, at full strength, sized from its resting width. The wall stays at 12 per cent behind the resting page. On a
   desktop the resting place is the foot of the left column, as large as the height left there allows at 2:3 (never under
   160 px), while the backdrop rises on the right, fading into the title, year
   and synopsis, shown without a tap. On a phone the poster fills the width at
@@ -1377,7 +1377,7 @@ symbol when one does not match.
 | `src/matinee/web/static/js/wall.js::Wall.stepBack` / `grownScale` | `src/matinee/web/static/js/wall.js:287` | 2026-09-28 |
 | `src/matinee/web/static/js/wall.js::Wall.useSharp` (the front element) | `src/matinee/web/static/js/wall.js:309` | 2026-09-28 |
 | `src/matinee/web/static/js/wall.js::Wall.bringForward` | `src/matinee/web/static/js/wall.js:328` | 2026-09-28 |
-| `src/matinee/web/static/js/wall.js::Wall.dress` / `glowShadow` | `src/matinee/web/static/js/wall.js:350` | 2026-09-28 |
+| `src/matinee/web/static/js/wall.js::Wall.dress` / `glowShadow` / `glowAt` | `src/matinee/web/static/js/wall.js:350` | 2026-09-29 |
 | `src/matinee/web/static/js/wall.js::glowOf` | `src/matinee/web/static/js/wall.js:52` | 2026-09-28 |
 | `src/matinee/web/static/js/wall.js::Wall.putBack` / `returnPoster` / `liftDim` / `settleBack` | `src/matinee/web/static/js/wall.js:391` | 2026-09-28 |
 | `src/matinee/web/static/js/wall.js::Wall.relayout` / `makeTiles` | `src/matinee/web/static/js/wall.js:491` | 2026-09-28 |

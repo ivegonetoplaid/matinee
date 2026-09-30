@@ -38,12 +38,13 @@ function fit(slot) {
 
 // Moves `poster` into `slot` in the page's flow, carried from `from`, the screen box where it hung on the
 // wall. The slot is placed by the caller before this runs. The move starts from that box, measured from
-// the same corner it scales from, so it never jumps.
-function settle(poster, from, slot) {
+// the same corner it scales from, so it never jumps. It keeps the glow it wore on the wall, `glow(width)`.
+function settle(poster, from, slot, glow) {
   const size = fit(slot);
   poster.className = "slot-poster";
   poster.style.width = `${size.width}px`;
   poster.style.height = `${size.height}px`;
+  poster.style.boxShadow = `${glow(size.width)}, 0 24px 60px rgba(0, 0, 0, 0.6)`;
   slot.append(poster);
   const to = poster.getBoundingClientRect();
   if (prefersLessMotion() || !to.width) return;
@@ -147,7 +148,7 @@ async function rest({ stage, wall, frame, film, result, actions, info, backdrop,
   if (poster && from) {
     const slot = h("div", { class: "poster-slot" });
     frame.left.append(slot);
-    settle(poster, from, slot);
+    settle(poster, from, slot, (w) => wall.glowAt(w));
     wall.lift(true);
   }
   if (isPhone()) {
