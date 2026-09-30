@@ -387,18 +387,20 @@ def _labelled_tree(cat: Catalog, tree_id: str, kinds: Mapping[int, frozenset[str
 def _apply_labels(cat: Catalog) -> None:
     """Check the labels against the trees, then settle every tree's pool by them at once.
 
-    Every labelled film joins the pool, whatever the pool rules said. Then a film labelled out of a tree
+    Every labelled film joins the pool, whatever the pool rules said, except a kids-only film, which only
+    the kids tree holds. Then a film labelled out of a tree
     leaves it only where another tree keeps it: holds it and does not label it out too. A film every tree
     holding it labels out stays in all of them, so no film is left with no way in. A film the house pins
     to a tree never leaves it: a house pin is the operator's own placement. The order of the entries in
     the labels file changes nothing.
     """
     index = cat.table.films.index
+    kids_only = cat.pools.get("kids:only", np.zeros(len(index), dtype=bool))
     leaving: dict[str, Mask] = {}
     for tree_id, labels in cat.labels.trees.items():
         tree = _labelled_tree(cat, tree_id, labels.kinds)
         if tree.pool in cat.pools:
-            cat.pools[tree.pool] = cat.pools[tree.pool] | index.isin(list(labels.kinds))
+            cat.pools[tree.pool] = cat.pools[tree.pool] | (index.isin(list(labels.kinds)) & ~kids_only)
             pinned = index.isin(list(cat.house.tree_pins.get(tree.pool, frozenset())))
             leaving[tree.pool] = index.isin(list(labels.out)) & ~pinned
     keeps = {t.pool: cat.pools[t.pool].copy() for t in cat.trees.values() if t.pool in cat.pools}

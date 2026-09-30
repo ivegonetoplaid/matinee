@@ -233,7 +233,10 @@ def specials(table: FilmTable, house: House) -> Mask:
 
 
 def build_pools(table: FilmTable, house: House) -> dict[str, Mask]:
-    """Every tree's and mode's pool, plus the kids bands as `kids:little`, `kids:family`, `kids:franchise`."""
+    """Every tree's and mode's pool, plus the kids bands as `kids:little`, `kids:family`, `kids:franchise`.
+
+    `kids:only` marks the kids-only films, which no other tree takes.
+    """
     s = scores(table)
     tag = {name: _genre(table, name) for name in ("Horror", "Comedy", "Action", "Adventure", "Fantasy", "Drama")}
     tag |= {name: _genre(table, name) for name in ("Western", "Documentary")}
@@ -263,6 +266,7 @@ def build_pools(table: FilmTable, house: House) -> dict[str, Mask]:
     pools["thriller"] = _any_genre(table, THRILLER_GENRES) & tense & ~young_kids & ~kids_only
     pools["crime"] = _genre(table, "Crime") & ~kids_only  # not in ADULT_TREES: it claims no stray
     pools["kids:franchise"] = bands["franchise"]
+    pools["kids:only"] = kids_only  # films only the kids tree may hold; not a home of its own
     pinned = _ids(table, frozenset().union(*house.tree_pins.values()))
     strays = _any_genre(table, DRAMA_STRAYS) & ~_claimed(pools) & ~pinned & ~kids_only
     adult = {name: pools[name] for name in ADULT_TREES}

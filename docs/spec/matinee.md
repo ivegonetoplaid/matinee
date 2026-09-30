@@ -333,7 +333,8 @@ committed, because it lists the films one library holds. Its shape:
 - `kinds` maps a TMDB id to the kinds the film clearly fits. An empty list means
   the film was labelled and fits no kind. Every film in `kinds` joins the tree's
   pool, whatever the pool rules said: a horror comedy the rules sent to comedy
-  alone is in horror too once labelled.
+  alone is in horror too once labelled. A kids-only film (section 3.2) is the
+  exception: only the kids tree holds it, whatever its labels say.
 - A film absent from `kinds` is unlabelled and sits under no kind.
 - `out` lists films that belong elsewhere. Every labelled film first joins its
   trees' pools. Then a film labelled out of a tree leaves it only where another
@@ -444,7 +445,7 @@ it has another home.
 - **House tree pins** add single films to a tree after every rule above.
 - **The labels come after.** Once these rules have run, the labels settle the
   pool of every tree they name (section 2.6): a labelled film joins whatever
-  the rules above said, and a film labelled out leaves only where another tree
+  the rules above said, unless it is kids-only, and a film labelled out leaves only where another tree
   or mode keeps it. Comedy's standup specials then return to its pool, whatever
   the pool rules and the labels said (section 2.3).
 
@@ -1247,10 +1248,9 @@ as the code stood on 2026-09-30.
 9. **Four doors have no tree.** Sci-fi, Romance, Animation and War are door
    names with no tree file, so the first question does not list them. The
    checker fails an answer that leads to no file. (`data/first_question.json:2`)
-10. **A label outranks the pool rules' exclusions.** Every labelled film joins
-    its tree's pool, so a label can bring in a film the pool rule leaves out,
-    such as a kids-only film behind the crime door, and offer it under a kind.
-    (`src/matinee/engine.py:387`)
+10. **A label outranks the pool rules' exclusions.** Every labelled film but a
+    kids-only one joins its tree's pool, so a label can bring in a film the pool
+    rule leaves out and offer it under a kind. (`src/matinee/engine.py:387`)
 11. **An apart flavour no answer offers loads.** The loader checks only that
     the tree defines the flavour it holds apart. The server starts with such a
     tree, whose held-apart films no answer offers; only the checker's
@@ -1385,7 +1385,7 @@ symbol when one does not match.
 | `data/trees/horror.json` gore question, `skip_if_topics`, `treat_as` | `data/trees/horror.json:134` | 2026-09-27 |
 | `data/trees/horror.json` labelled flavours (the kinds' rules) | `data/trees/horror.json:244` | 2026-09-30 |
 | `src/matinee/labels.py::load_labels` | `src/matinee/labels.py:64` | 2026-09-27 |
-| `src/matinee/engine.py::_apply_labels` (labelled films join; out films leave only where another tree keeps them; house tree pins stay) | `src/matinee/engine.py:387` | 2026-09-30 |
+| `src/matinee/engine.py::_apply_labels` (labelled films join, kids-only ones excepted; out films leave only where another tree keeps them; house tree pins stay) | `src/matinee/engine.py:387` | 2026-09-30 |
 | `src/matinee/engine.py::_labelled_tree` (unknown tree or kind refused) | `src/matinee/engine.py:375` | 2026-09-30 |
 | `src/matinee/pools.py::load_house` / `House` (`House.specials`) | `src/matinee/pools.py:112` | 2026-09-30 |
 | `src/matinee/engine.py::house_flavour` (a `specials` flavour holds the standup specials) | `src/matinee/engine.py:190` | 2026-09-30 |

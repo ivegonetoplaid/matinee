@@ -1213,6 +1213,17 @@
         "action"
       ],
       "note": "the one film Action holds only through a Crime film's excitement; the crime door must not take Action from it"
+    },
+    {
+      "title": "The Bad Guys 2",
+      "tmdb": 1175942,
+      "must_reach": [
+        "kids"
+      ],
+      "must_not": [
+        "crime"
+      ],
+      "note": "a kids-only film the labels place under crime's heists; only the kids tree holds a kids-only film (the operator, 2026-09-30)"
     }
   ]
 }
