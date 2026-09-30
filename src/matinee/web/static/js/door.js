@@ -9,7 +9,7 @@ import { clear, h, isPhone, sentenceCase } from "./dom.js";
 import { typeLine } from "./type.js";
 
 // Bulbs round the sign and the gap between them, as on the design boards; one dark bulb chases clockwise.
-const BULBS = { desktop: { count: 132, inset: 7 }, phone: { count: 60, inset: 6 } };
+const BULBS = { desktop: { count: 156, inset: 9 }, phone: { count: 64, inset: 6 } };
 const CHASE_S = 7;
 const LOOKUP_AFTER_MS = 200;
 const PIN_LENGTH = 4;
@@ -57,19 +57,18 @@ function crown() {
   return h("div", { class: "crown", "aria-hidden": "true" }, parts.map((p) => h("div", { class: p })));
 }
 
+// The sign: "Matinee", the largest thing on it, over a small letter board with the live film count,
+// inside a thin gold frame and a ring of bulbs.
 function sign(count) {
   const films = `${count.toLocaleString("en")} ${count === 1 ? "film" : "films"}`;
   const face = h(
     "div",
     { class: "sign" },
-    h("div", { class: "sign-rule" }),
-    h(
-      "div",
-      { class: "sign-face" },
-      h("div", { class: "sign-name" }, "Matinee"),
-      h("p", { class: "letterboard" }, h("span", { class: "board-small" }, "Now showing"), " ", h("span", { class: "board-big" }, films)),
-    ),
-    h("div", { class: "sign-rule" }),
+    h("div", { class: "sign-frame", "aria-hidden": "true" }),
+    h("div", { class: "sign-rule left", "aria-hidden": "true" }),
+    h("div", { class: "sign-rule right", "aria-hidden": "true" }),
+    h("div", { class: "sign-name" }, "Matinee"),
+    h("p", { class: "letterboard" }, h("span", { class: "board-small" }, "Now showing"), " ", h("span", { class: "board-big" }, films)),
   );
   face.prepend(bulbs(face));
   return face;

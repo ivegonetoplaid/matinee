@@ -942,10 +942,19 @@ button {
    soft dark fade behind it, across the top of the screen, lets the sign read against
    the posters; it belongs to the door and leaves with the marquee. */
 .marquee {
-  --crown-w: 560px;
-  --crown-h: 96px;
-  --sign-w: min(1120px, calc(100vw - 32px));
-  --sign-h: 150px;
+  --crown-w: 620px;
+  --crown-h: 114px;
+  --sign-w: min(900px, calc(100vw - 32px));
+  --sign-h: 216px;
+  --frame-in: 20px;
+  --name-size: 104px;
+  --name-top: 30px;
+  --board-top: 150px;
+  --board-small: 17px;
+  --board-big: 32px;
+  --board-gap: 16px;
+  --board-pad: 6px 24px 8px;
+  --bulb: 10px;
   --shade-h: 420px;
   position: relative;
   isolation: isolate;
@@ -992,7 +1001,7 @@ button {
 
 @media (max-height: 700px) and (min-width: 601px) {
   .marquee {
-    zoom: 0.62;
+    zoom: 0.45;
   }
 }
 
@@ -1092,55 +1101,72 @@ button {
   clip-path: polygon(50% 0, 100% 10%, 100% 100%, 0 100%, 0 10%);
 }
 
-/* The sign: "Matinee" above the letter board, ringed by bulbs. */
+/* The sign: a free-standing object with "Matinee" the largest thing on it, over a small letter board,
+   inside a thin gold frame and a ring of bulbs. Its measures are the marquee's properties. */
 .sign {
   position: relative;
   flex: 0 0 auto;
   width: var(--sign-w);
   height: var(--sign-h);
   border-radius: 10px;
-  background: #1a1410;
+  background: linear-gradient(180deg, #241b13, #130e0a);
   box-shadow:
     0 0 0 1px rgba(242, 179, 61, 0.35),
-    0 0 70px rgba(255, 190, 90, 0.2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 28px;
-  padding: 0 34px;
+    0 0 80px rgba(255, 190, 90, 0.22);
   transition: height 0.6s cubic-bezier(0.2, 0.7, 0.2, 1);
 }
 
+.sign-frame {
+  position: absolute;
+  inset: var(--frame-in);
+  border: 1.5px solid rgba(242, 179, 61, 0.42);
+  border-radius: 6px;
+  pointer-events: none;
+}
+
 .sign-rule {
-  flex: 1 1 0;
-  height: 46px;
+  position: absolute;
+  top: 60px;
+  width: 150px;
+  height: 44px;
   background: repeating-linear-gradient(180deg, rgba(242, 179, 61, 0.75) 0, rgba(242, 179, 61, 0.75) 2px, transparent 2px, transparent 10px);
 }
 
-.sign-face {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
+.sign-rule.left {
+  left: 46px;
+}
+
+.sign-rule.right {
+  right: 46px;
 }
 
 .sign-name {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: var(--name-top);
+  text-align: center;
   font-family: var(--display);
   font-weight: 800;
-  font-size: 32px;
+  font-size: var(--name-size);
   line-height: 1;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.12em;
   color: var(--gold);
   text-transform: uppercase;
-  text-shadow: 0 0 18px rgba(242, 179, 61, 0.6);
+  white-space: nowrap;
+  text-shadow: 0 0 22px rgba(242, 179, 61, 0.6);
 }
 
 .letterboard {
+  position: absolute;
+  top: var(--board-top);
+  left: 50%;
+  transform: translateX(-50%);
   margin: 0;
   display: flex;
   align-items: baseline;
-  gap: 22px;
-  padding: 10px 30px 12px;
+  gap: var(--board-gap);
+  padding: var(--board-pad);
   border-radius: 3px;
   background-color: var(--strip);
   background-image: repeating-linear-gradient(180deg, transparent 0, transparent 26px, rgba(0, 0, 0, 0.1) 26px, rgba(0, 0, 0, 0.1) 28px);
@@ -1154,12 +1180,12 @@ button {
 }
 
 .board-small {
-  font-size: 24px;
-  letter-spacing: 0.24em;
+  font-size: var(--board-small);
+  letter-spacing: 0.26em;
 }
 
 .board-big {
-  font-size: 62px;
+  font-size: var(--board-big);
   letter-spacing: 0.04em;
 }
 
@@ -1172,9 +1198,9 @@ button {
 /* Each bulb twinkles on its own beat; the chase darkens one bulb at a time, clockwise. */
 .bulb {
   position: absolute;
-  width: 8px;
-  height: 8px;
-  margin: -4px 0 0 -4px;
+  width: var(--bulb);
+  height: var(--bulb);
+  margin: calc(var(--bulb) / -2) 0 0 calc(var(--bulb) / -2);
   border-radius: 50%;
   background: radial-gradient(circle, #fff6d8 0, #ffd27a 55%, #c98a2a 100%);
   box-shadow: 0 0 7px 2px rgba(255, 200, 110, 0.55);
@@ -1701,52 +1727,25 @@ button {
 
 @media (max-width: 600px) {
   .marquee {
-    --crown-w: 240px;
-    --crown-h: 58px;
-    --sign-w: calc(100vw - 32px);
-    --sign-h: 116px;
+    --crown-w: 230px;
+    --crown-h: 54px;
+    --sign-w: min(350px, calc(100vw - 10px));
+    --sign-h: 140px;
+    --frame-in: 13px;
+    --name-size: 58px;
+    --name-top: 20px;
+    --board-top: 92px;
+    --board-small: 11px;
+    --board-big: 24px;
+    --board-gap: 10px;
+    --board-pad: 5px 14px 6px;
+    --bulb: 7px;
     --shade-h: 260px;
     padding-top: 16px;
   }
 
-  .crown .sunburst {
-    height: 66%;
-  }
-
-  .crown .sun-core {
-    height: 31%;
-  }
-
-  .sign {
-    gap: 0;
-    padding: 0 16px;
-  }
-
   .sign-rule {
     display: none;
-  }
-
-  .sign-face {
-    gap: 6px;
-  }
-
-  .sign-name {
-    font-size: 20px;
-  }
-
-  .letterboard {
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-    padding: 7px 16px 8px;
-  }
-
-  .board-small {
-    font-size: 12px;
-  }
-
-  .board-big {
-    font-size: 36px;
   }
 
   .credits {
@@ -1820,6 +1819,11 @@ button {
   /* While the picker is open the crown fades and the sign shrinks to a lit strip. */
   .marquee.compact {
     --sign-h: 40px;
+    --board-top: 50%;
+    --board-small: 11px;
+    --board-big: 19px;
+    --board-gap: 8px;
+    --board-pad: 4px 14px;
     padding-top: 10px;
   }
 
@@ -1833,24 +1837,18 @@ button {
     opacity: 0;
   }
 
-  .marquee.compact .sign-name {
+  .marquee.compact .sign-name,
+  .marquee.compact .sign-frame {
     display: none;
   }
 
+  /* In the lit strip the letter board sits at the strip's middle. */
   .marquee.compact .letterboard {
-    flex-direction: row;
-    align-items: baseline;
-    gap: 8px;
-    padding: 4px 14px;
+    transform: translate(-50%, -50%);
   }
 
   .marquee.compact .board-small {
-    font-size: 11px;
     letter-spacing: 0.22em;
-  }
-
-  .marquee.compact .board-big {
-    font-size: 19px;
   }
 
   .marquee.compact + .door-wall {
@@ -1892,12 +1890,6 @@ button {
 }
 
 @media (max-width: 600px) {
-  .bulb {
-    width: 6px;
-    height: 6px;
-    margin: -3px 0 0 -3px;
-  }
-
   /* With a name tag the top bar takes a second row; this keeps the answers clear of "Just pick one!". */
   .stage:has(.nametag) {
     gap: 12px;
@@ -1945,10 +1937,12 @@ button {
   }
 }
 
-/* A short desktop: the picker's heading tightens so the picker fits without scrolling. */
+/* A short desktop: the picker's heading tightens so the picker fits without scrolling, and it may come
+   down to 50 px above the foot, still clear of the corner credit line. */
 @media (max-height: 820px) and (min-width: 601px) {
   .door-wall {
     padding-top: 28px;
+    padding-bottom: 50px;
   }
 
   .picker .door-line {
