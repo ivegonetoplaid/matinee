@@ -1,6 +1,6 @@
 ---
 purpose: The contract Matinee's first build holds to — the conversation model, the pools and scales, the offline film table, profiles, exclusions, the DoesTheDogDie check, corrections, the web surface, the page, deployment and third-party terms — with a map of where each part lives.
-updated: 2026-09-28
+updated: 2026-09-30
 governs:
   - src/matinee/
   - tools/
@@ -619,7 +619,7 @@ request and end with the visit.
   profile appears only as a name suggestion.
 - A name suggestion carries the profile's id, name and whether it has a PIN.
   It never carries the profile's exclusions.
-- A token for a deleted profile is ignored. The box office clears it from the
+- A token for a deleted profile is ignored. The door's reply clears it from the
   cookie.
 - There is no PIN reset and no administrative surface. Whoever runs the
   installation clears a forgotten PIN in Matinee's store.
@@ -868,12 +868,38 @@ Shoulders Display, other text in DM Sans. Both fonts are self-hosted with their
 OFL licences. All displayed text is in sentence case. A phone is a viewport
 600 px wide or less.
 
-- **The box office.** An art deco booth: a stepped crown with a sunburst, a lit
-  sign reading "Matinee" over "Now showing N films", velvet columns, a back
-  wall, and a counter carrying the full credits. Bulbs run round the sign (132
-  on desktop, 60 on a phone). They twinkle while one dark bulb travels
-  clockwise. They are steady under reduced motion. Every question at the door
-  is asked on the back wall. The booth stays on screen until the viewer goes in.
+- **The door.** The marquee stands at the top centre of the screen over the
+  poster wall, and nothing else frames it: no booth and no curtains. The
+  marquee is an art deco stepped crown with a sunburst over a free-standing lit
+  sign, with a warm glow behind them and a dark fade across the top of the
+  screen (420 px deep, 260 px on a phone) that lets the sign read against the
+  posters. On a desktop the sign is 900 by 216 px under a crown 620 by 114 px;
+  on a phone it is 350 by 140 px under a crown 230 by 54 px. The sign never
+  runs wider than the screen less 32 px (10 px on a phone). "Matinee" is the
+  largest thing on it, at 104 px (58 px on a phone), over a small letter board
+  reading "Now showing N films" with the live count. A thin gold frame sits
+  inside the ring of bulbs, and on a desktop striped rules flank the name.
+  Bulbs run round the sign: 156 of 10 px on a desktop, 64 of 7 px on a phone.
+  They twinkle while two dark bulbs travel clockwise, half a lap apart, one lap
+  every 12 s; a lap starts with the two at the middles of the top and bottom
+  edges. Under reduced motion no bulb darkens or twinkles. A window too short
+  for the full marquee scales it down: to 0.8 under 820 px tall and 0.45 under
+  700 px tall on a desktop, and to 0.75 under 640 px tall on a phone.
+
+  Every question at the door is typed onto the wall below the marquee, with
+  nothing behind Matinee's words. On a desktop the words are a centred column
+  680 px wide, 44 px under the sign, with the line at 52 px and its answers as
+  22 px letter-board strips. On a phone the line hangs 26 px under the marquee
+  at 34 px, and the answers, 18 px strips, sit at the foot of the screen. A
+  short window closes the words up: under 820 px tall on a desktop they start
+  28 px under the sign, and under 640 px tall on a phone the line is 26 px. The
+  trigger picker sits on the wall too: on a desktop 1000 px wide, the question
+  and saving in a 360 px left column and the topics beside it. Its topic pills
+  and fields keep their own dark fill. On a phone, while the picker is open,
+  the crown fades and the sign shrinks to a lit strip of bulbs round the letter
+  board, with no name; it returns to full size when the picker closes. The
+  marquee stays on screen until the viewer goes in or opens
+  About.
   - A device with no token opens on "Hi! A few questions before I show you to
     your seats. Anything you never want to see?", with "Nope, show me all the
     movies.", "Yes, there are a few things." and "I've been here before".
@@ -884,16 +910,33 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
     asks for a name and an optional PIN and saves a profile. Unticked, the
     choices apply to this visit only. "Never mind, show me everything" enters
     with no exclusions.
-- **The iris.** Leaving the booth, the screen closes into a shrinking circle to
-  black (0.6 s) and the poster wall opens from a growing one (0.75 s). The first
-  line starts typing 0.52 s into the opening. It is the only transition through
-  black. Under reduced motion it is instant.
+- **Going in.** Every answer at the door that leads into the theatre asks for
+  the first question at the tap, and a door is entered once: a second tap or
+  Enter changes nothing. The door's words and the corner credit line fade out
+  (0.3 s), and the rest of the marquee fades over 0.55 s while it lifts 110 px
+  and shrinks to 0.93 of its size over 0.8 s. Meanwhile "Matinee" flies from
+  the sign's letters to the wordmark's place at the top left, shrinking to the
+  wordmark's 30 px and losing its glow, over 0.9 s. It lands letter for letter
+  on the theatre's wordmark, placed beside the name tag when the viewer has a
+  profile, and gives way to that wordmark when the theatre's screen is built.
+  The poster wall stays on screen throughout. No transition on the page passes
+  through black. The first question types once the name has landed and the
+  question has arrived; a landing that never reports counts as landed 0.95 s
+  after the flight began. When the viewer's pool differs from the door's, the
+  wall re-sorts in place as after any answer. From a phone's lit strip, which
+  draws no name, the name stands at the wordmark's place at once while the
+  strip lifts, and the question still waits the flight's time. Under reduced
+  motion the change is instant. "Edit my list" and "Not <name>?" return to the
+  door with the marquee already in place and lit; the name does not fly back.
 - **The poster wall.** A flat grid of the posters of the films still in the
   pool, each its own image element, sharp and upright, held at 35 per cent
-  strength (26 per cent behind the box office), with no backing behind
-  Matinee's words. Along a row the films run in the page's order, which is
-  drawn at random once per page load; each row starts a fixed number of films
-  on from the row above, chosen so a film's repeats sit as far apart as the
+  strength, with no backing behind Matinee's words. The wall holds that one
+  strength across the site's navigation and pages: the door, the questions,
+  going in and About never dim it. The pick's reveal is the one special case:
+  the rest of the wall dims to 12 per cent as the picked poster lands and stays
+  there while the pick rests (below). Along a row the films run in the page's
+  order, which is drawn at random once per page load; each row starts a fixed
+  number of films on from the row above, chosen so a film's repeats sit as far apart as the
   pool's size allows, and the wall repeats in both directions so no edge ever
   shows. Poster size follows the pool: from 22 across on desktop, or 14 on a
   phone, at 1,200 films or more, down to 10, or 5.2, at 40 or fewer, with a
@@ -1004,9 +1047,11 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
   wait and the hunt, and the reveal line types beneath it in the text colour
   as the new poster grows. Where the check turned a film away, its reason
   types in gold in the nope line's place and stays, and only the reveal line
-  is redealt to fit beneath it within the cap; the resting page keeps the
-  credit and the "What were you going to show me?" link. A pick with no film
-  speaks no quip.
+  is redealt to fit beneath it within the cap. DoesTheDogDie's credit is placed
+  beneath the reason before it starts to type and stays through the hunt; on
+  the resting page it moves beneath the buttons, joined by the "What were you
+  going to show me?" link. The three-in-a-row and exhausted-pool lines likewise
+  have their credit on screen before they type. A pick with no film speaks no quip.
 
   `Not that one` asks for the next film at the tap and carries the resting
   poster back from where it rests to its cell on the wall, at the wall's size
@@ -1042,13 +1087,47 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
   away, the fuse is put out and the explanation types as usual. Under reduced
   motion the numbers change without fading and the reply goes at once, leaving
   the scorch. "Not that one" and every later pick speak as usual.
-- **Credits.** The bottom bar of the wall and pick screens carries "Posters and
-  film data from TMDB [logo] · Tag genome by MovieLens · Powered by
-  DoesTheDogDie.com", each linked. The box office counter carries the same line
-  and adds TMDB's notice and the MovieLens citations.
-  The TMDB logo is smaller than Matinee's own mark.
+- **Credits.** The corner credit line reads "Posters and film data from TMDB
+  [logo] · About", the logo linked to TMDB and "About" a button that opens the
+  About page. It sits at the bottom right of the door, the question screens and
+  the pick screen on a desktop (13 px), and centred at the foot on a phone
+  (11 px). The TMDB logo is smaller than Matinee's own mark. MovieLens and
+  DoesTheDogDie are not on the line: MovieLens is credited on the About page,
+  and "Powered by DoesTheDogDie.com", linked, stands beside DoesTheDogDie's
+  data wherever it shows (section 14).
+- **About.** A screen inside the page, with no address of its own and no
+  server route. It opens over whatever screen is showing, as a centred dark
+  panel 65 per cent opaque over the poster wall, 1040 px wide on a desktop and
+  the screen's width less a 16 px gutter each side on a phone, with no sideways
+  scroll. The screen underneath, its credit line included, is hidden, never
+  rebuilt or paused, so only the posters show through; it shows again exactly
+  as it stood when About closes. Matinee's wordmark stands at the theatre
+  wordmark's place: fixed from 1400 px wide up, and scrolling away with the page
+  below that so it never sits over the text. About scrolls as a page when the panel
+  is taller than the screen. "Back" at its top, the browser's Back, a phone's back gesture
+  and Escape each close it and return the focus to the About link: opening it
+  adds one history entry at the same address, and a second Back leaves the page
+  rather than reopening About. The title is 68 px, the lead 23 px and the
+  paragraphs 19 px (on a phone the title is at most 13 per cent of the screen's
+  width, the lead 20 px and the paragraphs 17 px); section headings are gold,
+  in the display face. The copy, in order: a lead; "Why it exists"; "How it
+  knows what a film feels like", with links to MovieLens and the tag genome
+  dataset and the two MovieLens citations; "How it steers around things", with
+  "Powered by DoesTheDogDie.com", linked; and "Posters and film data", with the
+  TMDB logo (14 px tall), linked, and TMDB's notice. It states no count that
+  changes over time. Opened from inside, About moves nothing. Opened from the
+  door, the name flies to the wordmark's place and the rest of the marquee lifts
+  and fades, as on going in; the screen underneath is hidden once the name has
+  landed, and the panel fades in 0.8 s after opening (at once under reduced
+  motion). Closing it flies the name back to the sign, from wherever it is, and
+  the marquee and the door's words return. From a phone's lit strip the name
+  stands at the wordmark's place at once, and closing removes it.
 - **Failures.** A failed request shows its message and "Try again". No stale
-  film list is ever shown.
+  film list is shown, with one exception: when the first question fails after
+  the viewer goes in, the problem screen keeps the door's posters on the wall
+  behind its message, the wordmark and "Try again", and a "Try again" that fails
+  keeps them too. A "Try again" that succeeds shows the viewer's own pool. Every
+  other problem screen empties the wall.
 - **Installable.** A web app manifest (display fullscreen, falling back to
   standalone; start URL `/`; icons at 192 and 512 px, the 512 also maskable)
   lets the page install to a home screen. There is **no service worker.**
@@ -1090,14 +1169,14 @@ The terms of each source are part of the design.
 
 - **TMDB.** Cached at most six months (section 5.2). The notice "This product
   uses the TMDB API but is not endorsed or certified by TMDB." appears on the
-  box office counter. The TMDB logo appears there and in the credit line of the
-  wall and pick screens, less prominent than Matinee's own mark. TMDB data is
-  non-commercial under the default licence.
-- **MovieLens tag genome.** Credited to F. Maxwell Harper and Joseph A. Konstan
-  (2015), *The MovieLens Datasets: History and Context*, and Jesse Vig, Shilad
-  Sen and John Riedl (2012), *The Tag Genome: Encoding Community Knowledge to
-  Support Novel Interaction*. The raw dataset is never committed. A derived
-  table Matinee ships carries the dataset's own conditions:
+  About page. The TMDB logo appears there and in the corner credit line of the
+  door, the question screens and the pick screen, less prominent than
+  Matinee's own mark. TMDB data is non-commercial under the default licence.
+- **MovieLens tag genome.** Credited on the About page to F. Maxwell Harper and
+  Joseph A. Konstan (2015), *The MovieLens Datasets: History and Context*, and
+  Jesse Vig, Shilad Sen and John Riedl (2012), *The Tag Genome: Encoding
+  Community Knowledge to Support Novel Interaction*. The raw dataset is never
+  committed. A derived table Matinee ships carries the dataset's own conditions:
   `data/reference.json` states them in its `licence` field (research and
   non-commercial use, no implied endorsement, redistribution only under the
   same conditions).
@@ -1107,7 +1186,13 @@ The terms of each source are part of the design.
   refresh period the terms set for a performance cache (sections 8 and 9). "Powered by
   DoesTheDogDie.com", linked to `https://www.doesthedogdie.com`, appears
   wherever its data does: the trigger picker, the swap reason, the unchecked
-  note and the exhausted pool. The free tier is non-commercial.
+  note and the exhausted pool. It also appears beside the three-in-a-row line
+  and on the About page. The page gives the used-up line (section 9) the same
+  credit, whether or not the viewer holds topics, because that line reaches the
+  page in the same field as the exhausted pool's. Beside a line typed from its
+  data, it is on screen before the line starts to type and stays while the line
+  does. The corner credit line does not carry it. The free tier is
+  non-commercial.
 
 ## 15. Out of scope
 
@@ -1130,7 +1215,7 @@ Not part of this build, and not to be added until asked:
 # Known gaps
 
 Behaviour that is deliberately absent, still open, or short of the contract,
-as the code stood on 2026-09-27.
+as the code stood on 2026-09-27; gaps 9 and 10 as it stood on 2026-09-30.
 
 **Short of the contract:**
 
@@ -1170,6 +1255,18 @@ as the code stood on 2026-09-27.
 8. **Validation failures use the framework's error shape.** A request body
    that fails validation answers 422 with `{"detail": [...]}`, not Matinee's
    `{"error", "message"}` shape. (`src/matinee/web/app.py:87`)
+
+**Short of the contract, in the page:**
+
+9. **The door can be entered while About is open over it.** A late answer to
+   the name lookup or a profile opening, or the keyboard reaching the door's
+   controls during the name's flight, can take the viewer in behind the panel.
+   Closing About then flies the full-size name back over the theatre.
+   (`src/matinee/web/static/js/door.js::Door.bringBack`)
+10. **The name's home on the sign is measured once.** A resize or a phone
+    rotation while About is open over the door lands the returning name where
+    the sign's letters stood before, not where they stand now.
+    (`src/matinee/web/static/js/door.js::Door.leave`)
 
 ---
 
@@ -1362,12 +1459,22 @@ symbol when one does not match.
 
 | Handle | Where | Verified |
 |---|---|---|
-| `src/matinee/web/static/js/door.js::Door` | `src/matinee/web/static/js/door.js:91` | 2026-09-26 |
-| `src/matinee/web/static/js/door.js::Door.picker` | `src/matinee/web/static/js/door.js:251` | 2026-09-26 |
-| `src/matinee/web/static/js/door.js::Door.fillTopics` / `topicsTrouble` | `src/matinee/web/static/js/door.js:345` | 2026-09-26 |
-| `src/matinee/web/static/js/door.js::bulbs` | `src/matinee/web/static/js/door.js:31` | 2026-09-26 |
-| `src/matinee/web/static/js/door.js::BULBS` | `src/matinee/web/static/js/door.js:12` | 2026-09-26 |
-| `src/matinee/web/static/js/iris.js::closeIris` / `openIris` | `src/matinee/web/static/js/iris.js:14` | 2026-09-26 |
+| `src/matinee/web/static/js/door.js::Door` | `src/matinee/web/static/js/door.js:107` | 2026-09-30 |
+| `src/matinee/web/static/js/door.js::Door.open` (the marquee, the door's wall, the corner line) | `src/matinee/web/static/js/door.js:118` | 2026-09-30 |
+| `src/matinee/web/static/js/door.js::Door.talk` (a question typed onto the wall) | `src/matinee/web/static/js/door.js:141` | 2026-09-30 |
+| `src/matinee/web/static/js/door.js::Door.enter` (entered once) | `src/matinee/web/static/js/door.js:260` | 2026-09-30 |
+| `src/matinee/web/static/js/door.js::Door.leave` / `settle` / `bringBack` (the marquee leaves and returns) | `src/matinee/web/static/js/door.js:271` | 2026-09-30 |
+| `src/matinee/web/static/js/door.js::Door.picker` (sets the phone's lit strip) | `src/matinee/web/static/js/door.js:314` | 2026-09-30 |
+| `src/matinee/web/static/js/door.js::Door.fillTopics` / `topicsTrouble` | `src/matinee/web/static/js/door.js:408` | 2026-09-30 |
+| `src/matinee/web/static/js/door.js::sign` (frame, rules, name, live count) | `src/matinee/web/static/js/door.js:78` | 2026-09-30 |
+| `src/matinee/web/static/js/door.js::bulbs` / `ringAt` | `src/matinee/web/static/js/door.js:48` | 2026-09-30 |
+| `src/matinee/web/static/js/door.js::time` (the two-bulb chase's start) | `src/matinee/web/static/js/door.js:36` | 2026-09-30 |
+| `src/matinee/web/static/js/door.js::BULBS` / `CHASE_S` | `src/matinee/web/static/js/door.js:14` | 2026-09-30 |
+| `src/matinee/web/static/js/flight.js::fly` (`FLIGHT_MS`, the fail-open) | `src/matinee/web/static/js/flight.js:63` | 2026-09-30 |
+| `src/matinee/web/static/js/flight.js::nameAt` / `wordmarkAt` / `riseOf` / `copyAt` | `src/matinee/web/static/js/flight.js:14` | 2026-09-30 |
+| `src/matinee/web/static/js/about.js::openAbout` | `src/matinee/web/static/js/about.js:111` | 2026-09-30 |
+| `src/matinee/web/static/js/about.js::close` (popstate; Escape steps back) | `src/matinee/web/static/js/about.js:94` | 2026-09-30 |
+| `src/matinee/web/static/js/about.js::copy` (the About page's words and links) | `src/matinee/web/static/js/about.js:21` | 2026-09-30 |
 | `src/matinee/web/static/js/wall-grid.js::posterAcross` / `ACROSS` / `GAP` | `src/matinee/web/static/js/wall-grid.js:26` | 2026-09-28 |
 | `src/matinee/web/static/js/wall-grid.js::wallLayout` | `src/matinee/web/static/js/wall-grid.js:36` | 2026-09-28 |
 | `src/matinee/web/static/js/wall-grid.js::bestStride` / `repeatDistance` | `src/matinee/web/static/js/wall-grid.js:60` | 2026-09-28 |
@@ -1401,37 +1508,50 @@ symbol when one does not match.
 | `src/matinee/web/static/js/wall.js::Wall.frame` (the drift, `DRIFT_PX_S`) | `src/matinee/web/static/js/wall.js:544` | 2026-09-28 |
 | `src/matinee/web/static/js/wall.js::Wall.place` / `lay` / `picture` / `request` (`BLANK`) | `src/matinee/web/static/js/wall.js:555` | 2026-09-28 |
 | `src/matinee/web/static/js/wall.js::Wall.resort` / `slide` / `depart` | `src/matinee/web/static/js/wall.js:635` | 2026-09-28 |
-| `src/matinee/web/static/js/main.js::lockStage` / `leaveTo` / `nameTag` | `src/matinee/web/static/js/main.js:52` | 2026-09-28 |
-| `src/matinee/web/static/js/main.js::trail` | `src/matinee/web/static/js/main.js:86` | 2026-09-28 |
-| `src/matinee/web/static/js/main.js::start` | `src/matinee/web/static/js/main.js:197` | 2026-09-28 |
-| `src/matinee/web/static/js/main.js::backTo` / `step` | `src/matinee/web/static/js/main.js:225` | 2026-09-28 |
-| `src/matinee/web/static/js/main.js::checking` / `fadeTalk` (`READ_MS`) | `src/matinee/web/static/js/main.js:274` | 2026-09-28 |
-| `src/matinee/web/static/js/main.js::pickLines` | `src/matinee/web/static/js/main.js:292` | 2026-09-28 |
-| `src/matinee/web/static/js/main.js::clearForPick` / `requestPick` / `openPick` | `src/matinee/web/static/js/main.js:306` | 2026-09-28 |
-| `src/matinee/web/static/js/main.js::pickNow` (`notThatOne`, `rollAgain`, `justPick`) | `src/matinee/web/static/js/main.js:337` | 2026-09-28 |
-| `src/matinee/web/static/js/pick.js::showPick` | `src/matinee/web/static/js/pick.js:217` | 2026-09-28 |
-| `src/matinee/web/static/js/pick.js::goldLine` | `src/matinee/web/static/js/pick.js:178` | 2026-09-28 |
-| `src/matinee/web/static/js/pick.js::bringOut` | `src/matinee/web/static/js/pick.js:189` | 2026-09-28 |
-| `src/matinee/web/static/js/pick.js::toRest` (`BEAT_MS`, `STILL_HOLD_MS`) | `src/matinee/web/static/js/pick.js:237` | 2026-09-28 |
-| `src/matinee/web/static/js/pick.js::fetchFilm` / `picture` | `src/matinee/web/static/js/pick.js:250` | 2026-09-28 |
-| `src/matinee/web/static/js/pick.js::restingPoster` | `src/matinee/web/static/js/pick.js:161` | 2026-09-28 |
-| `src/matinee/web/static/js/pick.js::rest` | `src/matinee/web/static/js/pick.js:139` | 2026-09-28 |
-| `src/matinee/web/static/js/pick.js::settle` / `fit` | `src/matinee/web/static/js/pick.js:41` | 2026-09-28 |
+| `src/matinee/web/static/js/main.js::lockStage` / `leaveTo` / `nameTag` | `src/matinee/web/static/js/main.js:56` | 2026-09-30 |
+| `src/matinee/web/static/js/main.js::trail` | `src/matinee/web/static/js/main.js:100` | 2026-09-30 |
+| `src/matinee/web/static/js/main.js::start` | `src/matinee/web/static/js/main.js:212` | 2026-09-30 |
+| `src/matinee/web/static/js/main.js::backTo` / `step` | `src/matinee/web/static/js/main.js:240` | 2026-09-30 |
+| `src/matinee/web/static/js/main.js::checking` / `fadeTalk` (`READ_MS`) | `src/matinee/web/static/js/main.js:289` | 2026-09-30 |
+| `src/matinee/web/static/js/main.js::pickLines` | `src/matinee/web/static/js/main.js:307` | 2026-09-30 |
+| `src/matinee/web/static/js/main.js::clearForPick` / `requestPick` / `openPick` | `src/matinee/web/static/js/main.js:321` | 2026-09-30 |
+| `src/matinee/web/static/js/main.js::pickNow` (`notThatOne`, `rollAgain`, `justPick`) | `src/matinee/web/static/js/main.js:365` | 2026-09-30 |
+| `src/matinee/web/static/js/main.js::enter` (the start asked at the tap, the question after the landing) | `src/matinee/web/static/js/main.js:202` | 2026-09-30 |
+| `src/matinee/web/static/js/main.js::topbar` (settles a landed name) | `src/matinee/web/static/js/main.js:70` | 2026-09-30 |
+| `src/matinee/web/static/js/main.js::problem` (`keep`: the failed start's posters) | `src/matinee/web/static/js/main.js:175` | 2026-09-30 |
+| `src/matinee/web/static/js/pick.js::showPick` | `src/matinee/web/static/js/pick.js:239` | 2026-09-30 |
+| `src/matinee/web/static/js/pick.js::goldLine` | `src/matinee/web/static/js/pick.js:193` | 2026-09-30 |
+| `src/matinee/web/static/js/pick.js::bringOut` | `src/matinee/web/static/js/pick.js:217` | 2026-09-30 |
+| `src/matinee/web/static/js/pick.js::toRest` (`BEAT_MS`, `STILL_HOLD_MS`) | `src/matinee/web/static/js/pick.js:262` | 2026-09-30 |
+| `src/matinee/web/static/js/pick.js::fetchFilm` / `picture` | `src/matinee/web/static/js/pick.js:275` | 2026-09-30 |
+| `src/matinee/web/static/js/pick.js::restingPoster` | `src/matinee/web/static/js/pick.js:176` | 2026-09-30 |
+| `src/matinee/web/static/js/pick.js::rest` | `src/matinee/web/static/js/pick.js:154` | 2026-09-30 |
+| `src/matinee/web/static/js/pick.js::settle` / `fit` | `src/matinee/web/static/js/pick.js:42` | 2026-09-30 |
 | `src/matinee/web/static/js/fuse.js::lightFuse` / `fuseTimeline` | `src/matinee/web/static/js/fuse.js:37` | 2026-09-30 |
 | `src/matinee/trees.py::_self_destruct` / `_one_self_destruct` | `src/matinee/trees.py:191` | 2026-09-30 |
-| `src/matinee/web/static/js/pick.js::feature` | `src/matinee/web/static/js/pick.js:63` | 2026-09-28 |
-| `src/matinee/web/static/js/pick.js::choices` | `src/matinee/web/static/js/pick.js:126` | 2026-09-28 |
-| `src/matinee/web/static/js/pick.js::showNoFilm` | `src/matinee/web/static/js/pick.js:104` | 2026-09-28 |
-| `src/matinee/web/static/js/pick.js::firstPickReveal` | `src/matinee/web/static/js/pick.js:80` | 2026-09-28 |
+| `src/matinee/web/static/js/pick.js::feature` | `src/matinee/web/static/js/pick.js:65` | 2026-09-30 |
+| `src/matinee/web/static/js/pick.js::choices` | `src/matinee/web/static/js/pick.js:141` | 2026-09-30 |
+| `src/matinee/web/static/js/pick.js::showNoFilm` | `src/matinee/web/static/js/pick.js:116` | 2026-09-30 |
+| `src/matinee/web/static/js/pick.js::firstPickReveal` | `src/matinee/web/static/js/pick.js:91` | 2026-09-30 |
+| `src/matinee/web/static/js/pick.js::creditBeneath` (DoesTheDogDie's credit before its line types) | `src/matinee/web/static/js/pick.js:83` | 2026-09-30 |
 | `src/matinee/web/static/js/correct.js::GATED_NOTE` | `src/matinee/web/static/js/correct.js:10` | 2026-09-26 |
 | `src/matinee/web/static/js/correct.js::correctionLink` / `ensureProfile` | `src/matinee/web/static/js/correct.js:91` | 2026-09-26 |
-| `src/matinee/web/static/js/credits.js::credits` | `src/matinee/web/static/js/credits.js:23` | 2026-09-26 |
+| `src/matinee/web/static/js/credits.js::credits` | `src/matinee/web/static/js/credits.js:23` | 2026-09-30 |
+| `src/matinee/web/static/js/credits.js::aboutLink` | `src/matinee/web/static/js/credits.js:18` | 2026-09-30 |
 | `src/matinee/web/static/js/dom.js::h` (text nodes only) | `src/matinee/web/static/js/dom.js:12` | 2026-09-26 |
 | `src/matinee/web/static/js/type.js::typeLine` (`shown`: a gold line kept while the rest types beneath) | `src/matinee/web/static/js/type.js:11` | 2026-09-28 |
 | `src/matinee/web/static/manifest.webmanifest` | `src/matinee/web/static/manifest.webmanifest:1` | 2026-09-26 |
-| `src/matinee/web/static/css/matinee.css` reduced-motion rules | `src/matinee/web/static/css/matinee.css:831` | 2026-09-28 |
-| `src/matinee/web/static/css/matinee.css` `.wall`, `.wall.at-door`, `.wall-tiles`, `.tile` (`--tile`, the dark cell) | `src/matinee/web/static/css/matinee.css:87` | 2026-09-28 |
-| `src/matinee/web/static/css/matinee.css` `.pick-line` (size, four lines reserved), `.hushed` | `src/matinee/web/static/css/matinee.css:504` | 2026-09-28 |
+| `src/matinee/web/static/css/matinee.css` reduced-motion rules (the marquee and the door's words change at once) | `src/matinee/web/static/css/matinee.css:920` | 2026-09-30 |
+| `src/matinee/web/static/css/matinee.css` `.wall`, `.wall-tiles`, `.tile` (`--tile`, the one strength; the dark cell) | `src/matinee/web/static/css/matinee.css:86` | 2026-09-30 |
+| `src/matinee/web/static/css/matinee.css` `.marquee` (its measures as properties, the top fade, the short windows' scaling) | `src/matinee/web/static/css/matinee.css:952` | 2026-09-30 |
+| `src/matinee/web/static/css/matinee.css` `.marquee.lifted`, `.stage.leaving`, `.flying-name` (going in) | `src/matinee/web/static/css/matinee.css:982` | 2026-09-30 |
+| `src/matinee/web/static/css/matinee.css` `.sign`, `.bulb`, `@keyframes chase` | `src/matinee/web/static/css/matinee.css:1156` | 2026-09-30 |
+| `src/matinee/web/static/css/matinee.css` `.door-wall`, `.door-talk`, `.door-foot` | `src/matinee/web/static/css/matinee.css:1493` | 2026-09-30 |
+| `src/matinee/web/static/css/matinee.css` `.picker` | `src/matinee/web/static/css/matinee.css:1616` | 2026-09-30 |
+| `src/matinee/web/static/css/matinee.css` phone door: `.marquee` sizes, `.marquee.compact` (the lit strip) | `src/matinee/web/static/css/matinee.css:1799` | 2026-09-30 |
+| `src/matinee/web/static/css/matinee.css` `.credits`, `.tmdb-logo`, `.bottombar .credits`, `.inline-link` | `src/matinee/web/static/css/matinee.css:1306` | 2026-09-30 |
+| `src/matinee/web/static/css/matinee.css` `.stage.behind-about`, `.about`, `.about-wordmark`, `.about-panel` | `src/matinee/web/static/css/matinee.css:1347` | 2026-09-30 |
+| `src/matinee/web/static/css/matinee.css` `.pick-line` (size, four lines reserved), `.hushed` | `src/matinee/web/static/css/matinee.css:479` | 2026-09-30 |
 | `src/matinee/web/static/blank.svg` (a tile with no picture) | `src/matinee/web/static/blank.svg:1` | 2026-09-28 |
 
 ### Deployment
