@@ -418,7 +418,9 @@ it has another home.
   action, fantasy or thriller pool holds, that no house tree pin places, and
   that is not kids-only. A stray joins each of those five trees that holds
   another film of its TMDB collection. Membership is read before any stray is
-  added, so it never chains. A stray still unclaimed joins drama.
+  added, so it never chains. A stray still unclaimed joins drama. The crime
+  pool, which takes every film tagged Crime, claims no stray, so a Crime film
+  the drama or action tree holds keeps that home beside the crime door.
 - **House tree pins** add single films to a tree after every rule above.
 
 ### 3.2 The kids pool

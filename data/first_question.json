@@ -1,5 +1,5 @@
 {
-  "note": "Decisions 57 and 86: the first question on the poster wall offers each door by its plain name, in decision 86's order, one per door whose tree or mode exists. Each answer leads to the tree or mode named by its file; an answer whose tree or mode holds no film for the viewer is not shown. Each answer's label is the door's short name where one is needed, such as the correction link. A door whose tree does not exist yet (Crime, Sci-fi, Romance, Animation, War) is added here with its tree.",
+  "note": "Decisions 57 and 86: the first question on the poster wall offers each door by its plain name, in decision 86's order, one per door whose tree or mode exists. Each answer leads to the tree or mode named by its file; an answer whose tree or mode holds no film for the viewer is not shown. Each answer's label is the door's short name where one is needed, such as the correction link. A door whose tree does not exist yet (Sci-fi, Romance, Animation, War) is added here with its tree.",
   "lines": [
     "Right this way.",
     "So, what are we in the mood for?"
@@ -24,6 +24,11 @@
       "say": "Thriller",
       "tree": "thriller",
       "label": "Thriller"
+    },
+    {
+      "say": "Crime",
+      "tree": "crime",
+      "label": "Crime"
     },
     {
       "say": "Horror",

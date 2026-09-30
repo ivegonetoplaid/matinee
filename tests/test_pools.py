@@ -84,3 +84,16 @@ def test_a_standup_special_joins_comedy_and_stays_out_of_nonfiction() -> None:
     pools = build_pools(table, house)
     assert pools["comedy"].to_dict() == {1: True, 2: True, 3: False}
     assert pools["nonfiction"].to_dict() == {1: False, 2: False, 3: True}
+
+
+def test_the_crime_pool_takes_every_crime_film_and_claims_no_stray() -> None:
+    exciting = {"action": 0.9, "action packed": 0.9, "good action": 0.9}
+    table = make_table(
+        [film(1, "Crime", "R", None), film(2, "Crime", "R", None), film(3, "Drama", "R", None)],
+        {1: {"action": 0.1}, 2: exciting, 3: {}},
+    )
+    pools = build_pools(table, NO_PINS)
+    assert pools["crime"].to_dict() == {1: True, 2: True, 3: False}
+    assert pools["drama"][1]  # a Crime film no other tree claims stays a drama stray beside the crime pool
+    assert pools["action"][2]  # a Crime film exciting enough stays in action beside the crime pool
+    assert not pools["action"][1]

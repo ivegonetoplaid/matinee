@@ -19,6 +19,10 @@
     [
       "thriller",
       "erotic"
+    ],
+    [
+      "crime",
+      "prison"
     ]
   ],
   "films": [
@@ -184,7 +188,8 @@
       "title": "Se7en",
       "tmdb": 807,
       "must_reach": [
-        "thriller"
+        "thriller",
+        "crime"
       ],
       "note": "crime, mystery and thriller with no Drama tag; its home is the thriller tree",
       "must_not": [
@@ -193,6 +198,9 @@
       "flavour_in": {
         "thriller": [
           "mind_games",
+          "serial_killers"
+        ],
+        "crime": [
           "serial_killers"
         ]
       }
@@ -233,8 +241,14 @@
       "title": "GoodFellas",
       "tmdb": 769,
       "must_reach": [
-        "drama"
-      ]
+        "drama",
+        "crime"
+      ],
+      "flavour_in": {
+        "crime": [
+          "gangsters"
+        ]
+      }
     },
     {
       "title": "Schindler's List",
@@ -952,11 +966,15 @@
       "title": "Zodiac",
       "tmdb": 1949,
       "must_reach": [
-        "thriller"
+        "thriller",
+        "crime"
       ],
       "flavour_in": {
         "thriller": [
           "keep_guessing",
+          "serial_killers"
+        ],
+        "crime": [
           "serial_killers"
         ]
       },
@@ -1031,12 +1049,170 @@
       "title": "The Godfather",
       "tmdb": 238,
       "must_reach": [
-        "drama"
+        "drama",
+        "crime"
       ],
       "must_not": [
         "thriller"
       ],
-      "note": "a franchise stray the labels place behind no thriller kind; Drama holds it, so it leaves Thriller"
+      "note": "a franchise stray the labels place behind no thriller kind; Drama holds it, so it leaves Thriller",
+      "flavour_in": {
+        "crime": [
+          "gangsters"
+        ]
+      }
+    },
+    {
+      "title": "The Departed",
+      "tmdb": 1422,
+      "must_reach": [
+        "crime"
+      ],
+      "flavour_in": {
+        "crime": [
+          "cops",
+          "gangsters"
+        ]
+      },
+      "note": "one of the Crime door's signed-off examples (2026-09-30)"
+    },
+    {
+      "title": "Knives Out",
+      "tmdb": 546554,
+      "must_reach": [
+        "crime"
+      ],
+      "flavour_in": {
+        "crime": [
+          "cops"
+        ]
+      },
+      "note": "one of the Crime door's signed-off examples (2026-09-30)"
+    },
+    {
+      "title": "Fargo",
+      "tmdb": 275,
+      "must_reach": [
+        "crime"
+      ],
+      "flavour_in": {
+        "crime": [
+          "cops",
+          "crime_drama"
+        ]
+      },
+      "note": "one of the Crime door's signed-off examples (2026-09-30)"
+    },
+    {
+      "title": "City of God",
+      "tmdb": 598,
+      "must_reach": [
+        "crime"
+      ],
+      "flavour_in": {
+        "crime": [
+          "crime_drama",
+          "gangsters"
+        ]
+      },
+      "note": "one of the Crime door's signed-off examples (2026-09-30)"
+    },
+    {
+      "title": "Ocean's Eleven",
+      "tmdb": 161,
+      "must_reach": [
+        "crime"
+      ],
+      "flavour_in": {
+        "crime": [
+          "heists"
+        ]
+      },
+      "note": "one of the Crime door's signed-off examples (2026-09-30)"
+    },
+    {
+      "title": "Baby Driver",
+      "tmdb": 339403,
+      "must_reach": [
+        "crime",
+        "action"
+      ],
+      "flavour_in": {
+        "crime": [
+          "heists"
+        ]
+      },
+      "note": "one of the Crime door's signed-off examples (2026-09-30)"
+    },
+    {
+      "title": "Just Cause",
+      "tmdb": 9061,
+      "must_reach": [
+        "thriller"
+      ],
+      "must_not": [
+        "crime"
+      ],
+      "note": "a serial-killer thriller behind no crime door: the shared kind never adds a door"
+    },
+    {
+      "title": "Disturbia",
+      "tmdb": 8271,
+      "must_reach": [
+        "thriller"
+      ],
+      "must_not": [
+        "crime"
+      ],
+      "note": "a serial-killer thriller behind no crime door: the shared kind never adds a door"
+    },
+    {
+      "title": "A Clockwork Orange",
+      "tmdb": 185,
+      "must_reach": [
+        "drama"
+      ],
+      "note": "a Crime film Drama holds only as a leftover stray; the crime door must not take Drama from it"
+    },
+    {
+      "title": "Knockaround Guys",
+      "tmdb": 7501,
+      "must_reach": [
+        "drama"
+      ],
+      "note": "a Crime film Drama holds only as a leftover stray; the crime door must not take Drama from it"
+    },
+    {
+      "title": "The Great Mouse Detective",
+      "tmdb": 9994,
+      "must_reach": [
+        "drama"
+      ],
+      "note": "a Crime film Drama holds only as a leftover stray; the crime door must not take Drama from it"
+    },
+    {
+      "title": "Deliver Us from Evil",
+      "tmdb": 13364,
+      "must_reach": [
+        "drama"
+      ],
+      "note": "a Crime film Drama holds only as a leftover stray; the crime door must not take Drama from it"
+    },
+    {
+      "title": "Inside Job",
+      "tmdb": 44639,
+      "must_reach": [
+        "drama"
+      ],
+      "note": "a Crime film Drama holds only as a leftover stray; the crime door must not take Drama from it"
+    },
+    {
+      "title": "Mr. Right",
+      "tmdb": 333385,
+      "must_reach": [
+        "action"
+      ],
+      "note": "the one film Action holds only through a Crime film's excitement; the crime door must not take Action from it"
     }
   ]
 }
