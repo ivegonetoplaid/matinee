@@ -3,6 +3,7 @@
 // The screen underneath is hidden, never rebuilt or paused, and shows again exactly as it stands when
 // About closes. "Back", the browser's Back, a phone's back gesture and Escape all close it: opening it
 // adds one history entry at the same address, and closing it by "Back" or Escape steps back over that entry.
+// Opened from the door, the marquee's name flies to the wordmark's place first and flies back on closing.
 
 import { h } from "./dom.js";
 
@@ -86,16 +87,17 @@ function copy(back) {
   ];
 }
 
-let shown = null; // { layer, opener } while About is open
+let shown = null; // { layer, opener, around } while About is open
 
 // Closes About and shows the screen underneath as it stands. Runs on the browser's Back, which the
 // page's own "Back" also goes through.
 function close() {
   if (!shown) return;
-  const { layer, opener } = shown;
+  const { layer, opener, around } = shown;
   shown = null;
   layer.remove();
   stage.classList.remove("behind-about");
+  around?.bringBack();
   if (opener?.isConnected) opener.focus({ preventScroll: true });
 }
 
@@ -104,19 +106,26 @@ window.addEventListener("keydown", (e) => {
   if (shown && e.key === "Escape") history.back();
 });
 
-// Opens About over the current screen. `opener` gets the focus back when About closes.
-export function openAbout(opener = null) {
+// Opens About over the current screen. `opener` gets the focus back when About closes. `around` is the
+// door, when About opens from it: its name flies to the wordmark's place before the screen is hidden.
+export async function openAbout(opener = null, around = null) {
   if (shown) return;
   const back = h("button", { class: "link-button about-back", type: "button", onclick: () => history.back() }, "Back");
   const layer = h(
     "div",
-    { class: "about", role: "dialog", "aria-modal": "true", "aria-labelledby": "about-title" },
+    { class: around ? "about from-door flying" : "about", role: "dialog", "aria-modal": "true", "aria-labelledby": "about-title" },
     h("div", { class: "wordmark about-wordmark", "aria-hidden": "true" }, "Matinee"),
     h("main", { class: "about-panel" }, copy(back)),
   );
-  shown = { layer, opener };
+  shown = { layer, opener, around };
   history.pushState({ about: true }, "");
-  stage.classList.add("behind-about");
   document.body.append(layer);
   back.focus({ preventScroll: true });
+  if (around) {
+    await around.leave();
+    if (shown?.layer !== layer) return; // closed while the name was flying
+    around.settle();
+    layer.classList.remove("flying");
+  }
+  stage.classList.add("behind-about");
 }

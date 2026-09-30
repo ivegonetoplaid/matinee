@@ -13,12 +13,13 @@ function tmdbLogo() {
   );
 }
 
-// Opens the About page, which gives the focus back to this link when it closes.
-function aboutLink() {
-  const button = h("button", { class: "inline-link", type: "button", onclick: () => openAbout(button) }, "About");
+// Opens the About page, which gives the focus back to this link when it closes. `around` is the door
+// when the line is the door's: its marquee leaves while About is open.
+function aboutLink(around) {
+  const button = h("button", { class: "inline-link", type: "button", onclick: () => openAbout(button, around) }, "About");
   return button;
 }
 
-export function credits() {
-  return h("p", { class: "credits" }, "Posters and film data from TMDB ", tmdbLogo(), " · ", aboutLink());
+export function credits({ around = null } = {}) {
+  return h("p", { class: "credits" }, "Posters and film data from TMDB ", tmdbLogo(), " · ", aboutLink(around));
 }

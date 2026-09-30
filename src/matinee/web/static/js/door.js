@@ -5,7 +5,8 @@
 
 import { get, post, put } from "./api.js";
 import { credits } from "./credits.js";
-import { clear, h, isPhone, sentenceCase } from "./dom.js";
+import { clear, h, isPhone, prefersLessMotion, sentenceCase, wait } from "./dom.js";
+import { FLIGHT_MS, copyAt, fly, nameAt, riseOf, wordmarkAt } from "./flight.js";
 import { typeLine } from "./type.js";
 
 // Bulbs round the sign and the gap between them, as on the design boards. Two dark bulbs chase clockwise,
@@ -101,7 +102,8 @@ function field(props) {
   return h("input", { class: "field", autocomplete: "off", spellcheck: "false", ...props });
 }
 
-// The door and what it asks. `onEnter` takes the viewer into the theatre.
+// The door and what it asks. `onEnter` takes the viewer into the theatre, and is handed this door, whose
+// name has flown to the wordmark's place by then.
 export class Door {
   constructor({ stage, onEnter }) {
     this.stage = stage;
@@ -109,6 +111,7 @@ export class Door {
     this.held = [];
     this.picked = new Set();
     this.excluded = new Set();
+    this.copy = null; // the name while it is away from the sign: flying, or landed at the wordmark's place
   }
 
   // Build the door and open on the screen this device's tokens call for, or on `screen` when given.
@@ -120,7 +123,7 @@ export class Door {
       h("h1", { class: "sr-only" }, "Matinee box office"),
       this.marquee,
       this.wall,
-      h("footer", { class: "door-foot" }, credits()),
+      h("footer", { class: "door-foot" }, credits({ around: this })),
     );
     if (screen === "known") return this.known();
     const profile = this.held.find((p) => p.id === profileId);
@@ -253,9 +256,58 @@ export class Door {
     this.enter({ viewer: { profile_id: profile.id }, name: profile.name, profileTopics: profile.topics.length > 0 });
   }
 
+  // A door is entered once: a second tap or Enter before its buttons are disabled changes nothing.
   enter({ viewer = {}, name = null, profileTopics = false }) {
+    if (this.entered) return;
+    this.entered = true;
     for (const b of this.stage.querySelectorAll("button, input")) b.disabled = true;
-    this.onEnter({ viewer, name, profileTopics });
+    this.onEnter({ viewer, name, profileTopics, door: this });
+  }
+
+  // The marquee leaves: the door's words fade, the rest of the marquee lifts and fades, and the name flies
+  // to the wordmark's place, beside `beside` (what the theatre's top bar will also hold). Resolves once it
+  // has landed; it stays there until `settle()`. A phone's lit strip draws no name, so from the picker the
+  // name is at the wordmark's place at once while the strip lifts away.
+  async leave(beside = []) {
+    const name = this.marquee.querySelector(".sign-name");
+    if (!this.copy) {
+      const at = nameAt(name); // measured before the marquee lifts, which moves the sign
+      this.home = at.size > 0 ? at : null;
+      this.copy = copyAt(this.home ?? { ...at, size: 30 });
+      this.rise = riseOf(this.copy);
+    }
+    name.classList.add("away");
+    this.stage.classList.add("leaving");
+    this.marquee.classList.add("lifted");
+    const to = wordmarkAt(this.rise, beside);
+    if (this.home) return fly(this.copy, to);
+    await fly(this.copy, to, { instant: true });
+    if (!prefersLessMotion()) await wait(FLIGHT_MS);
+  }
+
+  // The landed name gives way to a wordmark standing in its place.
+  settle() {
+    this.copy?.remove();
+    this.copy = null;
+  }
+
+  // The marquee returns: the name flies back to the sign from wherever it is, and the rest of the marquee
+  // and the door's words come back. Resolves once the name is home. With no name on the sign to return to
+  // (a phone's lit strip), the copy simply goes.
+  async bringBack() {
+    this.stage.classList.remove("leaving");
+    this.marquee.classList.remove("lifted");
+    const name = this.marquee.querySelector(".sign-name");
+    if (!this.home) {
+      name.classList.remove("away");
+      this.settle();
+      return;
+    }
+    this.copy ??= copyAt(wordmarkAt(this.rise));
+    await fly(this.copy, this.home);
+    if (this.marquee.classList.contains("lifted")) return; // it left again before it was home
+    name.classList.remove("away");
+    this.settle();
   }
 
   // The trigger picker, which is also the preferences page when `editing` names a held profile.

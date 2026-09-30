@@ -4,7 +4,6 @@ import { get, post } from "./api.js";
 import { correctionLink } from "./correct.js";
 import { credits } from "./credits.js";
 import { Door } from "./door.js";
-import { closeIris, openIris } from "./iris.js";
 import { clear, h, prefersLessMotion, sentenceCase, wait } from "./dom.js";
 import { showPick } from "./pick.js";
 import { Deck, dealBeneath, dealPair, setFor } from "./quips.js";
@@ -45,6 +44,10 @@ get("/api/quips").then((res) => {
   else console.warn("the pick's lines could not be read; picks show no line", res.data);
 });
 
+// The door whose name flew in on going in; its name stands at the wordmark's place until the theatre's own
+// wordmark takes over.
+let landing = null;
+
 const TALK_FADE_MS = 350; // the question's words fade out as a pick begins
 const READ_MS = 1000; // Matinee's reply to the last answer stays whole this long before the hunt fades it
 
@@ -60,6 +63,16 @@ function leaveTo(next) {
   lockStage();
   wall.endPick();
   next();
+}
+
+// The theatre's top bar, the wordmark at its left. A name that flew in from the door gives way to it, and
+// the door, faded since going in, is no longer the stage's.
+function topbar(...rest) {
+  const bar = h("header", { class: "topbar" }, h("div", { class: "wordmark" }, "Matinee"), ...rest);
+  landing?.settle();
+  landing = null;
+  stage.classList.remove("at-door", "leaving");
+  return bar;
 }
 
 // The profile's name at the top of the wall, with "Edit my list" and "Not <name>?".
@@ -124,7 +137,7 @@ function frame({ count }) {
     "Just pick one!",
   );
   clear(stage).append(
-    h("header", { class: "topbar" }, h("div", { class: "wordmark" }, "Matinee"), nameTag(), h("div", { class: "count" }, count)),
+    topbar(nameTag(), h("div", { class: "count" }, count)),
     h("section", { class: "talk" }, line, answers, pick),
     h("div", { class: "bottombar" }, trail(), h("span"), credits()),
   );
@@ -146,25 +159,25 @@ function answerButton(o, picture) {
   );
 }
 
-// `reveal` runs once the screen is built and before the line types (the iris opening onto the wall).
-async function ask({ ack, question, options, count, many = false, picture = false, reveal = null }) {
+async function ask({ ack, question, options, count, many = false, picture = false }) {
   const { line, answers, pick } = frame({ count });
   const buttons = options.map((o) => answerButton(o, picture));
   answers.classList.toggle("many", many);
   answers.classList.toggle("pails", picture);
   answers.append(...buttons);
-  if (reveal) await reveal();
   await typeLine(line, ack, question);
   answers.hidden = false;
   pick.hidden = false;
 }
 
-function problem(data, again) {
-  wall.clear();
+// A problem screen: the message and "Try again". The wall is emptied, so no stale film list shows, except
+// when `keep` is set: a start that fails after going in keeps the door's posters behind it.
+function problem(data, again, keep = false) {
+  if (!keep) wall.clear();
   const line = h("h1", { class: "line done" });
   line.append(h("span", { class: "ack" }, data.message || "Something went wrong."));
   clear(stage).append(
-    h("header", { class: "topbar" }, h("div", { class: "wordmark" }, "Matinee")),
+    topbar(),
     h(
       "section",
       { class: "talk" },
@@ -184,18 +197,21 @@ async function boot(opts = {}) {
   await new Door({ stage, onEnter: enter }).open({ door: door.data, ...opts });
 }
 
-async function enter({ viewer, name, profileTopics }) {
+// Going in: the start is asked for at once, while the door's name flies to the wordmark's place, and the
+// first question types once it has landed.
+async function enter({ viewer, name, profileTopics, door }) {
   Object.assign(visit, { viewer, name, profileTopics });
-  await closeIris();
-  clear(stage);
-  stage.classList.remove("at-door");
-  await start({ reveal: openIris });
-  openIris(); // a start that ended on a problem screen still opens
+  const request = post("/api/first", { viewer });
+  landing = door;
+  await door.leave([nameTag()].filter(Boolean));
+  await start({ request, keep: true });
 }
 
-async function start({ reveal = null } = {}) {
-  const res = await post("/api/first", { viewer: visit.viewer });
-  if (!res.ok) return problem(res.data, start);
+// The first question. `request` is the start already asked for, if any; `keep` keeps the wall's posters
+// behind a problem screen (a start after going in, and its retries).
+async function start({ request = null, keep = false } = {}) {
+  const res = await (request ?? post("/api/first", { viewer: visit.viewer }));
+  if (!res.ok) return problem(res.data, () => start({ keep }), keep);
   Object.assign(visit, {
     tree: null,
     answers: [],
@@ -212,7 +228,7 @@ async function start({ reveal = null } = {}) {
   const name = res.data.name;
   const ack = name ? greeting.replace(/\.$/, `, ${name}.`) : greeting;
   const options = res.data.options.map((o) => ({ say: o.say, go: () => chooseTree(o) }));
-  await ask({ ack, question, options, count: countText(visit.pool.length, true), many: true, reveal });
+  await ask({ ack, question, options, count: countText(visit.pool.length, true), many: true });
 }
 
 function chooseTree(option) {
@@ -258,7 +274,7 @@ function pickFrame() {
   const left = h("div", { class: "pick-left" }, aside);
   const showing = h("section", { class: "showing" }, left);
   clear(stage).append(
-    h("header", { class: "topbar" }, h("div", { class: "wordmark" }, "Matinee"), nameTag() || h("span")),
+    topbar(nameTag() || h("span")),
     showing,
     h("footer", { class: "bottombar" }, trail(), h("span"), credits()),
   );

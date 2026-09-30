@@ -925,6 +925,14 @@ button {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+
+  /* Going in and About change at once: their short transitions would paint one frame of the door as it was. */
+  .marquee,
+  .sign-name,
+  .door-wall,
+  .door-foot {
+    transition-property: none !important;
+  }
 }
 
 /* ---------- the front door ---------- */
@@ -963,6 +971,48 @@ button {
   flex-direction: column;
   align-items: center;
   padding-top: 26px;
+  transform-origin: 50% 0;
+  transition:
+    opacity 0.55s ease,
+    transform 0.8s cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+/* Going in, or opening About from the door: the marquee lifts and fades while its name flies to the
+   wordmark's place, and the door's words fade out. The name's own copy does the flying (flight.js). */
+.marquee.lifted {
+  opacity: 0;
+  transform: translateY(-110px) scale(0.93);
+  pointer-events: none;
+}
+
+.sign-name.away {
+  visibility: hidden;
+}
+
+.door-wall,
+.door-foot {
+  transition: opacity 0.3s ease;
+}
+
+.stage.leaving .door-wall,
+.stage.leaving .door-foot {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.flying-name {
+  position: fixed;
+  z-index: 6;
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 800;
+  line-height: 1;
+  color: var(--gold);
+  text-transform: uppercase;
+  white-space: nowrap;
+  pointer-events: none;
+  /* Only the flight moves it; the reduced-motion rule's short transitions would paint its old place. */
+  transition-property: none !important;
 }
 
 .marquee::before {
@@ -1306,6 +1356,22 @@ button {
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-color: rgba(242, 179, 61, 0.45) transparent;
+}
+
+/* Opened from the door, the panel fades in once the name is nearly home, and the wordmark shows once it
+   has landed. */
+.about.from-door .about-panel {
+  animation-delay: 0.8s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .about.from-door .about-panel {
+    animation-delay: 0s;
+  }
+}
+
+.about.flying .about-wordmark {
+  visibility: hidden;
 }
 
 /* Where the theatre's wordmark stands, so opening About from inside moves nothing. It stays put while
@@ -1956,22 +2022,4 @@ button {
   .picker {
     row-gap: 10px;
   }
-}
-
-/* ---------- the iris ---------- */
-
-body[data-iris] > .wall,
-body[data-iris] > .stage {
-  clip-path: circle(72vmax at 50% 45%);
-}
-
-body[data-iris="closed"] > .wall,
-body[data-iris="closed"] > .stage {
-  clip-path: circle(0 at 50% 45%);
-  transition: clip-path 0.6s cubic-bezier(0.6, 0, 0.9, 0.4);
-}
-
-body[data-iris="opening"] > .wall,
-body[data-iris="opening"] > .stage {
-  transition: clip-path 0.75s cubic-bezier(0.1, 0.6, 0.3, 1);
 }
