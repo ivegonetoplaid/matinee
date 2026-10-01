@@ -175,7 +175,7 @@ def test_a_saved_exclusion_applies_to_every_walk(site: Any) -> None:
         "/api/walk",
         json={"tree": "west", "answers": [{"question": "era", "option": 1}], "viewer": {"profile_id": me["id"]}},
     ).json()
-    assert after["question"]["id"] == "payoff"  # topic 188 skips the gore question
+    assert after["question"]["id"] == "kind"  # topic 188 skips the gore question
 
 
 def test_a_visitor_holds_exclusions_for_the_visit_only(site: Any, tmp_path: Path) -> None:
@@ -184,7 +184,7 @@ def test_a_visitor_holds_exclusions_for_the_visit_only(site: Any, tmp_path: Path
     assert 3 not in client.post("/api/walk", json=visit).json()["pool"]
     assert 3 in client.post("/api/walk", json={"tree": "west"}).json()["pool"]
     squeamish = {"tree": "west", "answers": [{"question": "era", "option": 1}], "viewer": {"topics": [188]}}
-    assert client.post("/api/walk", json=squeamish).json()["question"]["id"] == "payoff"
+    assert client.post("/api/walk", json=squeamish).json()["question"]["id"] == "kind"
     assert client.cookies.get("matinee_tokens") is None
     assert store.suggest("anyone") == [] and store.holding([]) == {}
     with sqlite3.connect(tmp_path / "matinee.sqlite") as db:

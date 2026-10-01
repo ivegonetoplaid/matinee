@@ -17,9 +17,9 @@ DoesTheDogDie exclusions, which are checked at the pick. For a viewer whose topi
 skip a scale question (horror's gore pails), `gentlest` names the least-scoring
 third of a pool on that scale, which the pick draws from first.
 
-A tree's flavours are found by keyword, genome and genre signals, or, for a
-flavour marked `labelled`, read from the labels file (`matinee.labels`), which
-also settles which films a tree's pool holds. An answer leaving one
+A tree's flavours, its kinds, are read from the labels file (`matinee.labels`),
+which alone places films behind a genre door (`matinee.pools`); comedy's standup
+flavour is the standup specials. An answer leaving one
 flavour out keeps films that also sit in another flavour of the tree. An answer
 offering a labelled flavour shows only when that flavour holds at least
 `KIND_MIN_FILMS` films of the tree's pool in the loaded library, counted before
@@ -49,7 +49,7 @@ import numpy.typing as npt
 import pandas as pd
 
 from matinee.labels import Labels
-from matinee.pools import FOR_GROWN_UPS, House, build_pools, load_house, specials
+from matinee.pools import House, build_pools, load_house, specials
 from matinee.reference import DATA, Reference, load_reference, load_specs, problems
 from matinee.scales import film_scores, membership, offered, scale_of
 from matinee.table import FilmTable
@@ -162,25 +162,6 @@ def _any_genre(table: FilmTable, names: frozenset[str]) -> Mask:
     return np.array(table.films.genres.map(lambda g: bool(names & g)), dtype=bool)
 
 
-def _flavour(table: FilmTable, tree: Tree, name: str) -> Mask:
-    """Films matching any of the flavour's signals and reaching each of its `score_at_least` floors.
-
-    A film with no score passes a floor, as unknown values do everywhere.
-    """
-    spec = tree.flavours.get(name)
-    if spec is None:
-        raise TreeError(f"tree '{tree.id}' has no flavour '{name}'")
-    words = frozenset(spec.get("keywords_any", []))
-    hit = np.array(_keywords(table).map(lambda k: bool(words & k)), dtype=bool)
-    for tag in spec.get("genome_any", []):
-        hit |= _bool(table.tag(tag) >= tree.genome_threshold)
-    hit |= _any_genre(table, frozenset(spec.get("genres_any", [])))
-    for score, floor in spec.get("score_at_least", {}).items():
-        values = _score(table, tree, score)
-        hit &= _passes(values, values >= floor)
-    return hit
-
-
 def _labelled(cat: Catalog, tree: Tree, name: str) -> Mask:
     """Films whose labels in this tree name the kind `name`; an unlabelled film is in no kind."""
     kinds = cat.labels.of(tree.id).kinds
@@ -190,16 +171,13 @@ def _labelled(cat: Catalog, tree: Tree, name: str) -> Mask:
 def house_flavour(cat: Catalog, tree: Tree, name: str) -> Mask:
     """The flavour's films after house pins: a film pinned in joins it, a film pinned out leaves it.
 
-    A flavour marked `labelled` takes its films from the labels, one marked `specials` takes the standup
-    specials, and any other is found by its signals.
+    A flavour marked `labelled` takes its films from the labels, and one marked `specials` takes the standup
+    specials.
     """
-    spec = tree.flavours.get(name, {})
-    if spec.get("labelled"):
-        hit = _labelled(cat, tree, name)
-    elif spec.get("specials"):
-        hit = _bool(specials(cat.table, cat.house))
-    else:
-        hit = _flavour(cat.table, tree, name)
+    spec = tree.flavours.get(name)
+    if spec is None:
+        raise TreeError(f"tree '{tree.id}' has no flavour '{name}'")
+    hit = _labelled(cat, tree, name) if spec.get("labelled") else _bool(specials(cat.table, cat.house))
     for tmdb, member in cat.house.flavour_pins.get((tree.id, name), {}).items():
         hit[cat.table.films.index == tmdb] = member
     return hit
@@ -212,41 +190,6 @@ def _in_other_flavour(cat: Catalog, tree: Tree, name: str) -> Mask:
         if other != name:
             hit |= house_flavour(cat, tree, other)
     return hit
-
-
-def payoff_members(cat: Catalog, tree: Tree) -> pd.DataFrame:
-    """One boolean column per payoff answer of `tree`: whether each film belongs to it."""
-    spec = tree.payoffs
-    if spec is None:
-        raise TreeError(f"tree '{tree.id}' has no payoffs")
-    table = cat.table
-    z = pd.DataFrame(
-        {
-            name: (table.mean_of(tags) - cat.reference.payoff(tree.id, name).mean)
-            / cat.reference.payoff(tree.id, name).sd
-            for name, tags in spec.standardised.items()
-        }
-    )
-    strongest = z.eq(z.max(axis=1), axis=0)
-    members = strongest if spec.overlap is None else strongest | z.ge(spec.overlap)
-    for name, (tags, minimum) in spec.thresholds.items():
-        members[name] = table.mean_of(tags).ge(minimum)
-    members = members.fillna(False).astype(bool)
-    unscored = ~table.has_genome()
-    placed = pd.Series(False, index=table.films.index)
-    for genre, payoff in spec.by_genre:
-        hit = unscored & table.films.genres.map(lambda g, n=genre: n in g)
-        members[payoff] |= hit
-        placed |= hit
-    rest = unscored & ~placed
-    for name in spec.standardised if spec.default == "all" else [spec.default]:
-        members[name] |= rest
-    pins = {payoff: ids for (pin_tree, payoff), ids in cat.house.payoff_pins.items() if pin_tree == tree.id}
-    for ids in pins.values():
-        members.loc[table.films.index.isin(list(ids))] = False
-    for payoff, ids in pins.items():
-        members[payoff] |= table.films.index.isin(list(ids))
-    return members
 
 
 def scale_members(cat: Catalog, tree: Tree, name: str) -> pd.DataFrame:
@@ -332,11 +275,6 @@ def _scored_mask(cat: Catalog, tree: Tree, f: Filter) -> Mask:
         mask &= house_flavour(cat, tree, f.flavour)
     if f.flavour_none is not None:
         mask &= ~house_flavour(cat, tree, f.flavour_none) | _in_other_flavour(cat, tree, f.flavour_none)
-    if f.payoff is not None:
-        members = payoff_members(cat, tree)
-        if f.payoff not in members.columns:
-            raise TreeError(f"tree '{tree.id}' has no payoff '{f.payoff}'")
-        mask &= members[f.payoff].to_numpy()
     if f.bands is not None:
         mask &= offered(scale_members(cat, tree, f.bands.scale), f.bands.bands).to_numpy()
     for name, limit in f.score_at_most.items():
@@ -372,51 +310,16 @@ def _first_option(o: dict[str, str]) -> FirstOption:
     return FirstOption(o["say"], o["tree"], o["label"])
 
 
-def _labelled_tree(cat: Catalog, tree_id: str, kinds: Mapping[int, frozenset[str]]) -> Tree:
-    """The tree a labels entry names; raises when no tree file defines it or it does not label a kind given."""
-    tree = cat.trees.get(tree_id)
-    if tree is None:
-        raise EngineError(f"the labels name tree '{tree_id}', which no tree file defines")
-    known = {name for name, spec in tree.flavours.items() if spec.get("labelled")}
-    unknown = set().union(*kinds.values()) - known
-    if unknown:
-        raise EngineError(f"the labels give tree '{tree_id}' kinds it does not label: {sorted(unknown)}")
-    return tree
-
-
-def _apply_labels(cat: Catalog) -> None:
-    """Check the labels against the trees, then settle every tree's pool by them at once.
-
-    Every labelled film joins the pool, whatever the pool rules said, except a kids-only film, which only
-    the kids tree holds, and a film for little ones or the whole family, which no grown-ups' tree (horror,
-    thriller, crime) holds. Then a film labelled out of a tree
-    leaves it only where another tree keeps it: holds it and does not label it out too. A film every tree
-    holding it labels out stays in all of them, so no film is left with no way in. A film the house pins
-    to a tree never leaves it: a house pin is the operator's own placement. The order of the entries in
-    the labels file changes nothing.
-    """
-    index = cat.table.films.index
-    none = np.zeros(len(index), dtype=bool)
-    kids_only, young = cat.pools.get("kids:only", none), cat.pools.get("kids:young", none)
-    leaving: dict[str, Mask] = {}
+def _check_labels(cat: Catalog) -> None:
+    """Every tree the labels name exists and labels every kind they give it; raises EngineError otherwise."""
     for tree_id, labels in cat.labels.trees.items():
-        tree = _labelled_tree(cat, tree_id, labels.kinds)
-        if tree.pool in cat.pools:
-            barred = kids_only.copy()
-            if tree.pool in FOR_GROWN_UPS:
-                barred |= young
-            cat.pools[tree.pool] = cat.pools[tree.pool] | (index.isin(list(labels.kinds)) & ~barred)
-            pinned = index.isin(list(cat.house.tree_pins.get(tree.pool, frozenset())))
-            leaving[tree.pool] = index.isin(list(labels.out)) & ~pinned
-    keeps = {t.pool: cat.pools[t.pool].copy() for t in cat.trees.values() if t.pool in cat.pools}
-    for pool, out in leaving.items():
-        keeps[pool] &= ~out
-    for pool, out in leaving.items():
-        elsewhere = np.zeros(len(index), dtype=bool)
-        for other, kept in keeps.items():
-            if other != pool:
-                elsewhere |= kept
-        cat.pools[pool] = cat.pools[pool] & ~(out & elsewhere)
+        tree = cat.trees.get(tree_id)
+        if tree is None:
+            raise EngineError(f"the labels name tree '{tree_id}', which no tree file defines")
+        known = {name for name, spec in tree.flavours.items() if spec.get("labelled")}
+        unknown = set().union(*labels.kinds.values()) - known
+        if unknown:
+            raise EngineError(f"the labels give tree '{tree_id}' kinds it does not label: {sorted(unknown)}")
 
 
 def _hold_apart(cat: Catalog) -> None:
@@ -481,8 +384,9 @@ def load_catalog(
     for tree_id, flavour in cat.house.flavour_pins:
         if flavour not in getattr(cat.trees.get(tree_id), "flavours", {}):
             raise EngineError(f"house flavour pin names tree '{tree_id}' flavour '{flavour}', which no tree defines")
-    cat.pools = {name: np.array(pool, dtype=bool) for name, pool in build_pools(table, cat.house).items()}
-    _apply_labels(cat)
+    _check_labels(cat)
+    by_pool = Labels({cat.trees[t].pool: labels for t, labels in cat.labels.trees.items()})
+    cat.pools = {name: np.array(pool, dtype=bool) for name, pool in build_pools(table, cat.house, by_pool).items()}
     _hold_apart(cat)
     for tree in cat.trees.values():
         if tree.pool not in cat.pools:

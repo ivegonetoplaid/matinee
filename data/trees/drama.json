@@ -1,138 +1,113 @@
 {
   "genre": "Drama",
   "pool": "drama",
-  "opening": "drama. okay, let's feel something.",
-  "note": "Decisions 41, 42 and 44. One question, then a roll. Each answer is a payoff standardised against the drama reference; a film belongs to its highest payoff and to any other reaching 0.75. No thrill question, and nothing about quality, acclaim or awards.",
-  "scores": {
-    "weight": [
-      "drama",
-      "dramatic",
-      "emotional",
-      "moving",
-      "touching",
-      "harsh"
-    ]
-  },
-  "reference": {
-    "movielens_genres": [
-      "Drama"
-    ],
-    "floor_any": {
-      "weight": 0.13
-    }
-  },
-  "payoffs": {
-    "root": [
-      "inspirational",
-      "inspiring",
-      "feel-good",
-      "feel good movie",
-      "heartwarming",
-      "courage",
-      "underdog"
-    ],
-    "cry": [
-      "heartbreaking",
-      "poignant",
-      "sad",
-      "depressing",
-      "emotional",
-      "sad but good"
-    ],
-    "love": [
-      "romance",
-      "love story",
-      "romantic",
-      "love"
-    ],
-    "dark": [
-      "dark",
-      "bleak",
-      "disturbing",
-      "grim"
-    ],
-    "apart": [
-      "crime gone awry",
-      "mafia",
-      "organized crime",
-      "gangsters",
-      "mob",
-      "corruption"
-    ],
-    "head": [
-      "twist",
-      "plot twist",
-      "twists & turns",
-      "twist ending",
-      "psychological",
-      "enigmatic",
-      "mystery"
-    ],
-    "quiet": [
-      "melancholic",
-      "melancholy",
-      "loneliness",
-      "reflective",
-      "meditative",
-      "thought-provoking",
-      "philosophical"
-    ]
-  },
-  "payoff_rule": {
-    "overlap": 0.75,
-    "no_genome": {
-      "default": "all"
-    },
-    "note": "a film with no genome score is offered under every answer: no decision gives it one, and a missing score never removes a film"
-  },
+  "opening": "lovely. something with a bit of weight to it.",
+  "note": "Decision 88: the door runs on the labels (the labels file in Matinee's state directory). One question, its kinds, then \"anything\". A film sits under every kind it is labelled with, at most two; a film not yet labelled waits behind the door under \"anything\" and \"Just pick one!\" only. A kind under 30 films in the library is not offered.",
   "questions": [
     {
-      "id": "payoff",
-      "ask": "what do you want it to do to you?",
+      "id": "kind",
+      "ask": "so, what kind of story are we settling into?",
       "options": [
         {
-          "say": "give me someone to root for.",
+          "say": "true stories and biopics. it really happened.",
+          "reply": "the best ones usually did.",
           "filter": {
-            "payoff": "root"
+            "flavour": "true_stories"
           }
         },
         {
-          "say": "I want a good cry.",
+          "say": "families, childhood, and growing up.",
+          "reply": "ah. everyone's been there, one way or another.",
           "filter": {
-            "payoff": "cry"
+            "flavour": "family_coming_of_age"
           }
         },
         {
-          "say": "make me believe in love.",
+          "say": "lives coming apart. grief, addiction, and love that costs.",
+          "reply": "take a breath. this one's heavy.",
           "filter": {
-            "payoff": "love"
+            "flavour": "lives_apart"
           }
         },
         {
-          "say": "take me somewhere dark.",
+          "say": "another era. kings, empires, and history in costume.",
+          "reply": "splendid. mind the corsets.",
           "filter": {
-            "payoff": "dark"
+            "flavour": "history_period"
           }
         },
         {
-          "say": "let me watch it all fall apart.",
+          "say": "crime and its consequences. the people, not the puzzle.",
+          "reply": "no one walks away clean.",
           "filter": {
-            "payoff": "apart"
+            "flavour": "crime_drama"
           }
         },
         {
-          "say": "mess with my head.",
+          "say": "war, and what it does to people.",
+          "reply": "the quiet after is the hardest part.",
           "filter": {
-            "payoff": "head"
+            "flavour": "war_cost"
           }
         },
         {
-          "say": "something quiet to sit with.",
+          "say": "sports. the game, the match, the fighter.",
+          "reply": "into the ring, then.",
           "filter": {
-            "payoff": "quiet"
+            "flavour": "sports"
           }
+        },
+        {
+          "say": "courtrooms and politics. trials, elections, and power.",
+          "reply": "order in the court. I'll take the gavel.",
+          "filter": {
+            "flavour": "courtroom_politics"
+          }
+        },
+        {
+          "say": "artists, musicians, and showbiz. the life behind the stage.",
+          "reply": "places, everyone. curtain's up.",
+          "filter": {
+            "flavour": "showbiz"
+          }
+        },
+        {
+          "say": "anything. something with real weight to it.",
+          "reply": "very well. get comfortable.",
+          "filter": {}
         }
       ]
     }
-  ]
+  ],
+  "flavours": {
+    "true_stories": {
+      "labelled": true
+    },
+    "family_coming_of_age": {
+      "labelled": true
+    },
+    "lives_apart": {
+      "labelled": true
+    },
+    "history_period": {
+      "labelled": true
+    },
+    "crime_drama": {
+      "labelled": true,
+      "note": "shared with the crime door, so a film behind both holds it at both or neither."
+    },
+    "war_cost": {
+      "labelled": true,
+      "note": "shared with the war door, so a film behind both holds it at both or neither."
+    },
+    "sports": {
+      "labelled": true
+    },
+    "courtroom_politics": {
+      "labelled": true
+    },
+    "showbiz": {
+      "labelled": true
+    }
+  }
 }

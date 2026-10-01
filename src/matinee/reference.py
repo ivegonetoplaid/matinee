@@ -1,7 +1,7 @@
 """Reference statistics: what every score means, fixed against films in general rather than one library.
 
-A tree file names its reference (MovieLens genres plus a score floor), the payoff
-scores it standardises, and the scales it cuts into answers. `compute` measures
+A tree file names its reference (MovieLens genres plus a score floor) and the
+scales it cuts into answers. `compute` measures
 those over the genome and `to_json` writes them as a shipped data file; at
 runtime Matinee only reads that file and never recomputes it from a library.
 
@@ -20,7 +20,6 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
-import numpy.typing as npt
 
 from matinee.genome import Genome, Mask
 
@@ -60,15 +59,7 @@ class TreeSpec:
     tree: str
     genres: tuple[str, ...]
     floor_any: tuple[Floor, ...]
-    payoffs: Mapping[str, tuple[str, ...]]
     scales: Mapping[str, ScaleSpec]
-
-
-@dataclass(frozen=True)
-class Stat:
-    tags: tuple[str, ...]
-    mean: float
-    sd: float
 
 
 @dataclass(frozen=True)
@@ -83,7 +74,6 @@ class TreeReference:
     genres: tuple[str, ...]
     floor_any: tuple[Floor, ...]
     films: int
-    payoffs: Mapping[str, Stat]
     scales: Mapping[str, Cuts]
 
 
@@ -91,12 +81,6 @@ class TreeReference:
 class Reference:
     source: str
     trees: Mapping[str, TreeReference]
-
-    def payoff(self, tree: str, payoff: str) -> Stat:
-        try:
-            return self.trees[tree].payoffs[payoff]
-        except KeyError as exc:
-            raise ReferenceError(f"the reference has no payoff '{payoff}' for tree '{tree}'") from exc
 
     def scale(self, tree: str, scale: str) -> Cuts:
         try:
@@ -140,8 +124,7 @@ def spec_of(tree: str, doc: Mapping[str, Any]) -> TreeSpec | None:
     for name, s in doc.get("scales", {}).items():
         _exact_keys(s, SCALE_KEYS, f"tree '{tree}' scale '{name}'", frozenset(SCALE_ENGINE_KEYS))
         scales[name] = ScaleSpec(s["score"], _tags(scores, s["score"], tree), tuple(float(p) for p in s["percentiles"]))
-    payoffs = {name: tuple(tags) for name, tags in doc.get("payoffs", {}).items()}
-    return TreeSpec(tree, tuple(ref["movielens_genres"]), floors, payoffs, scales)
+    return TreeSpec(tree, tuple(ref["movielens_genres"]), floors, scales)
 
 
 def load_specs(trees_dir: Path) -> list[TreeSpec]:
@@ -169,15 +152,10 @@ def _round(x: float | np.floating[Any]) -> float:
     return round(float(x), PLACES)
 
 
-def _stat(values: npt.NDArray[np.float32], tags: tuple[str, ...]) -> Stat:
-    return Stat(tags, _round(values.mean()), _round(values.std()))
-
-
 def compute_tree(genome: Genome, spec: TreeSpec) -> TreeReference:
     films = reference_films(genome, spec)
     if not films.any():
         raise ReferenceError(f"tree '{spec.tree}' has no reference films in {genome.release}")
-    payoffs = {name: _stat(genome.mean_of(tags)[films], tags) for name, tags in spec.payoffs.items()}
     scales = {
         name: Cuts(
             s.tags,
@@ -186,7 +164,7 @@ def compute_tree(genome: Genome, spec: TreeSpec) -> TreeReference:
         )
         for name, s in spec.scales.items()
     }
-    return TreeReference(spec.genres, spec.floor_any, int(films.sum()), payoffs, scales)
+    return TreeReference(spec.genres, spec.floor_any, int(films.sum()), scales)
 
 
 def compute(genome: Genome, specs: Sequence[TreeSpec]) -> Reference:
@@ -200,7 +178,6 @@ def to_json(ref: Reference) -> str:
             "movielens_genres": list(t.genres),
             "floor_any": {f.score: {"tags": list(f.tags), "min": f.minimum} for f in t.floor_any},
             "films": t.films,
-            "payoffs": {n: {"tags": list(p.tags), "mean": p.mean, "sd": p.sd} for n, p in t.payoffs.items()},
             "scales": {
                 n: {"tags": list(c.tags), "percentiles": list(c.percentiles), "cuts": list(c.cuts)}
                 for n, c in t.scales.items()
@@ -218,7 +195,6 @@ def from_json(text: str) -> Reference:
             genres=tuple(t["movielens_genres"]),
             floor_any=tuple(Floor(s, tuple(f["tags"]), float(f["min"])) for s, f in t["floor_any"].items()),
             films=int(t["films"]),
-            payoffs={n: Stat(tuple(p["tags"]), float(p["mean"]), float(p["sd"])) for n, p in t["payoffs"].items()},
             scales={
                 n: Cuts(tuple(c["tags"]), tuple(float(x) for x in c["percentiles"]), tuple(float(x) for x in c["cuts"]))
                 for n, c in t["scales"].items()
@@ -239,9 +215,6 @@ def _tree_problems(spec: TreeSpec, have: TreeReference) -> list[str]:
     out = []
     if spec.genres != have.genres or spec.floor_any != have.floor_any:
         out.append(f"tree '{spec.tree}': its reference genres or floor differ from the shipped reference")
-    for name, tags in spec.payoffs.items():
-        if name not in have.payoffs or have.payoffs[name].tags != tags:
-            out.append(f"tree '{spec.tree}': payoff '{name}' is missing from the reference or has other tags")
     for name, scale in spec.scales.items():
         got = have.scales.get(name)
         if got is None or (got.tags, got.percentiles) != (scale.tags, scale.percentiles):
@@ -250,7 +223,7 @@ def _tree_problems(spec: TreeSpec, have: TreeReference) -> list[str]:
 
 
 def problems(ref: Reference, specs: Sequence[TreeSpec]) -> list[str]:
-    """Every payoff, scale or reference definition a tree file names that the shipped statistics do not cover."""
+    """Every scale or reference definition a tree file names that the shipped statistics do not cover."""
     out: list[str] = []
     for spec in specs:
         have = ref.trees.get(spec.tree)

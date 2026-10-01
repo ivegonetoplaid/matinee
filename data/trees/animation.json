@@ -1,0 +1,73 @@
+{
+  "genre": "Animation",
+  "pool": "animation",
+  "opening": "animation. anything can happen in a cartoon.",
+  "note": "Decision 88: the door runs on the labels (the labels file in Matinee's state directory). One question, its kinds, then \"anything\". A film sits under every kind it is labelled with, at most two; a film not yet labelled waits behind the door under \"anything\" and \"Just pick one!\" only. A kind under 30 films in the library is not offered.",
+  "questions": [
+    {
+      "id": "kind",
+      "ask": "so, what are we drawing tonight?",
+      "options": [
+        {
+          "say": "animated adventures for everyone. the journey's the thing.",
+          "reply": "lovely. grab the snacks.",
+          "filter": {
+            "flavour": "family_adventure"
+          }
+        },
+        {
+          "say": "cartoon comedies. silly, fast, and funny.",
+          "reply": "good. the anvils are on standby.",
+          "filter": {
+            "flavour": "cartoon_comedy"
+          }
+        },
+        {
+          "say": "anime. japanese animation.",
+          "reply": "excellent. subtitles or dub? I won't judge.",
+          "filter": {
+            "flavour": "anime"
+          }
+        },
+        {
+          "say": "animated superheroes. capes in ink.",
+          "reply": "heroes, assemble. in two dimensions.",
+          "filter": {
+            "flavour": "superheroes"
+          }
+        },
+        {
+          "say": "animation for grown-ups. definitely not for the kids.",
+          "reply": "send the little ones to bed first.",
+          "filter": {
+            "flavour": "adult_animation"
+          }
+        },
+        {
+          "say": "anything animated. surprise me.",
+          "reply": "very well. anything's possible.",
+          "filter": {}
+        }
+      ]
+    }
+  ],
+  "flavours": {
+    "family_adventure": {
+      "labelled": true
+    },
+    "cartoon_comedy": {
+      "labelled": true,
+      "note": "shared with the comedy door, so a film behind both holds it at both or neither."
+    },
+    "anime": {
+      "labelled": true
+    },
+    "superheroes": {
+      "labelled": true,
+      "note": "shared with the action and scifi and fantasy doors, so a film behind both holds it at both or neither."
+    },
+    "adult_animation": {
+      "labelled": true
+    }
+  }
+}

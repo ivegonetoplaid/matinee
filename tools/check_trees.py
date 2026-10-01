@@ -8,11 +8,16 @@ no film's home. It reports:
 
 1. Reachability: every film must have at least one home. A film a tree holds
    apart (comedy's standup specials) must sit in no other home.
-2. Expected homes: every film must be reachable through a tree its own genre tags
-   point at, not only by accident.
-3. The answer key: list films (genome list tags) and hand fixtures in
-   data/answer_key.json, plus the horror and comedy fixture files. A fixture may
-   also name the gore pail a horror film must land in, or pails it must not.
+2. Kinds: every film the labels place behind a door that asks about kinds holds
+   at least one of that door's kinds, and a kind two or more doors share holds
+   the same films at every one of them. The waiting room (films the labels file
+   does not list, placed by their genres) is listed by title, as are the films a
+   house pin puts behind a door where they hold no kind, and the kinds the
+   30-film bar hides in this library.
+3. The answer key: list films (genome list tags) must have a home, and the hand
+   fixtures in data/answer_key.json, plus the horror and comedy fixture files,
+   must hold. A fixture may also name the gore pail a horror film must land in,
+   or pails it must not.
 4. The gore scale: no unpinned film without a genome entry may reach "None. I'm
    squeamish." or "RIP AND TEAR.".
 5. The data: every film carries TMDB facts, and the shipped reference statistics
@@ -25,7 +30,7 @@ no film's home. It reports:
    answers of that tree (decision 58). Fixtures are checked on the full
    library only, since a sample may not hold them.
 
-Reads nothing live. Usage: python3 tools/check_trees.py [--table FILE]
+Reads nothing live. Usage: python3 tools/check_trees.py [--table FILE] [--labels FILE]
 """
 
 from __future__ import annotations
@@ -33,6 +38,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -51,37 +57,17 @@ from matinee.engine import (
     walk_ends,
 )
 from matinee.labels import LabelsError, load_labels
-from matinee.pools import House
+from matinee.pools import GENRE_DOORS, House, waiting
 from matinee.quips import QuipsError, load_quips, quip_problems
 from matinee.reference import DATA
 from matinee.table import FilmTable, load_table
+from matinee.trees import Tree
 
 DEFAULT_TABLE = Path.home() / ".local/share/matinee/films.sqlite"
 SAMPLES = (("a third", 1 / 3, 3), ("a tenth", 1 / 10, 10))  # name, share of the library, fixed seed
 GORE_PROMISES = ("spotless", "rip")  # pails an unknown film could break the promise of
-# Trees a film's genre tag is expected to lead to.
-EXPECTED = {
-    "Horror": {"horror"},
-    "Comedy": {"comedy"},
-    "Action": {"action"},
-    "Adventure": {"action", "drama", "kids", "sleep", "fantasy"},
-    "Drama": {"drama"},
-    "Crime": {"crime", "drama", "action", "horror", "thriller"},
-    "Mystery": {"thriller", "crime", "drama", "action", "horror"},
-    "Thriller": {"thriller", "crime", "drama", "action", "horror"},
-    "Romance": {"drama", "comedy"},
-    "Science Fiction": {"action", "drama", "horror", "kids"},
-    "Fantasy": {"fantasy", "action", "sleep", "kids", "drama", "horror"},
-    "War": {"drama", "action"},
-    "History": {"drama", "action"},
-    "Western": {"western"},
-    "Documentary": {"nonfiction"},
-    "Animation": {"kids"},
-    "Family": {"kids"},
-    "Music": {"drama", "comedy", "nonfiction"},
-    "TV Movie": {"horror", "comedy", "action", "drama", "kids"},
-}
 Pools = dict[str, pd.Series]
+Held = Mapping[str, Mapping[int, frozenset[str]]]  # a shared kind's doors, each to its TreeLabels.kinds
 SPECIALS_KIND = ("comedy", "standup")  # the tree and flavour a house specials pin places a film in
 
 
@@ -117,13 +103,6 @@ def band_of(tmdb: int, pools: Pools) -> str:
     return ""
 
 
-def expected_for(genres: frozenset[str]) -> set[str]:
-    out: set[str] = set()
-    for g in genres:
-        out |= EXPECTED.get(g, set())
-    return out
-
-
 def check_reachability(table: FilmTable, pools: Pools, report: Report) -> None:
     reached = pd.concat([p for n, p in pools.items() if ":" not in n], axis=1).any(axis=1)
     report.say(f"\n== reachability: {int(reached.sum())} of {len(table.films)} films have a home ==")
@@ -153,19 +132,8 @@ def check_apart(cat: Catalog, pools: Pools, report: Report) -> None:
                 )
 
 
-def check_expected(table: FilmTable, pools: Pools, report: Report) -> None:
-    misses = []
-    for tmdb, genres in zip(table.films.index.tolist(), table.films.genres.tolist(), strict=True):
-        want = expected_for(genres)
-        if want and not (homes_of(tmdb, pools) & want):
-            homes = sorted(homes_of(tmdb, pools)) or "nothing"
-            misses.append(f"{_label(table, tmdb)} {'/'.join(sorted(genres))} -> in {homes}")
-    report.say(f"\n== expected homes: {len(misses)} films not reachable through their own genres ==")
-    for m in misses:
-        report.fail(f"unexpected home: {m}")
-
-
 def check_lists(table: FilmTable, pools: Pools, key: dict[str, Any], report: Report) -> None:
+    """Every film a genome list tag names (the answer key's `list_tags`) must have a home."""
     thresholds = key["list_tags"].get("thresholds", {})
     for tag in key["list_tags"]["tags"]:
         threshold = thresholds.get(tag, key["list_tags"]["threshold"])
@@ -173,13 +141,10 @@ def check_lists(table: FilmTable, pools: Pools, key: dict[str, Any], report: Rep
             report.fail(f"list tag missing from genome: {tag}")
             continue
         members = [int(t) for t in table.films.index[table.tag(tag).ge(threshold)]]
-        genres = table.films.genres
-        bad = [t for t in members if not (homes_of(t, pools) & expected_for(genres[t]))]
-        report.say(
-            f"\n== list '{tag}': {len(members) - len(bad)} of {len(members)} reachable through their own genres =="
-        )
+        bad = [t for t in members if not homes_of(t, pools)]
+        report.say(f"\n== list '{tag}': {len(members) - len(bad)} of {len(members)} have a home ==")
         for t in bad:
-            report.fail(f"list '{tag}': {_label(table, t)} -> in {sorted(homes_of(t, pools)) or 'nothing'}")
+            report.fail(f"list '{tag}': {_label(table, t)} has no home")
 
 
 def _check_gore(entry: dict[str, Any], gore: pd.DataFrame, report: Report) -> None:
@@ -280,8 +245,6 @@ def check_pins_in_key(house: House, key: dict[str, Any], report: Report) -> None
     wants += [(t, f"kids_band {b}", fixture.get(t, {}).get("kids_band") == b) for t, b in house.kids_pins.items()]
     for tree, ids in house.tree_pins.items():
         wants += [(t, f"must_reach {tree}", tree in fixture.get(t, {}).get("must_reach", [])) for t in ids]
-    for (tree, _), ids in house.payoff_pins.items():
-        wants += [(t, f"must_reach {tree}", tree in fixture.get(t, {}).get("must_reach", [])) for t in ids]
     for (_, _, band), ids in house.scale_pins.items():
         wants += [(t, f"gore_band {band}", fixture.get(t, {}).get("gore_band") == band) for t in ids]
     wants += _flavour_pin_wants(house, fixture)
@@ -294,9 +257,10 @@ def check_pins_in_key(house: House, key: dict[str, Any], report: Report) -> None
 
 
 def check_flavour_fixtures(cat: Catalog, entries: list[dict[str, Any]], report: Report) -> None:
-    """Fixtures with flavour_in or flavour_out must be in, or out of, those flavours after house pins.
+    """Fixtures with flavour_in or flavour_out must be in, or out of, those flavours as a viewer is offered them.
 
-    A tree defining no flavours is skipped: its fixtures name payoffs, not flavours.
+    That is after house pins, and with a film the tree holds apart (comedy's standup specials) counted only in
+    the flavour it is held apart in, since no other answer offers it.
     """
     index = cat.table.films.index
     wants = [
@@ -304,11 +268,14 @@ def check_flavour_fixtures(cat: Catalog, entries: list[dict[str, Any]], report: 
         for entry in entries
         for side, member in (("flavour_in", True), ("flavour_out", False))
         for tree_id, flavours in entry.get(side, {}).items()
-        if cat.trees[tree_id].flavours
         for flavour in flavours
     ]
     for entry, tree_id, flavour, member in wants:
-        held = house_flavour(cat, cat.trees[tree_id], flavour)[index == entry["tmdb"]]
+        tree = cat.trees[tree_id]
+        offered = house_flavour(cat, tree, flavour)
+        if tree_id in cat.apart and flavour != tree.apart:
+            offered = offered & ~cat.apart[tree_id]
+        held = offered[index == entry["tmdb"]]
         if held.size and bool(held[0]) != member:
             side = "in" if member else "out of"
             report.fail(f"'{entry['title']}' must be {side} {tree_id} flavour {flavour}")
@@ -357,8 +324,7 @@ def check_answer_coverage(cat: Catalog, pools: Pools, report: Report) -> dict[st
 def check_same_answers(full: Catalog, sample: Catalog, report: Report) -> None:
     """A film must reach the same answers in every library (decision 58).
 
-    Compared for every answer of every tree, over the films both libraries hold in that tree's pool: pool
-    membership itself may differ, because the franchise and stray rules read which films are present.
+    Compared for every answer of every tree, over the films both libraries hold in that tree's pool.
     """
     rows = full.table.films.index.get_indexer(sample.table.films.index)
     for (tree_id, question, option), mask in sample.masks.items():
@@ -380,7 +346,6 @@ def check_homes(cat: Catalog, pools: Pools, report: Report) -> Pools:
     reached = {**pools, **check_answer_coverage(cat, pools, report)}
     homes = door_pools(cat, reached)
     check_apart(cat, homes, report)
-    check_expected(cat.table, homes, report)
     check_reachability(cat.table, homes, report)
     return homes
 
@@ -400,22 +365,88 @@ def check_sample(full: Catalog, name: str, share: float, seed: int, report: Repo
     report.prefix = ""
 
 
-def report_kept(cat: Catalog, tree_id: str, report: Report) -> None:
-    """Name the films labelled out of a tree that stay in it, each under the reason it stays."""
+def _kinds_held(cat: Catalog, tree_id: str) -> tuple[pd.Index, pd.Index]:
+    """The films behind a door that asks about kinds that hold none of its kinds: (labelled there, pinned there)."""
+    tree = cat.trees[tree_id]
     index = cat.table.films.index
-    pool = cat.trees[tree_id].pool
-    kept = cat.pools[pool] & index.isin(list(cat.labels.of(tree_id).out))
-    pinned = index.isin(list(cat.house.tree_pins.get(pool, frozenset())))
-    apart = cat.apart.get(tree_id, np.zeros(len(index), dtype=bool))
-    reasons = (
-        ("the house pins it there", kept & pinned),
-        ("held apart there", kept & ~pinned & apart),
-        ("no other door keeps it", kept & ~pinned & ~apart),
-    )
-    for reason, films in reasons:
-        if films.any():
-            names = "; ".join(_label(cat.table, int(t)) for t in index[films])
-            report.say(f"  labelled out of {tree_id} but kept there, {reason}: {names}")
+    kinds = {name for name, spec in tree.flavours.items() if spec.get("labelled")}
+    labelled = cat.labels.of(tree_id).kinds
+    held = np.zeros(len(index), dtype=bool)
+    for name in kinds:
+        held |= house_flavour(cat, tree, name)
+    without = cat.pools[tree.pool] & ~held
+    listed = index.isin(list(labelled))
+    return index[without & listed], index[without & ~listed]
+
+
+def check_kinds(cat: Catalog, report: Report) -> None:
+    """Name every film behind a door that asks about kinds but holds none of them there.
+
+    Such a film is reached through "anything" and `Just pick one!` only. The labels give it no kind where none
+    is a real fit, so the list is for a person to read, not a failure.
+    """
+    report.say('\n== kinds: films behind a door under "anything" only ==')
+    for tree_id, tree in sorted(cat.trees.items()):
+        if not any(spec.get("labelled") for spec in tree.flavours.values()):
+            continue
+        no_kind, pinned = _kinds_held(cat, tree_id)
+        if len(no_kind):
+            names = "; ".join(_label(cat.table, int(t)) for t in no_kind)
+            report.say(f"  {tree_id}: {len(no_kind)} labelled films no kind fits: {names}")
+        if len(pinned):
+            names = "; ".join(_label(cat.table, int(t)) for t in pinned)
+            report.say(
+                f"  {tree_id}: {len(pinned)} films there by pin, waiting room or standup rule, under no kind: {names}"
+            )
+
+
+def _shared_kinds(trees: Mapping[str, Tree]) -> dict[str, list[str]]:
+    """Flavour names two or more tree files define, each with the doors sharing it."""
+    holders: dict[str, list[str]] = {}
+    for tree_id, tree in trees.items():
+        for name in tree.flavours:
+            holders.setdefault(name, []).append(tree_id)
+    return {name: sorted(ids) for name, ids in holders.items() if len(ids) > 1}
+
+
+def _kind_split(tmdb: int, kind: str, doors: list[str], held: Held) -> tuple[list[str], list[str]] | None:
+    """Where `tmdb` sits behind two or more of `doors`, the ones holding `kind` and the ones not; else None."""
+    there = sorted(door for door in doors if tmdb in held[door])
+    if len(there) < 2:
+        return None
+    have = sorted(door for door in there if kind in held[door][tmdb])
+    missing = sorted(door for door in there if door not in have)
+    return (have, missing) if have and missing else None
+
+
+def _shared_violations(kind: str, doors: list[str], held: Held) -> list[tuple[int, list[str], list[str]]]:
+    """Every film behind two or more of `doors` holding `kind` at some but not all of them."""
+    listed = set[int]().union(*(set(k) for k in held.values()))
+    violations = []
+    for tmdb in sorted(listed):
+        split = _kind_split(tmdb, kind, doors, held)
+        if split is not None:
+            violations.append((tmdb, *split))
+    return violations
+
+
+def check_shared_kinds(cat: Catalog, report: Report) -> None:
+    """A film the labels place behind two doors sharing a kind must hold that kind at both or neither."""
+    report.say("\n== shared kinds: a film behind two sharing doors holds the kind at one only ==")
+    for kind, doors in sorted(_shared_kinds(cat.trees).items()):
+        held = {door: cat.labels.of(door).kinds for door in doors}
+        for tmdb, have, missing in _shared_violations(kind, doors, held):
+            report.fail(f"shared kinds: {_label(cat.table, tmdb)} holds '{kind}' at {have} but not at {missing}")
+
+
+def report_waiting(cat: Catalog, report: Report) -> None:
+    """Name every film in the waiting room: listed nowhere in the labels file, so its genres place it."""
+    index = cat.table.films.index
+    held = waiting(cat.table, cat.house, cat.labels)
+    report.say(f"\n== waiting room: {int(held.sum())} films the labels do not list, behind their genres' doors ==")
+    for tmdb in index[held.to_numpy()]:
+        doors = sorted(name for name in GENRE_DOORS if cat.pools[name][index.get_loc(tmdb)])
+        report.say(f"  waiting: {_label(cat.table, int(tmdb))} -> {', '.join(doors) or 'no door'}")
 
 
 def check_hidden(cat: Catalog, key: dict[str, Any], report: Report) -> None:
@@ -459,7 +490,7 @@ def check_data(table: FilmTable, report: Report) -> None:
     if len(unknown):
         first = "; ".join(_label(table, int(t)) for t in unknown[:10])
         report.fail(
-            f"{len(unknown)} films have no usable TMDB facts; the franchise and standup rules cannot see them."
+            f"{len(unknown)} films have no usable TMDB facts; the standup rule cannot see them."
             f" Run tools/rebuild_table.py. First: {first}"
         )
 
@@ -474,7 +505,10 @@ def main() -> int:
     report = Report()
     try:
         cat = load_catalog(table, labels=load_labels(args.labels or args.table.with_name("labels.json")))
-    except (EngineError, LabelsError) as exc:
+    except LabelsError as exc:
+        print(f"FAIL {exc}")
+        return 1
+    except EngineError as exc:
         print(f"FAIL {exc}; run tools/build_reference.py if the statistics are stale")
         return 1
     house = cat.house
@@ -483,11 +517,11 @@ def main() -> int:
     report.say(f"film table {args.table}: {len(table.films)} films, {int(table.has_genome().sum())} with genome scores")
     report.say(f"built {table.built_at:%Y-%m-%d %H:%M}, genome {table.release}")
     for tree_id, labels in cat.labels.trees.items():
-        report.say(f"labels: {len(labels.kinds)} films labelled in {tree_id}, {len(labels.out)} labelled out of it")
-        report_kept(cat, tree_id, report)
+        report.say(f"labels: {len(labels.kinds)} films labelled behind {tree_id}")
+    report_waiting(cat, report)
+    check_kinds(cat, report)
+    check_shared_kinds(cat, report)
     check_hidden(cat, key, report)
-    added = table.films.index[pools["kids:franchise"]]
-    report.say(f"franchise rule added {len(added)} films to kids: " + "; ".join(sorted(table.films.loc[added, "name"])))
     check_data(table, report)
     check_first_question(cat, report)
     check_quips(cat, report)

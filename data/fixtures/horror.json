@@ -39,7 +39,7 @@
         "supernatural"
       ],
       "must_not": [
-        "comedy"
+        "horror_comedy"
       ]
     },
     {
@@ -78,7 +78,7 @@
         "slowburn"
       ],
       "must_not": [
-        "comedy"
+        "horror_comedy"
       ]
     },
     {
@@ -129,7 +129,7 @@
       "title": "An American Werewolf in London",
       "tmdb": "814",
       "expect": [
-        "comedy"
+        "horror_comedy"
       ],
       "note": "tagged Comedy, so offered only under the comedy answer (decision 66, 2026-09-26)"
     },
@@ -167,7 +167,7 @@
       "title": "Happy Death Day",
       "tmdb": "440021",
       "expect": [
-        "comedy"
+        "horror_comedy"
       ],
       "note": "tagged Comedy, so offered only under the comedy answer (decision 66, 2026-09-26)"
     },
@@ -175,7 +175,7 @@
       "title": "Tucker and Dale vs. Evil",
       "tmdb": "46838",
       "expect": [
-        "comedy"
+        "horror_comedy"
       ],
       "note": "tagged Comedy, so offered only under the comedy answer (decision 66, 2026-09-26)"
     },
@@ -183,7 +183,7 @@
       "title": "Army of Darkness",
       "tmdb": "766",
       "expect": [
-        "comedy"
+        "horror_comedy"
       ],
       "note": "tagged Comedy, so offered only under the comedy answer (decision 66, 2026-09-26)"
     },
@@ -191,7 +191,7 @@
       "title": "Gremlins",
       "tmdb": "927",
       "expect": [
-        "comedy"
+        "horror_comedy"
       ],
       "note": "tagged Comedy, so offered only under the comedy answer (decision 66, 2026-09-26)"
     },
@@ -199,7 +199,7 @@
       "title": "Knights of Badassdom",
       "tmdb": "74461",
       "expect": [
-        "comedy"
+        "horror_comedy"
       ],
       "note": "a stoner comedy summoning a succubus: supernatural, but a comedy first, so only under the comedy answer (decision 66, 2026-09-26)"
     }

@@ -44,7 +44,6 @@ class Filter:
     genres_none: frozenset[str] | None = None
     flavour: str | None = None
     flavour_none: str | None = None
-    payoff: str | None = None
     bands: Bands | None = None
     score_at_most: Mapping[str, float] = field(default_factory=dict)
     score_above: Mapping[str, float] = field(default_factory=dict)
@@ -75,25 +74,6 @@ class Question:
 
 
 @dataclass(frozen=True)
-class Payoffs:
-    """How films are placed on a tree's payoff answers.
-
-    `standardised` payoffs are scored against the reference; a film belongs to its
-    strongest one and to any other reaching `overlap` (None: strongest only).
-    `thresholds` payoffs are raw scores that must reach a minimum and never count
-    as strongest. A film with no genome score is placed under every `by_genre`
-    payoff whose genre it carries; a film matching none of them is placed by
-    `default`: a payoff name, or "all" for every standardised payoff.
-    """
-
-    standardised: Mapping[str, tuple[str, ...]]
-    overlap: float | None
-    thresholds: Mapping[str, tuple[tuple[str, ...], float]]
-    by_genre: tuple[tuple[str, str], ...]
-    default: str
-
-
-@dataclass(frozen=True)
 class Tree:
     id: str
     pool: str
@@ -101,8 +81,6 @@ class Tree:
     questions: tuple[Question, ...]
     scores: Mapping[str, tuple[str, ...]]
     flavours: Mapping[str, Mapping[str, Any]]
-    genome_threshold: float
-    payoffs: Payoffs | None
     scales: Mapping[str, Mapping[str, Any]]
     apart: str | None = None  # a flavour whose films only the answer naming it offers
 
@@ -121,7 +99,6 @@ FILTER_KEYS = {
     "genres_none",
     "flavour",
     "flavour_none",
-    "payoff",
     "bands",
     "score_at_most",
     "score_above",
@@ -141,7 +118,6 @@ QUESTION_KEYS = {
     "treat_as",
 }
 KIDS_BANDS = {"little", "family", "older"}
-FLAVOUR_SIGNALS = {"keywords_any", "genome_any", "genres_any"}
 
 
 def _check_keys(block: Mapping[str, Any], allowed: set[str], what: str) -> None:
@@ -191,7 +167,6 @@ def parse_filter(raw: Mapping[str, Any], what: str) -> Filter:
         genres_none=_opt_set(raw, "genres_none"),
         flavour=raw.get("flavour"),
         flavour_none=raw.get("flavour_none"),
-        payoff=raw.get("payoff"),
         bands=None if bands is None else Bands(str(bands["scale"]), frozenset(bands["in"])),
         score_at_most={k: float(v) for k, v in raw.get("score_at_most", {}).items()},
         score_above={k: float(v) for k, v in raw.get("score_above", {}).items()},
@@ -240,64 +215,26 @@ def parse_question(raw: Mapping[str, Any], tree: str) -> Question:
     )
 
 
-def _payoffs(doc: Mapping[str, Any], tree: str) -> Payoffs | None:
-    if "payoffs" not in doc:
-        return None
-    rule = doc.get("payoff_rule", {})
-    _check_keys(rule, {"overlap", "thresholds", "no_genome", "note"}, f"tree '{tree}' payoff_rule")
-    no_genome = rule.get("no_genome", {})
-    _check_keys(no_genome, {"by_genre", "default"}, f"tree '{tree}' payoff_rule.no_genome")
-    scores = doc.get("scores", {})
-    thresholds = {name: (tuple(scores[t["score"]]), float(t["min"])) for name, t in rule.get("thresholds", {}).items()}
-    names = set(doc["payoffs"]) | set(thresholds)
-    by_genre = tuple((str(g), str(p)) for g, p in no_genome.get("by_genre", []))
-    default = str(no_genome.get("default", "all"))
-    unknown = {p for _, p in by_genre} | ({default} - {"all"})
-    if unknown - names:
-        raise TreeError(f"tree '{tree}': no-genome placement names unknown payoffs {sorted(unknown - names)}")
-    overlap = rule.get("overlap")
-    return Payoffs(
-        standardised={name: tuple(tags) for name, tags in doc["payoffs"].items()},
-        overlap=None if overlap is None else float(overlap),
-        thresholds=thresholds,
-        by_genre=by_genre,
-        default=default,
-    )
+SOLE_SIGNALS = ("labelled", "specials")  # a flavour takes its films from the labels or the standup specials
 
 
-SOLE_SIGNALS = ("labelled", "specials")  # a flavour marked with one of these takes nothing else
-
-
-def _check_signals(what: str, spec: Mapping[str, Any], scores: Mapping[str, Any]) -> None:
-    """A flavour found by its signals names at least one, and its floors name defined scores."""
-    floors = spec.get("score_at_least", {})
-    if not isinstance(floors, dict) or not all(isinstance(v, int | float) for v in floors.values()):
-        raise TreeError(f"{what} score_at_least must map score names to numbers")
-    unknown = set(floors) - set(scores)
-    if unknown:
-        raise TreeError(f"{what} score_at_least names undefined scores {sorted(unknown)}")
-    if not FLAVOUR_SIGNALS & set(spec):
-        raise TreeError(f"{what} names no keywords, genome tags or genres, and is not labelled")
-
-
-def _check_flavours(tree: str, flavours: Mapping[str, Any], scores: Mapping[str, Any]) -> None:
+def _check_flavours(tree: str, flavours: Mapping[str, Any]) -> None:
+    """Each flavour is labelled or the standup specials, never both, and only a labelled one may be always shown."""
     for name, spec in flavours.items():
         what = f"tree '{tree}' flavour '{name}'"
-        _check_keys(spec, FLAVOUR_SIGNALS | {"note", "score_at_least", "always_shown", *SOLE_SIGNALS}, what)
+        _check_keys(spec, {"note", "always_shown", *SOLE_SIGNALS}, what)
         sole = [key for key in SOLE_SIGNALS if spec.get(key) is True]
+        if len(sole) != 1:
+            raise TreeError(f"{what} must be either labelled or the standup specials")
         if "always_shown" in spec and (sole != ["labelled"] or spec["always_shown"] is not True):
             raise TreeError(f"{what}: only a labelled flavour may be always_shown, and only as true")
-        if not sole:
-            _check_signals(what, spec, scores)
-        elif set(spec) - {sole[0], "note", "always_shown"}:
-            raise TreeError(f"{what} is {sole[0]}, so it takes no other signals or floors")
 
 
 def parse_tree(tree: str, doc: Mapping[str, Any]) -> Tree:
     for key in ("pool", "opening"):
         if key not in doc:
             raise TreeError(f"tree '{tree}' has no '{key}'")
-    _check_flavours(tree, doc.get("flavours", {}), doc.get("scores", {}))
+    _check_flavours(tree, doc.get("flavours", {}))
     apart = doc.get("apart")
     if apart is not None and apart not in doc.get("flavours", {}):
         raise TreeError(f"tree '{tree}' holds apart flavour '{apart}', which it does not define")
@@ -308,8 +245,6 @@ def parse_tree(tree: str, doc: Mapping[str, Any]) -> Tree:
         questions=tuple(parse_question(q, tree) for q in doc.get("questions", [])),
         scores={name: tuple(tags) for name, tags in doc.get("scores", {}).items()},
         flavours=doc.get("flavours", {}),
-        genome_threshold=float(doc.get("genome", {}).get("threshold", 0.6)),
-        payoffs=_payoffs(doc, tree),
         scales=doc.get("scales", {}),
         apart=apart,
     )

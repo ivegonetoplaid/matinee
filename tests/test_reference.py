@@ -2,8 +2,8 @@
 
 The fixture is built so that the wrong statistic gives a different number: every
 score has two tags whose mean differs from their maximum and from the first tag,
-the gore values are uneven so percentile methods disagree, the payoff's mean
-differs from its median, one film sits exactly on the floor, one passes only the
+the gore values are uneven so percentile methods disagree, one film sits
+exactly on the floor, one passes only the
 second floor, and one carries the tree's genre only as its second genre.
 """
 
@@ -46,7 +46,6 @@ ROWS = [
 ]
 GENRES = {1: "Horror", 2: "Thriller", 3: "Horror", 4: "Horror", 5: "Comedy", 6: "Comedy|Thriller"}
 GORE_CUTS = (0.24, 0.68)  # linear percentiles 40 and 90 of 0.1, 0.2, 0.4, 0.8
-FUN_MEAN, FUN_SD = 0.3, float(np.sqrt(0.12))  # of 0.1, 0.1, 0.1, 0.9; the median would be 0.1
 
 
 def genome() -> Genome:
@@ -65,7 +64,6 @@ def spec() -> TreeSpec:
         tree="horror",
         genres=("Horror", "Thriller"),
         floor_any=(Floor("fear", ("scary", "frightening"), 0.5), Floor("thrill", ("tense",), 0.6)),
-        payoffs={"fun": ("fun_a", "fun_b")},
         scales={"gore": ScaleSpec("gore", ("gore_a", "gore_b"), (40.0, 90.0))},
     )
 
@@ -87,15 +85,12 @@ def test_cut_fixture_separates_percentile_methods() -> None:
     assert not np.allclose(np.percentile(gore, [60, 10]), GORE_CUTS)
 
 
-def test_payoff_is_mean_and_population_sd_over_reference() -> None:
-    tree = compute(genome(), [spec()]).trees["horror"]
-    assert tree.films == 4
-    assert tree.payoffs["fun"].mean == pytest.approx(FUN_MEAN, abs=1e-6)
-    assert tree.payoffs["fun"].sd == pytest.approx(FUN_SD, abs=1e-6)
+def test_the_reference_counts_its_films() -> None:
+    assert compute(genome(), [spec()]).trees["horror"].films == 4
 
 
 def test_no_floor_takes_every_genre_film() -> None:
-    assert reference_films(genome(), TreeSpec("any", ("Horror",), (), {}, {})).sum() == 3
+    assert reference_films(genome(), TreeSpec("any", ("Horror",), (), {})).sum() == 3
 
 
 def test_json_round_trip_rerun_identical_and_six_places() -> None:
@@ -114,13 +109,12 @@ def _changed(**kw: Any) -> TreeSpec:
 @pytest.mark.parametrize(
     "changed",
     [
-        _changed(payoffs={"fun": ("fun_a",)}),
         _changed(scales={"gore": ScaleSpec("gore", ("gore_a",), (40.0, 90.0))}),
         _changed(scales={"gore": ScaleSpec("gore", ("gore_a", "gore_b"), (40.0, 95.0))}),
         _changed(scales={"gore": spec().scales["gore"], "extra": ScaleSpec("x", ("fun_a",), (50.0,))}),
         _changed(genres=("Horror",)),
         _changed(floor_any=(Floor("fear", ("scary", "frightening"), 0.4),)),
-        TreeSpec("action", ("Action",), (), {}, {}),
+        TreeSpec("action", ("Action",), (), {}),
     ],
 )
 def test_problems_flags_every_uncovered_definition(changed: TreeSpec) -> None:
@@ -139,7 +133,6 @@ def _doc(reference: dict[str, object]) -> dict[str, object]:
         "scores": {"fear": ["scary", "frightening"], "thrill": ["tense"], "gore": ["gore_a", "gore_b"]},
         "reference": reference,
         "scales": {"gore": {"score": "gore", "percentiles": [40, 90]}},
-        "payoffs": {"fun": ["fun_a", "fun_b"]},
     }
 
 

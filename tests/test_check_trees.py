@@ -22,18 +22,21 @@ from check_trees import (
     check_gore,
     check_hidden,
     check_homes,
+    check_kinds,
     check_pins_in_key,
     check_reachability,
     check_same_answers,
     check_sample,
+    check_shared_kinds,
     door_pools,
+    report_waiting,
 )
 from matinee.engine import load_catalog
 from matinee.labels import Labels, TreeLabels
 from matinee.pools import House
-from matinee.reference import Reference, Stat
+from matinee.reference import Cuts, Reference
 from matinee.table import FilmTable
-from test_engine import TREE, make_table, reference, write_data
+from test_engine import TREE, gore_cut_tree, make_table, reference, write_data
 
 BANDS = ["spotless", "some", "messy", "rip"]
 
@@ -48,7 +51,7 @@ def _table() -> FilmTable:
 
 
 def _house(scale_pins: dict[tuple[str, str, str], frozenset[int]]) -> House:
-    return House(kids_pins={}, tree_pins={}, payoff_pins={}, scale_pins=scale_pins)
+    return House(kids_pins={}, tree_pins={}, scale_pins=scale_pins)
 
 
 def _gore(rows: dict[int, list[str]]) -> pd.DataFrame:
@@ -83,14 +86,12 @@ def test_every_pin_needs_a_fixture_asserting_its_placement() -> None:
     house = House(
         kids_pins={10: "older"},
         tree_pins={"action": frozenset({11})},
-        payoff_pins={("western", "showdown"): frozenset({12})},
         scale_pins={("horror", "gore", "rip"): frozenset({13})},
         specials=frozenset({14}),
     )
     good = [
         {"tmdb": 10, "kids_band": "older"},
         {"tmdb": 11, "must_reach": ["action"]},
-        {"tmdb": 12, "must_reach": ["western"]},
         {"tmdb": 13, "gore_band": "rip"},
         {"tmdb": 14, "flavour_in": {"comedy": ["standup"]}},
     ]
@@ -100,13 +101,12 @@ def test_every_pin_needs_a_fixture_asserting_its_placement() -> None:
     weak = [
         {"tmdb": 10},
         {"tmdb": 11, "must_reach": ["drama"]},
-        {"tmdb": 12},
         {"tmdb": 13, "gore_band": "some"},
         {"tmdb": 14, "must_reach": ["comedy"]},
     ]
     report = Report()
     check_pins_in_key(house, {"films": weak}, report)
-    assert len(report.failures) == 5
+    assert len(report.failures) == 4
 
 
 def test_a_sample_keeps_every_answer(tmp_path: Path) -> None:
@@ -140,16 +140,14 @@ def test_sample_draws_its_share_by_its_seed_and_counts_its_failures(tmp_path: Pa
 
 
 def test_an_answer_that_depends_on_the_library_fails(tmp_path: Path) -> None:
-    full = load_catalog(make_table(), write_data(tmp_path), reference())
-    west = reference().trees["west"]
-    moved = replace(west, payoffs={**west.payoffs, "slow": Stat(("p_slow",), 0.45, 0.2)})
-    other = load_catalog(make_table().subset(list(range(1, 31))), tmp_path, Reference("test", {"west": moved}))
+    data = write_data(tmp_path, gore_cut_tree())
+    full = load_catalog(make_table(), data, reference())
+    moved = replace(reference().trees["west"], scales={"gore": Cuts(("gore_a",), (50.0,), (0.9,))})
+    other = load_catalog(make_table().subset(list(range(1, 31))), data, Reference("test", {"west": moved}))
     report = Report()
     check_same_answers(full, other, report)
     assert sorted(report.failures) == [
-        "answers: Film 13 (1983) changes its west 'payoff' answer 0 with the library's size",
-        "answers: Film 13 (1983) changes its west 'payoff' answer 1 with the library's size",
-        "answers: Film 14 (1984) changes its west 'payoff' answer 1 with the library's size",
+        f"answers: Film {t} ({1970 + t}) changes its west 'gore' answer 0 with the library's size" for t in (1, 3, 4, 5)
     ]
 
 
@@ -177,7 +175,7 @@ def test_samples_are_a_third_and_a_tenth_with_fixed_seeds() -> None:
     assert len({seed for _, _, seed in SAMPLES}) == 2
 
 
-def test_a_sample_runs_reachability_and_expected_homes(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_a_sample_runs_reachability(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     full = load_catalog(make_table(), write_data(tmp_path), reference())
     mine = Report()
     seen: list[tuple[str, int, bool]] = []
@@ -186,9 +184,20 @@ def test_a_sample_runs_reachability_and_expected_homes(tmp_path: Path, monkeypat
         return lambda table, pools, report: seen.append((name, len(table.films), report is mine))
 
     monkeypatch.setattr("check_trees.check_reachability", record("reach"))
-    monkeypatch.setattr("check_trees.check_expected", record("expect"))
     check_sample(full, "a half", 0.5, 1, mine, tmp_path)
-    assert sorted(seen) == [("expect", 20, True), ("reach", 20, True)]
+    assert seen == [("reach", 20, True)]
+
+
+def test_a_labelled_film_holding_none_of_its_doors_kinds_is_named_not_failed(tmp_path: Path) -> None:
+    lab = Labels({"west": TreeLabels({1: frozenset({"heroic"}), 2: frozenset()})})
+    cat = load_catalog(make_table(), write_data(tmp_path), reference(), lab)
+    report = Report()
+    check_kinds(cat, report)
+    report_waiting(cat, report)
+    assert report.failures == []
+    assert "  west: 1 labelled films no kind fits: Film 2 (1972)" in report.lines
+    assert any(line.startswith("  west: 38 films there by pin") for line in report.lines)
+    assert "  waiting: Film 3 (1973) -> comedy, western" in report.lines
 
 
 def test_first_question_answers_must_name_a_tree(tmp_path: Path) -> None:
@@ -264,6 +273,23 @@ def test_the_homes_check_fails_a_special_another_door_holds(tmp_path: Path) -> N
     report = Report()
     check_homes(cat, pools, report)
     assert "held apart: Film 5 (1975) is held apart in west but horror holds it" in report.failures
+
+
+def test_a_shared_kind_must_hold_the_same_film_at_every_door_that_lists_it(tmp_path: Path) -> None:
+    data = write_data(tmp_path)
+    (data / "trees" / "east.json").write_text(
+        json.dumps({"pool": "comedy", "opening": "ha.", "flavours": {"heroic": {"labelled": True}}})
+    )
+    lab = Labels(
+        {
+            "west": TreeLabels({1: frozenset({"heroic"}), 2: frozenset({"heroic"})}),
+            "east": TreeLabels({1: frozenset(), 2: frozenset({"heroic"})}),
+        }
+    )
+    cat = load_catalog(make_table(), data, reference(), lab)
+    report = Report()
+    check_shared_kinds(cat, report)
+    assert report.failures == ["shared kinds: Film 1 (1971) holds 'heroic' at ['west'] but not at ['east']"]
 
 
 def test_the_hidden_kinds_must_be_the_ones_the_key_expects(tmp_path: Path) -> None:

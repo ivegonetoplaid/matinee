@@ -1,0 +1,72 @@
+{
+  "genre": "Science Fiction",
+  "pool": "scifi",
+  "opening": "excellent. set a course for somewhere else.",
+  "note": "Decision 88: the door runs on the labels (the labels file in Matinee's state directory). One question, its kinds, then \"anything\". A film sits under every kind it is labelled with, at most two; a film not yet labelled waits behind the door under \"anything\" and \"Just pick one!\" only. A kind under 30 films in the library is not offered.",
+  "questions": [
+    {
+      "id": "kind",
+      "ask": "so, where are we going?",
+      "options": [
+        {
+          "say": "space and aliens. ships, planets, and first contact.",
+          "reply": "lovely. we come in peace. probably.",
+          "filter": {
+            "flavour": "space_aliens"
+          }
+        },
+        {
+          "say": "time travel, robots, and AI.",
+          "reply": "I'd warn you about this one, but I already have.",
+          "filter": {
+            "flavour": "time_robots_ai"
+          }
+        },
+        {
+          "say": "dystopias and the end of the world.",
+          "reply": "cheer up. it's only fiction. mostly.",
+          "filter": {
+            "flavour": "dystopia"
+          }
+        },
+        {
+          "say": "monsters made by science. dinosaurs, kaiju, and experiments gone wrong.",
+          "reply": "life, uh, finds a way.",
+          "filter": {
+            "flavour": "lab_monsters"
+          }
+        },
+        {
+          "say": "superheroes. powers, gadgets, and capes.",
+          "reply": "very good. somebody save the city.",
+          "filter": {
+            "flavour": "superheroes"
+          }
+        },
+        {
+          "say": "anything. just make it the future.",
+          "reply": "very well. engage.",
+          "filter": {}
+        }
+      ]
+    }
+  ],
+  "flavours": {
+    "space_aliens": {
+      "labelled": true
+    },
+    "time_robots_ai": {
+      "labelled": true
+    },
+    "dystopia": {
+      "labelled": true
+    },
+    "lab_monsters": {
+      "labelled": true
+    },
+    "superheroes": {
+      "labelled": true,
+      "note": "shared with the action and fantasy and animation doors, so a film behind both holds it at both or neither."
+    }
+  }
+}

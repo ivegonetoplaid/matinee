@@ -18,6 +18,12 @@
       "tmdb": 698609,
       "band": "family",
       "note": "a Muppet sing-along video with no certificate; the gate fails closed on it and it fell to drama"
+    },
+    {
+      "title": "The Reluctant Astronaut",
+      "tmdb": 36855,
+      "band": "little",
+      "note": "a 1967 Don Knotts comedy with certificate NR; the kids gate fails closed on NR, so the pin lets it in, for the little ones (the operator, 2026-10-01)"
     }
   ],
   "trees": [
@@ -92,15 +98,6 @@
       "note": "a standup special with no TMDB keywords, so the standup rule misses it"
     }
   ],
-  "payoffs": [
-    {
-      "title": "The Harder They Fall",
-      "tmdb": 618162,
-      "tree": "western",
-      "payoff": "showdown",
-      "note": "a stylish revenge shootout western whose thin genome profile reads as comedy"
-    }
-  ],
   "scales": [
     {
       "title": "Terrifier",
@@ -132,7 +129,7 @@
       "title": "The Cabin in the Woods",
       "tmdb": 22970,
       "tree": "horror",
-      "flavour": "comedy",
+      "flavour": "horror_comedy",
       "member": false,
       "note": "tagged Comedy with laugh 0.48, but the operator: a horror film with some comedic elements, not one for someone sitting down to Shaun of the Dead"
     },
@@ -140,7 +137,7 @@
       "title": "Ready or Not",
       "tmdb": 567609,
       "tree": "horror",
-      "flavour": "comedy",
+      "flavour": "horror_comedy",
       "member": false,
       "note": "tagged Comedy with laugh 0.38; the operator: a horror thriller with comedic elements"
     },

@@ -34,7 +34,7 @@
         "slapstick"
       ],
       "must_not": [
-        "dark",
+        "dark_comedy",
         "feelgood"
       ]
     },
@@ -107,27 +107,27 @@
         "feelgood"
       ],
       "must_not": [
-        "dark",
+        "dark_comedy",
         "slapstick"
       ]
     },
     {
       "title": "Up",
       "expect": [
-        "animated"
+        "cartoon_comedy"
       ],
       "must_not": [
-        "dark",
+        "dark_comedy",
         "slapstick"
       ]
     },
     {
       "title": "Klaus",
       "expect": [
-        "animated"
+        "cartoon_comedy"
       ],
       "must_not": [
-        "dark"
+        "dark_comedy"
       ]
     },
     {
@@ -136,14 +136,14 @@
         "feelgood"
       ],
       "must_not": [
-        "dark"
+        "dark_comedy"
       ],
       "note": "warm 0.42 and teen 0.63. It is both, and the warm threshold had to come down to 0.40 to admit it."
     },
     {
       "title": "Dr. Strangelove or: How I Learned to Stop Worrying and Love the Bomb",
       "expect": [
-        "dark"
+        "dark_comedy"
       ],
       "must_not": [
         "feelgood",
@@ -153,7 +153,7 @@
     {
       "title": "In Bruges",
       "expect": [
-        "dark"
+        "dark_comedy"
       ],
       "must_not": [
         "feelgood",
@@ -163,7 +163,7 @@
     {
       "title": "Jojo Rabbit",
       "expect": [
-        "dark"
+        "dark_comedy"
       ],
       "must_not": [
         "slapstick"
@@ -172,7 +172,7 @@
     {
       "title": "The Wolf of Wall Street",
       "expect": [
-        "dark"
+        "dark_comedy"
       ],
       "must_not": [
         "feelgood"
@@ -199,7 +199,7 @@
     {
       "title": "Superbad",
       "expect": [
-        "teen"
+        "teen_comedy"
       ],
       "must_not": [
         "feelgood"
@@ -219,7 +219,7 @@
       "title": "Meet the Parents",
       "expect": [],
       "must_not": [
-        "dark",
+        "dark_comedy",
         "feelgood"
       ],
       "note": "unreachable, same as Horrible Bosses. teen 0.36, broad 0.47. Kept as a negative fixture."
@@ -227,14 +227,14 @@
     {
       "title": "Tucker and Dale vs. Evil",
       "expect": [
-        "horror"
+        "horror_comedy"
       ],
       "note": "the crossed question was removed 2026-09-26 (comedy asks at most three questions); a horror-comedy's horror home is horror's \"make me laugh while I'm scared\""
     },
     {
       "title": "Shaun of the Dead",
       "expect": [
-        "horror"
+        "horror_comedy"
       ],
       "note": "the crossed question was removed 2026-09-26 (comedy asks at most three questions); a horror-comedy's horror home is horror's \"make me laugh while I'm scared\""
     },

@@ -2,118 +2,7 @@
   "genre": "Kids",
   "pool": "kids",
   "opening": "ooh, movie time!",
-  "note": "Decisions 45, 47, 48, 49 and 57. The pool is gated and fails closed (matinee.pools). The first question sorts by age band; bands allow rather than require. The second asks what kind of film: each kind is standardised against the kids reference, a film belongs to its strongest kind other than spooky and to any other reaching 0.75. Spooky is a raw threshold, never a film's strongest kind, and is not offered to the little ones. A film with no genome score is placed by its genre tags.",
-  "scores": {
-    "spooky": [
-      "scary",
-      "creepy",
-      "halloween"
-    ]
-  },
-  "reference": {
-    "movielens_genres": [
-      "Children",
-      "Animation"
-    ],
-    "floor_any": {}
-  },
-  "payoffs": {
-    "silly": [
-      "funny",
-      "very funny",
-      "silly fun",
-      "slapstick",
-      "silly"
-    ],
-    "adventure": [
-      "adventure",
-      "exciting",
-      "treasure",
-      "treasure hunt",
-      "pirates"
-    ],
-    "magic": [
-      "magic",
-      "fairy tale",
-      "fairy tales",
-      "witches",
-      "wizards",
-      "dragons"
-    ],
-    "animals": [
-      "talking animals",
-      "animals",
-      "dogs"
-    ],
-    "heroes": [
-      "superhero",
-      "superheroes",
-      "robot",
-      "robots",
-      "giant robots",
-      "space",
-      "aliens"
-    ],
-    "songs": [
-      "musical",
-      "music",
-      "great music",
-      "good music"
-    ],
-    "warm": [
-      "heartwarming",
-      "touching",
-      "friendship",
-      "family bonds"
-    ]
-  },
-  "payoff_rule": {
-    "overlap": 0.75,
-    "thresholds": {
-      "spooky": {
-        "score": "spooky",
-        "min": 0.3
-      }
-    },
-    "no_genome": {
-      "by_genre": [
-        [
-          "Comedy",
-          "silly"
-        ],
-        [
-          "Adventure",
-          "adventure"
-        ],
-        [
-          "Fantasy",
-          "magic"
-        ],
-        [
-          "Music",
-          "songs"
-        ],
-        [
-          "Science Fiction",
-          "heroes"
-        ],
-        [
-          "Action",
-          "heroes"
-        ],
-        [
-          "Horror",
-          "spooky"
-        ],
-        [
-          "Drama",
-          "warm"
-        ]
-      ],
-      "default": "all"
-    },
-    "note": "a kids film with no genome score and none of these genres is offered under every standardised kind: no decision places it, and a missing score never removes a film"
-  },
+  "note": "Decisions 48, 57 and 88. The pool is the films the labels list behind For the kids whose certificate passes (matinee.pools); the gate fails closed. The first question sorts by age band: a film's band is the older of its labelled band and its certificate's band, and bands allow rather than require. The second asks what kind of film, and each answer holds the films the labels give that kind. Spooky is not offered to the little ones. Every kind is always shown, whatever its size: the kind question has no \"anything\" answer, so a hidden kind would leave its films no way in.",
   "questions": [
     {
       "id": "age",
@@ -150,56 +39,56 @@
           "say": "something super silly!",
           "reply": "get ready to giggle.",
           "filter": {
-            "payoff": "silly"
+            "flavour": "silly"
           }
         },
         {
           "say": "a big adventure!",
           "reply": "grab your map. let's go!",
           "filter": {
-            "payoff": "adventure"
+            "flavour": "adventure"
           }
         },
         {
           "say": "something with magic in it.",
           "reply": "abracadabra...",
           "filter": {
-            "payoff": "magic"
+            "flavour": "magic"
           }
         },
         {
           "say": "animals! talking animals!",
           "reply": "paws, claws and whiskers, coming up.",
           "filter": {
-            "payoff": "animals"
+            "flavour": "animals"
           }
         },
         {
           "say": "superheroes and robots!",
           "reply": "beep boop. hero mode on.",
           "filter": {
-            "payoff": "heroes"
+            "flavour": "heroes"
           }
         },
         {
           "say": "a movie with songs we can sing.",
           "reply": "warm up those voices!",
           "filter": {
-            "payoff": "songs"
+            "flavour": "songs"
           }
         },
         {
           "say": "one that makes you feel all warm inside.",
           "reply": "aww. good pick.",
           "filter": {
-            "payoff": "warm"
+            "flavour": "warm"
           }
         },
         {
           "say": "a little bit spooky... but not too scary!",
           "reply": "ooooh. lights on, just in case.",
           "filter": {
-            "payoff": "spooky"
+            "flavour": "spooky"
           },
           "not_after": {
             "age": [
@@ -209,5 +98,47 @@
         }
       ]
     }
-  ]
+  ],
+  "flavours": {
+    "silly": {
+      "labelled": true,
+      "note": "funny films played for giggles: slapstick, silly fun.",
+      "always_shown": true
+    },
+    "adventure": {
+      "labelled": true,
+      "note": "a big adventure: quests, treasure, pirates, journeys.",
+      "always_shown": true
+    },
+    "magic": {
+      "labelled": true,
+      "note": "magic, fairy tales, witches, wizards and dragons.",
+      "always_shown": true
+    },
+    "animals": {
+      "labelled": true,
+      "note": "animals, talking or not, at the heart of it.",
+      "always_shown": true
+    },
+    "heroes": {
+      "labelled": true,
+      "note": "superheroes, robots, space and aliens.",
+      "always_shown": true
+    },
+    "songs": {
+      "labelled": true,
+      "note": "musicals: songs the film is built around.",
+      "always_shown": true
+    },
+    "warm": {
+      "labelled": true,
+      "note": "heartwarming stories of friendship and family.",
+      "always_shown": true
+    },
+    "spooky": {
+      "labelled": true,
+      "note": "a little spooky but not too scary; never offered to the little ones.",
+      "always_shown": true
+    }
+  }
 }

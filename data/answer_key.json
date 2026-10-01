@@ -23,6 +23,18 @@
     [
       "crime",
       "prison"
+    ],
+    [
+      "romance",
+      "period_romance"
+    ],
+    [
+      "scifi",
+      "lab_monsters"
+    ],
+    [
+      "war",
+      "behind_lines"
     ]
   ],
   "films": [
@@ -44,9 +56,6 @@
       "must_not": [
         "horror",
         "thriller"
-      ],
-      "must_reach": [
-        "comedy"
       ],
       "note": "the operator's standing example: technically horror, unwanted there"
     },
@@ -88,8 +97,7 @@
       "tmdb": 24428,
       "must_reach": [
         "action"
-      ],
-      "note": "rated funny by the genome (humor 0.97) but reaches for excitement first; fell through the flat laugh cut"
+      ]
     },
     {
       "title": "Avengers: Infinity War",
@@ -170,18 +178,18 @@
       "title": "Dune: Part Two",
       "tmdb": 693134,
       "must_reach": [
-        "action"
+        "scifi"
       ],
-      "note": "adventure with no genome score: a missing score admits it (a comparison against a missing value is false, so this guards the rule)"
+      "note": "decision 88: the labels place it behind Sci-fi, not behind Action",
+      "must_not": [
+        "action"
+      ]
     },
     {
       "title": "Cast Away",
       "tmdb": 8358,
       "must_reach": [
         "drama"
-      ],
-      "must_not": [
-        "action"
       ]
     },
     {
@@ -231,17 +239,9 @@
       ]
     },
     {
-      "title": "The Silence of the Lambs",
-      "tmdb": 274,
-      "must_reach": [
-        "drama"
-      ]
-    },
-    {
       "title": "GoodFellas",
       "tmdb": 769,
       "must_reach": [
-        "drama",
         "crime"
       ],
       "flavour_in": {
@@ -261,19 +261,24 @@
       "title": "The Notebook",
       "tmdb": 11036,
       "must_reach": [
-        "drama"
+        "romance"
       ]
     },
     {
       "title": "PAW Patrol: The Movie",
       "tmdb": 675445,
       "kids_band": "little",
-      "note": "no genome score; a G certificate is enough"
+      "note": "decision 88 build outcome: a G film the labels give the little ones"
     },
     {
       "title": "Toy Story",
       "tmdb": 862,
-      "kids_band": "little"
+      "must_reach": [
+        "kids",
+        "comedy",
+        "animation"
+      ],
+      "note": "decision 88 build outcome: behind For the kids, Comedy and Animation"
     },
     {
       "title": "Frozen",
@@ -303,18 +308,7 @@
         "kids",
         "fantasy"
       ],
-      "note": "no Family tag; enters kids on the genome's young score. Not in action: no Action tag, and its excitement is under the adventure bar (§35)"
-    },
-    {
-      "title": "Who Framed Roger Rabbit",
-      "tmdb": 856,
-      "kids_band": "older",
-      "note": "the operator watched it as a kid but finds it rough; fright 0.47"
-    },
-    {
-      "title": "The Nightmare Before Christmas",
-      "tmdb": 9479,
-      "kids_band": "older"
+      "note": "the operator: kids films adults love stay in both"
     },
     {
       "title": "Coraline",
@@ -326,12 +320,6 @@
       "tmdb": 128,
       "kids_band": "older",
       "note": "PG-13 non-comedy animation; the most violent of that group (0.63)"
-    },
-    {
-      "title": "Batman: Hush",
-      "tmdb": 537056,
-      "kids_band": "older",
-      "note": "the operator: DC animated films are fine for about 8 and up"
     },
     {
       "title": "The Simpsons Movie",
@@ -389,9 +377,6 @@
       "tmdb": 14239,
       "must_not": [
         "kids"
-      ],
-      "must_reach": [
-        "comedy"
       ]
     },
     {
@@ -424,7 +409,7 @@
         "action",
         "comedy"
       ],
-      "note": "no genome entry: the kids-only tier"
+      "note": "kids-first: behind For the kids and Animation, and no grown-up door"
     },
     {
       "title": "Labyrinth",
@@ -494,7 +479,7 @@
         "kids",
         "fantasy"
       ],
-      "note": "franchise rule"
+      "note": "the operator: kids films adults love stay in both"
     },
     {
       "title": "Harry Potter and the Goblet of Fire",
@@ -504,7 +489,7 @@
         "fantasy"
       ],
       "kids_band": "older",
-      "note": "franchise rule; PG-13"
+      "note": "the operator: kids films adults love stay in both; PG-13"
     },
     {
       "title": "Harry Potter and the Deathly Hallows: Part 2",
@@ -513,7 +498,8 @@
         "kids",
         "fantasy"
       ],
-      "kids_band": "older"
+      "kids_band": "older",
+      "note": "the operator: kids films adults love stay in both; PG-13"
     },
     {
       "title": "Cube",
@@ -525,18 +511,18 @@
         "drama",
         "horror"
       ],
-      "note": "the operator (2026-09-27): a trap film, with Escape Room and The Belko Experiment, for thriller's trapped kind; labelled out of horror"
+      "note": "the operator (2026-09-27): a trap film, with Escape Room and The Belko Experiment, for thriller's trapped kind; not horror"
     },
     {
       "title": "Dune",
       "tmdb": 438631,
       "must_reach": [
-        "action"
+        "scifi"
       ],
       "must_not": [
         "drama"
       ],
-      "note": "the operator: slow-burn action. Tagged Adventure and Science Fiction with excitement 0.37; follows Dune: Part Two into action by the franchise rule for strays"
+      "note": "decision 88: the labels place it behind Sci-fi"
     },
     {
       "title": "The Batman",
@@ -548,7 +534,7 @@
       "must_not": [
         "drama"
       ],
-      "note": "tagged Crime, Mystery, Thriller with excitement 0.42; a Batman film belongs in action, by house pin"
+      "note": "house pin: a Batman film belongs in action"
     },
     {
       "title": "Chinatown",
@@ -565,22 +551,10 @@
       ]
     },
     {
-      "title": "Ocean's Twelve",
-      "tmdb": 163,
-      "must_reach": [
-        "action"
-      ],
-      "must_not": [
-        "drama"
-      ],
-      "note": "low excitement and low tension; follows Ocean's Eleven into action by the franchise rule for strays"
-    },
-    {
       "title": "Tombstone",
       "tmdb": 11969,
       "must_reach": [
-        "western",
-        "action"
+        "western"
       ]
     },
     {
@@ -701,14 +675,6 @@
       "note": "house pin"
     },
     {
-      "title": "The Harder They Fall",
-      "tmdb": 618162,
-      "must_reach": [
-        "western"
-      ],
-      "note": "house payoff pin: showdown"
-    },
-    {
       "title": "Terrifier",
       "tmdb": 420634,
       "must_reach": [
@@ -816,7 +782,7 @@
       ],
       "flavour_out": {
         "horror": [
-          "comedy"
+          "horror_comedy"
         ]
       },
       "note": "house flavour pin"
@@ -829,7 +795,7 @@
       ],
       "flavour_out": {
         "horror": [
-          "comedy"
+          "horror_comedy"
         ]
       },
       "note": "house flavour pin"
@@ -1049,13 +1015,12 @@
       "title": "The Godfather",
       "tmdb": 238,
       "must_reach": [
-        "drama",
         "crime"
       ],
       "must_not": [
         "thriller"
       ],
-      "note": "a franchise stray the labels place behind no thriller kind; Drama holds it, so it leaves Thriller",
+      "note": "the labels place it behind no thriller kind, so it is not behind Thriller",
       "flavour_in": {
         "crime": [
           "gangsters"
@@ -1134,8 +1099,7 @@
       "title": "Baby Driver",
       "tmdb": 339403,
       "must_reach": [
-        "crime",
-        "action"
+        "crime"
       ],
       "flavour_in": {
         "crime": [
@@ -1167,54 +1131,6 @@
       "note": "a serial-killer thriller behind no crime door: the shared kind never adds a door"
     },
     {
-      "title": "A Clockwork Orange",
-      "tmdb": 185,
-      "must_reach": [
-        "drama"
-      ],
-      "note": "a Crime film Drama holds only as a leftover stray; the crime door must not take Drama from it"
-    },
-    {
-      "title": "Knockaround Guys",
-      "tmdb": 7501,
-      "must_reach": [
-        "drama"
-      ],
-      "note": "a Crime film Drama holds only as a leftover stray; the crime door must not take Drama from it"
-    },
-    {
-      "title": "The Great Mouse Detective",
-      "tmdb": 9994,
-      "must_reach": [
-        "drama"
-      ],
-      "note": "a Crime film Drama holds only as a leftover stray; the crime door must not take Drama from it"
-    },
-    {
-      "title": "Deliver Us from Evil",
-      "tmdb": 13364,
-      "must_reach": [
-        "drama"
-      ],
-      "note": "a Crime film Drama holds only as a leftover stray; the crime door must not take Drama from it"
-    },
-    {
-      "title": "Inside Job",
-      "tmdb": 44639,
-      "must_reach": [
-        "drama"
-      ],
-      "note": "a Crime film Drama holds only as a leftover stray; the crime door must not take Drama from it"
-    },
-    {
-      "title": "Mr. Right",
-      "tmdb": 333385,
-      "must_reach": [
-        "action"
-      ],
-      "note": "the one film Action holds only through a Crime film's excitement; the crime door must not take Action from it"
-    },
-    {
       "title": "The Bad Guys 2",
       "tmdb": 1175942,
       "must_reach": [
@@ -1224,6 +1140,46 @@
         "crime"
       ],
       "note": "a kids-only film the labels place under crime's heists; only the kids tree holds a kids-only film (the operator, 2026-09-30)"
+    },
+    {
+      "title": "The Goonies",
+      "tmdb": 9340,
+      "must_reach": [
+        "kids"
+      ],
+      "must_not": [
+        "action",
+        "comedy"
+      ],
+      "note": "decision 88 build outcome: kids-first, behind For the kids and no grown-up door"
+    },
+    {
+      "title": "The Reluctant Astronaut",
+      "tmdb": 36855,
+      "kids_band": "little",
+      "note": "the operator: a Don Knotts comedy, fine for the little ones; NR, so a house pin lets it in",
+      "must_reach": [
+        "comedy",
+        "kids"
+      ]
+    },
+    {
+      "title": "The Nightmare Before Christmas",
+      "tmdb": 9479,
+      "kids_band": "older",
+      "note": "the operator's band for it: big kids"
+    },
+    {
+      "title": "Who Framed Roger Rabbit",
+      "tmdb": 856,
+      "kids_band": "older",
+      "note": "the operator watched it as a kid but finds it rough; fright 0.47"
+    },
+    {
+      "title": "Batman: Hush",
+      "tmdb": 537056,
+      "kids_band": "older",
+      "note": "the operator: DC animated films are fine for about 8 and up"
     },
     {
       "title": "The Bad Guys",

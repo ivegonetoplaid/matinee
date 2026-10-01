@@ -1,10 +1,9 @@
 """Write data/reference.json: the reference statistics every tree file names.
 
 Reads the MovieLens ml-latest genome and every file in data/trees/, measures each
-payoff's mean and standard deviation and each scale's cut points over the tree's
-reference films, and writes the result. Running it twice on the same release and
+scale's cut points over the tree's reference films, and writes the result. Running it twice on the same release and
 tree files writes an identical file. Rerun it whenever a tree file's scores,
-payoffs, scales or reference change; tests/test_reference.py::test_shipped_reference_covers_every_tree
+scales or reference change; tests/test_reference.py::test_shipped_reference_covers_every_tree
 fails in ./check.sh until it is rerun.
 
 Usage: python3 tools/build_reference.py [--ml DIR] [--out FILE]
@@ -32,7 +31,7 @@ def main() -> int:
     args.out.write_text(to_json(ref), encoding="utf-8")
     for name, tree in ref.trees.items():
         cuts = "; ".join(f"{n} {list(c.cuts)}" for n, c in tree.scales.items())
-        print(f"{name}: {tree.films} reference films, {len(tree.payoffs)} payoffs. {cuts}")
+        print(f"{name}: {tree.films} reference films. {cuts}")
     return 0
 
 
