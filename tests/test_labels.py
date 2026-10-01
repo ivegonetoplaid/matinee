@@ -10,6 +10,7 @@ import pytest
 
 from matinee.engine import Answer, EngineError, Viewer, load_catalog, walk
 from matinee.labels import Labels, LabelsError, TreeLabels, load_labels
+from matinee.reference import DATA
 from matinee.trees import Filter, TreeError, load_trees
 from test_engine import TREE, make_table, reference, write_data
 
@@ -74,7 +75,17 @@ def test_the_shipped_thriller_door_offers_its_kinds_in_order_and_only_spies_self
     assert all(thriller.flavours[f]["labelled"] for f in flavours if f)
 
 
-@pytest.mark.parametrize("door", ["action", "drama", "fantasy"])
+def test_the_first_question_offers_fifteen_doors_in_decision_86s_order() -> None:
+    first = json.loads((DATA / "first_question.json").read_text(encoding="utf-8"))
+    assert [o["tree"] for o in first["options"]] == [
+        *("comedy", "action", "drama", "thriller", "crime", "horror", "scifi", "fantasy", "romance", "animation"),
+        *("western", "war", "kids", "nonfiction", "fall-asleep"),
+    ]
+    trees = load_trees()
+    assert all(o["tree"] in trees for o in first["options"])
+
+
+@pytest.mark.parametrize("door", ["action", "drama", "fantasy", "scifi", "romance", "animation", "war"])
 def test_a_door_moved_onto_the_labels_asks_one_question_its_labelled_kinds_then_anything(door: str) -> None:
     tree = load_trees()[door]
     (question,) = tree.questions

@@ -1,0 +1,53 @@
+{
+  "genre": "War",
+  "pool": "war",
+  "opening": "war. I'll keep my voice down.",
+  "note": "Decision 88: the door runs on the labels (the labels file in Matinee's state directory). One question, its kinds, then \"anything\". A film sits under every kind it is labelled with, at most two; a film not yet labelled waits behind the door under \"anything\" and \"Just pick one!\" only. A kind under 30 films in the library is not offered.",
+  "questions": [
+    {
+      "id": "kind",
+      "ask": "so, what part of the war are we watching?",
+      "options": [
+        {
+          "say": "the battle. combat, up close.",
+          "reply": "keep your head down.",
+          "filter": {
+            "flavour": "war_battle"
+          }
+        },
+        {
+          "say": "the cost of war. what it does to people.",
+          "reply": "this one stays with you.",
+          "filter": {
+            "flavour": "war_cost"
+          }
+        },
+        {
+          "say": "behind the lines. spies, prisoners, and the resistance.",
+          "reply": "quietly, now. they're listening.",
+          "filter": {
+            "flavour": "behind_lines"
+          }
+        },
+        {
+          "say": "anything. just tell me a war story.",
+          "reply": "very well. stand to.",
+          "filter": {}
+        }
+      ]
+    }
+  ],
+  "flavours": {
+    "war_battle": {
+      "labelled": true,
+      "note": "shared with the action door, so a film behind both holds it at both or neither."
+    },
+    "war_cost": {
+      "labelled": true,
+      "note": "shared with the drama door, so a film behind both holds it at both or neither."
+    },
+    "behind_lines": {
+      "labelled": true
+    }
+  }
+}
