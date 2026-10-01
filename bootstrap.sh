@@ -24,4 +24,11 @@ VENV_PYTHON="$VENV_DIR/bin/python"
 "$VENV_PYTHON" -m pip install --upgrade pip
 "$VENV_PYTHON" -m pip install -e "$SCRIPT_DIR[dev]"
 (cd "$SCRIPT_DIR" && npm ci --no-fund --no-audit)
-"$VENV_PYTHON" -m pre_commit install --config "$REPO_ROOT/.pre-commit-config.yaml"
+# Every worktree shares one hooks directory, and the installed hook names this venv's interpreter. Run from
+# a linked worktree, the install would point every checkout's commits at a venv that goes when the worktree
+# does, so only the main checkout installs the hook.
+if [[ "$(git -C "$REPO_ROOT" rev-parse --git-dir)" != "$(git -C "$REPO_ROOT" rev-parse --git-common-dir)" ]]; then
+    echo "bootstrap.sh: linked worktree; the pre-commit hook is the main checkout's, so it is left as it is."
+else
+    "$VENV_PYTHON" -m pre_commit install --config "$REPO_ROOT/.pre-commit-config.yaml"
+fi
