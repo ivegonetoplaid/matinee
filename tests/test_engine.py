@@ -21,12 +21,12 @@ from matinee.engine import (
     gentlest,
     load_catalog,
     option_mask,
-    payoff_members,
     reachable,
     walk,
 )
+from matinee.labels import Labels, TreeLabels
 from matinee.pools import SCORES
-from matinee.reference import Cuts, Reference, Stat, TreeReference
+from matinee.reference import Cuts, Reference, TreeReference
 from matinee.table import FilmTable
 from matinee.trees import Bands, Filter, Option
 
@@ -98,14 +98,7 @@ TREE: dict[str, Any] = {
     "scales": {
         "gore": {"score": "gore", "percentiles": [50], "bands": ["clean", "messy"], "unscored_bands": ["messy"]}
     },
-    "flavours": {"heroic": {"keywords_any": ["superhero"], "genome_any": ["hero"], "genres_any": ["Musical"]}},
-    "genome": {"threshold": 0.6},
-    "payoffs": {"fast": ["p_fast"], "slow": ["p_slow"]},
-    "payoff_rule": {
-        "overlap": 1.0,
-        "thresholds": {"spooky": {"score": "spook", "min": 0.3}},
-        "no_genome": {"by_genre": [["Horror", "spooky"]], "default": "all"},
-    },
+    "flavours": {"heroic": {"labelled": True}},
     "questions": [
         {
             "id": "era",
@@ -128,13 +121,13 @@ TREE: dict[str, Any] = {
             ],
         },
         {
-            "id": "payoff",
+            "id": "kind",
             "ask": "what?",
             "only_if_pool_over": 15,
             "options": [
-                {"say": "fast.", "reply": "zoom.", "filter": {"payoff": "fast"}},
-                {"say": "slow.", "reply": "ahh.", "filter": {"payoff": "slow"}},
-                {"say": "spooky.", "reply": "boo.", "filter": {"payoff": "spooky"}, "not_after": {"era": [0]}},
+                {"say": "fast.", "reply": "zoom.", "filter": {"rating_min": 6.0}},
+                {"say": "slow.", "reply": "ahh.", "filter": {}},
+                {"say": "spooky.", "reply": "boo.", "filter": {"year_min": 1980}, "not_after": {"era": [0]}},
             ],
         },
     ],
@@ -171,7 +164,6 @@ def write_data(root: Path, tree: dict[str, Any] | None = None) -> Path:
             {
                 "kids": [],
                 "trees": [],
-                "payoffs": [{"tmdb": 5, "tree": "west", "payoff": "slow"}],
                 "scales": [{"tmdb": 2, "tree": "west", "scale": "gore", "band": "clean"}],
             }
         )
@@ -187,7 +179,6 @@ def reference() -> Reference:
                 genres=("Western",),
                 floor_any=(),
                 films=30,
-                payoffs={"fast": Stat(("p_fast",), 0.5, 0.2), "slow": Stat(("p_slow",), 0.3, 0.2)},
                 scales={"gore": Cuts(("gore_a",), (50.0,), (0.5,))},
             )
         },
@@ -212,12 +203,12 @@ def test_answers_narrow_reply_and_prefer(cat: Catalog) -> None:
     assert step.line == "long."
     assert step.prefer == "rating"
     assert step.pool == tuple(range(20, N + 1))  # runtime 100+ and the film with no runtime
-    assert step.question is not None and step.question.id == "payoff"
+    assert step.question is not None and step.question.id == "kind"
 
 
 def test_asks_while_twelve_or_more_remain_and_stops_under(cat: Catalog) -> None:
     short = walk(cat, "west", Viewer(), [Answer("era", 0), Answer("gore", 0)])  # films 1-20: over 15
-    assert short.question is not None and short.question.id == "payoff"
+    assert short.question is not None and short.question.id == "kind"
     assert [o.index for o in short.question.options] == [0, 1]  # spooky hidden after "old."
     fewer = Viewer(corrections=tuple(Correction(t, "west", "remove") for t in range(1, 10)))
     stopped = walk(cat, "west", fewer, [Answer("era", 0)])  # films 10-20: eleven left
@@ -241,7 +232,7 @@ def test_topic_skip_narrows_the_starting_pool(cat: Catalog) -> None:
     assert start.question is not None
     assert [o.index for o in start.question.options] == [0, 1]  # "late." holds only long films: hidden
     step = walk(cat, "west", squeamish, [Answer("era", 1)])
-    assert step.question is not None and step.question.id == "payoff"
+    assert step.question is not None and step.question.id == "kind"
     with pytest.raises(EngineError):
         walk(cat, "west", squeamish, [Answer("era", 1), Answer("gore", 0)])
 
@@ -259,7 +250,7 @@ def test_misfit_and_leftover_answers_are_refused(cat: Catalog) -> None:
     with pytest.raises(EngineError):
         walk(cat, "west", Viewer(), [Answer("era", 2)])  # an empty answer is not shown
     with pytest.raises(EngineError):
-        walk(cat, "west", Viewer(), [Answer("era", 1), Answer("gore", 1), Answer("payoff", 0), Answer("x", 0)])
+        walk(cat, "west", Viewer(), [Answer("era", 1), Answer("gore", 1), Answer("kind", 0), Answer("x", 0)])
     with pytest.raises(EngineError):
         walk(cat, "nope", Viewer(), [])
 
@@ -278,26 +269,9 @@ def test_exclusions_and_corrections(cat: Catalog) -> None:
         walk(cat, "west", Viewer(exclusions=frozenset({"nope"})), [])
 
 
-def test_payoff_placement(cat: Catalog) -> None:
-    m = payoff_members(cat, cat.trees["west"])
-    assert m.loc[1, "fast"] and not m.loc[1, "slow"]  # z 2.0 against -0.5
-    assert m.loc[11, "slow"] and not m.loc[11, "fast"]
-    assert m.loc[13, "slow"] and not m.loc[13, "fast"]  # raw fast 0.6 beats slow 0.5; standardised, slow wins
-    assert m.loc[14, "fast"] and m.loc[14, "slow"]  # weaker payoff z 1.25 reaches the overlap of 1.0
-    assert m.loc[5, "slow"] and not m.loc[5, "fast"]  # a house pin moves the film to its answer
-    assert m.loc[12, "spooky"] and not m.loc[11, "spooky"]  # raw threshold, never strongest
-    assert m.loc[32, "spooky"] and not m.loc[32, "fast"] and not m.loc[32, "slow"]  # no genome, Horror
-
-
-def test_no_genome_default_all(cat: Catalog) -> None:
-    m = payoff_members(cat, cat.trees["west"])
-    odd = 31  # Comedy, no genome, matches no by_genre rule: every standardised payoff
-    assert m.loc[odd, "fast"] and m.loc[odd, "slow"] and not m.loc[odd, "spooky"]
-
-
 def test_not_after_hides_an_option(cat: Catalog) -> None:
     step = walk(cat, "west", Viewer(), [Answer("era", 0), Answer("gore", 0)])
-    assert step.question is not None and step.question.id == "payoff"
+    assert step.question is not None and step.question.id == "kind"
     assert 2 not in [o.index for o in step.question.options]
     wide = walk(cat, "west", Viewer(), [Answer("era", 1), Answer("gore", 1)])
     assert wide.question is not None and 2 in [o.index for o in wide.question.options]
@@ -310,7 +284,7 @@ def test_first_question_hides_missing_and_empty_trees(cat: Catalog) -> None:
 
 
 def test_stale_reference_refuses_to_load(tmp_path: Path) -> None:
-    stale = Reference("test", {"west": TreeReference(("Western",), (), 30, {}, reference().trees["west"].scales)})
+    stale = Reference("test", {"west": TreeReference(("Western",), (), 30, {})})
     with pytest.raises(EngineError, match="reference"):
         load_catalog(make_table(), write_data(tmp_path), stale)
 
@@ -326,8 +300,8 @@ def test_a_self_destructing_reply_reaches_the_walks_end(tmp_path: Path) -> None:
     tree = json.loads(json.dumps(TREE))
     tree["questions"][2]["options"][0]["self_destruct"] = 5
     cat = load_catalog(make_table(), write_data(tmp_path, tree), reference())
-    fast = walk(cat, "west", Viewer(), [Answer("era", 1), Answer("gore", 1), Answer("payoff", 0)])
-    slow = walk(cat, "west", Viewer(), [Answer("era", 1), Answer("gore", 1), Answer("payoff", 1)])
+    fast = walk(cat, "west", Viewer(), [Answer("era", 1), Answer("gore", 1), Answer("kind", 0)])
+    slow = walk(cat, "west", Viewer(), [Answer("era", 1), Answer("gore", 1), Answer("kind", 1)])
     assert (fast.question, fast.line, fast.self_destruct) == (None, "zoom.", 5)
     assert slow.self_destruct is None
 
@@ -360,7 +334,6 @@ def test_metadata_filters(cat: Catalog) -> None:
     assert set(mask_of(cat, certificate_in=frozenset({"G", "PG"}))) == set(range(1, 21)) - {6}
     assert set(mask_of(cat, spoken_english=True)) == everyone - {8}  # film 9's language is unknown: kept
     assert set(mask_of(cat, standalone=True)) == everyone - {1, 2, 3}
-    assert mask_of(cat, flavour="heroic") == [3, 4, 7]  # genome, genre, keyword
     assert mask_of(cat, kids_band="older") == []  # no film is labelled behind For the kids
 
 
@@ -450,10 +423,10 @@ def test_gentlest_needs_a_skipped_question_that_cuts_a_scale(cat: Catalog) -> No
     assert gentlest(cat, Viewer(topics=frozenset({188})), [1, 6]) == frozenset()  # TREE's gore question cuts runtime
 
 
-def comedy_gate_tree() -> dict[str, Any]:
-    """TREE with a flavour of Comedy films that must also score 'fast' at 0.5, and an answer leaving it out."""
+def kind_tree() -> dict[str, Any]:
+    """TREE with a labelled kind `laughs` asked first, and an answer leaving it out."""
     tree: dict[str, Any] = json.loads(json.dumps(TREE))
-    tree["flavours"]["laughs"] = {"genres_any": ["Comedy"], "score_at_least": {"fast": 0.5}}
+    tree["flavours"]["laughs"] = {"labelled": True}
     tree["questions"][0]["options"] = [
         {"say": "laughs.", "reply": "", "filter": {"flavour": "laughs"}},
         {"say": "no laughs.", "reply": "", "filter": {"flavour_none": "laughs"}},
@@ -461,13 +434,10 @@ def comedy_gate_tree() -> dict[str, Any]:
     return tree
 
 
-def test_a_flavour_floor_keeps_only_films_reaching_it_and_films_with_no_score(tmp_path: Path) -> None:
-    cat = load_catalog(make_table(), write_data(tmp_path, comedy_gate_tree()), reference())
-    laughs = set(walk(cat, "west", Viewer(), [Answer("era", 0)]).pool)
-    # odd films are Comedy; 'fast' is 0.9 up to film 10, 0.6 for 13, 0.1 otherwise; 31-40 have no genome entry
-    assert laughs == {1, 3, 5, 7, 9, 13, 31, 33, 35, 37, 39}
-    rest = set(walk(cat, "west", Viewer(), [Answer("era", 1)]).pool)
-    assert rest == (set(range(1, 41)) - laughs) | {3, 7}  # the complement, plus laughs also in heroic
+def kind_labels() -> Labels:
+    """Every film labelled behind west; the odd films (Comedy) in laughs, and film 3 in heroic too."""
+    kinds = {t: frozenset({"laughs"} if t % 2 else set()) for t in range(1, N + 1)}
+    return Labels({"west": TreeLabels({**kinds, 3: frozenset({"laughs", "heroic"})})})
 
 
 def pin_flavours(root: Path, pins: list[dict[str, Any]]) -> Path:
@@ -484,7 +454,8 @@ def test_flavour_pins_move_a_film_in_or_out_and_a_film_pinned_elsewhere_survives
         {"tmdb": 2, "tree": "west", "flavour": "laughs", "member": True},
         {"tmdb": 5, "tree": "west", "flavour": "heroic", "member": True},
     ]
-    cat = load_catalog(make_table(), pin_flavours(write_data(tmp_path, comedy_gate_tree()), pins), reference())
+    root = pin_flavours(write_data(tmp_path, kind_tree()), pins)
+    cat = load_catalog(make_table(), root, reference(), kind_labels())
     laughs = set(walk(cat, "west", Viewer(), [Answer("era", 0)]).pool)
     rest = set(walk(cat, "west", Viewer(), [Answer("era", 1)]).pool)
     assert 3 in rest and 3 not in laughs
@@ -495,18 +466,18 @@ def test_flavour_pins_move_a_film_in_or_out_and_a_film_pinned_elsewhere_survives
 def test_a_flavour_pin_naming_an_unknown_flavour_refuses_to_load(tmp_path: Path) -> None:
     pins = [{"tmdb": 3, "tree": "west", "flavour": "nope", "member": True}]
     with pytest.raises(ValueError):
-        load_catalog(make_table(), pin_flavours(write_data(tmp_path, comedy_gate_tree()), pins), reference())
+        load_catalog(make_table(), pin_flavours(write_data(tmp_path, kind_tree()), pins), reference(), kind_labels())
 
 
 @pytest.mark.parametrize(
     "change",
     [
-        lambda t: t["flavours"]["heroic"].update({"score_at_least": {"fast": "high"}}),
-        lambda t: t["flavours"]["heroic"].update({"score_at_least": {"nope": 0.5}}),
+        lambda t: t["flavours"]["heroic"].update({"genres_any": ["Comedy"]}),
+        lambda t: t["flavours"].update({"plain": {}}),
         lambda t: t["questions"][0]["options"][0]["filter"].update({"flavour_none": "nope"}),
     ],
 )
-def test_a_bad_flavour_floor_or_unknown_flavour_none_refuses_to_load(tmp_path: Path, change: Any) -> None:
+def test_a_flavour_not_labelled_or_an_unknown_flavour_none_refuses_to_load(tmp_path: Path, change: Any) -> None:
     tree: dict[str, Any] = json.loads(json.dumps(TREE))
     change(tree)
     with pytest.raises(ValueError):  # TreeError and EngineError are both ValueErrors

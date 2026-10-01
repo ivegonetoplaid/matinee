@@ -1,125 +1,62 @@
 {
-  "genre": "Fantasy and adventure",
+  "genre": "Fantasy",
   "pool": "fantasy",
-  "opening": "fantasy and adventure. somewhere else, then.",
-  "note": "Decision 50. One question, then a roll. Each answer is a payoff standardised against the fantasy and adventure reference; a film belongs to its strongest payoff and to any other reaching 0.75. The Adventure tag alone never admits a film.",
-  "scores": {
-    "wonder": [
-      "fantasy world",
-      "magic",
-      "fantasy",
-      "mythology",
-      "fairy tale",
-      "imagination",
-      "dragons",
-      "wizards"
-    ],
-    "explore": [
-      "treasure",
-      "treasure hunt",
-      "pirates",
-      "archaeology",
-      "jungle",
-      "island"
-    ]
-  },
-  "reference": {
-    "movielens_genres": [
-      "Fantasy",
-      "Adventure"
-    ],
-    "floor_any": {
-      "wonder": 0.45,
-      "explore": 0.45
-    }
-  },
-  "payoffs": {
-    "quest": [
-      "epic",
-      "medieval",
-      "sword fight",
-      "good versus evil",
-      "destiny",
-      "mythology"
-    ],
-    "wonder": [
-      "whimsical",
-      "magic",
-      "fairy tale",
-      "imagination",
-      "childhood"
-    ],
-    "teeth": [
-      "dark fantasy",
-      "dark",
-      "creepy",
-      "surreal",
-      "dreamlike"
-    ],
-    "ruins": [
-      "treasure",
-      "treasure hunt",
-      "pirates",
-      "archaeology",
-      "jungle",
-      "island"
-    ],
-    "elsewhere": [
-      "alternate universe",
-      "parallel universe",
-      "time travel",
-      "video games",
-      "fantasy world"
-    ]
-  },
-  "payoff_rule": {
-    "overlap": 0.75,
-    "no_genome": {
-      "default": "all"
-    },
-    "note": "a film with no genome score is offered under every answer: no decision gives it one, and a missing score never removes a film"
-  },
+  "opening": "fantasy. wonderful. bring a cloak.",
+  "note": "Decision 88: the door runs on the labels (the labels file in Matinee's state directory). One question, its kinds, then \"anything\". A film sits under every kind it is labelled with, at most two; a film not yet labelled waits behind the door under \"anything\" and \"Just pick one!\" only. A kind under 30 films in the library is not offered.",
   "questions": [
     {
-      "id": "payoff",
-      "ask": "where to?",
+      "id": "kind",
+      "ask": "so, which kind of magic are we after?",
       "options": [
         {
-          "say": "an epic quest. swords, armies, the fate of everything.",
-          "reply": "to arms, then.",
+          "say": "swords, sorcery, and dragons. a whole other world.",
+          "reply": "excellent. mind the dragon.",
           "filter": {
-            "payoff": "quest"
+            "flavour": "sword_sorcery"
           }
         },
         {
-          "say": "somewhere full of wonder.",
-          "reply": "mind the fairies.",
+          "say": "fairy tales. princesses, curses, and enchanted kingdoms.",
+          "reply": "once upon a time, then.",
           "filter": {
-            "payoff": "wonder"
+            "flavour": "fairy_tales"
           }
         },
         {
-          "say": "a fairy tale with teeth.",
-          "reply": "the woods are darker than they look.",
+          "say": "magic in our world. wizards, ghosts, and wonders next door.",
+          "reply": "keep an eye on the wardrobe.",
           "filter": {
-            "payoff": "teeth"
+            "flavour": "magic_our_world"
           }
         },
         {
-          "say": "treasure, traps and ancient ruins.",
-          "reply": "bring a torch.",
+          "say": "superheroes. gods, sorcerers, and capes with magic in them.",
+          "reply": "of course. stand back from the lightning.",
           "filter": {
-            "payoff": "ruins"
+            "flavour": "superheroes"
           }
         },
         {
-          "say": "fall into another world.",
-          "reply": "down the rabbit hole.",
-          "filter": {
-            "payoff": "elsewhere"
-          }
+          "say": "anything. just take me somewhere enchanted.",
+          "reply": "very well. hold on to your hat.",
+          "filter": {}
         }
       ]
     }
-  ]
+  ],
+  "flavours": {
+    "sword_sorcery": {
+      "labelled": true
+    },
+    "fairy_tales": {
+      "labelled": true
+    },
+    "magic_our_world": {
+      "labelled": true
+    },
+    "superheroes": {
+      "labelled": true,
+      "note": "shared with the action and scifi and animation doors, so a film behind both holds it at both or neither."
+    }
+  }
 }

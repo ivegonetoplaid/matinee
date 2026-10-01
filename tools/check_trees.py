@@ -280,8 +280,6 @@ def check_pins_in_key(house: House, key: dict[str, Any], report: Report) -> None
     wants += [(t, f"kids_band {b}", fixture.get(t, {}).get("kids_band") == b) for t, b in house.kids_pins.items()]
     for tree, ids in house.tree_pins.items():
         wants += [(t, f"must_reach {tree}", tree in fixture.get(t, {}).get("must_reach", [])) for t in ids]
-    for (tree, _), ids in house.payoff_pins.items():
-        wants += [(t, f"must_reach {tree}", tree in fixture.get(t, {}).get("must_reach", [])) for t in ids]
     for (_, _, band), ids in house.scale_pins.items():
         wants += [(t, f"gore_band {band}", fixture.get(t, {}).get("gore_band") == band) for t in ids]
     wants += _flavour_pin_wants(house, fixture)

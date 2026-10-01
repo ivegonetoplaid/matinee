@@ -1,179 +1,115 @@
 {
-  "genre": "Action",
+  "genre": "Action and adventure",
   "pool": "action",
-  "opening": "action. love it.",
-  "note": "Decisions 34, 35, 39, 44 and 52. Two questions, then a roll. Payoffs are standardised against the action reference and a film takes its strongest one only. Thrill is a dial cut into thirds at the action reference's fixed scores; Jellyfin's Thriller tag is never read for it. Superheroes and bound-by-reality are viewer exclusions, never questions.",
-  "scores": {
-    "excite": [
-      "action",
-      "action packed",
-      "good action"
-    ],
-    "thrill": [
-      "tense",
-      "suspense",
-      "suspenseful",
-      "intense"
-    ]
-  },
-  "reference": {
-    "movielens_genres": [
-      "Action"
-    ],
-    "floor_any": {
-      "excite": 0.3
-    }
-  },
-  "payoffs": {
-    "payback": [
-      "revenge",
-      "vengeance",
-      "vigilante",
-      "justice"
-    ],
-    "rush": [
-      "fun movie",
-      "entertaining",
-      "over the top",
-      "cool",
-      "fun"
-    ],
-    "awe": [
-      "visually stunning",
-      "epic",
-      "visual",
-      "visually appealing"
-    ],
-    "survival": [
-      "survival",
-      "stranded",
-      "wilderness",
-      "monster",
-      "monsters",
-      "dinosaurs",
-      "shark",
-      "disaster",
-      "natural disaster"
-    ],
-    "pros": [
-      "heist",
-      "caper",
-      "espionage",
-      "spy",
-      "spies",
-      "cia",
-      "assassin",
-      "hitman",
-      "police investigation",
-      "clever"
-    ]
-  },
-  "payoff_rule": {
-    "overlap": null,
-    "no_genome": {
-      "default": "all"
-    },
-    "note": "a film with no genome score is offered under every payoff answer: no decision gives it one, and a missing score never removes a film"
-  },
-  "scales": {
-    "thrill": {
-      "score": "thrill",
-      "percentiles": [
-        33.3333,
-        66.6667
-      ],
-      "bands": [
-        "easy",
-        "edge",
-        "white_knuckle"
-      ],
-      "unscored_bands": [
-        "easy",
-        "edge",
-        "white_knuckle"
-      ]
-    }
-  },
+  "opening": "excellent. I'll turn the speakers up.",
+  "note": "Decision 88: the door runs on the labels (the labels file in Matinee's state directory). One question, its kinds, then \"anything\". A film sits under every kind it is labelled with, at most two; a film not yet labelled waits behind the door under \"anything\" and \"Just pick one!\" only. A kind under 30 films in the library is not offered.",
   "questions": [
     {
-      "id": "payoff",
-      "ask": "so what's the payoff?",
+      "id": "kind",
+      "ask": "so, what kind of mayhem are we after?",
       "options": [
         {
-          "say": "someone messed with the wrong guy. let him finish it.",
+          "say": "superheroes. capes, powers, and comic-book heroics.",
+          "reply": "of course. cue the superhero landing.",
+          "filter": {
+            "flavour": "superheroes"
+          }
+        },
+        {
+          "say": "martial arts. fists, feet, and blades do the talking.",
+          "reply": "very good. push the furniture back.",
+          "filter": {
+            "flavour": "martial_arts"
+          }
+        },
+        {
+          "say": "one against an army. someone picked the wrong fight.",
           "reply": "ah. a reckoning.",
           "filter": {
-            "payoff": "payback"
+            "flavour": "revenge"
           }
         },
         {
-          "say": "fast cars, big stunts, zero homework.",
-          "reply": "strap in.",
+          "say": "spies and secret agents. gadgets, disguises, and a lot of running.",
+          "reply": "shaken, not stirred. obviously.",
           "filter": {
-            "payoff": "rush"
+            "flavour": "spies"
           }
         },
         {
-          "say": "show me something I've never seen.",
-          "reply": "big screen energy. got it.",
+          "say": "robots, space wars, and broken futures.",
+          "reply": "excellent. the future's on fire again.",
           "filter": {
-            "payoff": "awe"
+            "flavour": "scifi_action"
           }
         },
         {
-          "say": "something huge is coming. I want to watch them run.",
+          "say": "quests, treasure, and pirates. take me somewhere far away.",
+          "reply": "pack light. we're not coming back for anything.",
+          "filter": {
+            "flavour": "quests"
+          }
+        },
+        {
+          "say": "disaster and survival. nature, catastrophe, or stranded with no help coming.",
           "reply": "run, then.",
           "filter": {
-            "payoff": "survival"
+            "flavour": "disaster_survival"
           }
         },
         {
-          "say": "watch people who are scary good at their jobs.",
-          "reply": "the professionals.",
+          "say": "war, on the front line. the battle, up close.",
+          "reply": "boots on. stay low.",
           "filter": {
-            "payoff": "pros"
-          }
-        }
-      ]
-    },
-    {
-      "id": "thrill",
-      "ask": "how much do you want to sweat?",
-      "options": [
-        {
-          "say": "keep it easy. popcorn, not panic.",
-          "filter": {
-            "bands": {
-              "scale": "thrill",
-              "in": [
-                "easy"
-              ]
-            }
+            "flavour": "war_battle"
           }
         },
         {
-          "say": "a little edge is good.",
+          "say": "action comedies. big explosions, bigger mouths.",
+          "reply": "lovely. expect one-liners at terrible moments.",
           "filter": {
-            "bands": {
-              "scale": "thrill",
-              "in": [
-                "edge"
-              ]
-            }
+            "flavour": "action_comedy"
           }
         },
         {
-          "say": "white knuckles. don't let me breathe.",
-          "filter": {
-            "bands": {
-              "scale": "thrill",
-              "in": [
-                "white_knuckle"
-              ]
-            }
-          }
+          "say": "anything. big, loud, and exciting.",
+          "reply": "very well. stand back.",
+          "filter": {}
         }
       ]
     }
-  ]
+  ],
+  "flavours": {
+    "superheroes": {
+      "labelled": true,
+      "note": "shared with the scifi and fantasy and animation doors, so a film behind both holds it at both or neither."
+    },
+    "martial_arts": {
+      "labelled": true
+    },
+    "revenge": {
+      "labelled": true
+    },
+    "spies": {
+      "labelled": true,
+      "note": "shared with the thriller door, so a film behind both holds it at both or neither."
+    },
+    "scifi_action": {
+      "labelled": true
+    },
+    "quests": {
+      "labelled": true
+    },
+    "disaster_survival": {
+      "labelled": true
+    },
+    "war_battle": {
+      "labelled": true,
+      "note": "shared with the war door, so a film behind both holds it at both or neither."
+    },
+    "action_comedy": {
+      "labelled": true,
+      "note": "shared with the comedy door, so a film behind both holds it at both or neither."
+    }
+  }
 }

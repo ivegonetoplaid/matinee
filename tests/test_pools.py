@@ -12,7 +12,7 @@ from matinee.pools import SCORES, House, build_pools, waiting
 from matinee.table import FilmTable
 
 TAGS = tuple(sorted({t for tags in SCORES.values() for t in tags}))
-NO_PINS = House(kids_pins={}, tree_pins={}, payoff_pins={}, scale_pins={})
+NO_PINS = House(kids_pins={}, tree_pins={}, scale_pins={})
 
 
 def make_table(films: list[dict[str, object]], relevance: dict[int, dict[str, float]]) -> FilmTable:
@@ -46,7 +46,7 @@ def test_a_kids_film_takes_the_older_of_its_labelled_band_and_its_certificates_a
     table = make_table([film(t, "Animation|Family", c, None) for t, c in certs.items()], {})
     bands = {1: "little", 2: "family", 3: "little", 4: "little", 5: "family", 6: "family", 7: "family", 9: "older"}
     kids = TreeLabels(kinds={t: frozenset({"silly"}) for t in bands}, bands=bands)
-    house = House(kids_pins={7: "family"}, tree_pins={}, payoff_pins={}, scale_pins={})
+    house = House(kids_pins={7: "family"}, tree_pins={}, scale_pins={})
     pools = build_pools(table, house, Labels({"kids": kids}))
     assert [t for t in certs if pools["kids:little"][t]] == [1]
     assert [t for t in certs if pools["kids:family"][t]] == [1, 2, 3, 7]  # 7: an R film the house pins
@@ -86,7 +86,7 @@ def test_an_unlisted_film_waits_behind_the_doors_its_genres_name() -> None:
 
 def test_a_house_pin_puts_a_film_behind_a_door_the_labels_do_not() -> None:
     table = make_table([film(1, "Crime", "R", None)], {})
-    house = House(kids_pins={}, tree_pins={"action": frozenset({1})}, payoff_pins={}, scale_pins={})
+    house = House(kids_pins={}, tree_pins={"action": frozenset({1})}, scale_pins={})
     pools = build_pools(table, house, labels(crime={1: ["cops"]}))
     assert pools["action"][1] and pools["crime"][1] and not pools["drama"][1]
 
@@ -95,7 +95,7 @@ def test_a_standup_special_joins_comedy_and_stays_out_of_nonfiction() -> None:
     special = {**film(1, "Comedy|Documentary", "TV-MA", None), "keywords": frozenset({"stand-up comedy"})}
     pinned = film(2, "Documentary", "R", None)
     table = make_table([special, pinned, film(3, "Documentary", "R", None)], {})
-    house = House(kids_pins={}, tree_pins={}, payoff_pins={}, scale_pins={}, specials=frozenset({2}))
+    house = House(kids_pins={}, tree_pins={}, scale_pins={}, specials=frozenset({2}))
     pools = build_pools(table, house, Labels())
     assert pools["comedy"].to_dict() == {1: True, 2: True, 3: False}
     assert pools["nonfiction"].to_dict() == {1: False, 2: False, 3: True}

@@ -31,9 +31,9 @@ from check_trees import (
 from matinee.engine import load_catalog
 from matinee.labels import Labels, TreeLabels
 from matinee.pools import House
-from matinee.reference import Reference, Stat
+from matinee.reference import Cuts, Reference
 from matinee.table import FilmTable
-from test_engine import TREE, make_table, reference, write_data
+from test_engine import TREE, gore_cut_tree, make_table, reference, write_data
 
 BANDS = ["spotless", "some", "messy", "rip"]
 
@@ -48,7 +48,7 @@ def _table() -> FilmTable:
 
 
 def _house(scale_pins: dict[tuple[str, str, str], frozenset[int]]) -> House:
-    return House(kids_pins={}, tree_pins={}, payoff_pins={}, scale_pins=scale_pins)
+    return House(kids_pins={}, tree_pins={}, scale_pins=scale_pins)
 
 
 def _gore(rows: dict[int, list[str]]) -> pd.DataFrame:
@@ -83,14 +83,12 @@ def test_every_pin_needs_a_fixture_asserting_its_placement() -> None:
     house = House(
         kids_pins={10: "older"},
         tree_pins={"action": frozenset({11})},
-        payoff_pins={("western", "showdown"): frozenset({12})},
         scale_pins={("horror", "gore", "rip"): frozenset({13})},
         specials=frozenset({14}),
     )
     good = [
         {"tmdb": 10, "kids_band": "older"},
         {"tmdb": 11, "must_reach": ["action"]},
-        {"tmdb": 12, "must_reach": ["western"]},
         {"tmdb": 13, "gore_band": "rip"},
         {"tmdb": 14, "flavour_in": {"comedy": ["standup"]}},
     ]
@@ -100,13 +98,12 @@ def test_every_pin_needs_a_fixture_asserting_its_placement() -> None:
     weak = [
         {"tmdb": 10},
         {"tmdb": 11, "must_reach": ["drama"]},
-        {"tmdb": 12},
         {"tmdb": 13, "gore_band": "some"},
         {"tmdb": 14, "must_reach": ["comedy"]},
     ]
     report = Report()
     check_pins_in_key(house, {"films": weak}, report)
-    assert len(report.failures) == 5
+    assert len(report.failures) == 4
 
 
 def test_a_sample_keeps_every_answer(tmp_path: Path) -> None:
@@ -140,16 +137,14 @@ def test_sample_draws_its_share_by_its_seed_and_counts_its_failures(tmp_path: Pa
 
 
 def test_an_answer_that_depends_on_the_library_fails(tmp_path: Path) -> None:
-    full = load_catalog(make_table(), write_data(tmp_path), reference())
-    west = reference().trees["west"]
-    moved = replace(west, payoffs={**west.payoffs, "slow": Stat(("p_slow",), 0.45, 0.2)})
-    other = load_catalog(make_table().subset(list(range(1, 31))), tmp_path, Reference("test", {"west": moved}))
+    data = write_data(tmp_path, gore_cut_tree())
+    full = load_catalog(make_table(), data, reference())
+    moved = replace(reference().trees["west"], scales={"gore": Cuts(("gore_a",), (50.0,), (0.9,))})
+    other = load_catalog(make_table().subset(list(range(1, 31))), data, Reference("test", {"west": moved}))
     report = Report()
     check_same_answers(full, other, report)
     assert sorted(report.failures) == [
-        "answers: Film 13 (1983) changes its west 'payoff' answer 0 with the library's size",
-        "answers: Film 13 (1983) changes its west 'payoff' answer 1 with the library's size",
-        "answers: Film 14 (1984) changes its west 'payoff' answer 1 with the library's size",
+        f"answers: Film {t} ({1970 + t}) changes its west 'gore' answer 0 with the library's size" for t in (1, 3, 4, 5)
     ]
 
 

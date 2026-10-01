@@ -85,7 +85,6 @@ class House:
 
     kids_pins: Mapping[int, str]
     tree_pins: Mapping[str, frozenset[int]]
-    payoff_pins: Mapping[tuple[str, str], frozenset[int]]
     scale_pins: Mapping[tuple[str, str, str], frozenset[int]]
     flavour_pins: Mapping[tuple[str, str], Mapping[int, bool]] = field(default_factory=dict)
     specials: frozenset[int] = frozenset()  # films counted as standup specials whatever the rule says
@@ -96,9 +95,6 @@ def load_house(path: Path = DATA / "house_overrides.json") -> House:
     tree_pins: dict[str, set[int]] = {}
     for pin in doc.get("trees", []):
         tree_pins.setdefault(pin["tree"], set()).add(int(pin["tmdb"]))
-    payoffs: dict[tuple[str, str], set[int]] = {}
-    for pin in doc.get("payoffs", []):
-        payoffs.setdefault((pin["tree"], pin["payoff"]), set()).add(int(pin["tmdb"]))
     scales: dict[tuple[str, str, str], set[int]] = {}
     for pin in doc.get("scales", []):
         scales.setdefault((pin["tree"], pin["scale"], pin["band"]), set()).add(int(pin["tmdb"]))
@@ -108,7 +104,6 @@ def load_house(path: Path = DATA / "house_overrides.json") -> House:
     return House(
         kids_pins={int(p["tmdb"]): p["band"] for p in doc.get("kids", [])},
         tree_pins={t: frozenset(ids) for t, ids in tree_pins.items()},
-        payoff_pins={k: frozenset(ids) for k, ids in payoffs.items()},
         scale_pins={k: frozenset(ids) for k, ids in scales.items()},
         flavour_pins=flavours,
         specials=frozenset(int(p["tmdb"]) for p in doc.get("specials", [])),

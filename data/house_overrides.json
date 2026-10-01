@@ -92,15 +92,6 @@
       "note": "a standup special with no TMDB keywords, so the standup rule misses it"
     }
   ],
-  "payoffs": [
-    {
-      "title": "The Harder They Fall",
-      "tmdb": 618162,
-      "tree": "western",
-      "payoff": "showdown",
-      "note": "a stylish revenge shootout western whose thin genome profile reads as comedy"
-    }
-  ],
   "scales": [
     {
       "title": "Terrifier",

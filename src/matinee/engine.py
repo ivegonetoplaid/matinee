@@ -17,9 +17,9 @@ DoesTheDogDie exclusions, which are checked at the pick. For a viewer whose topi
 skip a scale question (horror's gore pails), `gentlest` names the least-scoring
 third of a pool on that scale, which the pick draws from first.
 
-A tree's flavours are found by keyword, genome and genre signals, or, for a
-flavour marked `labelled`, read from the labels file (`matinee.labels`), which
-alone places films behind a genre door (`matinee.pools`). An answer leaving one
+A tree's flavours, its kinds, are read from the labels file (`matinee.labels`),
+which alone places films behind a genre door (`matinee.pools`); comedy's standup
+flavour is the standup specials. An answer leaving one
 flavour out keeps films that also sit in another flavour of the tree. An answer
 offering a labelled flavour shows only when that flavour holds at least
 `KIND_MIN_FILMS` films of the tree's pool in the loaded library, counted before
@@ -162,25 +162,6 @@ def _any_genre(table: FilmTable, names: frozenset[str]) -> Mask:
     return np.array(table.films.genres.map(lambda g: bool(names & g)), dtype=bool)
 
 
-def _flavour(table: FilmTable, tree: Tree, name: str) -> Mask:
-    """Films matching any of the flavour's signals and reaching each of its `score_at_least` floors.
-
-    A film with no score passes a floor, as unknown values do everywhere.
-    """
-    spec = tree.flavours.get(name)
-    if spec is None:
-        raise TreeError(f"tree '{tree.id}' has no flavour '{name}'")
-    words = frozenset(spec.get("keywords_any", []))
-    hit = np.array(_keywords(table).map(lambda k: bool(words & k)), dtype=bool)
-    for tag in spec.get("genome_any", []):
-        hit |= _bool(table.tag(tag) >= tree.genome_threshold)
-    hit |= _any_genre(table, frozenset(spec.get("genres_any", [])))
-    for score, floor in spec.get("score_at_least", {}).items():
-        values = _score(table, tree, score)
-        hit &= _passes(values, values >= floor)
-    return hit
-
-
 def _labelled(cat: Catalog, tree: Tree, name: str) -> Mask:
     """Films whose labels in this tree name the kind `name`; an unlabelled film is in no kind."""
     kinds = cat.labels.of(tree.id).kinds
@@ -190,16 +171,13 @@ def _labelled(cat: Catalog, tree: Tree, name: str) -> Mask:
 def house_flavour(cat: Catalog, tree: Tree, name: str) -> Mask:
     """The flavour's films after house pins: a film pinned in joins it, a film pinned out leaves it.
 
-    A flavour marked `labelled` takes its films from the labels, one marked `specials` takes the standup
-    specials, and any other is found by its signals.
+    A flavour marked `labelled` takes its films from the labels, and one marked `specials` takes the standup
+    specials.
     """
-    spec = tree.flavours.get(name, {})
-    if spec.get("labelled"):
-        hit = _labelled(cat, tree, name)
-    elif spec.get("specials"):
-        hit = _bool(specials(cat.table, cat.house))
-    else:
-        hit = _flavour(cat.table, tree, name)
+    spec = tree.flavours.get(name)
+    if spec is None:
+        raise TreeError(f"tree '{tree.id}' has no flavour '{name}'")
+    hit = _labelled(cat, tree, name) if spec.get("labelled") else _bool(specials(cat.table, cat.house))
     for tmdb, member in cat.house.flavour_pins.get((tree.id, name), {}).items():
         hit[cat.table.films.index == tmdb] = member
     return hit
@@ -212,41 +190,6 @@ def _in_other_flavour(cat: Catalog, tree: Tree, name: str) -> Mask:
         if other != name:
             hit |= house_flavour(cat, tree, other)
     return hit
-
-
-def payoff_members(cat: Catalog, tree: Tree) -> pd.DataFrame:
-    """One boolean column per payoff answer of `tree`: whether each film belongs to it."""
-    spec = tree.payoffs
-    if spec is None:
-        raise TreeError(f"tree '{tree.id}' has no payoffs")
-    table = cat.table
-    z = pd.DataFrame(
-        {
-            name: (table.mean_of(tags) - cat.reference.payoff(tree.id, name).mean)
-            / cat.reference.payoff(tree.id, name).sd
-            for name, tags in spec.standardised.items()
-        }
-    )
-    strongest = z.eq(z.max(axis=1), axis=0)
-    members = strongest if spec.overlap is None else strongest | z.ge(spec.overlap)
-    for name, (tags, minimum) in spec.thresholds.items():
-        members[name] = table.mean_of(tags).ge(minimum)
-    members = members.fillna(False).astype(bool)
-    unscored = ~table.has_genome()
-    placed = pd.Series(False, index=table.films.index)
-    for genre, payoff in spec.by_genre:
-        hit = unscored & table.films.genres.map(lambda g, n=genre: n in g)
-        members[payoff] |= hit
-        placed |= hit
-    rest = unscored & ~placed
-    for name in spec.standardised if spec.default == "all" else [spec.default]:
-        members[name] |= rest
-    pins = {payoff: ids for (pin_tree, payoff), ids in cat.house.payoff_pins.items() if pin_tree == tree.id}
-    for ids in pins.values():
-        members.loc[table.films.index.isin(list(ids))] = False
-    for payoff, ids in pins.items():
-        members[payoff] |= table.films.index.isin(list(ids))
-    return members
 
 
 def scale_members(cat: Catalog, tree: Tree, name: str) -> pd.DataFrame:
@@ -332,11 +275,6 @@ def _scored_mask(cat: Catalog, tree: Tree, f: Filter) -> Mask:
         mask &= house_flavour(cat, tree, f.flavour)
     if f.flavour_none is not None:
         mask &= ~house_flavour(cat, tree, f.flavour_none) | _in_other_flavour(cat, tree, f.flavour_none)
-    if f.payoff is not None:
-        members = payoff_members(cat, tree)
-        if f.payoff not in members.columns:
-            raise TreeError(f"tree '{tree.id}' has no payoff '{f.payoff}'")
-        mask &= members[f.payoff].to_numpy()
     if f.bands is not None:
         mask &= offered(scale_members(cat, tree, f.bands.scale), f.bands.bands).to_numpy()
     for name, limit in f.score_at_most.items():

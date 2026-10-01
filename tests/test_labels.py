@@ -10,7 +10,7 @@ import pytest
 
 from matinee.engine import Answer, EngineError, Viewer, load_catalog, walk
 from matinee.labels import Labels, LabelsError, TreeLabels, load_labels
-from matinee.trees import TreeError, load_trees
+from matinee.trees import Filter, TreeError, load_trees
 from test_engine import TREE, make_table, reference, write_data
 
 
@@ -74,6 +74,20 @@ def test_the_shipped_thriller_door_offers_its_kinds_in_order_and_only_spies_self
     assert all(thriller.flavours[f]["labelled"] for f in flavours if f)
 
 
+@pytest.mark.parametrize("door", ["action", "drama", "fantasy"])
+def test_a_door_moved_onto_the_labels_asks_one_question_its_labelled_kinds_then_anything(door: str) -> None:
+    tree = load_trees()[door]
+    (question,) = tree.questions
+    *kinds, anything = question.options
+    assert kinds and all(tree.flavours[str(o.filter.flavour)]["labelled"] for o in kinds)
+    assert anything.filter == Filter() and anything.say.startswith("anything")
+
+
+def test_the_westerns_door_asks_no_question() -> None:
+    western = load_trees()["western"]
+    assert western.questions == () and not western.flavours
+
+
 @pytest.mark.parametrize(
     "lab",
     [labels({1: ["nope"]}), Labels({"nowhere": TreeLabels()})],
@@ -83,7 +97,7 @@ def test_labels_naming_an_unknown_kind_or_tree_refuse_to_load(tmp_path: Path, la
         load_catalog(make_table(), write_data(tmp_path, labelled_tree()), reference(), lab)
 
 
-def test_a_labelled_kind_takes_no_signals(tmp_path: Path) -> None:
+def test_a_labelled_kind_takes_no_other_signal(tmp_path: Path) -> None:
     tree = labelled_tree()
     tree["flavours"]["ghost"]["keywords_any"] = ["ghost"]
     with pytest.raises(TreeError):
@@ -137,8 +151,6 @@ def shown_says(cat: Any) -> list[str]:
 def bar_tree() -> dict[str, Any]:
     tree = labelled_tree()
     tree["questions"][0]["options"].append({"say": "anything.", "reply": "", "filter": {}})
-    tree["flavours"]["heroic"] = {"keywords_any": ["superhero"]}
-    tree["questions"][0]["options"].append({"say": "heroes.", "reply": "", "filter": {"flavour": "heroic"}})
     return tree
 
 
@@ -151,7 +163,6 @@ def test_a_labelled_kind_shows_from_thirty_films_and_a_hidden_one_keeps_its_film
     says = shown_says(cat)
     assert ("ghosts." in says) is shown  # ghost has no answer leaving it out, so the bar alone decides
     assert "anything but laughs." in says
-    assert "heroes." in says  # a kind found by signals is not held to the bar
     assert int(cat.masks[("west", "era", 0)].sum()) == ghosts  # the bar never changes which films it holds
     anything = set(walk(cat, "west", Viewer(), [Answer("era", 3)]).pool)
     assert set(range(1, ghosts + 1)) <= anything
@@ -167,7 +178,7 @@ def test_an_always_shown_kind_shows_under_thirty_films(tmp_path: Path) -> None:
 @pytest.mark.parametrize(
     "change",
     [
-        lambda t: t["flavours"]["heroic"].update({"always_shown": True}),
+        lambda t: t["flavours"].update({"specials": {"specials": True, "always_shown": True}}),
         lambda t: t["flavours"]["laughs"].update({"always_shown": "yes"}),
     ],
 )
