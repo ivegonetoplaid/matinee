@@ -26,8 +26,8 @@ def labelled_tree() -> dict[str, Any]:
     return tree
 
 
-def labels(kinds: dict[int, list[str]], out: tuple[int, ...] = ()) -> Labels:
-    return Labels({"west": TreeLabels({t: frozenset(k) for t, k in kinds.items()}, frozenset(out))})
+def labels(kinds: dict[int, list[str]]) -> Labels:
+    return Labels({"west": TreeLabels({t: frozenset(k) for t, k in kinds.items()})})
 
 
 def pool_after(cat: Any, option: int) -> set[int]:
@@ -52,78 +52,17 @@ def test_leaving_a_kind_out_keeps_films_in_another_kind_and_films_in_none(tmp_pa
     assert {1, 2, 4, 5} <= rest  # another kind, labelled with no kind, unlabelled
 
 
-def test_a_labelled_film_joins_the_pool_the_rules_left_it_out_of(tmp_path: Path) -> None:
-    root = write_data(tmp_path, labelled_tree())
-    (root / "trees" / "west.json").write_text(json.dumps({**labelled_tree(), "pool": "horror"}))
-    cat = load_catalog(make_table(), root, reference(), labels({3: ["laughs"]}))
-    ids = list(cat.ids)
-    assert cat.pools["horror"][ids.index(3)]  # film 3 is tagged Comedy, not Horror
-
-
-def test_a_label_never_brings_a_kids_only_film_into_another_tree(tmp_path: Path) -> None:
-    table = make_table()
-    genres, certificate = table.films.genres.copy(), table.films.certificate.copy()
-    genres[31], certificate[31] = frozenset({"Animation", "Comedy", "Western"}), "G"  # no genome: kids-only
-    table.films["genres"], table.films["certificate"] = genres, certificate
-    root = write_data(tmp_path, labelled_tree())
-    (root / "trees" / "west.json").write_text(json.dumps({**labelled_tree(), "pool": "horror"}))
-    cat = load_catalog(table, root, reference(), labels({31: ["ghost"], 3: ["ghost"]}))
-    ids = list(cat.ids)
-    assert cat.pools["kids:only"][ids.index(31)] and cat.pools["kids"][ids.index(31)]
-    assert not cat.pools["horror"][ids.index(31)]  # only the kids tree holds a kids-only film
-    assert cat.pools["horror"][ids.index(3)]  # any other labelled film still joins
-
-
-def test_a_label_never_brings_a_film_for_the_whole_family_behind_a_grown_ups_door(tmp_path: Path) -> None:
-    table = make_table()
-    genres = table.films.genres.copy()
-    genres[3] = frozenset({"Animation", "Comedy", "Western"})  # PG, with genome: the kids tree's family band
-    table.films["genres"] = genres
-    root = write_data(tmp_path, labelled_tree())
-    (root / "trees" / "west.json").write_text(json.dumps({**labelled_tree(), "pool": "horror"}))
-    laughs = {"pool": "fantasy", "opening": "ha.", "flavours": {"ghost": {"labelled": True}}}
-    (root / "trees" / "laughs.json").write_text(json.dumps(laughs))
-    lab = Labels({t: TreeLabels({3: frozenset({"ghost"})}) for t in ("west", "laughs")})
-    cat = load_catalog(table, root, reference(), lab)
-    ids = list(cat.ids)
-    assert cat.pools["kids:young"][ids.index(3)] and not cat.pools["kids:only"][ids.index(3)]
-    assert not cat.pools["horror"][ids.index(3)]  # horror is for grown-ups
-    assert cat.pools["fantasy"][ids.index(3)]  # a family film may still be labelled into fantasy
-
-
-def test_a_film_labelled_out_leaves_only_when_another_tree_holds_it(tmp_path: Path) -> None:
-    root = write_data(tmp_path, labelled_tree())
-    (root / "trees" / "laughs.json").write_text(json.dumps({"pool": "comedy", "opening": "ha."}))
-    cat = load_catalog(make_table(), root, reference(), labels({}, out=(2, 3)))
-    ids = list(cat.ids)
-    assert not cat.pools["western"][ids.index(3)]  # a Comedy film: the comedy tree holds it
-    assert cat.pools["western"][ids.index(2)]  # a Horror film: no other tree holds it, so it stays
-
-
-@pytest.mark.parametrize("order", [("west", "scary"), ("scary", "west")])
-def test_labels_settle_the_same_whatever_order_the_file_lists_them(tmp_path: Path, order: tuple[str, str]) -> None:
+def test_a_film_the_labels_list_under_another_door_is_not_behind_this_one(tmp_path: Path) -> None:
     root = write_data(tmp_path, labelled_tree())
     scary = {"pool": "horror", "opening": "boo.", "flavours": {"ghost": {"labelled": True}}}
     (root / "trees" / "scary.json").write_text(json.dumps(scary))
-    entries = {
-        "west": TreeLabels({1: frozenset()}, frozenset({3, 4})),  # 3 is labelled into scary; 4 is out of both
-        "scary": TreeLabels({3: frozenset()}, frozenset({4})),
-    }
-    pools = load_catalog(make_table(), root, reference(), Labels({t: entries[t] for t in order})).pools
-    ids = list(make_table().films.index)
-    assert pools["horror"][ids.index(3)] and not pools["western"][ids.index(3)]  # its labels place it in scary
-    assert pools["western"][ids.index(4)] and pools["horror"][ids.index(4)]  # every door holding it labels it out
-
-
-def test_a_film_the_house_pins_to_a_tree_stays_there_whatever_its_labels_say(tmp_path: Path) -> None:
-    root = write_data(tmp_path, labelled_tree())
-    (root / "trees" / "laughs.json").write_text(json.dumps({"pool": "comedy", "opening": "ha."}))
-    house = json.loads((root / "house_overrides.json").read_text())
-    (root / "house_overrides.json").write_text(json.dumps({**house, "trees": [{"tmdb": 3, "tree": "western"}]}))
-    cat = load_catalog(make_table(), root, reference(), labels({}, out=(3, 5)))
+    west = TreeLabels({1: frozenset({"ghost"}), 4: frozenset({"ghost"})})
+    lab = Labels({"west": west, "scary": TreeLabels({3: frozenset({"ghost"})})})
+    cat = load_catalog(make_table(), root, reference(), lab)
     ids = list(cat.ids)
-    assert cat.pools["western"][ids.index(3)]  # pinned: the comedy tree holds it too, and it stays
-    assert not cat.pools["western"][ids.index(5)]  # unpinned, held by comedy: it leaves
+    assert not cat.pools["western"][ids.index(3)]  # tagged Western, but labelled behind scary only
+    assert cat.pools["horror"][ids.index(3)] and not cat.pools["horror"][ids.index(4)]  # genres never place it
+    assert cat.pools["western"][ids.index(1)] and cat.pools["western"][ids.index(5)]  # labelled; waiting
 
 
 def test_the_shipped_thriller_door_offers_its_kinds_in_order_and_only_spies_self_destructs() -> None:
@@ -151,23 +90,36 @@ def test_a_labelled_kind_takes_no_signals(tmp_path: Path) -> None:
         load_catalog(make_table(), write_data(tmp_path, tree), reference())
 
 
-def test_the_labels_file_reads_kinds_and_out_and_is_empty_when_absent(tmp_path: Path) -> None:
+def test_the_labels_file_reads_kinds_and_bands_and_is_empty_when_absent(tmp_path: Path) -> None:
     path = tmp_path / "labels.json"
     assert load_labels(path) == Labels()
-    path.write_text(json.dumps({"format": 1, "trees": {"horror": {"kinds": {"238": ["a", "b"], "9": []}, "out": [7]}}}))
-    horror = load_labels(path).of("horror")
-    assert horror.kinds == {238: frozenset({"a", "b"}), 9: frozenset()}
-    assert horror.out == frozenset({7})
-    assert load_labels(path).of("comedy") == TreeLabels()
+    doc = {
+        "horror": {"kinds": {"238": ["a", "b"], "9": []}},
+        "kids": {"kinds": {"7": ["silly"]}, "bands": {"7": "little"}},
+    }
+    path.write_text(json.dumps({"format": 2, "trees": doc}))
+    read = load_labels(path)
+    assert read.of("horror").kinds == {238: frozenset({"a", "b"}), 9: frozenset()}
+    assert read.of("kids").bands == {7: "little"}
+    assert read.of("comedy") == TreeLabels()
+    assert read.films() == frozenset({238, 9, 7})
+
+
+def test_a_format_1_labels_file_is_refused_with_its_format_named(tmp_path: Path) -> None:
+    path = tmp_path / "labels.json"
+    path.write_text(json.dumps({"format": 1, "trees": {"horror": {"kinds": {"238": ["a"]}, "out": [7]}}}))
+    with pytest.raises(LabelsError, match="is format 1; this Matinee reads only format 2"):
+        load_labels(path)
 
 
 @pytest.mark.parametrize(
     "doc",
     [
-        {"format": 2, "trees": {}},
-        {"format": 1, "trees": {"horror": {"kinds": {"238": "a"}}}},
-        {"format": 1, "trees": {"horror": {"kinds": {"x": ["a"]}}}},
-        {"format": 1, "trees": {"horror": {"extra": []}}},
+        {"format": 2, "trees": []},
+        {"format": 2, "trees": {"horror": {"kinds": {"238": "a"}}}},
+        {"format": 2, "trees": {"horror": {"kinds": {"x": ["a"]}}}},
+        {"format": 2, "trees": {"horror": {"out": []}}},
+        {"format": 2, "trees": {"kids": {"kinds": {"7": ["silly"]}, "bands": {"7": "toddlers"}}}},
     ],
 )
 def test_a_malformed_labels_file_refuses_to_load(tmp_path: Path, doc: dict[str, Any]) -> None:

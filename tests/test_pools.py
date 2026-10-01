@@ -7,7 +7,8 @@ from datetime import UTC, datetime
 import numpy as np
 import pandas as pd
 
-from matinee.pools import SCORES, House, build_pools
+from matinee.labels import Labels, TreeLabels
+from matinee.pools import SCORES, House, build_pools, waiting
 from matinee.table import FilmTable
 
 TAGS = tuple(sorted({t for tags in SCORES.values() for t in tags}))
@@ -50,30 +51,48 @@ def test_kids_franchise_respects_the_adult_ceiling_and_joins_as_rough() -> None:
         ],
         {1: {}, 2: {"foul language": 0.6}, 3: {"foul language": 0.2}, 4: {}},
     )
-    pools = build_pools(table, NO_PINS)
+    pools = build_pools(table, NO_PINS, Labels())
     assert pools["kids"].to_dict() == {1: True, 2: False, 3: True, 4: False}
     assert pools["kids:franchise"].to_dict() == {1: False, 2: False, 3: True, 4: False}
     assert not pools["kids:family"][3]
 
 
-def test_missing_score_never_removes_a_film_from_horror() -> None:
-    table = make_table(
-        [film(1, "Horror|Comedy", "R", None), film(2, "Horror|Comedy", "R", None), film(3, "Horror", "R", None)],
-        {1: {"scary": 0.0, "frightening": 0.0, "creepy": 0.0, "horror": 0.0}, 3: {}},
+def labels(**doors: dict[int, list[str]]) -> Labels:
+    return Labels(
+        {door: TreeLabels(kinds={t: frozenset(k) for t, k in films.items()}) for door, films in doors.items()}
     )
-    pools = build_pools(table, NO_PINS)
-    assert pools["horror"].to_dict() == {1: False, 2: True, 3: True}
-    assert pools["comedy"][1]
 
 
-def test_a_kids_only_film_stays_out_of_western_and_nonfiction() -> None:
+def test_a_labelled_film_is_behind_exactly_the_doors_listing_it_whatever_its_genres() -> None:
+    table = make_table([film(1, "Adventure|Science Fiction", "PG-13", None), film(2, "Horror|Comedy", "R", None)], {})
+    pools = build_pools(table, NO_PINS, labels(scifi={1: ["space_aliens"]}, comedy={2: ["horror_comedy"]}))
+    assert [door for door in ("action", "scifi", "fantasy") if pools[door][1]] == ["scifi"]
+    assert pools["comedy"][2] and not pools["horror"][2]
+
+
+def test_an_unlisted_film_waits_behind_the_doors_its_genres_name() -> None:
     table = make_table(
-        [film(1, "Animation|Family|Western", "G", None), film(2, "Animation|Family|Documentary", "G", None)],
+        [
+            film(1, "Adventure|Mystery|Science Fiction", "PG", None),
+            film(2, "Western", "R", None),
+            film(3, "Music", "R", None),
+            film(4, "Documentary|War", "R", None),
+        ],
         {},
     )
-    pools = build_pools(table, NO_PINS)
-    assert pools["kids"][1] and pools["kids"][2]
-    assert not pools["western"][1] and not pools["nonfiction"][2]
+    pools = build_pools(table, NO_PINS, labels(western={2: []}))
+    doors = ("action", "comedy", "drama", "thriller", "crime", "horror", "scifi", "fantasy", "romance", "animation")
+    assert {door for door in (*doors, "western", "war") if pools[door][1]} == {"action", "thriller", "scifi"}
+    assert waiting(table, NO_PINS, labels(western={2: []})).to_dict() == {1: True, 2: False, 3: True, 4: False}
+    assert not any(pools[door][3] for door in doors)  # a film whose genres name no door waits behind none
+    assert not pools["war"][4] and pools["nonfiction"][4]  # a documentary keeps its own rule and does not wait
+
+
+def test_a_house_pin_puts_a_film_behind_a_door_the_labels_do_not() -> None:
+    table = make_table([film(1, "Crime", "R", None)], {})
+    house = House(kids_pins={}, tree_pins={"action": frozenset({1})}, payoff_pins={}, scale_pins={})
+    pools = build_pools(table, house, labels(crime={1: ["cops"]}))
+    assert pools["action"][1] and pools["crime"][1] and not pools["drama"][1]
 
 
 def test_a_standup_special_joins_comedy_and_stays_out_of_nonfiction() -> None:
@@ -81,28 +100,6 @@ def test_a_standup_special_joins_comedy_and_stays_out_of_nonfiction() -> None:
     pinned = film(2, "Documentary", "R", None)
     table = make_table([special, pinned, film(3, "Documentary", "R", None)], {})
     house = House(kids_pins={}, tree_pins={}, payoff_pins={}, scale_pins={}, specials=frozenset({2}))
-    pools = build_pools(table, house)
+    pools = build_pools(table, house, Labels())
     assert pools["comedy"].to_dict() == {1: True, 2: True, 3: False}
     assert pools["nonfiction"].to_dict() == {1: False, 2: False, 3: True}
-
-
-def test_the_crime_pool_takes_every_crime_film_and_claims_no_stray() -> None:
-    exciting = {"action": 0.9, "action packed": 0.9, "good action": 0.9}
-    table = make_table(
-        [film(1, "Crime", "R", None), film(2, "Crime", "R", None), film(3, "Drama", "R", None)],
-        {1: {"action": 0.1}, 2: exciting, 3: {}},
-    )
-    pools = build_pools(table, NO_PINS)
-    assert pools["crime"].to_dict() == {1: True, 2: True, 3: False}
-    assert pools["drama"][1]  # a Crime film no other tree claims stays a drama stray beside the crime pool
-    assert pools["action"][2]  # a Crime film exciting enough stays in action beside the crime pool
-    assert not pools["action"][1]
-
-
-def test_the_crime_pool_leaves_out_a_film_for_the_whole_family() -> None:
-    table = make_table(
-        [film(1, "Animation|Crime|Family", "PG", None), film(2, "Animation|Crime", "PG-13", None)], {1: {}, 2: {}}
-    )
-    pools = build_pools(table, NO_PINS)
-    assert pools["kids:young"][1] and not pools["crime"][1]
-    assert pools["crime"][2]  # an older kids' film may still be crime

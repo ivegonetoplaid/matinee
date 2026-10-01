@@ -111,7 +111,7 @@
           "say": "not a nightmare. make me laugh.",
           "reply": "comedies, camp and the gloriously awful. let's find you one.",
           "filter": {
-            "flavour": "comedy"
+            "flavour": "horror_comedy"
           }
         },
         {
@@ -125,7 +125,7 @@
           "say": "anything scary. I'll take it.",
           "reply": "we'll let fate decide.",
           "filter": {
-            "flavour_none": "comedy"
+            "flavour_none": "horror_comedy"
           }
         }
       ]
@@ -258,7 +258,7 @@
       "labelled": true,
       "note": "dread over shocks: the horror is in the mind, the atmosphere, or something wrong that builds slowly."
     },
-    "comedy": {
+    "horror_comedy": {
       "labelled": true,
       "note": "made to be laughed with or at: horror comedies, spoofs and cheesy cult B-movies. A scary film with some jokes is not comedy (The Cabin in the Woods, Ready or Not)."
     },

@@ -48,7 +48,7 @@
     {
       "id": "kind",
       "ask": "so, what manner of foolishness are we watching?",
-      "note": "Each answer holds the films the labels place in it (the labels file in Matinee's state directory, one rule per answer quoting its words). Animated comedies are their own answer by TMDB's Animation genre and are labelled with no other kind. Horror comedy is the horror tree's comedy kind. Stand-up specials are held apart: only the stand-up answer offers them, and no other answer or \"Just pick one!\" in this tree picks one. A film no answer clearly fits, or not yet labelled, is reached through \"anything\" and \"Just pick one!\".",
+      "note": "Each answer holds the films the labels place in it (the labels file in Matinee's state directory, one rule per answer quoting its words). Horror comedy is the horror tree's comedy kind. Stand-up specials are held apart: only the stand-up answer offers them, and no other answer or \"Just pick one!\" in this tree picks one. A film no answer clearly fits, or not yet labelled, is reached through \"anything\" and \"Just pick one!\".",
       "options": [
         {
           "say": "slapstick, spoofs, and complete nonsense.",
@@ -68,35 +68,35 @@
           "say": "cartoons. drawn, animated, and gloriously unhinged.",
           "reply": "excellent. reality is overrated.",
           "filter": {
-            "flavour": "animated"
+            "flavour": "cartoon_comedy"
           }
         },
         {
           "say": "dark humor and terrible ideas. let me laugh at things I probably shouldn't.",
           "reply": "I won't tell anyone.",
           "filter": {
-            "flavour": "dark"
+            "flavour": "dark_comedy"
           }
         },
         {
           "say": "wisecracks, explosions, and spectacularly bad decisions.",
           "reply": "excellent. subtlety can stay home.",
           "filter": {
-            "flavour": "action"
+            "flavour": "action_comedy"
           }
         },
         {
           "say": "blood, monsters, and punchlines. make the nightmare funny.",
           "reply": "excellent. let's find something that kills.",
           "filter": {
-            "flavour": "horror"
+            "flavour": "horror_comedy"
           }
         },
         {
           "say": "awkward adolescence, bad influences, and absolutely no supervision.",
           "reply": "nothing but bad decisions. perfect.",
           "filter": {
-            "flavour": "teen"
+            "flavour": "teen_comedy"
           }
         },
         {
@@ -131,25 +131,23 @@
       "labelled": true,
       "note": "warm, gentle comedies where the heart is the point: family, cosy and charming, and dry, quirky ones."
     },
-    "animated": {
-      "genres_any": [
-        "Animation"
-      ],
-      "note": "every animated comedy, by TMDB's Animation genre: a fact about the film, not a label."
+    "cartoon_comedy": {
+      "labelled": true,
+      "note": "cartoon comedies; shared with the animation door's cartoon comedies, so a film behind both doors holds it at both or neither."
     },
-    "dark": {
+    "dark_comedy": {
       "labelled": true,
       "note": "death, crime, cruelty or disaster played for laughs; the joke is that it is wrong."
     },
-    "action": {
+    "action_comedy": {
       "labelled": true,
       "note": "the action drives the plot and the jokes carry the film: buddy cops, heists gone wrong, spy and chase comedies."
     },
-    "horror": {
+    "horror_comedy": {
       "labelled": true,
       "note": "horror comedies: the horror tree's comedy kind, so both trees offer the same films."
     },
-    "teen": {
+    "teen_comedy": {
       "labelled": true,
       "note": "comedies about teenagers or college students, their schools, parties and growing up."
     },

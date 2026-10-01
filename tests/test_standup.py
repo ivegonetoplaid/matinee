@@ -110,17 +110,16 @@ def test_the_certificate_ceiling_keeps_specials_and_their_answer_from_the_kids_p
             assert not pool & SPECIALS
 
 
-def test_a_special_labelled_out_of_the_tree_stays_reachable_through_its_answer(tmp_path: Path) -> None:
-    # A second tree holds special 31 and film 4, so labelling them out of west removes them unless held apart.
+def test_a_special_the_labels_list_nowhere_stays_reachable_through_its_answer(tmp_path: Path) -> None:
+    # Film 4 is labelled behind a second tree only, so it leaves west; the specials are listed nowhere.
     cat = catalog(
         tmp_path,
-        Labels({"west": TreeLabels({}, frozenset({*SPECIALS, 4}))}),
-        pins=({"tmdb": 31, "tree": "horror"},),
+        Labels({"scary": TreeLabels({4: frozenset()})}),
         also={"scary": {"pool": "horror", "opening": "boo."}},
     )
     paths = ends(cat)
     assert paths[(1, 1)] == SPECIALS
-    assert not any(4 in pool for pool in paths.values())  # only the apart flavour is kept against its labels
+    assert not any(4 in pool for pool in paths.values())
 
 
 def test_the_footnote_shows_only_beside_the_answer_it_points_at(tmp_path: Path) -> None:

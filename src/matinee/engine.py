@@ -19,7 +19,7 @@ third of a pool on that scale, which the pick draws from first.
 
 A tree's flavours are found by keyword, genome and genre signals, or, for a
 flavour marked `labelled`, read from the labels file (`matinee.labels`), which
-also settles which films a tree's pool holds. An answer leaving one
+alone places films behind a genre door (`matinee.pools`). An answer leaving one
 flavour out keeps films that also sit in another flavour of the tree. An answer
 offering a labelled flavour shows only when that flavour holds at least
 `KIND_MIN_FILMS` films of the tree's pool in the loaded library, counted before
@@ -49,7 +49,7 @@ import numpy.typing as npt
 import pandas as pd
 
 from matinee.labels import Labels
-from matinee.pools import FOR_GROWN_UPS, House, build_pools, load_house, specials
+from matinee.pools import House, build_pools, load_house, specials
 from matinee.reference import DATA, Reference, load_reference, load_specs, problems
 from matinee.scales import film_scores, membership, offered, scale_of
 from matinee.table import FilmTable
@@ -372,51 +372,16 @@ def _first_option(o: dict[str, str]) -> FirstOption:
     return FirstOption(o["say"], o["tree"], o["label"])
 
 
-def _labelled_tree(cat: Catalog, tree_id: str, kinds: Mapping[int, frozenset[str]]) -> Tree:
-    """The tree a labels entry names; raises when no tree file defines it or it does not label a kind given."""
-    tree = cat.trees.get(tree_id)
-    if tree is None:
-        raise EngineError(f"the labels name tree '{tree_id}', which no tree file defines")
-    known = {name for name, spec in tree.flavours.items() if spec.get("labelled")}
-    unknown = set().union(*kinds.values()) - known
-    if unknown:
-        raise EngineError(f"the labels give tree '{tree_id}' kinds it does not label: {sorted(unknown)}")
-    return tree
-
-
-def _apply_labels(cat: Catalog) -> None:
-    """Check the labels against the trees, then settle every tree's pool by them at once.
-
-    Every labelled film joins the pool, whatever the pool rules said, except a kids-only film, which only
-    the kids tree holds, and a film for little ones or the whole family, which no grown-ups' tree (horror,
-    thriller, crime) holds. Then a film labelled out of a tree
-    leaves it only where another tree keeps it: holds it and does not label it out too. A film every tree
-    holding it labels out stays in all of them, so no film is left with no way in. A film the house pins
-    to a tree never leaves it: a house pin is the operator's own placement. The order of the entries in
-    the labels file changes nothing.
-    """
-    index = cat.table.films.index
-    none = np.zeros(len(index), dtype=bool)
-    kids_only, young = cat.pools.get("kids:only", none), cat.pools.get("kids:young", none)
-    leaving: dict[str, Mask] = {}
+def _check_labels(cat: Catalog) -> None:
+    """Every tree the labels name exists and labels every kind they give it; raises EngineError otherwise."""
     for tree_id, labels in cat.labels.trees.items():
-        tree = _labelled_tree(cat, tree_id, labels.kinds)
-        if tree.pool in cat.pools:
-            barred = kids_only.copy()
-            if tree.pool in FOR_GROWN_UPS:
-                barred |= young
-            cat.pools[tree.pool] = cat.pools[tree.pool] | (index.isin(list(labels.kinds)) & ~barred)
-            pinned = index.isin(list(cat.house.tree_pins.get(tree.pool, frozenset())))
-            leaving[tree.pool] = index.isin(list(labels.out)) & ~pinned
-    keeps = {t.pool: cat.pools[t.pool].copy() for t in cat.trees.values() if t.pool in cat.pools}
-    for pool, out in leaving.items():
-        keeps[pool] &= ~out
-    for pool, out in leaving.items():
-        elsewhere = np.zeros(len(index), dtype=bool)
-        for other, kept in keeps.items():
-            if other != pool:
-                elsewhere |= kept
-        cat.pools[pool] = cat.pools[pool] & ~(out & elsewhere)
+        tree = cat.trees.get(tree_id)
+        if tree is None:
+            raise EngineError(f"the labels name tree '{tree_id}', which no tree file defines")
+        known = {name for name, spec in tree.flavours.items() if spec.get("labelled")}
+        unknown = set().union(*labels.kinds.values()) - known
+        if unknown:
+            raise EngineError(f"the labels give tree '{tree_id}' kinds it does not label: {sorted(unknown)}")
 
 
 def _hold_apart(cat: Catalog) -> None:
@@ -481,8 +446,9 @@ def load_catalog(
     for tree_id, flavour in cat.house.flavour_pins:
         if flavour not in getattr(cat.trees.get(tree_id), "flavours", {}):
             raise EngineError(f"house flavour pin names tree '{tree_id}' flavour '{flavour}', which no tree defines")
-    cat.pools = {name: np.array(pool, dtype=bool) for name, pool in build_pools(table, cat.house).items()}
-    _apply_labels(cat)
+    _check_labels(cat)
+    by_pool = Labels({cat.trees[t].pool: labels for t, labels in cat.labels.trees.items()})
+    cat.pools = {name: np.array(pool, dtype=bool) for name, pool in build_pools(table, cat.house, by_pool).items()}
     _hold_apart(cat)
     for tree in cat.trees.values():
         if tree.pool not in cat.pools:

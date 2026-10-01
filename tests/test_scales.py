@@ -9,8 +9,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from matinee import pools
-from matinee.reference import DATA, Cuts, ReferenceError, load_specs, spec_of
+from matinee.reference import DATA, Cuts, ReferenceError, spec_of
 from matinee.scales import band_index, membership, offered, scale_of
 from matinee.table import FilmTable
 
@@ -77,21 +76,6 @@ def test_scale_spec_is_checked() -> None:
         scale_of("horror", "gore", {**SPEC, "bands": ["spotless", "some", "messy"]}, SCORES)
     with pytest.raises(ReferenceError):
         scale_of("horror", "gore", {**SPEC, "unscored_bands": ["nope"]}, SCORES)
-
-
-POOL_FLOORS = {**pools.EFFECT_FLOOR, "wonder": pools.WONDER_BAR, "explore": pools.EXPLORE_BAR}
-
-
-def test_pool_floors_match_tree_reference_floors() -> None:
-    """A tree file's reference floor and the pool rule's floor are one decision number; they must agree."""
-    checked = 0
-    for spec in load_specs(DATA / "trees"):
-        for floor in spec.floor_any:
-            assert floor.score in POOL_FLOORS, f"{spec.tree}: floor score '{floor.score}' has no pool floor"
-            assert floor.minimum == POOL_FLOORS[floor.score], spec.tree
-            assert list(floor.tags) == pools.SCORES[floor.score], spec.tree
-            checked += 1
-    assert checked >= 1
 
 
 GORE_KEYWORDS = {

@@ -51,7 +51,7 @@ from matinee.engine import (
     walk_ends,
 )
 from matinee.labels import LabelsError, load_labels
-from matinee.pools import House
+from matinee.pools import GENRE_DOORS, House, waiting
 from matinee.quips import QuipsError, load_quips, quip_problems
 from matinee.reference import DATA
 from matinee.table import FilmTable, load_table
@@ -400,22 +400,14 @@ def check_sample(full: Catalog, name: str, share: float, seed: int, report: Repo
     report.prefix = ""
 
 
-def report_kept(cat: Catalog, tree_id: str, report: Report) -> None:
-    """Name the films labelled out of a tree that stay in it, each under the reason it stays."""
+def report_waiting(cat: Catalog, report: Report) -> None:
+    """Name every film in the waiting room: listed nowhere in the labels file, so its genres place it."""
     index = cat.table.films.index
-    pool = cat.trees[tree_id].pool
-    kept = cat.pools[pool] & index.isin(list(cat.labels.of(tree_id).out))
-    pinned = index.isin(list(cat.house.tree_pins.get(pool, frozenset())))
-    apart = cat.apart.get(tree_id, np.zeros(len(index), dtype=bool))
-    reasons = (
-        ("the house pins it there", kept & pinned),
-        ("held apart there", kept & ~pinned & apart),
-        ("no other door keeps it", kept & ~pinned & ~apart),
-    )
-    for reason, films in reasons:
-        if films.any():
-            names = "; ".join(_label(cat.table, int(t)) for t in index[films])
-            report.say(f"  labelled out of {tree_id} but kept there, {reason}: {names}")
+    held = waiting(cat.table, cat.house, cat.labels)
+    report.say(f"\n== waiting room: {int(held.sum())} films the labels do not list, behind their genres' doors ==")
+    for tmdb in index[held.to_numpy()]:
+        doors = sorted(name for name in GENRE_DOORS if cat.pools[name][index.get_loc(tmdb)])
+        report.say(f"  waiting: {_label(cat.table, int(tmdb))} -> {', '.join(doors) or 'no door'}")
 
 
 def check_hidden(cat: Catalog, key: dict[str, Any], report: Report) -> None:
@@ -483,8 +475,8 @@ def main() -> int:
     report.say(f"film table {args.table}: {len(table.films)} films, {int(table.has_genome().sum())} with genome scores")
     report.say(f"built {table.built_at:%Y-%m-%d %H:%M}, genome {table.release}")
     for tree_id, labels in cat.labels.trees.items():
-        report.say(f"labels: {len(labels.kinds)} films labelled in {tree_id}, {len(labels.out)} labelled out of it")
-        report_kept(cat, tree_id, report)
+        report.say(f"labels: {len(labels.kinds)} films labelled behind {tree_id}")
+    report_waiting(cat, report)
     check_hidden(cat, key, report)
     added = table.films.index[pools["kids:franchise"]]
     report.say(f"franchise rule added {len(added)} films to kids: " + "; ".join(sorted(table.films.loc[added, "name"])))
