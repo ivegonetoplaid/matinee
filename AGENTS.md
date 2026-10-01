@@ -45,6 +45,17 @@ binding for every line of code here.
   - MovieLens tag genome: credit Harper and Konstan (2015) and Vig, Sen and
     Riedl (2012); derived tables carry the dataset's share-alike condition. The
     raw dataset is never committed.
+- **Matinee is built for any library; one library is only the first test.** Doors,
+  kinds, answer wording and every threshold are designed and sized against the world
+  label set (the roughly 10,400 most-voted films labelled in the workbench), never
+  against the operator's library alone. Report a count for the world set first and
+  the operator's library beside it. A kind, answer or rule that only works because of
+  one library's mix is a defect. Before proposing wording or a build for a door, check
+  where every film the labels place behind that door is reached, across the world set.
+- **The labels alone decide which doors and kinds a film belongs to.** The pool rules
+  that sorted films by genre tags and genome scores are being retired, not carried
+  forward: never design around them, explain a result by them, or keep one alive as a
+  fallback. Every film behind a door belongs to at least one of that door's kinds.
 - **Every film must stay reachable.** A tree takes every film carrying its genre;
   a film leaves only when it barely reaches for the tree's effect and has another
   home. `tools/check_trees.py` holds the trees to that and to the answer key; a
