@@ -305,8 +305,10 @@
       "title": "Harry Potter and the Philosopher's Stone",
       "tmdb": 671,
       "must_reach": [
+        "kids",
         "fantasy"
-      ]
+      ],
+      "note": "the operator: kids films adults love stay in both"
     },
     {
       "title": "Coraline",
@@ -474,22 +476,30 @@
       "title": "Harry Potter and the Chamber of Secrets",
       "tmdb": 672,
       "must_reach": [
+        "kids",
         "fantasy"
-      ]
+      ],
+      "note": "the operator: kids films adults love stay in both"
     },
     {
       "title": "Harry Potter and the Goblet of Fire",
       "tmdb": 674,
       "must_reach": [
+        "kids",
         "fantasy"
-      ]
+      ],
+      "kids_band": "older",
+      "note": "the operator: kids films adults love stay in both; PG-13"
     },
     {
       "title": "Harry Potter and the Deathly Hallows: Part 2",
       "tmdb": 12445,
       "must_reach": [
+        "kids",
         "fantasy"
-      ]
+      ],
+      "kids_band": "older",
+      "note": "the operator: kids films adults love stay in both; PG-13"
     },
     {
       "title": "Cube",
@@ -1148,6 +1158,57 @@
       "tmdb": 36855,
       "kids_band": "family",
       "note": "house pin"
+    },
+    {
+      "title": "The Nightmare Before Christmas",
+      "tmdb": 9479,
+      "kids_band": "older",
+      "note": "the operator's band for it: big kids"
+    },
+    {
+      "title": "Who Framed Roger Rabbit",
+      "tmdb": 856,
+      "kids_band": "older",
+      "note": "the operator watched it as a kid but finds it rough; fright 0.47"
+    },
+    {
+      "title": "Batman: Hush",
+      "tmdb": 537056,
+      "kids_band": "older",
+      "note": "the operator: DC animated films are fine for about 8 and up"
+    },
+    {
+      "title": "The Bad Guys",
+      "tmdb": 629542,
+      "must_reach": [
+        "kids"
+      ],
+      "must_not": [
+        "crime"
+      ],
+      "note": "a film for the whole family never counts as crime (the operator, 2026-09-30)"
+    },
+    {
+      "title": "Hoodwinked!",
+      "tmdb": 10982,
+      "must_reach": [
+        "kids"
+      ],
+      "must_not": [
+        "crime"
+      ],
+      "note": "a film for the whole family never counts as crime (the operator, 2026-09-30)"
+    },
+    {
+      "title": "The Pink Panther",
+      "tmdb": 12096,
+      "must_reach": [
+        "kids"
+      ],
+      "must_not": [
+        "crime"
+      ],
+      "note": "a film for the whole family never counts as crime (the operator, 2026-09-30)"
     }
   ]
 }
