@@ -528,13 +528,14 @@
       "title": "The Batman",
       "tmdb": 414906,
       "must_reach": [
-        "action",
-        "thriller"
+        "thriller",
+        "crime"
       ],
       "must_not": [
-        "drama"
+        "drama",
+        "action"
       ],
-      "note": "house pin: a Batman film belongs in action"
+      "note": "the labels' home for it; its old house pin to action was removed (the operator, 2026-10-01)"
     },
     {
       "title": "Chinatown",
@@ -576,12 +577,12 @@
       "title": "The Good Liar",
       "tmdb": 511322,
       "must_reach": [
-        "thriller"
+        "crime"
       ],
       "must_not": [
         "drama"
       ],
-      "note": "house pin"
+      "note": "the labels' home for it; its old house pin to thriller was removed (the operator, 2026-10-01)"
     },
     {
       "title": "The Thirteenth Floor",
@@ -598,45 +599,47 @@
       "title": "Project Almanac",
       "tmdb": 227719,
       "must_reach": [
-        "thriller"
+        "scifi"
       ],
       "must_not": [
         "drama"
       ],
-      "note": "house pin"
+      "note": "the labels' home for it; its old house pin to thriller was removed (the operator, 2026-10-01)"
     },
     {
       "title": "Mortal Engines",
       "tmdb": 428078,
       "must_reach": [
-        "action"
+        "scifi"
       ],
       "must_not": [
         "drama"
       ],
-      "note": "house pin"
+      "note": "the labels' home for it; its old house pin to action was removed (the operator, 2026-10-01)"
     },
     {
       "title": "The Animatrix",
       "tmdb": 55931,
       "must_reach": [
-        "action"
+        "scifi",
+        "animation"
       ],
       "must_not": [
         "drama"
       ],
-      "note": "house pin"
+      "note": "the labels' home for it; its old house pin to action was removed (the operator, 2026-10-01)"
     },
     {
       "title": "Trancers",
       "tmdb": 5677,
       "must_reach": [
-        "action"
+        "scifi",
+        "crime"
       ],
       "must_not": [
         "drama"
       ],
-      "note": "house pin"
+      "note": "the labels' home for it; its old house pin to action was removed (the operator, 2026-10-01)"
     },
     {
       "title": "Muppet Sing Alongs: Treasure Island",
