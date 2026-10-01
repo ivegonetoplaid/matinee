@@ -22,11 +22,13 @@ from check_trees import (
     check_gore,
     check_hidden,
     check_homes,
+    check_kinds,
     check_pins_in_key,
     check_reachability,
     check_same_answers,
     check_sample,
     door_pools,
+    report_waiting,
 )
 from matinee.engine import load_catalog
 from matinee.labels import Labels, TreeLabels
@@ -172,7 +174,7 @@ def test_samples_are_a_third_and_a_tenth_with_fixed_seeds() -> None:
     assert len({seed for _, _, seed in SAMPLES}) == 2
 
 
-def test_a_sample_runs_reachability_and_expected_homes(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_a_sample_runs_reachability(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     full = load_catalog(make_table(), write_data(tmp_path), reference())
     mine = Report()
     seen: list[tuple[str, int, bool]] = []
@@ -181,9 +183,19 @@ def test_a_sample_runs_reachability_and_expected_homes(tmp_path: Path, monkeypat
         return lambda table, pools, report: seen.append((name, len(table.films), report is mine))
 
     monkeypatch.setattr("check_trees.check_reachability", record("reach"))
-    monkeypatch.setattr("check_trees.check_expected", record("expect"))
     check_sample(full, "a half", 0.5, 1, mine, tmp_path)
-    assert sorted(seen) == [("expect", 20, True), ("reach", 20, True)]
+    assert seen == [("reach", 20, True)]
+
+
+def test_a_labelled_film_holding_none_of_its_doors_kinds_fails_and_a_waiting_one_is_named(tmp_path: Path) -> None:
+    lab = Labels({"west": TreeLabels({1: frozenset({"heroic"}), 2: frozenset()})})
+    cat = load_catalog(make_table(), write_data(tmp_path), reference(), lab)
+    report = Report()
+    check_kinds(cat, report)
+    report_waiting(cat, report)
+    assert report.failures == ["kinds: Film 2 (1972) is labelled behind west with none of its kinds"]
+    assert any(line.startswith("  west: 38 films there by pin") for line in report.lines)
+    assert "  waiting: Film 3 (1973) -> comedy, western" in report.lines
 
 
 def test_first_question_answers_must_name_a_tree(tmp_path: Path) -> None:
