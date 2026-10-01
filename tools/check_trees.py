@@ -9,7 +9,8 @@ no film's home. It reports:
 1. Reachability: every film must have at least one home. A film a tree holds
    apart (comedy's standup specials) must sit in no other home.
 2. Kinds: every film the labels place behind a door that asks about kinds holds
-   at least one of that door's kinds. The waiting room (films the labels file
+   at least one of that door's kinds, and a kind two or more doors share holds
+   the same films at every one of them. The waiting room (films the labels file
    does not list, placed by their genres) is listed by title, as are the films a
    house pin puts behind a door where they hold no kind, and the kinds the
    30-film bar hides in this library.
@@ -37,6 +38,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -59,11 +61,13 @@ from matinee.pools import GENRE_DOORS, House, waiting
 from matinee.quips import QuipsError, load_quips, quip_problems
 from matinee.reference import DATA
 from matinee.table import FilmTable, load_table
+from matinee.trees import Tree
 
 DEFAULT_TABLE = Path.home() / ".local/share/matinee/films.sqlite"
 SAMPLES = (("a third", 1 / 3, 3), ("a tenth", 1 / 10, 10))  # name, share of the library, fixed seed
 GORE_PROMISES = ("spotless", "rip")  # pails an unknown film could break the promise of
 Pools = dict[str, pd.Series]
+Held = Mapping[str, Mapping[int, frozenset[str]]]  # a shared kind's doors, each to its TreeLabels.kinds
 SPECIALS_KIND = ("comedy", "standup")  # the tree and flavour a house specials pin places a film in
 
 
@@ -391,6 +395,45 @@ def check_kinds(cat: Catalog, report: Report) -> None:
             )
 
 
+def _shared_kinds(trees: Mapping[str, Tree]) -> dict[str, list[str]]:
+    """Flavour names two or more tree files define, each with the doors sharing it."""
+    holders: dict[str, list[str]] = {}
+    for tree_id, tree in trees.items():
+        for name in tree.flavours:
+            holders.setdefault(name, []).append(tree_id)
+    return {name: sorted(ids) for name, ids in holders.items() if len(ids) > 1}
+
+
+def _kind_split(tmdb: int, kind: str, doors: list[str], held: Held) -> tuple[list[str], list[str]] | None:
+    """Where `tmdb` sits behind two or more of `doors`, the ones holding `kind` and the ones not; else None."""
+    there = sorted(door for door in doors if tmdb in held[door])
+    if len(there) < 2:
+        return None
+    have = sorted(door for door in there if kind in held[door][tmdb])
+    missing = sorted(door for door in there if door not in have)
+    return (have, missing) if have and missing else None
+
+
+def _shared_violations(kind: str, doors: list[str], held: Held) -> list[tuple[int, list[str], list[str]]]:
+    """Every film behind two or more of `doors` holding `kind` at some but not all of them."""
+    listed = set[int]().union(*(set(k) for k in held.values()))
+    violations = []
+    for tmdb in sorted(listed):
+        split = _kind_split(tmdb, kind, doors, held)
+        if split is not None:
+            violations.append((tmdb, *split))
+    return violations
+
+
+def check_shared_kinds(cat: Catalog, report: Report) -> None:
+    """A film the labels place behind two doors sharing a kind must hold that kind at both or neither."""
+    report.say("\n== shared kinds: a film behind two sharing doors holds the kind at one only ==")
+    for kind, doors in sorted(_shared_kinds(cat.trees).items()):
+        held = {door: cat.labels.of(door).kinds for door in doors}
+        for tmdb, have, missing in _shared_violations(kind, doors, held):
+            report.fail(f"shared kinds: {_label(cat.table, tmdb)} holds '{kind}' at {have} but not at {missing}")
+
+
 def report_waiting(cat: Catalog, report: Report) -> None:
     """Name every film in the waiting room: listed nowhere in the labels file, so its genres place it."""
     index = cat.table.films.index
@@ -457,7 +500,10 @@ def main() -> int:
     report = Report()
     try:
         cat = load_catalog(table, labels=load_labels(args.labels or args.table.with_name("labels.json")))
-    except (EngineError, LabelsError) as exc:
+    except LabelsError as exc:
+        print(f"FAIL {exc}")
+        return 1
+    except EngineError as exc:
         print(f"FAIL {exc}; run tools/build_reference.py if the statistics are stale")
         return 1
     house = cat.house
@@ -469,6 +515,7 @@ def main() -> int:
         report.say(f"labels: {len(labels.kinds)} films labelled behind {tree_id}")
     report_waiting(cat, report)
     check_kinds(cat, report)
+    check_shared_kinds(cat, report)
     check_hidden(cat, key, report)
     check_data(table, report)
     check_first_question(cat, report)

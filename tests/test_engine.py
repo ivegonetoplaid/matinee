@@ -334,7 +334,46 @@ def test_metadata_filters(cat: Catalog) -> None:
     assert set(mask_of(cat, certificate_in=frozenset({"G", "PG"}))) == set(range(1, 21)) - {6}
     assert set(mask_of(cat, spoken_english=True)) == everyone - {8}  # film 9's language is unknown: kept
     assert set(mask_of(cat, standalone=True)) == everyone - {1, 2, 3}
-    assert mask_of(cat, kids_band="older") == []  # no film is labelled behind For the kids
+
+
+def _kids_table() -> FilmTable:
+    """One film per certificate (G, PG, PG-13, R), enough to probe the kids age gate's ceiling."""
+    rows: list[dict[str, Any]] = [
+        {
+            "tmdb": t,
+            "name": f"Kid film {t}",
+            "year": 2000,
+            "genres": frozenset(),
+            "certificate": cert,
+            "runtime_min": 90.0,
+            "rating": 6.0,
+            "tmdb_known": True,
+            "language": "en",
+            "collection_id": None,
+            "keywords": frozenset(),
+        }
+        for t, cert in {1: "G", 2: "PG", 3: "PG-13", 4: "R"}.items()
+    ]
+    frame = pd.DataFrame(rows).set_index("tmdb")
+    frame["year"] = frame["year"].astype("Int64")
+    frame["collection_id"] = frame["collection_id"].astype("Int64")
+    matrix = np.full((len(rows), len(TAGS)), np.nan, dtype=np.float32)
+    return FilmTable(frame, TAGS, matrix, datetime.now(UTC), None, "test")
+
+
+def test_kids_band_takes_the_stricter_of_the_labelled_band_and_the_certificate_ceiling(tmp_path: Path) -> None:
+    """little/family/older must come from the certificate as well as the label, or a PG-13 film reaches the little ones.
+
+    Every film here is labelled "little"; only the certificate differs (G, PG, PG-13, R), so this fails if the
+    certificate ceiling, or the little/family/older mapping, breaks.
+    """
+    root = write_data(tmp_path)
+    (root / "trees" / "kids.json").write_text(json.dumps({"pool": "kids", "opening": "for the kids."}))
+    lab = Labels({"kids": TreeLabels(bands={1: "little", 2: "little", 3: "little", 4: "little"})})
+    cat = load_catalog(_kids_table(), root, reference(), lab)
+    assert mask_of(cat, kids_band="little") == [1]
+    assert mask_of(cat, kids_band="family") == [1, 2]
+    assert mask_of(cat, kids_band="older") == [1, 2, 3]  # the R film (4) never appears
 
 
 def test_scale_bands_with_pin_and_unscored(cat: Catalog) -> None:

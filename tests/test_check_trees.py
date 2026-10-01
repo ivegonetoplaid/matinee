@@ -27,6 +27,7 @@ from check_trees import (
     check_reachability,
     check_same_answers,
     check_sample,
+    check_shared_kinds,
     door_pools,
     report_waiting,
 )
@@ -271,6 +272,23 @@ def test_the_homes_check_fails_a_special_another_door_holds(tmp_path: Path) -> N
     report = Report()
     check_homes(cat, pools, report)
     assert "held apart: Film 5 (1975) is held apart in west but horror holds it" in report.failures
+
+
+def test_a_shared_kind_must_hold_the_same_film_at_every_door_that_lists_it(tmp_path: Path) -> None:
+    data = write_data(tmp_path)
+    (data / "trees" / "east.json").write_text(
+        json.dumps({"pool": "comedy", "opening": "ha.", "flavours": {"heroic": {"labelled": True}}})
+    )
+    lab = Labels(
+        {
+            "west": TreeLabels({1: frozenset({"heroic"}), 2: frozenset({"heroic"})}),
+            "east": TreeLabels({1: frozenset(), 2: frozenset({"heroic"})}),
+        }
+    )
+    cat = load_catalog(make_table(), data, reference(), lab)
+    report = Report()
+    check_shared_kinds(cat, report)
+    assert report.failures == ["shared kinds: Film 1 (1971) holds 'heroic' at ['west'] but not at ['east']"]
 
 
 def test_the_hidden_kinds_must_be_the_ones_the_key_expects(tmp_path: Path) -> None:

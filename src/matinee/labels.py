@@ -11,21 +11,20 @@ lists the films one library holds. Its shape (format 2):
 a door is behind it. A door that asks no question (Westerns) lists its films with
 no kinds. `bands` gives each For the kids film the youngest age band it suits:
 `little`, `family` or `older`. A film the file does not list at all has not been
-labelled yet (`matinee.pools` gives it a waiting room). A missing file means no
-film is labelled; a file in any other format or shape stops the server at start-up.
+labelled yet (`matinee.pools` gives it a waiting room). A missing file, or one in
+any other format or shape, stops the server at start-up with a LabelsError naming
+the problem.
 """
 
 from __future__ import annotations
 
 import json
-import logging
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 
 FORMAT = 2
 BANDS = ("little", "family", "older")  # youngest first
-log = logging.getLogger("matinee.labels")
 
 
 class LabelsError(ValueError):
@@ -51,9 +50,12 @@ class Labels:
 
 
 def _bands(name: str, raw: object) -> dict[int, str]:
-    if not isinstance(raw, dict) or set(raw.values()) - set(BANDS):
+    if not isinstance(raw, dict) or not all(isinstance(b, str) for b in raw.values()) or set(raw.values()) - set(BANDS):
         raise LabelsError(f"labels for tree '{name}': 'bands' must map TMDB ids to one of {list(BANDS)}")
-    return {int(t): str(b) for t, b in raw.items()}
+    try:
+        return {int(t): b for t, b in raw.items()}
+    except (TypeError, ValueError) as exc:
+        raise LabelsError(f"labels for tree '{name}' name a film by something other than a TMDB id") from exc
 
 
 def _tree(name: str, raw: object) -> TreeLabels:
@@ -62,25 +64,26 @@ def _tree(name: str, raw: object) -> TreeLabels:
     kinds = raw.get("kinds", {})
     if not isinstance(kinds, dict) or not all(isinstance(v, list) for v in kinds.values()):
         raise LabelsError(f"labels for tree '{name}': 'kinds' must map TMDB ids to lists of kinds")
+    bands = _bands(name, raw.get("bands", {}))
     try:
-        return TreeLabels(
-            kinds={int(t): frozenset(str(k) for k in v) for t, v in kinds.items()},
-            bands=_bands(name, raw.get("bands", {})),
-        )
+        parsed_kinds = {int(t): frozenset(str(k) for k in v) for t, v in kinds.items()}
     except (TypeError, ValueError) as exc:
         raise LabelsError(f"labels for tree '{name}' name a film by something other than a TMDB id") from exc
+    return TreeLabels(kinds=parsed_kinds, bands=bands)
 
 
 def load_labels(path: Path) -> Labels:
-    """Read the labels file; an absent file is no labels, logged, and a malformed one raises LabelsError."""
+    """Read the labels file; raises LabelsError naming the path when it is absent or malformed."""
     if not path.exists():
-        log.warning("no labels file at %s; every film waits behind the doors its genres name", path)
-        return Labels()
-    doc = json.loads(path.read_text(encoding="utf-8"))
+        raise LabelsError(f"no labels file at {path}; the labelling pass must write one before Matinee starts")
+    try:
+        doc = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise LabelsError(f"the labels file at {path} is not valid JSON: {exc}") from exc
     if not isinstance(doc, dict) or doc.get("format") != FORMAT:
         found = doc.get("format") if isinstance(doc, dict) else None
         raise LabelsError(
-            f"the labels file at {path} is format {found}; this Matinee reads only format {FORMAT}."
+            f"the labels file at {path} is format {found!r}; this Matinee reads only format {FORMAT}."
             " Write it again with the labelling pass's settle step."
         )
     trees = doc.get("trees", {})

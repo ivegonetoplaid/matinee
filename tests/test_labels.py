@@ -115,9 +115,14 @@ def test_a_labelled_kind_takes_no_other_signal(tmp_path: Path) -> None:
         load_catalog(make_table(), write_data(tmp_path, tree), reference())
 
 
-def test_the_labels_file_reads_kinds_and_bands_and_is_empty_when_absent(tmp_path: Path) -> None:
+def test_a_missing_labels_file_refuses_to_load_and_names_the_path(tmp_path: Path) -> None:
     path = tmp_path / "labels.json"
-    assert load_labels(path) == Labels()
+    with pytest.raises(LabelsError, match=str(path)):
+        load_labels(path)
+
+
+def test_the_labels_file_reads_kinds_and_bands(tmp_path: Path) -> None:
+    path = tmp_path / "labels.json"
     doc = {
         "horror": {"kinds": {"238": ["a", "b"], "9": []}},
         "kids": {"kinds": {"7": ["silly"]}, "bands": {"7": "little"}},
@@ -130,10 +135,24 @@ def test_the_labels_file_reads_kinds_and_bands_and_is_empty_when_absent(tmp_path
     assert read.films() == frozenset({238, 9, 7})
 
 
+def test_a_labels_file_that_is_not_valid_json_names_the_file(tmp_path: Path) -> None:
+    path = tmp_path / "labels.json"
+    path.write_text("{not json")
+    with pytest.raises(LabelsError, match=f"{path} is not valid JSON"):
+        load_labels(path)
+
+
 def test_a_format_1_labels_file_is_refused_with_its_format_named(tmp_path: Path) -> None:
     path = tmp_path / "labels.json"
     path.write_text(json.dumps({"format": 1, "trees": {"horror": {"kinds": {"238": ["a"]}, "out": [7]}}}))
     with pytest.raises(LabelsError, match="is format 1; this Matinee reads only format 2"):
+        load_labels(path)
+
+
+def test_a_format_given_as_a_string_is_named_as_the_string_it_is(tmp_path: Path) -> None:
+    path = tmp_path / "labels.json"
+    path.write_text(json.dumps({"format": "2", "trees": {}}))
+    with pytest.raises(LabelsError, match=r"is format '2'; this Matinee reads only format 2"):
         load_labels(path)
 
 
@@ -151,6 +170,15 @@ def test_a_malformed_labels_file_refuses_to_load(tmp_path: Path, doc: dict[str, 
     path = tmp_path / "labels.json"
     path.write_text(json.dumps(doc))
     with pytest.raises(LabelsError):
+        load_labels(path)
+
+
+@pytest.mark.parametrize("bad_bands", [{"1": "toddler"}, {"1": ["little"]}])
+def test_a_bad_kids_band_is_named_as_a_band_problem_not_a_bad_tmdb_id(tmp_path: Path, bad_bands: Any) -> None:
+    path = tmp_path / "labels.json"
+    doc = {"format": 2, "trees": {"kids": {"kinds": {"1": ["silly"]}, "bands": bad_bands}}}
+    path.write_text(json.dumps(doc))
+    with pytest.raises(LabelsError, match="'bands' must map TMDB ids to one of"):
         load_labels(path)
 
 

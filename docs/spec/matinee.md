@@ -322,6 +322,10 @@ non-zero exit, on any of these:
     be loaded.
 11. **Kinds.** A film the labels place behind a door that asks about kinds holds
     none of that door's kinds.
+12. **Shared kinds.** A kind two or more doors offer (a tree file's flavour name,
+    such as `action_comedy` at Action and Comedy) must hold the same films at
+    every one of those doors. A film the labels list under two sharing doors,
+    holding the kind at one and not the other, fails.
 
 Separately, the engine refuses to prepare when the shipped reference statistics
 do not cover the tree files (section 3). The checker reports that as a failure.
@@ -355,10 +359,11 @@ one library holds. Its shape (format 2):
   suits: `little`, `family` or `older` (section 3.2).
 - A film the file lists under no door at all is unlabelled and waits behind the
   doors its genres name (section 3.1).
-- An absent file means no film is labelled, and the server logs a warning. A
-  file in any format but 2 is refused at start-up with its format named. A
-  malformed file, a band outside the three, a tree no file defines, or a kind the
-  tree does not label stops the server at start-up.
+- An absent file stops the server at start-up with the path named; the labelling
+  pass must write one first. A file in any format but 2 is refused at start-up
+  with its format named. A malformed file, a band outside the three, a tree no
+  file defines, or a kind the tree does not label stops the server at start-up
+  too.
 - The server reads the file once at start-up. Replacing it takes a restart.
 
 Each labelled flavour's `note` in its tree file states the rule its kind
@@ -626,8 +631,8 @@ The server refuses to start, and logs why, when any of these holds:
 - the film table is absent, in another format, or too old;
 - the reference statistics are absent or stale;
 - a tree or mode file is malformed;
-- the labels file is malformed, or names a tree no file defines or a kind its
-  tree does not label;
+- the labels file is absent, malformed, or names a tree no file defines or a
+  kind its tree does not label;
 - the pick's lines (`data/quips.json`) are missing or malformed, or universal
   lacks reveal lines or nope lines (section 2.7).
 
@@ -1308,9 +1313,10 @@ as the code stood on 2026-09-30.
 8. **Validation failures use the framework's error shape.** A request body
    that fails validation answers 422 with `{"detail": [...]}`, not Matinee's
    `{"error", "message"}` shape. (`src/matinee/web/app.py:87`)
-9. **Matinee does not check that a shared kind holds the same films at every
-   door.** The labelling pass writes it so; a labels file that breaks it loads.
-   (`src/matinee/engine.py::_check_labels`)
+9. **The engine does not check that a shared kind holds the same films at every
+   door.** The labelling pass writes it so; a labels file that breaks it still
+   loads and serves. Only the offline checker catches it, as a failure.
+   (`src/matinee/engine.py::_check_labels`, `tools/check_trees.py::check_shared_kinds`)
 10. **A house pin may put a film behind a door under no kind.** Such a film is
     reached through "anything" only; the checker lists it but does not fail it.
     (`tools/check_trees.py::check_kinds`)
