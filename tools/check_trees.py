@@ -442,7 +442,7 @@ def check_data(table: FilmTable, report: Report) -> None:
     if len(unknown):
         first = "; ".join(_label(table, int(t)) for t in unknown[:10])
         report.fail(
-            f"{len(unknown)} films have no usable TMDB facts; the franchise and standup rules cannot see them."
+            f"{len(unknown)} films have no usable TMDB facts; the standup rule cannot see them."
             f" Run tools/rebuild_table.py. First: {first}"
         )
 
