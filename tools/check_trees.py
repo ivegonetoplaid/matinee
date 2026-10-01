@@ -478,8 +478,6 @@ def main() -> int:
         report.say(f"labels: {len(labels.kinds)} films labelled behind {tree_id}")
     report_waiting(cat, report)
     check_hidden(cat, key, report)
-    added = table.films.index[pools["kids:franchise"]]
-    report.say(f"franchise rule added {len(added)} films to kids: " + "; ".join(sorted(table.films.loc[added, "name"])))
     check_data(table, report)
     check_first_question(cat, report)
     check_quips(cat, report)

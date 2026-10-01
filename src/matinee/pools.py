@@ -15,8 +15,9 @@ where it holds no kind, so only "anything" and `Just pick one!` reach it, until 
 labelling pass places it. A documentary or a standup special does not wait: its own
 rule gives it a home.
 
-The kids tree is gated and fails closed: a film enters only with a passing
-certificate, and sorts into three age bands.
+For the kids holds the films the labels list under it whose certificate passes,
+each in the older of its labelled age band and its certificate's band (`kids_band`);
+the gate fails closed.
 """
 
 from __future__ import annotations
@@ -28,7 +29,7 @@ from pathlib import Path
 
 import pandas as pd
 
-from matinee.labels import Labels
+from matinee.labels import BANDS, Labels, TreeLabels
 from matinee.reference import DATA
 from matinee.table import FilmTable
 
@@ -37,23 +38,14 @@ Mask = pd.Series
 STANDUP_KEYWORD = "stand-up comedy"
 CONCERT_KEYWORDS = {"concert", "concert film"}
 SLEEP_ENCHANTMENT, SLEEP_EDGE = 0.55, 0.40
-KIDS_GENRES = {"Animation", "Family"}
-LITTLE_CERTS = {"G", "TV-Y", "TV-Y7", "TV-G", "E"}
-FAMILY_CERTS = LITTLE_CERTS | {"PG", "TV-PG"}
-TEEN_CERTS = {"PG-13", "TV-14"}
-KIDS_UNTAGGED_YOUNG = 0.50
-KIDS_ADULT_CEILING = 0.40
-LITTLE_FRIGHT, LITTLE_ADULT = 0.30, 0.25
-ROUGH_FRIGHT = 0.45
+CERTIFICATE_BANDS = {  # the youngest kids band a certificate allows; any other certificate never passes
+    **dict.fromkeys(("G", "TV-Y", "TV-Y7", "TV-G", "E"), "little"),
+    **dict.fromkeys(("PG", "TV-PG"), "family"),
+    **dict.fromkeys(("PG-13", "TV-14"), "older"),
+}
 SCORES = {
     "ench": ["fairy tale", "childhood", "fantasy", "whimsical", "magic", "fantasy world", "fairy tales"],
     "edge": ["violent", "gore", "disturbing", "tense", "brutal"],
-    "young": ["kids", "children", "cute", "cute!", "talking animals"],
-    "fright": ["scary", "creepy", "dark fantasy"],
-    "language": ["foul language"],
-    "sex": ["sex", "sexual", "sex comedy", "nudity", "nudity (topless)", "notable nudity"],
-    "crude": ["crude humor", "gross-out"],
-    "drugs": ["drugs"],
 }
 WAITING_ROOM = {
     "Action": "action",
@@ -124,7 +116,7 @@ def load_house(path: Path = DATA / "house_overrides.json") -> House:
 
 
 def scores(table: FilmTable) -> pd.DataFrame:
-    """The scores the pool rules read, NaN where the genome does not cover a film."""
+    """The fall-asleep mode's scores, NaN where the genome does not cover a film."""
     return pd.DataFrame({name: table.mean_of(tags) for name, tags in SCORES.items()})
 
 
@@ -132,54 +124,37 @@ def _genre(table: FilmTable, name: str) -> Mask:
     return table.films.genres.apply(lambda g: name in g)
 
 
-def _any_genre(table: FilmTable, names: set[str]) -> Mask:
-    return table.films.genres.apply(lambda g: bool(names & g))
-
-
 def _ids(table: FilmTable, ids: frozenset[int]) -> Mask:
     return pd.Series(table.films.index.isin(list(ids)), index=table.films.index)
 
 
-def under(x: pd.Series, limit: float) -> Mask:
-    """True where x is below limit or unknown: a missing score is not evidence of a problem."""
-    return x.isna() | x.lt(limit)
+def kids_band(labelled: str | None, certificate: str | None) -> str | None:
+    """The older of a film's labelled kids band and its certificate's band; None when either fails.
+
+    A film with no labelled band, or a certificate outside `CERTIFICATE_BANDS` (R, NC-17, TV-MA, none,
+    unrated), never passes: the kids gate fails closed.
+    """
+    ceiling = CERTIFICATE_BANDS.get(certificate or "")
+    if labelled is None or ceiling is None:
+        return None
+    return max(labelled, ceiling, key=BANDS.index)
 
 
-def over(x: pd.Series, limit: float) -> Mask:
-    """True where x is at or above limit; unknown counts as not over."""
-    return x.ge(limit).fillna(False).astype(bool)
+def kids_bands(table: FilmTable, labels: TreeLabels, pins: Mapping[int, str]) -> dict[str, Mask]:
+    """The kids pool split into little, family and older bands; family includes little, older includes both.
 
-
-def _franchise(table: FilmTable, entered: Mask) -> Mask:
-    coll = table.films.collection_id
-    kid_colls = set(coll[entered].dropna().astype(int))
-    return coll.isin(kid_colls).fillna(False).astype(bool)
-
-
-def kids_bands(table: FilmTable, s: pd.DataFrame, pins: Mapping[int, str]) -> dict[str, Mask]:
-    """The gated kids pool split into little, family and older bands (older includes family)."""
-    cert = table.films.certificate
-    tagged = _any_genre(table, KIDS_GENRES)
-    adult = s[["language", "sex", "crude", "drugs"]].max(axis=1)
-    family_cert = cert.isin(FAMILY_CERTS)
-    teen_ok = (
-        cert.isin(TEEN_CERTS)
-        & tagged
-        & ((_genre(table, "Animation") & ~_genre(table, "Comedy")) | _genre(table, "Family"))
-        & under(adult, KIDS_ADULT_CEILING)
+    A film's band is `kids_band` of its label and certificate; a house pin sets the band outright.
+    """
+    films = table.films
+    band = pd.Series(
+        [
+            pins.get(int(t)) or kids_band(labels.bands.get(int(t)), c)
+            for t, c in zip(films.index, films.certificate, strict=True)
+        ],
+        index=films.index,
+        dtype=object,
     )
-    untagged = ~tagged & family_cert & over(s["young"], KIDS_UNTAGGED_YOUNG)
-    entered = (tagged & family_cert) | teen_ok | untagged
-    franchise = (
-        _franchise(table, entered) & ~entered & cert.isin(FAMILY_CERTS | TEEN_CERTS) & under(adult, KIDS_ADULT_CEILING)
-    )
-    pool = entered | franchise | _ids(table, frozenset(pins))
-    pinned_older = _ids(table, frozenset(t for t, b in pins.items() if b == "older"))
-    rough = over(s["fright"], ROUGH_FRIGHT) | cert.isin(TEEN_CERTS) | pinned_older
-    little = (
-        pool & cert.isin(LITTLE_CERTS) & under(s["fright"], LITTLE_FRIGHT) & under(adult, LITTLE_ADULT) & ~pinned_older
-    )
-    return {"little": little, "family": pool & ~rough, "older": pool, "tagged": tagged, "franchise": franchise}
+    return {"little": band.eq("little"), "family": band.isin(["little", "family"]), "older": band.notna()}
 
 
 def standup_specials(table: FilmTable) -> Mask:
@@ -212,13 +187,12 @@ def waiting(table: FilmTable, house: House, labels: Labels) -> Mask:
 
 
 def build_pools(table: FilmTable, house: House, labels: Labels) -> dict[str, Mask]:
-    """Every tree's and mode's pool, plus the kids bands as `kids:little`, `kids:family`, `kids:franchise`.
+    """Every tree's and mode's pool, plus the kids bands as `kids:little` and `kids:family`.
 
     A genre door holds the films the labels list under it, the waiting films whose genres name it, and the
     films the house pins there.
     """
-    s = scores(table)
-    bands = kids_bands(table, s, house.kids_pins)
+    bands = kids_bands(table, labels.of("kids"), house.kids_pins)
     standup = specials(table, house)
     pools = {door: _ids(table, frozenset(labels.of(door).kinds)) for door in GENRE_DOORS}
     unplaced = waiting(table, house, labels)
@@ -229,10 +203,10 @@ def build_pools(table: FilmTable, house: House, labels: Labels) -> dict[str, Mas
         "kids": bands["older"],
         "kids:little": bands["little"],
         "kids:family": bands["family"],
-        "kids:franchise": bands["franchise"],
         "nonfiction": _genre(table, "Documentary") & ~standup,
     }
     for tree, ids in house.tree_pins.items():
         pools[tree] = pools[tree] | _ids(table, ids)
+    s = scores(table)
     pools["sleep"] = (s["ench"].ge(SLEEP_ENCHANTMENT) & s["edge"].lt(SLEEP_EDGE)).fillna(False).astype(bool)
     return pools

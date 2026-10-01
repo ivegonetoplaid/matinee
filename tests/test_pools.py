@@ -41,20 +41,16 @@ def film(tmdb: int, genres: str, cert: str, collection: int | None) -> dict[str,
     }
 
 
-def test_kids_franchise_respects_the_adult_ceiling_and_joins_as_rough() -> None:
-    table = make_table(
-        [
-            film(1, "Animation|Family", "G", 7),
-            film(2, "Adventure", "PG-13", 7),
-            film(3, "Adventure", "PG-13", 7),
-            film(4, "Adventure", "R", 7),
-        ],
-        {1: {}, 2: {"foul language": 0.6}, 3: {"foul language": 0.2}, 4: {}},
-    )
-    pools = build_pools(table, NO_PINS, Labels())
-    assert pools["kids"].to_dict() == {1: True, 2: False, 3: True, 4: False}
-    assert pools["kids:franchise"].to_dict() == {1: False, 2: False, 3: True, 4: False}
-    assert not pools["kids:family"][3]
+def test_a_kids_film_takes_the_older_of_its_labelled_band_and_its_certificates_and_fails_closed() -> None:
+    certs = {1: "G", 2: "G", 3: "PG", 4: "PG-13", 5: "R", 6: "", 7: "R", 8: "G", 9: "TV-Y7"}
+    table = make_table([film(t, "Animation|Family", c, None) for t, c in certs.items()], {})
+    bands = {1: "little", 2: "family", 3: "little", 4: "little", 5: "family", 6: "family", 7: "family", 9: "older"}
+    kids = TreeLabels(kinds={t: frozenset({"silly"}) for t in bands}, bands=bands)
+    house = House(kids_pins={7: "family"}, tree_pins={}, payoff_pins={}, scale_pins={})
+    pools = build_pools(table, house, Labels({"kids": kids}))
+    assert [t for t in certs if pools["kids:little"][t]] == [1]
+    assert [t for t in certs if pools["kids:family"][t]] == [1, 2, 3, 7]  # 7: an R film the house pins
+    assert [t for t in certs if pools["kids"][t]] == [1, 2, 3, 4, 7, 9]  # 5 is R, 6 has no certificate, 8 no label
 
 
 def labels(**doors: dict[int, list[str]]) -> Labels:

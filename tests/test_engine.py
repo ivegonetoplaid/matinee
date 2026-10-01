@@ -361,8 +361,7 @@ def test_metadata_filters(cat: Catalog) -> None:
     assert set(mask_of(cat, spoken_english=True)) == everyone - {8}  # film 9's language is unknown: kept
     assert set(mask_of(cat, standalone=True)) == everyone - {1, 2, 3}
     assert mask_of(cat, flavour="heroic") == [3, 4, 7]  # genome, genre, keyword
-    assert mask_of(cat, kids_band="little") == [1]
-    assert mask_of(cat, kids_band="family") == [1, 2, 3]  # film 3 shares film 1's collection (franchise rule)
+    assert mask_of(cat, kids_band="older") == []  # no film is labelled behind For the kids
 
 
 def test_scale_bands_with_pin_and_unscored(cat: Catalog) -> None:
