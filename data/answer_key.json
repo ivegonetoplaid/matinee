@@ -97,8 +97,7 @@
       "tmdb": 24428,
       "must_reach": [
         "action"
-      ],
-      "note": "rated funny by the genome (humor 0.97) but reaches for excitement first; fell through the flat laugh cut"
+      ]
     },
     {
       "title": "Avengers: Infinity War",
@@ -269,7 +268,7 @@
       "title": "PAW Patrol: The Movie",
       "tmdb": 675445,
       "kids_band": "little",
-      "note": "no genome score; a G certificate is enough"
+      "note": "decision 88 build outcome: a G film the labels give the little ones"
     },
     {
       "title": "Toy Story",
@@ -408,7 +407,7 @@
         "action",
         "comedy"
       ],
-      "note": "no genome entry: the kids-only tier"
+      "note": "kids-first: behind For the kids and Animation, and no grown-up door"
     },
     {
       "title": "Labyrinth",
@@ -502,7 +501,7 @@
         "drama",
         "horror"
       ],
-      "note": "the operator (2026-09-27): a trap film, with Escape Room and The Belko Experiment, for thriller's trapped kind; labelled out of horror"
+      "note": "the operator (2026-09-27): a trap film, with Escape Room and The Belko Experiment, for thriller's trapped kind; not horror"
     },
     {
       "title": "Dune",
@@ -525,7 +524,7 @@
       "must_not": [
         "drama"
       ],
-      "note": "tagged Crime, Mystery, Thriller with excitement 0.42; a Batman film belongs in action, by house pin"
+      "note": "house pin: a Batman film belongs in action"
     },
     {
       "title": "Chinatown",
