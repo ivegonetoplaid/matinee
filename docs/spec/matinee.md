@@ -463,6 +463,9 @@ labelled band and its certificate's band:
 | PG, TV-PG | family |
 | PG-13, TV-14 | older |
 
+One exception: a film labelled for the whole family with a G-class certificate
+is in the little band, unless one of its kids kinds is spooky.
+
 Any other certificate, R, NC-17, TV-MA, an absent or unusable one, never
 passes. A house kids pin puts a film in the pool in the named band, whatever
 its certificate and labels. The bands allow rather than require:

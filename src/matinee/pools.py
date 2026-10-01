@@ -123,27 +123,30 @@ def _ids(table: FilmTable, ids: frozenset[int]) -> Mask:
     return pd.Series(table.films.index.isin(list(ids)), index=table.films.index)
 
 
-def kids_band(labelled: str | None, certificate: str | None) -> str | None:
+def kids_band(labelled: str | None, certificate: str | None, spooky: bool = False) -> str | None:
     """The older of a film's labelled kids band and its certificate's band; None when either fails.
 
-    A film with no labelled band, or a certificate outside `CERTIFICATE_BANDS` (R, NC-17, TV-MA, none,
-    unrated), never passes: the kids gate fails closed.
+    A film labelled for the whole family whose certificate allows the little ones (G-class) is offered to
+    the little ones too, unless it is spooky. A film with no labelled band, or a certificate outside
+    `CERTIFICATE_BANDS` (R, NC-17, TV-MA, none, unrated), never passes: the kids gate fails closed.
     """
     ceiling = CERTIFICATE_BANDS.get(certificate or "")
     if labelled is None or ceiling is None:
         return None
+    if labelled == "family" and ceiling == "little" and not spooky:
+        return "little"
     return max(labelled, ceiling, key=BANDS.index)
 
 
 def kids_bands(table: FilmTable, labels: TreeLabels, pins: Mapping[int, str]) -> dict[str, Mask]:
     """The kids pool split into little, family and older bands; family includes little, older includes both.
 
-    A film's band is `kids_band` of its label and certificate; a house pin sets the band outright.
+    A film's band is `kids_band` of its label, certificate and spooky kind; a house pin sets the band outright.
     """
     films = table.films
     band = pd.Series(
         [
-            pins.get(int(t)) or kids_band(labels.bands.get(int(t)), c)
+            pins.get(int(t)) or kids_band(labels.bands.get(int(t)), c, "spooky" in labels.kinds.get(int(t), ()))
             for t, c in zip(films.index, films.certificate, strict=True)
         ],
         index=films.index,

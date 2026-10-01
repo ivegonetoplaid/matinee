@@ -8,7 +8,7 @@ import numpy as np
 import pandas as pd
 
 from matinee.labels import Labels, TreeLabels
-from matinee.pools import SCORES, House, build_pools, waiting
+from matinee.pools import SCORES, House, build_pools, kids_band, waiting
 from matinee.table import FilmTable
 
 TAGS = tuple(sorted({t for tags in SCORES.values() for t in tags}))
@@ -48,7 +48,7 @@ def test_a_kids_film_takes_the_older_of_its_labelled_band_and_its_certificates_a
     kids = TreeLabels(kinds={t: frozenset({"silly"}) for t in bands}, bands=bands)
     house = House(kids_pins={7: "family"}, tree_pins={}, scale_pins={})
     pools = build_pools(table, house, Labels({"kids": kids}))
-    assert [t for t in certs if pools["kids:little"][t]] == [1]
+    assert [t for t in certs if pools["kids:little"][t]] == [1, 2]  # 2: G-rated and for the whole family
     assert [t for t in certs if pools["kids:family"][t]] == [1, 2, 3, 7]  # 7: an R film the house pins
     assert [t for t in certs if pools["kids"][t]] == [1, 2, 3, 4, 7, 9]  # 5 is R, 6 has no certificate, 8 no label
 
@@ -99,3 +99,12 @@ def test_a_standup_special_joins_comedy_and_stays_out_of_nonfiction() -> None:
     pools = build_pools(table, house, Labels())
     assert pools["comedy"].to_dict() == {1: True, 2: True, 3: False}
     assert pools["nonfiction"].to_dict() == {1: False, 2: False, 3: True}
+
+
+def test_a_g_rated_film_for_the_whole_family_reaches_the_little_ones_unless_spooky() -> None:
+    assert kids_band("family", "G") == "little"
+    assert kids_band("family", "TV-G") == "little"
+    assert kids_band("family", "G", spooky=True) == "family"
+    assert kids_band("family", "PG") == "family"
+    assert kids_band("older", "G") == "older"
+    assert kids_band("family", "R") is None
