@@ -320,9 +320,7 @@ non-zero exit, on any of these:
    answers of that tree in both. Fixtures are checked on the full library only.
 10. **Quips.** The pick's lines break a rule of section 2.7, or the file cannot
     be loaded.
-11. **Kinds.** A film the labels place behind a door that asks about kinds holds
-    none of that door's kinds.
-12. **Shared kinds.** A kind two or more doors offer (a tree file's flavour name,
+11. **Shared kinds.** A kind two or more doors offer (a tree file's flavour name,
     such as `action_comedy` at Action and Comedy) must hold the same films at
     every one of those doors. A film the labels list under two sharing doors,
     holding the kind at one and not the other, fails.
@@ -332,7 +330,9 @@ do not cover the tree files (section 3). The checker reports that as a failure.
 The checker reads the labels file beside the film table unless `--labels` names
 another. It lists by title the films in the waiting room (section 3.1) with the
 doors their genres place them behind, the films each door holds under no kind
-(by a house pin, the waiting room or the standup rule), and each answer a small
+(by a house pin, the waiting room or the standup rule), the labelled films no
+kind of their door fits (reached through "anything" and `Just pick one!` only;
+the labels give no kind where none is a real fit), and each answer a small
 kind hides. On the full library it fails
 when the kinds the bar hides differ from the answer key's `hidden` list of
 `[tree, kind]` pairs, so a kind that starts hiding, or stops, is never silent.
@@ -352,8 +352,9 @@ one library holds. Its shape (format 2):
 ```
 
 - A tree's `kinds` maps a TMDB id to the kinds the film holds at that door, one
-  or two (horror's found_footage marker may come on top, or alone). Every film
-  listed under a door is behind it. Westerns asks no question, so its films hold
+  or two (horror's found_footage marker may come on top, or alone; a kind shared
+  with another door may come on top too), or none where no kind of the door is a
+  real fit. Every film listed under a door is behind it. Westerns asks no question, so its films hold
   no kind.
 - `bands`, under `kids` only, gives each kids film the youngest age band it
   suits: `little`, `family` or `older` (section 3.2).

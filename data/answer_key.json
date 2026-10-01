@@ -1156,8 +1156,12 @@
     {
       "title": "The Reluctant Astronaut",
       "tmdb": 36855,
-      "kids_band": "family",
-      "note": "house pin"
+      "kids_band": "little",
+      "note": "the operator: a Don Knotts comedy, fine for the little ones; NR, so a house pin lets it in",
+      "must_reach": [
+        "comedy",
+        "kids"
+      ]
     },
     {
       "title": "The Nightmare Before Christmas",

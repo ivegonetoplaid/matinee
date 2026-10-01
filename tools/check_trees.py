@@ -380,14 +380,19 @@ def _kinds_held(cat: Catalog, tree_id: str) -> tuple[pd.Index, pd.Index]:
 
 
 def check_kinds(cat: Catalog, report: Report) -> None:
-    """Every labelled film behind a door that asks about kinds holds one there; pinned films without one are named."""
-    report.say("\n== kinds: labelled films behind a door holding none of its kinds ==")
+    """Name every film behind a door that asks about kinds but holds none of them there.
+
+    Such a film is reached through "anything" and `Just pick one!` only. The labels give it no kind where none
+    is a real fit, so the list is for a person to read, not a failure.
+    """
+    report.say('\n== kinds: films behind a door under "anything" only ==')
     for tree_id, tree in sorted(cat.trees.items()):
         if not any(spec.get("labelled") for spec in tree.flavours.values()):
             continue
         no_kind, pinned = _kinds_held(cat, tree_id)
-        for tmdb in no_kind:
-            report.fail(f"kinds: {_label(cat.table, int(tmdb))} is labelled behind {tree_id} with none of its kinds")
+        if len(no_kind):
+            names = "; ".join(_label(cat.table, int(t)) for t in no_kind)
+            report.say(f"  {tree_id}: {len(no_kind)} labelled films no kind fits: {names}")
         if len(pinned):
             names = "; ".join(_label(cat.table, int(t)) for t in pinned)
             report.say(

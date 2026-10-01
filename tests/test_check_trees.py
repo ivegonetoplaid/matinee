@@ -188,13 +188,14 @@ def test_a_sample_runs_reachability(tmp_path: Path, monkeypatch: pytest.MonkeyPa
     assert seen == [("reach", 20, True)]
 
 
-def test_a_labelled_film_holding_none_of_its_doors_kinds_fails_and_a_waiting_one_is_named(tmp_path: Path) -> None:
+def test_a_labelled_film_holding_none_of_its_doors_kinds_is_named_not_failed(tmp_path: Path) -> None:
     lab = Labels({"west": TreeLabels({1: frozenset({"heroic"}), 2: frozenset()})})
     cat = load_catalog(make_table(), write_data(tmp_path), reference(), lab)
     report = Report()
     check_kinds(cat, report)
     report_waiting(cat, report)
-    assert report.failures == ["kinds: Film 2 (1972) is labelled behind west with none of its kinds"]
+    assert report.failures == []
+    assert "  west: 1 labelled films no kind fits: Film 2 (1972)" in report.lines
     assert any(line.startswith("  west: 38 films there by pin") for line in report.lines)
     assert "  waiting: Film 3 (1973) -> comedy, western" in report.lines
 
