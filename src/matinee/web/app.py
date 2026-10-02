@@ -200,6 +200,8 @@ SECURITY_HEADERS = {
     "X-Content-Type-Options": "nosniff",
     "Referrer-Policy": "same-origin",
     "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+    # Search engines must read this header, so no robots.txt ever blocks crawling.
+    "X-Robots-Tag": "noindex",
 }
 
 

@@ -288,13 +288,21 @@ def test_the_jellyfin_reader_refuses_odd_answers_and_ids(monkeypatch: pytest.Mon
 
 def test_every_response_carries_the_security_headers(world: Any) -> None:
     client, _, _, _ = world
-    for path in ("/", "/static/css/matinee.css", "/api/film/5", "/api/film/12345", "/img/logo/5/m"):
+    for path in ("/", "/static/css/matinee.css", "/img/poster/5/m", "/api/film/5", "/api/film/12345", "/img/logo/5/m"):
         resp = client.get(path)
+        assert resp.headers["x-robots-tag"] == "noindex", path
         policy = resp.headers["content-security-policy"]
         assert "default-src 'self'" in policy and "frame-ancestors 'none'" in policy and "unsafe-inline" not in policy
         assert resp.headers["x-content-type-options"] == "nosniff"
         assert resp.headers["referrer-policy"] == "same-origin"
     assert client.get("/").headers["content-type"].startswith("text/html")
+    invalid = client.post("/api/walk", json={"tree": "x" * 41})
+    assert invalid.status_code == 422 and invalid.headers["x-robots-tag"] == "noindex"
+
+
+def test_no_robots_file_blocks_crawling_the_header(world: Any) -> None:
+    client, _, _, _ = world
+    assert client.get("/robots.txt").status_code == 404
 
 
 def test_the_page_and_its_static_files_revalidate_so_a_deploy_is_never_half_seen(world: Any) -> None:

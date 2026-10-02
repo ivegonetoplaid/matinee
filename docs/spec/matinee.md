@@ -923,6 +923,9 @@ Every response, including static files and errors, carries:
 - `X-Content-Type-Options: nosniff`
 - `Referrer-Policy: same-origin`
 - `Permissions-Policy: camera=(), microphone=(), geolocation=()`
+- `X-Robots-Tag: noindex`, whether or not a door word is set. Matinee serves no
+  robots.txt, because one that blocked crawling would stop search engines from
+  reading this header.
 
 The page builds all text as text nodes, never as markup, so a name or title from
 the server can never become part of the page's HTML.
