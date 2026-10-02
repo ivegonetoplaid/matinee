@@ -1410,22 +1410,22 @@ symbol when one does not match.
 
 | Handle | Where | Verified |
 |---|---|---|
-| `tools/check_trees.py::main` | `tools/check_trees.py:450` | 2026-09-30 |
-| `tools/check_trees.py::SAMPLES` | `tools/check_trees.py:64` | 2026-09-30 |
-| `tools/check_trees.py::check_answer_coverage` | `tools/check_trees.py:291` | 2026-09-30 |
-| `tools/check_trees.py::check_same_answers` | `tools/check_trees.py:320` | 2026-09-30 |
-| `tools/check_trees.py::check_sample` | `tools/check_trees.py:349` | 2026-09-30 |
-| `tools/check_trees.py::check_homes` | `tools/check_trees.py:337` | 2026-09-30 |
-| `tools/check_trees.py::door_pools` (only doors are homes) | `tools/check_trees.py:112` | 2026-09-30 |
-| `tools/check_trees.py::check_apart` | `tools/check_trees.py:118` | 2026-09-30 |
-| `tools/check_trees.py::check_kinds` / `report_waiting` | `tools/check_trees.py:378` | 2026-09-30 |
-| `tools/check_trees.py::check_hidden` | `tools/check_trees.py:404` | 2026-09-30 |
-| `tools/check_trees.py::check_pins_in_key` | `tools/check_trees.py:237` | 2026-09-30 |
-| `tools/check_trees.py::SPECIALS_KIND` (a `specials` pin's fixture) | `tools/check_trees.py:67` | 2026-09-30 |
-| `tools/check_trees.py::check_gore` | `tools/check_trees.py:280` | 2026-09-30 |
-| `tools/check_trees.py::check_lists` | `tools/check_trees.py:131` | 2026-09-30 |
-| `tools/check_trees.py::check_data` | `tools/check_trees.py:440` | 2026-09-30 |
-| `tools/check_trees.py::check_quips` | `tools/check_trees.py:430` | 2026-09-30 |
+| `tools/check_trees.py::main` | `tools/check_trees.py:498` | 2026-09-30 |
+| `tools/check_trees.py::SAMPLES` | `tools/check_trees.py:67` | 2026-09-30 |
+| `tools/check_trees.py::check_answer_coverage` | `tools/check_trees.py:295` | 2026-09-30 |
+| `tools/check_trees.py::check_same_answers` | `tools/check_trees.py:324` | 2026-09-30 |
+| `tools/check_trees.py::check_sample` | `tools/check_trees.py:353` | 2026-09-30 |
+| `tools/check_trees.py::check_homes` | `tools/check_trees.py:341` | 2026-09-30 |
+| `tools/check_trees.py::door_pools` (only doors are homes) | `tools/check_trees.py:116` | 2026-09-30 |
+| `tools/check_trees.py::check_apart` | `tools/check_trees.py:122` | 2026-09-30 |
+| `tools/check_trees.py::check_kinds` / `report_waiting` | `tools/check_trees.py:382` | 2026-09-30 |
+| `tools/check_trees.py::check_hidden` | `tools/check_trees.py:452` | 2026-09-30 |
+| `tools/check_trees.py::check_pins_in_key` | `tools/check_trees.py:241` | 2026-09-30 |
+| `tools/check_trees.py::SPECIALS_KIND` (a `specials` pin's fixture) | `tools/check_trees.py:71` | 2026-09-30 |
+| `tools/check_trees.py::check_gore` | `tools/check_trees.py:284` | 2026-09-30 |
+| `tools/check_trees.py::check_lists` | `tools/check_trees.py:135` | 2026-09-30 |
+| `tools/check_trees.py::check_data` | `tools/check_trees.py:488` | 2026-09-30 |
+| `tools/check_trees.py::check_quips` | `tools/check_trees.py:478` | 2026-09-30 |
 | `data/answer_key.json` list tags | `data/answer_key.json:3` | 2026-09-30 |
 | `data/answer_key.json` `hidden` | `data/answer_key.json:18` | 2026-09-30 |
 
@@ -1443,12 +1443,12 @@ symbol when one does not match.
 
 | Handle | Where | Verified |
 |---|---|---|
-| `src/matinee/pools.py::build_pools` (labelled films, the waiting room and pins; comedy holds the specials) | `src/matinee/pools.py:184` | 2026-09-30 |
+| `src/matinee/pools.py::build_pools` (labelled films, the waiting room and pins; comedy holds the specials) | `src/matinee/pools.py:187` | 2026-09-30 |
 | `src/matinee/pools.py::SCORES` (the fall-asleep mode) | `src/matinee/pools.py:46` | 2026-09-30 |
-| `src/matinee/pools.py::kids_bands` / `kids_band` / `CERTIFICATE_BANDS` | `src/matinee/pools.py:138` | 2026-09-30 |
-| `src/matinee/pools.py::waiting` / `WAITING_ROOM` / `GENRE_DOORS` | `src/matinee/pools.py:177` | 2026-09-30 |
-| `src/matinee/pools.py::standup_specials` | `src/matinee/pools.py:155` | 2026-09-30 |
-| `src/matinee/pools.py::specials` (the rule plus `specials` pins) | `src/matinee/pools.py:172` | 2026-09-30 |
+| `src/matinee/pools.py::kids_bands` / `kids_band` / `CERTIFICATE_BANDS` | `src/matinee/pools.py:141` | 2026-09-30 |
+| `src/matinee/pools.py::waiting` / `WAITING_ROOM` / `GENRE_DOORS` | `src/matinee/pools.py:180` | 2026-09-30 |
+| `src/matinee/pools.py::standup_specials` | `src/matinee/pools.py:158` | 2026-09-30 |
+| `src/matinee/pools.py::specials` (the rule plus `specials` pins) | `src/matinee/pools.py:175` | 2026-09-30 |
 | `src/matinee/reference.py::reference_films` | `src/matinee/reference.py:140` | 2026-09-30 |
 | `src/matinee/reference.py::compute_tree` | `src/matinee/reference.py:155` | 2026-09-30 |
 | `src/matinee/reference.py::problems` | `src/matinee/reference.py:225` | 2026-09-30 |
@@ -1469,7 +1469,7 @@ symbol when one does not match.
 | `data/trees/horror.json` gore scale | `data/trees/horror.json:38` | 2026-09-26 |
 | `data/trees/horror.json` gore question, `skip_if_topics`, `treat_as` | `data/trees/horror.json:134` | 2026-09-27 |
 | `data/trees/horror.json` labelled flavours (the kinds' rules) | `data/trees/horror.json:244` | 2026-09-30 |
-| `src/matinee/labels.py::load_labels` (format 2; format 1 refused) / `Labels` / `TreeLabels` | `src/matinee/labels.py:74` | 2026-09-30 |
+| `src/matinee/labels.py::load_labels` (format 2; format 1 refused) / `Labels` / `TreeLabels` | `src/matinee/labels.py:75` | 2026-09-30 |
 | `src/matinee/pools.py::load_house` / `House` (`House.specials`) | `src/matinee/pools.py:93` | 2026-09-30 |
 | `src/matinee/engine.py::_check_labels` (unknown tree or kind refused) | `src/matinee/engine.py:313` | 2026-09-30 |
 | `src/matinee/engine.py::house_flavour` (a `specials` flavour holds the standup specials) | `src/matinee/engine.py:171` | 2026-09-30 |
@@ -1604,24 +1604,24 @@ symbol when one does not match.
 | `src/matinee/web/static/js/wall.js::Wall.bringForward` | `src/matinee/web/static/js/wall.js:328` | 2026-09-28 |
 | `src/matinee/web/static/js/wall.js::Wall.dress` / `glowShadow` / `glowAt` | `src/matinee/web/static/js/wall.js:350` | 2026-09-29 |
 | `src/matinee/web/static/js/wall.js::glowOf` | `src/matinee/web/static/js/wall.js:52` | 2026-09-28 |
-| `src/matinee/web/static/js/wall.js::Wall.putBack` / `returnPoster` / `liftDim` / `settleBack` | `src/matinee/web/static/js/wall.js:391` | 2026-09-28 |
-| `src/matinee/web/static/js/wall.js::Wall.relayout` / `makeTiles` | `src/matinee/web/static/js/wall.js:491` | 2026-09-28 |
-| `src/matinee/web/static/js/wall.js::Wall.prepare` (the re-sort's wait) | `src/matinee/web/static/js/wall.js:524` | 2026-09-28 |
-| `src/matinee/web/static/js/wall.js::Wall.frame` (the drift, `DRIFT_PX_S`) | `src/matinee/web/static/js/wall.js:544` | 2026-09-28 |
-| `src/matinee/web/static/js/wall.js::Wall.place` / `lay` / `picture` / `request` (`BLANK`) | `src/matinee/web/static/js/wall.js:555` | 2026-09-28 |
-| `src/matinee/web/static/js/wall.js::Wall.resort` / `slide` / `depart` | `src/matinee/web/static/js/wall.js:635` | 2026-09-28 |
+| `src/matinee/web/static/js/wall.js::Wall.putBack` / `returnPoster` / `liftDim` / `settleBack` | `src/matinee/web/static/js/wall.js:397` | 2026-09-28 |
+| `src/matinee/web/static/js/wall.js::Wall.relayout` / `makeTiles` | `src/matinee/web/static/js/wall.js:497` | 2026-09-28 |
+| `src/matinee/web/static/js/wall.js::Wall.prepare` (the re-sort's wait) | `src/matinee/web/static/js/wall.js:530` | 2026-09-28 |
+| `src/matinee/web/static/js/wall.js::Wall.frame` (the drift, `DRIFT_PX_S`) | `src/matinee/web/static/js/wall.js:550` | 2026-09-28 |
+| `src/matinee/web/static/js/wall.js::Wall.place` / `lay` / `picture` / `request` (`BLANK`) | `src/matinee/web/static/js/wall.js:561` | 2026-09-28 |
+| `src/matinee/web/static/js/wall.js::Wall.resort` / `slide` / `depart` | `src/matinee/web/static/js/wall.js:641` | 2026-09-28 |
 | `src/matinee/web/static/js/main.js::lockStage` / `leaveTo` / `nameTag` | `src/matinee/web/static/js/main.js:56` | 2026-09-30 |
 | `src/matinee/web/static/js/main.js::trail` / `lastCrumb` | `src/matinee/web/static/js/main.js:101` | 2026-10-01 |
-| `src/matinee/web/static/js/main.js::frame` / `ask` (the footnote) | `src/matinee/web/static/js/main.js:122` | 2026-09-30 |
-| `src/matinee/web/static/js/main.js::start` | `src/matinee/web/static/js/main.js:214` | 2026-09-30 |
+| `src/matinee/web/static/js/main.js::frame` / `ask` (the footnote) | `src/matinee/web/static/js/main.js:121` | 2026-09-30 |
+| `src/matinee/web/static/js/main.js::start` | `src/matinee/web/static/js/main.js:213` | 2026-09-30 |
 | `src/matinee/web/static/js/main.js::goTo` / `step` | `src/matinee/web/static/js/main.js:242` | 2026-10-01 |
 | `src/matinee/web/static/js/main.js::checking` / `fadeTalk` (`READ_MS`) | `src/matinee/web/static/js/main.js:292` | 2026-09-30 |
 | `src/matinee/web/static/js/main.js::pickLines` | `src/matinee/web/static/js/main.js:310` | 2026-09-30 |
 | `src/matinee/web/static/js/main.js::clearForPick` / `requestPick` / `openPick` | `src/matinee/web/static/js/main.js:324` | 2026-09-30 |
 | `src/matinee/web/static/js/main.js::pickNow` (`notThatOne`, `rollAgain`, `justPick`) | `src/matinee/web/static/js/main.js:368` | 2026-09-30 |
-| `src/matinee/web/static/js/main.js::enter` (the start asked at the tap, the question after the landing) | `src/matinee/web/static/js/main.js:204` | 2026-09-30 |
+| `src/matinee/web/static/js/main.js::enter` (the start asked at the tap, the question after the landing) | `src/matinee/web/static/js/main.js:203` | 2026-09-30 |
 | `src/matinee/web/static/js/main.js::topbar` (settles a landed name) | `src/matinee/web/static/js/main.js:70` | 2026-09-30 |
-| `src/matinee/web/static/js/main.js::problem` (`keep`: the failed start's posters) | `src/matinee/web/static/js/main.js:177` | 2026-09-30 |
+| `src/matinee/web/static/js/main.js::problem` (`keep`: the failed start's posters) | `src/matinee/web/static/js/main.js:176` | 2026-09-30 |
 | `src/matinee/web/static/js/pick.js::showPick` | `src/matinee/web/static/js/pick.js:239` | 2026-09-30 |
 | `src/matinee/web/static/js/pick.js::goldLine` | `src/matinee/web/static/js/pick.js:193` | 2026-09-30 |
 | `src/matinee/web/static/js/pick.js::bringOut` | `src/matinee/web/static/js/pick.js:217` | 2026-09-30 |
