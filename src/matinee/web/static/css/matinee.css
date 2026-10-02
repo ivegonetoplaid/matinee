@@ -1635,29 +1635,6 @@ button {
   letter-spacing: 0.5em;
 }
 
-.suggest {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
-
-.suggest:empty {
-  display: none;
-}
-
-.chip {
-  min-height: 38px;
-  padding: 7px 14px;
-  border: 1px solid var(--gold);
-  border-radius: 999px;
-  background: rgba(22, 25, 38, 0.95);
-  color: var(--text);
-  font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
 .pill.solid {
   align-self: flex-start;
   color: var(--strip-ink);
@@ -1783,53 +1760,13 @@ button {
   gap: 6px;
 }
 
-.check {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 36px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.check input {
-  appearance: none;
-  flex: 0 0 auto;
-  width: 22px;
-  height: 22px;
-  margin: 0;
-  border: 2px solid var(--gold);
-  border-radius: 5px;
-  background: transparent;
-  display: grid;
-  place-content: center;
-  cursor: pointer;
-}
-
-.check input:checked {
-  background: var(--gold);
-}
-
-.check input:checked::after {
-  content: "✓";
-  color: var(--strip-ink);
-  font-size: 15px;
-  font-weight: 800;
-  line-height: 1;
-}
-
 .remember-note {
-  padding-left: 32px;
   font-size: 14px;
 }
 
 .remember-who {
   display: flex;
   gap: 10px;
-}
-
-.remember-who[hidden] {
-  display: none;
 }
 
 .remember-who .field:first-child {

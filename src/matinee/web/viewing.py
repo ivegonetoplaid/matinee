@@ -1,10 +1,11 @@
 """Routes that walk the trees for a viewer, and the exclusions that shape every walk.
 
-A viewer is either a profile this device holds a token for, whose saved
-exclusions apply, or a visitor whose exclusions arrive with each request from the
-page and end with the visit. Matinee's own exclusions remove matching films from
-every tree and mode through the engine. DoesTheDogDie topics are checked at the
-pick; here they only decide whether the gore question is asked.
+A viewer is a profile this device holds a token for, and its saved exclusions
+apply. Walks and picks run only under a held profile. The first question's pool
+may be asked for without one, for the wall behind the front door, and then no
+exclusion applies. Matinee's own exclusions remove matching films from every
+tree and mode through the engine. DoesTheDogDie topics are checked at the pick;
+here they only decide whether the gore question is asked.
 """
 
 from __future__ import annotations
@@ -36,8 +37,6 @@ TOPICS_UNAVAILABLE = "I can't load the list of topics right now."
 
 class ViewerIn(BaseModel):
     profile_id: int | None = None
-    topics: list[int] = Field(default=[], max_length=400)
-    exclusions: list[str] = Field(default=[], max_length=20)
 
 
 class AnswerIn(BaseModel):
@@ -195,12 +194,20 @@ def check_exclusions(theatre: Theatre, names: Sequence[str]) -> None:
 
 
 def resolve(request: Request, store: Store, v: ViewerIn) -> tuple[Viewer, Profile | None]:
-    """The engine's viewer: a held profile's saved exclusions, or this visit's."""
-    if v.profile_id is not None:
-        profile = held_profile(request, store, v.profile_id)
-        fixes = tuple(Correction(c.tmdb, c.tree, c.direction) for c in store.corrections(profile.id))
-        return Viewer(exclusions=profile.exclusions, topics=profile.topics, corrections=fixes), profile
-    return Viewer(exclusions=frozenset(v.exclusions), topics=frozenset(v.topics)), None
+    """The engine's viewer: a held profile's saved exclusions, or none when no profile is named."""
+    if v.profile_id is None:
+        return Viewer(), None
+    profile = held_profile(request, store, v.profile_id)
+    fixes = tuple(Correction(c.tmdb, c.tree, c.direction) for c in store.corrections(profile.id))
+    return Viewer(exclusions=profile.exclusions, topics=profile.topics, corrections=fixes), profile
+
+
+def resolve_held(request: Request, store: Store, v: ViewerIn) -> Viewer:
+    """The engine's viewer for a walk or a pick, which runs only under a profile this device holds; 403 otherwise."""
+    viewer, profile = resolve(request, store, v)
+    if profile is None:
+        raise HTTPException(status_code=403, detail="refused")
+    return viewer
 
 
 DEVICE_COOKIE = "matinee_device"
@@ -313,7 +320,7 @@ def add_viewing_routes(app: FastAPI, theatre: Theatre, store: Store, dtdd: Dtdd)
     @app.post("/api/walk")
     def walk_tree(body: WalkIn, request: Request) -> StepOut:
         cat = theatre.showing().catalog
-        viewer, _ = resolve(request, store, body.viewer)
+        viewer = resolve_held(request, store, body.viewer)
         step = walk(cat, body.tree, viewer, [Answer(a.question, a.option) for a in body.answers])
         question = None
         if step.question is not None:
@@ -399,7 +406,7 @@ def add_pick_routes(app: FastAPI, theatre: Theatre, store: Store, picker: Picker
     def pick(body: PickIn, request: Request, response: Response) -> PickOut:
         """One film from the pool the answers leave, checked against the viewer's topics before it is shown."""
         cat = theatre.showing().catalog
-        viewer, _ = resolve(request, store, body.viewer)
+        viewer = resolve_held(request, store, body.viewer)
         left, prefer = pick_pool(cat, viewer, body)
         films = cat.table.films
         ratings = dict(zip(films.index.tolist(), films.rating.fillna(0.0).tolist(), strict=True))

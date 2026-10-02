@@ -18,7 +18,7 @@ from matinee.web.config import Config
 from matinee.web.theatre import Theatre
 from test_engine import TREE, reference, write_data
 from test_viewing import FakeDtdd
-from test_web_library import SECRET_KEY, SECRET_URL, FakeLibrary, write_film_table
+from test_web_library import SECRET_KEY, SECRET_URL, FakeLibrary, seat_for, write_film_table
 
 
 def test_a_correction_is_one_override_of_structured_rows(tmp_path: Path) -> None:
@@ -52,7 +52,7 @@ def site(tmp_path: Path) -> tuple[TestClient, Store]:
 
 
 def pool(client: TestClient, tree: str, profile_id: int | None) -> list[int]:
-    viewer = {} if profile_id is None else {"profile_id": profile_id}
+    viewer = seat_for(client) if profile_id is None else {"profile_id": profile_id}
     return list(client.post("/api/walk", json={"tree": tree, "viewer": viewer}).json()["pool"])
 
 

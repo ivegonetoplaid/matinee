@@ -38,7 +38,7 @@ from matinee.web.app import create_app
 from matinee.web.config import Config
 from matinee.web.theatre import Theatre
 from test_engine import TREE, reference, write_data
-from test_web_library import SECRET_KEY, SECRET_URL, FakeLibrary, write_film_table
+from test_web_library import SECRET_KEY, SECRET_URL, FakeLibrary, seat_for, write_film_table
 
 TOPICS = [
     {"id": 188, "name": "there's blood/gore", "minimalName": "blood/gore", "keywords": "blood", "topicCategoryId": 4},
@@ -178,17 +178,22 @@ def test_a_saved_exclusion_applies_to_every_walk(site: Any) -> None:
     assert after["question"]["id"] == "kind"  # topic 188 skips the gore question
 
 
-def test_a_visitor_holds_exclusions_for_the_visit_only(site: Any, tmp_path: Path) -> None:
+def test_without_a_profile_only_the_first_questions_pool_is_given(site: Any, tmp_path: Path) -> None:
     client, store, _ = site
-    visit = {"tree": "west", "viewer": {"exclusions": ["heroes"], "topics": []}}
-    assert 3 not in client.post("/api/walk", json=visit).json()["pool"]
-    assert 3 in client.post("/api/walk", json={"tree": "west"}).json()["pool"]
-    squeamish = {"tree": "west", "answers": [{"question": "era", "option": 1}], "viewer": {"topics": [188]}}
-    assert client.post("/api/walk", json=squeamish).json()["question"]["id"] == "kind"
+    first = client.post("/api/first", json={})
+    assert first.status_code == 200 and first.json()["pool"] == list(range(1, 40)) + [99]
+    sneaking = {"tree": "west", "viewer": {"exclusions": ["heroes"], "topics": [188]}}
+    assert client.post("/api/walk", json=sneaking).status_code == 403
+    assert client.post("/api/walk", json={"tree": "west"}).status_code == 403
     assert client.cookies.get("matinee_tokens") is None
-    assert store.suggest("anyone") == [] and store.holding([]) == {}
     with sqlite3.connect(tmp_path / "matinee.sqlite") as db:
         assert db.execute("SELECT COUNT(*) FROM profiles").fetchone() == (0,)  # nothing was saved
+
+
+def test_a_profiles_topics_skip_the_gore_question(site: Any) -> None:
+    client, _, _ = site
+    squeamish = {"tree": "west", "answers": [{"question": "era", "option": 1}], "viewer": seat_for(client, [188])}
+    assert client.post("/api/walk", json=squeamish).json()["question"]["id"] == "kind"
 
 
 def test_only_the_device_holding_a_profile_may_use_or_change_it(site: Any) -> None:
@@ -203,10 +208,12 @@ def test_only_the_device_holding_a_profile_may_use_or_change_it(site: Any) -> No
 
 def test_unknown_exclusions_and_misfit_answers_are_refused(site: Any) -> None:
     client, _, _ = site
-    assert client.post("/api/walk", json={"tree": "west", "viewer": {"exclusions": ["cats"]}}).status_code == 400
-    misfit = client.post("/api/walk", json={"tree": "west", "answers": [{"question": "gore", "option": 0}]})
+    me = seat_for(client)
+    misfit = client.post(
+        "/api/walk", json={"tree": "west", "answers": [{"question": "gore", "option": 0}], "viewer": me}
+    )
     assert misfit.status_code == 400 and misfit.json()["error"] == "refused"
-    assert client.post("/api/walk", json={"tree": "nope"}).status_code == 400
+    assert client.post("/api/walk", json={"tree": "nope", "viewer": me}).status_code == 400
 
 
 def test_first_question_greets_a_profile_by_name(site: Any) -> None:
@@ -317,7 +324,7 @@ def test_first_question_hides_a_tree_the_viewer_excluded_empty(tmp_path: Path) -
     assert client.post("/api/first", json={}).json()["options"] == [
         {"say": "Cowboys.", "tree": "west", "label": "Western", "correctable": True}
     ]
-    both = {"viewer": {"exclusions": ["heroes", "superheroes"]}}
+    both = {"viewer": seat_for(client, exclusions=["heroes", "superheroes"])}
     assert client.post("/api/first", json=both).json()["options"] == []
     assert client.post("/api/first", json=both).json()["pool"] == []
 
@@ -444,6 +451,6 @@ def test_a_question_footnote_reaches_the_page(site: Any, tmp_path: Path) -> None
     (tmp_path / "data" / "trees" / "west.json").write_text(json.dumps(tree))
     client, _, _ = site
     assert (
-        client.post("/api/walk", json={"tree": "west"}).json()["question"]["footnote"]
+        client.post("/api/walk", json={"tree": "west", "viewer": seat_for(client)}).json()["question"]["footnote"]
         == tree["questions"][0]["footnote"]
     )

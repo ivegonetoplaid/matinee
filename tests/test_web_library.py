@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import itertools
 import json
 import os
 import urllib.request
@@ -28,6 +29,19 @@ from test_engine import make_table, reference, write_data
 
 SECRET_URL = "http://media.invalid:8096"
 SECRET_KEY = "k" * 32
+
+
+_names = itertools.count(1)
+
+
+def seat_for(
+    client: TestClient, topics: list[int] | None = None, exclusions: list[str] | None = None
+) -> dict[str, int]:
+    """A new profile held by this client's device, with these topics and exclusions, as a request's viewer."""
+    body = {"name": f"Viewer {next(_names)}", "topics": topics or [], "exclusions": exclusions or []}
+    made = client.post("/api/profiles", json=body)
+    assert made.status_code == 200, made.text
+    return {"profile_id": made.json()["id"]}
 
 
 def item(tmdb: int) -> str:
@@ -296,7 +310,7 @@ def test_every_response_carries_the_security_headers(world: Any) -> None:
         assert resp.headers["x-content-type-options"] == "nosniff"
         assert resp.headers["referrer-policy"] == "same-origin"
     assert client.get("/").headers["content-type"].startswith("text/html")
-    invalid = client.post("/api/walk", json={"tree": "x" * 41})
+    invalid = client.post("/api/walk", json={"tree": "x" * 41, "viewer": seat_for(client)})
     assert invalid.status_code == 422 and invalid.headers["x-robots-tag"] == "noindex"
 
 

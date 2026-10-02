@@ -659,9 +659,10 @@ Answers narrow that pool from there (section 2.4).
 
 ## 7. Viewers, profiles and devices
 
-Matinee has no accounts and no login. A viewer is either a **profile** this
-device holds a token for, or a **visitor** whose choices travel with each
-request and end with the visit.
+Matinee has no accounts and no login. Every viewing runs under a **profile**
+this device holds a token for. A device without one is shown the first
+question's pool behind the front door, with no exclusion applied, and walks or
+picks nothing until it opens or makes a profile.
 
 | Rule | Value |
 |---|---|
@@ -689,12 +690,11 @@ request and end with the visit.
   installation clears a forgotten PIN in Matinee's store.
 - A request naming a profile (the first question, a walk, a pick, saving
   exclusions or saving a correction) is refused with 403 unless this device
-  holds a token for it.
+  holds a token for it. A walk or a pick naming no profile is refused with 403.
 
 ## 8. Exclusions
 
-A viewer may exclude two kinds of thing. A profile saves them. A visitor's apply
-to this visit only.
+A viewer may exclude two kinds of thing. A profile saves them.
 
 **Matinee's own exclusions** (`data/exclusions.json`) remove every film they
 match from every tree and mode, through the engine. A genome test matches when
@@ -720,9 +720,8 @@ than no.**
 - The trigger picker, which is also the preferences page, offers Matinee's own
   exclusions and the DoesTheDogDie topics. It says the check is best effort from
   crowd votes and carries "Powered by DoesTheDogDie.com", linked.
-- When the topic list cannot be fetched, the picker says so and offers "Nope,
-  show me all the movies." (or, when editing, "Never mind, keep my list") and
-  "Try again".
+- When the topic list cannot be fetched, the picker says so and offers "Try
+  again" (and, when editing, "Never mind, keep my list").
 
 ## 9. The DoesTheDogDie check at the pick
 
@@ -970,16 +969,12 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
   board, with no name; it returns to full size when the picker closes. The
   marquee stays on screen until the viewer goes in or opens
   About.
-  - A device with no token opens on "Hi! A few questions before I show you to
-    your seats. Anything you never want to see?", with "Nope, show me all the
-    movies.", "Yes, there are a few things." and "I've been here before".
+  - Every viewing runs under a profile. The door offers no way in without one.
+  - A device with no token opens on the trigger picker, which asks for a name
+    and an optional PIN and saves a profile with whatever is chosen.
   - A device holding one token opens on "Welcome back, <name>. Your seats are
-    waiting.", with "Take me in" and "Not <name>?". A device holding several
-    asks "Who's watching?".
-  - The trigger picker has a "Remember me" box, ticked by default. Ticked, it
-    asks for a name and an optional PIN and saves a profile. Unticked, the
-    choices apply to this visit only. "Never mind, show me everything" enters
-    with no exclusions.
+    waiting.", with "Take me in" and "Not <name>?", which makes a new profile. A
+    device holding several asks "Who's watching?", with "Someone new".
 - **Going in.** Every answer at the door that leads into the theatre asks for
   the first question at the tap, and a door is entered once: a second tap or
   Enter changes nothing. The door's words and the corner credit line fade out

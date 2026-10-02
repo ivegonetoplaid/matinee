@@ -14,7 +14,7 @@ import { Wall } from "./wall.js";
 const stage = document.getElementById("stage");
 const wall = new Wall(document.getElementById("wall"));
 
-// Where this visit stands. The viewer is a held profile or this visit's own exclusions.
+// Where this visit stands. The viewer is always a profile this device holds.
 const visit = {
   viewer: {},
   name: null,
@@ -75,7 +75,7 @@ function topbar(...rest) {
   return bar;
 }
 
-// The profile's name at the top of the wall, with "Edit my list" and "Not <name>?".
+// The profile's name at the top of the wall, with "Edit my list" and "Not <name>?", which makes a new one.
 function nameTag() {
   if (!visit.name) return null;
   const leave = (opts) => leaveTo(() => boot(opts));
@@ -89,7 +89,7 @@ function nameTag() {
       {
         class: "link-button",
         type: "button",
-        onclick: () => leave({ screen: "known" }),
+        onclick: () => leave({ screen: "new" }),
       },
       `Not ${visit.name}?`,
     ),
@@ -188,7 +188,7 @@ function problem(data, again, keep = false) {
   );
 }
 
-// The box office. `opts.screen` opens it on the name lookup ("known") or the viewer's list ("list").
+// The box office. `opts.screen` opens it on a new profile ("new") or the viewer's list ("list").
 async function boot(opts = {}) {
   const [door, first] = await Promise.all([get("/api/door"), post("/api/first", { viewer: {} })]);
   if (!door.ok) return problem(door.data, () => boot(opts));
@@ -285,7 +285,7 @@ function pickFrame() {
 }
 
 function hasTopics() {
-  return Boolean(visit.viewer.profile_id ? visit.profileTopics : visit.viewer.topics?.length);
+  return visit.profileTopics;
 }
 
 // While the check runs the line says so, beneath the reply to the last answer when there is one, and the

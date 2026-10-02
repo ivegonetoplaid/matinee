@@ -30,7 +30,7 @@ from matinee.web.app import create_app
 from matinee.web.config import Config
 from matinee.web.theatre import Theatre
 from test_engine import gore_cut_tree, reference, write_data
-from test_web_library import SECRET_KEY, SECRET_URL, FakeLibrary, write_film_table
+from test_web_library import SECRET_KEY, SECRET_URL, FakeLibrary, seat_for, write_film_table
 
 
 def stat(topic: int, yes: object, no: object) -> dict[str, Any]:
@@ -176,9 +176,19 @@ def site(tmp_path: Path) -> tuple[TestClient, ScriptedDtdd]:
     return TestClient(app, base_url="https://testserver"), dtdd
 
 
+def test_a_walk_or_pick_without_a_held_profile_is_refused(site: Any) -> None:
+    client, dtdd = site
+    for path in ("/api/walk", "/api/pick"):
+        assert client.post(path, json={"tree": "west"}).status_code == 403
+        assert (
+            client.post(path, json={"tree": "west", "viewer": {"topics": [153], "exclusions": []}}).status_code == 403
+        )
+    assert dtdd.paths == []
+
+
 def test_a_viewer_without_topics_causes_no_lookup_and_no_device_cookie(site: Any) -> None:
     client, dtdd = site
-    resp = client.post("/api/pick", json={"tree": "west"})
+    resp = client.post("/api/pick", json={"tree": "west", "viewer": seat_for(client)})
     body = resp.json()
     assert body["film"]["tmdb"] in {1, 2, 3} and body["swapped"] is None and body["unchecked"] is None
     assert dtdd.paths == [] and "matinee_device" not in resp.headers.get("set-cookie", "")
@@ -186,12 +196,17 @@ def test_a_viewer_without_topics_causes_no_lookup_and_no_device_cookie(site: Any
 
 def test_seen_films_are_not_drawn_again(site: Any) -> None:
     client, _ = site
-    assert client.post("/api/pick", json={"tree": "west", "seen": [1, 2]}).json()["film"]["tmdb"] == 3
+    assert (
+        client.post("/api/pick", json={"tree": "west", "seen": [1, 2], "viewer": seat_for(client)}).json()["film"][
+            "tmdb"
+        ]
+        == 3
+    )
 
 
 def test_a_pool_whose_every_film_was_shown_says_it_is_used_up(site: Any) -> None:
     client, _ = site
-    body = client.post("/api/pick", json={"tree": "west", "seen": [1, 2, 3]}).json()
+    body = client.post("/api/pick", json={"tree": "west", "seen": [1, 2, 3], "viewer": seat_for(client)}).json()
     assert body["film"] is None
     assert (
         body["exhausted"] == "That's every film I've got for those answers. Step back along the trail, or start over."
@@ -200,7 +215,7 @@ def test_a_pool_whose_every_film_was_shown_says_it_is_used_up(site: Any) -> None
 
 def test_an_exhausted_pool_says_so_in_words(site: Any) -> None:
     client, dtdd = site
-    resp = client.post("/api/pick", json={"tree": "west", "viewer": {"topics": [153]}})
+    resp = client.post("/api/pick", json={"tree": "west", "viewer": seat_for(client, topics=[153])})
     body = resp.json()
     assert body["film"] is None
     assert body["exhausted"] == "Every film left here trips something on your list. Want to start over?"
@@ -236,7 +251,7 @@ def site_with(tmp_path: Path, picker: Picker | None, dtdd: ScriptedDtdd) -> Test
 def test_the_route_names_an_unchecked_film(tmp_path: Path) -> None:
     dtdd = ScriptedDtdd({1: None, 2: None, 3: None})
     client = site_with(tmp_path, Picker(dtdd, DeviceCap(), random.Random(0)), dtdd)
-    body = client.post("/api/pick", json={"tree": "west", "viewer": {"topics": [153]}}).json()
+    body = client.post("/api/pick", json={"tree": "west", "viewer": seat_for(client, topics=[153])}).json()
     assert body["film"] is not None
     assert body["unchecked"] == "I couldn't check this one against your list, so have a look before you press play."
 
@@ -245,19 +260,20 @@ def test_the_route_caps_each_device_on_its_own(tmp_path: Path) -> None:
     dtdd = ScriptedDtdd({t: [stat(153, 0, 9)] for t in (1, 2, 3)})
     cap = DeviceCap()
     client = site_with(tmp_path, Picker(dtdd, cap, random.Random(0)), dtdd)
-    visit = {"tree": "west", "viewer": {"topics": [153]}}
+    visit = {"tree": "west", "viewer": seat_for(client, topics=[153])}
     for _ in range(LOOKUPS_PER_HOUR):
         assert client.post("/api/pick", json=visit).json()["unchecked"] is None
     assert client.post("/api/pick", json=visit).json()["unchecked"].startswith("I've checked a lot of films")
     other = site_with(tmp_path / "b", Picker(dtdd, cap, random.Random(0)), dtdd)
-    assert other.post("/api/pick", json=visit).json()["unchecked"] is None  # another device, its own hour
+    elsewhere = {"tree": "west", "viewer": seat_for(other, topics=[153])}
+    assert other.post("/api/pick", json=elsewhere).json()["unchecked"] is None  # another device, its own hour
 
 
 def test_the_reveal_names_the_first_failed_film(tmp_path: Path) -> None:
     dtdd = ScriptedDtdd({1: [stat(153, 9, 0)], 2: [stat(153, 9, 0)], 3: [stat(153, 0, 9)]})
 
     client = site_with(tmp_path, Picker(dtdd, DeviceCap(), InOrder()), dtdd)
-    body = client.post("/api/pick", json={"tree": "west", "viewer": {"topics": [153]}}).json()
+    body = client.post("/api/pick", json={"tree": "west", "viewer": seat_for(client, topics=[153])}).json()
     assert body["film"]["tmdb"] == 3 and body["swapped"]["film"]["tmdb"] == 1
     assert dtdd.looked_up() == [1, 2, 3]
 
@@ -298,7 +314,7 @@ def test_the_swap_line_names_the_first_topic_hit(tmp_path: Path) -> None:
     two = [stat(153, 9, 0), stat(188, 9, 0)]
     dtdd = ScriptedDtdd({1: two, 2: [stat(153, 0, 9)], 3: [stat(153, 0, 9)]})
     client = site_with(tmp_path, Picker(dtdd, DeviceCap(), InOrder()), dtdd)
-    body = client.post("/api/pick", json={"tree": "west", "viewer": {"topics": [153, 188]}}).json()
+    body = client.post("/api/pick", json={"tree": "west", "viewer": seat_for(client, topics=[153, 188])}).json()
     assert body["swapped"]["topics"] == ["topic 153", "topic 188"]
     assert body["swapped"]["line"].startswith("Oh, I almost recommended a film where topic 153.")
 
@@ -319,17 +335,21 @@ def test_the_route_honours_the_rating_half(tmp_path: Path) -> None:
         base_url="https://testserver",
     )
     long = [{"question": "era", "option": 1}, {"question": "gore", "option": 1}]  # "long." asks for the best rated
-    assert client.post("/api/pick", json={"tree": "west", "answers": long}).json()["film"]["tmdb"] == 39
+    assert (
+        client.post("/api/pick", json={"tree": "west", "answers": long, "viewer": seat_for(client)}).json()["film"][
+            "tmdb"
+        ]
+        == 39
+    )
 
 
 def test_just_pick_one_before_any_answer_picks_from_the_viewers_whole_pool(tmp_path: Path) -> None:
     dtdd = ScriptedDtdd({})
     client = site_with(tmp_path, Picker(dtdd, DeviceCap(), random.Random(0)), dtdd)
-    picked = {
-        client.post("/api/pick", json={"viewer": {"exclusions": ["heroes"]}}).json()["film"]["tmdb"] for _ in range(30)
-    }
+    heroes = seat_for(client, exclusions=["heroes"])
+    picked = {client.post("/api/pick", json={"viewer": heroes}).json()["film"]["tmdb"] for _ in range(30)}
     assert picked <= {1, 2} and picked  # film 3 carries the "heroes" exclusion
-    refused = client.post("/api/pick", json={"answers": [{"question": "era", "option": 0}]})
+    refused = client.post("/api/pick", json={"answers": [{"question": "era", "option": 0}], "viewer": heroes})
     assert refused.status_code == 400
 
 
@@ -405,7 +425,7 @@ def test_the_route_draws_the_least_gory_third_first_for_a_blood_topic(tmp_path: 
         create_app(config, theatre, Store(tmp_path / "s.sqlite"), dtdd, clock=lambda: 0.0, picker=picker),
         base_url="https://testserver",
     )
-    visit = {"tree": "west", "answers": [{"question": "era", "option": 1}], "viewer": {"topics": [188]}}
+    visit = {"tree": "west", "answers": [{"question": "era", "option": 1}], "viewer": seat_for(client, topics=[188])}
     picked = {client.post("/api/pick", json=visit).json()["film"]["tmdb"] for _ in range(20)}
     assert picked and picked <= set(range(6, 31))  # never the goriest (1-5) or the unscored (31-40) first
 
@@ -439,7 +459,7 @@ def test_the_route_offers_to_roll_again_or_just_pick_one_after_three_fail(tmp_pa
         create_app(config, theatre, Store(tmp_path / "s.sqlite"), dtdd, clock=lambda: 0.0, picker=picker),
         base_url="https://testserver",
     )
-    visit: dict[str, Any] = {"tree": "west", "viewer": {"topics": [153]}}
+    visit: dict[str, Any] = {"tree": "west", "viewer": seat_for(client, topics=[153])}
     body = client.post("/api/pick", json=visit).json()
     assert body["film"] is None and body["exhausted"] is None
     assert body["tired"].startswith("Three in a row trip your list, starting with one where topic 153.")
