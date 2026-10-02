@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 
 import notes as tool
-from matinee.store import Note, Store
+from matinee.store import Note, Store, StoreError
 from test_web_library import write_film_table
 
 
@@ -76,3 +76,23 @@ def test_a_missing_store_is_never_created(tmp_path: Path, capsys: pytest.Capture
     assert run(tmp_path, "list") == 2
     assert not (tmp_path / "matinee.sqlite").exists()
     assert "No Matinee store" in capsys.readouterr().err
+
+
+def test_clear_pin_clears_one_profiles_pin_and_lockout(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    store = Store(tmp_path / "matinee.sqlite")
+    locked, _ = store.create("Pat", "1234", [], [])
+    other, _ = store.create("Sam", "5678", [], [])
+    for _ in range(5):
+        with pytest.raises(StoreError):
+            store.open(locked.id, "0000", 1000.0)
+    with pytest.raises(StoreError) as still:
+        store.open(locked.id, "1234", 1001.0)
+    assert still.value.code == "locked"
+    assert run(tmp_path, "clear-pin", "  pAT ") == 0
+    assert "Cleared the PIN on Pat." in capsys.readouterr().out
+    opened, _ = store.open(locked.id, None, 1002.0)  # no PIN asked, no lockout left
+    assert not opened.has_pin
+    with pytest.raises(StoreError):
+        store.open(other.id, None, 1002.0)  # Sam keeps a PIN
+    assert run(tmp_path, "clear-pin", "Nobody") == 1
+    assert "Refused: no profile is named 'Nobody'." in capsys.readouterr().err

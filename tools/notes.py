@@ -1,4 +1,4 @@
-"""Go through viewers' notes in Matinee's own store.
+"""Go through viewers' notes, and clear a forgotten PIN, in Matinee's own store.
 
 Run on the server, inside the same image as the server, against its state
 directory. It writes only Matinee's own store, never a film's placement, labels
@@ -8,6 +8,7 @@ and the settle step.
     python tools/notes.py list
     python tools/notes.py accept <note> "<reason>" --ruling "<the label ruling that fixed it>"
     python tools/notes.py reject <note> "<reason>"
+    python tools/notes.py clear-pin "<profile name>"
 
 The state directory comes from `--state` or MATINEE_STATE. A ruling on a note
 already ruled replaces the earlier one and prints it. The film is printed before
@@ -104,6 +105,12 @@ def rule(store: Store, names: Names, args: argparse.Namespace) -> int:
     return 0
 
 
+def clear_pin(store: Store, args: argparse.Namespace) -> int:
+    profile = store.clear_pin(args.name)
+    print(f"Cleared the PIN on {profile.name}. It now opens without one.")
+    return 0
+
+
 def parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument("--state", type=Path, default=os.environ.get("MATINEE_STATE"), help="Matinee's state directory")
@@ -116,6 +123,8 @@ def parser() -> argparse.ArgumentParser:
     reject = commands.add_parser("reject", help="reject a note")
     reject.add_argument("note", type=int)
     reject.add_argument("reason")
+    pin = commands.add_parser("clear-pin", help="clear one profile's PIN and any lockout on it")
+    pin.add_argument("name")
     return p
 
 
@@ -128,6 +137,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     try:
         if args.command == "list":
             return list_open(store, load_names(args.state))
+        if args.command == "clear-pin":
+            return clear_pin(store, args)
         return rule(store, load_names(args.state), args)
     except StoreError as exc:
         print(f"Refused: {exc}.", file=sys.stderr)

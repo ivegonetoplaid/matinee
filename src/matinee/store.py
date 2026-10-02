@@ -354,6 +354,19 @@ class Store:
             )
         return _filed(row)
 
+    def clear_pin(self, name: str) -> Profile:
+        """Clear the PIN and any lockout of the profile with this name, ignoring case; refuses an unknown name."""
+        with closing(self._connect()) as db, db:
+            row = db.execute("SELECT id FROM profiles WHERE name_key = ?", (name_key(name),)).fetchone()
+            if row is None:
+                raise StoreError("no_profile", f"no profile is named {name.strip()!r}")
+            db.execute(
+                "UPDATE profiles SET pin_salt = NULL, pin_hash = NULL, failed = 0, locked_until = 0 WHERE id = ?",
+                (row["id"],),
+            )
+            cleared = db.execute("SELECT * FROM profiles WHERE id = ?", (row["id"],)).fetchone()
+        return self._profile(cleared)
+
     def open(self, profile_id: int, pin: str | None, now: float) -> tuple[Profile, str]:
         """A device token for a profile found by name: needs its PIN when it has one."""
         with closing(self._connect()) as db, db:

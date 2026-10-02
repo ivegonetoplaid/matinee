@@ -25,7 +25,8 @@ promises is written down in `docs/spec/matinee.md`.
   TMDB and the tag genome; `--daily HH:MM` rebuilds it every night.
 - `tools/check_trees.py`: checks every tree against the film table:
   reachability, the answer key and the famous-film lists, at three library sizes.
-- `tools/notes.py`: lists viewers' open notes and records a ruling on one, run
+- `tools/notes.py`: lists viewers' open notes, records a ruling on one, and
+  clears a forgotten PIN, run
   inside the server's image against its state directory.
 - `docs/spec/`: the specification.
 

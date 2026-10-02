@@ -687,8 +687,10 @@ picks nothing until it opens or makes a profile.
   It never carries the profile's exclusions.
 - A token for a deleted profile is ignored. The door's reply clears it from the
   cookie.
-- There is no PIN reset and no administrative surface. Whoever runs the
-  installation clears a forgotten PIN in Matinee's store.
+- There is no PIN reset and no administrative surface on the web. Whoever runs
+  the installation clears a forgotten PIN with the notes tool's
+  `clear-pin "<profile name>"` (section 10), which matches the name ignoring
+  case, clears the PIN and any lockout on it, and refuses a name no profile has.
 - A request naming a profile (the first question, a walk, a pick, saving
   exclusions or saving a note) is refused with 403 unless this device
   holds a token for it. A walk or a pick naming no profile is refused with 403.
@@ -888,6 +890,7 @@ changes nothing any viewer is shown.
   - `accept <note> "<reason>" --ruling "<the label ruling that fixed it>"` and
     `reject <note> "<reason>"` print the note's film, then record the ruling.
     Where the note was already ruled, the tool prints the ruling it replaced.
+  - `clear-pin "<profile name>"` clears one profile's PIN (section 7).
   - A note that does not exist, an empty or multi-line reason, or an accept
     without its label ruling is refused, and nothing is written.
 
