@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
-import { filmIndex, nearestCell, pictureSize, posterAcross, wallLayout } from "../../src/matinee/web/static/js/wall-grid.js";
+import { besideItself, filmAt, filmIndex, nearestCell, pictureSize, posterAcross, wallLayout } from "../../src/matinee/web/static/js/wall-grid.js";
 
 test("every film shows at its home cell, in the wall's order along row 0", () => {
   const layout = wallLayout(1280, 800, posterAcross(3900, false), false, 3900);
@@ -82,4 +82,16 @@ test("the wall picture is the smallest that covers the cell", () => {
   assert.equal(pictureSize(192, 1), "m");
   assert.equal(pictureSize(79, 2.6), "m");
   assert.equal(pictureSize(400, 2), "l");
+});
+
+test("a film is beside itself when a neighbouring cell shows it, placed or in the wall's order", () => {
+  const layout = wallLayout(1280, 800, posterAcross(40, false, true), false, 40);
+  const order = Array.from({ length: 40 }, (_, k) => k);
+  const none = new Map();
+  const home = filmAt(layout, order, none, 3, 3);
+  assert.equal(besideItself(layout, order, none, { i: 2, j: 3 }, home), true);
+  assert.equal(besideItself(layout, order, none, { i: 3, j: 3 }, home), false);
+  const placed = new Map([["10,10", 999]]);
+  assert.equal(besideItself(layout, order, placed, { i: 11, j: 11 }, 999), true);
+  assert.equal(besideItself(layout, order, placed, { i: 12, j: 12 }, 999), false);
 });

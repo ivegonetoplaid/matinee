@@ -9,6 +9,7 @@ import { GOLD, posterGlow } from "./glow.js";
 import { SETTLE_EASE, SETTLE_S, bezier, centreOf, hopCell, hopCount, placeLanding, planHunt, settledCamera } from "./hunt-plan.js";
 import {
   ACROSS,
+  besideItself,
   camCell,
   cellBox,
   filmAt,
@@ -27,6 +28,7 @@ const DRIFT_PX_S = 10; // upward, timed by the clock, never by frames
 const MAX_STEP_S = 0.25; // a frame after a long pause (a hidden tab) moves the wall no further than this
 const RESORT_MS = 1400; // each answer's re-sort
 const RESORT_EASE = "cubic-bezier(0.45, 0, 0.25, 1)"; // eases out of place, glides, and settles; never a dash then a crawl
+const LANDING_TRIES = 20; // hunt plans tried for a landing cell clear of the picked film's own copies
 const PRELOAD_MS = 600; // the re-sort waits this long at most for the posters it brings on screen
 const FIRST_MS = 2500; // a wall laid fresh waits this long at most for its pictures before it fades in
 const DROPPED_SCALE = 0.5; // a dropped film's poster shrinks to this and fades where it stands
@@ -230,12 +232,24 @@ export class Wall {
     onStop();
     const from = await this.settle(lift);
     if (!from || round !== this.round) return null;
-    const plan = planHunt({ n: hopCount(rand), rand, layout: this.layout, from });
+    const plan = this.planClearOf(id, from, rand);
     this.placed = new Map([...this.placed, ...placeLanding(plan, id)]);
     this.dirty = true;
     this.request(`/img/poster/${id}/${this.size}`);
     if (lessMotion.matches) return this.jump(plan, round);
     return this.hop(plan, from);
+  }
+
+  // A hunt plan whose landing cell has no copy of film `id` in the eight cells around it, so the picked
+  // film never lands beside itself. Tries up to LANDING_TRIES plans; a pool too small to allow it takes
+  // the last.
+  planClearOf(id, from, rand) {
+    let plan = null;
+    for (let k = 0; k < LANDING_TRIES; k += 1) {
+      plan = planHunt({ n: hopCount(rand), rand, layout: this.layout, from });
+      if (!besideItself(this.layout, this.order, this.placed, plan.landing, id)) return plan;
+    }
+    return plan;
   }
 
   // Under reduced motion: the camera moves to the landing cell at once, and the jump ends once the

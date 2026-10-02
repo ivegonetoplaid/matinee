@@ -200,3 +200,13 @@ export function filmAt(layout, order, placed, i, j) {
   if (hunted !== undefined) return hunted;
   return layout.films ? order[filmIndex(layout, i, j)] : null;
 }
+
+// Whether film `id` shows in any of the eight cells around `cell`, counting films a hunt placed.
+export function besideItself(layout, order, placed, cell, id) {
+  for (let di = -1; di <= 1; di += 1) {
+    for (let dj = -1; dj <= 1; dj += 1) {
+      if ((di || dj) && filmAt(layout, order, placed, cell.i + di, cell.j + dj) === id) return true;
+    }
+  }
+  return false;
+}
