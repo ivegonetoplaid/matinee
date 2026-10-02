@@ -1130,8 +1130,13 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
   deck per page load, and is reshuffled only when every line has been dealt.
   The line is set in Big Shoulders Display, scaling with the screen between
   28 px and 40 px, with four lines reserved, so the buttons beneath it stay in
-  place from pick to pick. On a first pick no line shows during the hunt and
-  the reveal line types while the poster grows. On `Not that one` a nope line
+  place from pick to pick. On a first pick Matinee's reply to the last answer
+  types in gold, is read for 1 s before the hunt starts, and stays through the
+  hunt; the reveal line, dealt to fit beneath it within the combined cap, types
+  beneath it in the text colour as the poster grows. While the check runs, its
+  line types beneath the reply, and goes once the check is done. A reply that
+  self-destructs is the exception: its fuse owns the line. A pick with no reply
+  before it (`Just pick one!`, "Roll again") shows no line during the hunt. On `Not that one` a nope line
   and a reveal line are dealt together within the combined cap: when a pair
   is over it, the longer line goes back unshown and its set deals the next
   that fits beside the other, then, if the pair is still over, the other is
@@ -1645,10 +1650,10 @@ symbol when one does not match.
 | `src/matinee/web/static/js/main.js::frame` / `ask` (the footnote) | `src/matinee/web/static/js/main.js:121` | 2026-09-30 |
 | `src/matinee/web/static/js/main.js::start` | `src/matinee/web/static/js/main.js:213` | 2026-09-30 |
 | `src/matinee/web/static/js/main.js::goTo` / `step` | `src/matinee/web/static/js/main.js:242` | 2026-10-01 |
-| `src/matinee/web/static/js/main.js::checking` / `fadeTalk` (`READ_MS`) | `src/matinee/web/static/js/main.js:292` | 2026-09-30 |
-| `src/matinee/web/static/js/main.js::pickLines` | `src/matinee/web/static/js/main.js:310` | 2026-09-30 |
-| `src/matinee/web/static/js/main.js::clearForPick` / `requestPick` / `openPick` | `src/matinee/web/static/js/main.js:324` | 2026-09-30 |
-| `src/matinee/web/static/js/main.js::pickNow` (`notThatOne`, `rollAgain`, `justPick`) | `src/matinee/web/static/js/main.js:368` | 2026-09-30 |
+| `src/matinee/web/static/js/main.js::checking` / `fadeTalk` (`READ_MS`) | `src/matinee/web/static/js/main.js:293` | 2026-09-30 |
+| `src/matinee/web/static/js/main.js::pickLines` | `src/matinee/web/static/js/main.js:325` | 2026-09-30 |
+| `src/matinee/web/static/js/main.js::clearForPick` / `requestPick` / `openPick` | `src/matinee/web/static/js/main.js:340` | 2026-09-30 |
+| `src/matinee/web/static/js/main.js::pickNow` (`notThatOne`, `rollAgain`, `justPick`) | `src/matinee/web/static/js/main.js:384` | 2026-09-30 |
 | `src/matinee/web/static/js/main.js::enter` (the start asked at the tap, the question after the landing) | `src/matinee/web/static/js/main.js:203` | 2026-09-30 |
 | `src/matinee/web/static/js/main.js::topbar` (settles a landed name) | `src/matinee/web/static/js/main.js:70` | 2026-09-30 |
 | `src/matinee/web/static/js/main.js::problem` (`keep`: the failed start's posters) | `src/matinee/web/static/js/main.js:176` | 2026-09-30 |

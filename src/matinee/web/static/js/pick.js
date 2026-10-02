@@ -192,7 +192,7 @@ async function restingPoster(sharp, wall, film) {
 // DoesTheDogDie's credit beneath it, and only the reveal line is redealt to fit beneath it. Resolves to
 // the gold line that stays through the hunt: the reason, or the nope line, or "" when nothing stays.
 async function goldLine({ line, aside }, result, lines, fuse) {
-  if (!result.swapped) return lines.nope || "";
+  if (!result.swapped) return lines.gold || "";
   fuse?.cancel();
   lines.reveal = lines.beneath(result.swapped.line);
   creditBeneath(aside, result);

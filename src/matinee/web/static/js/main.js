@@ -49,7 +49,7 @@ get("/api/quips").then((res) => {
 let landing = null;
 
 const TALK_FADE_MS = 350; // the question's words fade out as a pick begins
-const READ_MS = 1000; // Matinee's reply to the last answer stays whole this long before the hunt fades it
+const READ_MS = 1000; // Matinee's reply to the last answer is read this long before the hunt starts
 
 // The first action on a screen wins: every button on it is disabled at once, so an
 // answer and "Just pick one!" can never both run.
@@ -288,12 +288,25 @@ function hasTopics() {
   return Boolean(visit.viewer.profile_id ? visit.profileTopics : visit.viewer.topics?.length);
 }
 
-// While the check runs the line says so and the wall keeps drifting; nothing else on it moves.
-function checking(frame) {
-  return typeLine(frame.line, CHECKING, "");
+// While the check runs the line says so, beneath the reply to the last answer when there is one, and the
+// wall keeps drifting; nothing else on it moves.
+function checking(frame, held) {
+  if (!held) return typeLine(frame.line, CHECKING, "");
+  return typeLine(frame.line, held, CHECKING, { shown: held.length });
 }
 
 const SEEN_MAX = 200; // PickIn.seen's max_length on the server
+
+// The pick's answer, with the check said aloud while it runs when `aloud`. Once the answer is back the
+// reply stands alone again, unless the check's reason is about to take its place.
+async function checkedPick(request, frame, lines, aloud) {
+  if (aloud) await checking(frame, lines.gold);
+  const res = await request;
+  if (aloud && res.ok && lines.gold && !res.data.swapped && frame.showing.isConnected) {
+    await typeLine(frame.line, lines.gold, "", { shown: lines.gold.length });
+  }
+  return res;
+}
 
 // `risk` is "Just pick one" after three films tripped the list: nothing is checked or turned away.
 // The question's words fade out as a pick begins from a question screen.
@@ -307,16 +320,19 @@ async function fadeTalk() {
 // The lines for a pick, from the set of the category the first answer led to. After "Not that one" a
 // nope line and a reveal line are dealt together under the combined cap; otherwise a reveal line alone.
 // `beneath(fixed)` redeals only the reveal line to fit beneath `fixed`, the check's explanation.
-function pickLines(again) {
-  if (!quips) return { nope: null, reveal: "", beneath: () => "" };
+// The pick's lines. `gold` is the line that stays through the hunt, with the reveal line dealt to fit
+// beneath it: the nope line after "Not that one", else `held`, the reply to the last answer.
+function pickLines(again, held = "") {
+  if (!quips) return { nope: null, gold: held || null, reveal: "", beneath: () => "" };
   const revealSet = setFor(quips, visit.tree, "reveal");
   const cap = quips.caps.pair;
-  const pair = again ? dealPair(deck, setFor(quips, visit.tree, "nope"), revealSet, cap) : { nope: null, reveal: deck.deal(revealSet) };
+  const first = { nope: null, reveal: held ? dealBeneath(deck, held, revealSet, cap) : deck.deal(revealSet) };
+  const pair = again ? dealPair(deck, setFor(quips, visit.tree, "nope"), revealSet, cap) : first;
   const beneath = (fixed) => {
     deck.remaining(revealSet).push(pair.reveal);
     return dealBeneath(deck, fixed, revealSet, cap);
   };
-  return { ...pair, beneath };
+  return { ...pair, gold: pair.nope || held || null, beneath };
 }
 
 // What the screen gives up as a pick begins: a question's words fade out, or, on "Not that one", the
@@ -369,13 +385,13 @@ async function pickNow(opening = "", risk = false, again = false, destruct = nul
   const round = wall.round;
   // The pick is asked for first, so the check and the fetch run while the words fade and the line types.
   const request = requestPick(risk);
-  const lines = pickLines(again);
+  // A reply that self-destructs owns the line; any other reply stays through the hunt.
+  const lines = pickLines(again, destruct ? "" : opening);
   await clearForPick(again);
   const { frame, readUntil } = await openPick(opening, lines.nope);
   const fuse = fuseOn(frame, opening, destruct, round);
   // The check's line types only on a checked pick that is not "Not that one", and never over a fuse.
-  if (checksAloud(risk, again, fuse)) await checking(frame);
-  const res = await request;
+  const res = await checkedPick(request, frame, lines, checksAloud(risk, again, fuse));
   // The viewer took a way back out while the pick was fetched.
   if (!frame.showing.isConnected || wall.round !== round) return undefined;
   if (!res.ok) return problem(res.data, start);
