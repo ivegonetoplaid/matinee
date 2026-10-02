@@ -711,7 +711,13 @@ table named `feedback`) and personal corrections.
 - Before its first change to a shape-0 file, the upgrade copies the file as it
   stood to a new file beside it, named
   `matinee.sqlite.before-shape-1-<UTC time>`. Nothing ever overwrites that copy,
-  and a later start on the upgraded file makes none.
+  and a later start on the upgraded file makes none. A start that finds such a
+  copy already there makes no other, because a refused upgrade leaves the store
+  unchanged.
+- Code from before shapes were recorded can still open a current file: it
+  recreates its old tables and files new notes into `feedback`, where no queue
+  reads them. A start that finds any row in a `feedback` table is refused and
+  names the count; empty old tables do not stop it.
 - A file newer than the code, a file that is not a SQLite database, a shape no
   upgrade starts from, and an upgrade that fails all stop the start. The store
   file is left unchanged.
@@ -916,7 +922,7 @@ would hand one device's profiles to another.
 - **An answer** as a question id and an option index, never as a filter.
 - **Request sizes** are capped: a typed name 80 characters; a profile name 80
   and a PIN 8; topics 400; exclusions 20; answers 12; tree names 40; option
-  indexes 0 to 50; films already seen 200; trees a note says a film belongs in 12. A pick
+  indexes 0 to 50; films already seen 200; trees a note says a film belongs in 32. A pick
   with no tree may carry no answers.
 
 ### 11.3 What no response carries

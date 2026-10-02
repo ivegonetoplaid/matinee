@@ -131,7 +131,7 @@ class NoteIn(BaseModel):
     answers: list[AnswerIn] = Field(default=[], max_length=12)
     rushed: bool = False
     comment: str = Field(default="", max_length=500)
-    belongs: list[str] = Field(default=[], max_length=12)  # "Not <genre> at all": where the film belongs
+    belongs: list[str] = Field(default=[], max_length=32)  # "Not <genre> at all": where the film belongs
 
 
 class ExclusionOut(BaseModel):

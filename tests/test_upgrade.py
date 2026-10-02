@@ -64,7 +64,11 @@ NOTES = [
     (9, 2, 105, "comedy", "kind", '["Funny.", "Silly."]', 1, "too goofy", "2026-09-11T00:00:00+00:00"),
     (11, 1, 603, "horror", "genre", "[]", 0, "again", "2026-09-12T00:00:01+00:00"),
     (12, 2, 77, "drama", "genre", "[]", 0, "", "2026-09-12T00:00:00+00:00"),
+    (13, 1, 603, "horror", "kind", "[]", 0, "", "2026-09-14T00:00:00+00:00"),
 ]
+# Two decoys sit after note 11's own correction and before the note, so only the profile and tree clauses tell them
+# apart from it.
+LATER = "2026-09-12T00:00:00.500000+00:00"
 # Note 4's correction, saved with it; note 11's, saved later for the same film, which a match must tell apart;
 # Bo's correction of film 77 under drama, saved after note 12 and so not its own.
 CORRECTIONS = [
@@ -75,6 +79,10 @@ CORRECTIONS = [
     (5, "cd", 1, 603, "drama", "add", "2026-09-12T00:00:00+00:00"),
     (6, "ef", 2, 77, "drama", "remove", "2026-09-13T00:00:00+00:00"),
     (7, "ef", 2, 77, "comedy", "add", "2026-09-13T00:00:00+00:00"),
+    (8, "gh", 2, 603, "horror", "remove", LATER),  # Bo, the same film and tree: not Ada's
+    (9, "gh", 2, 603, "western", "add", LATER),
+    (10, "ij", 1, 603, "thriller", "remove", LATER),  # Ada, the same film, another tree
+    (11, "ij", 1, 603, "comedy", "add", LATER),
 ]
 
 
@@ -116,7 +124,7 @@ def test_a_genre_note_keeps_where_its_own_correction_said_the_film_belongs(tmp_p
     path = shape_0(tmp_path / "matinee.sqlite")
     Store(path)
     belongs = dict(rows(path, "SELECT id, belongs FROM notes"))
-    assert belongs == {4: '["thriller"]', 9: "[]", 11: '["drama","war"]', 12: "[]"}
+    assert belongs == {4: '["thriller"]', 9: "[]", 11: '["drama","war"]', 12: "[]", 13: "[]"}
 
 
 def test_every_note_arrives_open_in_the_review_queue(tmp_path: Path) -> None:
@@ -183,4 +191,42 @@ def test_after_the_upgrade_deleting_a_profile_keeps_its_notes(tmp_path: Path) ->
     with sqlite3.connect(path) as db:
         db.execute("PRAGMA foreign_keys = ON")
         db.execute("DELETE FROM profiles WHERE id = 1")
-    assert [(n.id, n.profile) for n in store.notes()] == [(4, None), (9, "Bo"), (11, None), (12, "Bo")]
+    assert [(n.id, n.profile) for n in store.notes()] == [(4, None), (9, "Bo"), (11, None), (12, "Bo"), (13, None)]
+
+
+def test_notes_older_code_files_after_the_upgrade_stop_the_next_start(tmp_path: Path) -> None:
+    path = shape_0(tmp_path / "matinee.sqlite")
+    Store(path)
+    with sqlite3.connect(path) as db:  # what the code from before shapes does on a rollback: recreate, then file
+        db.executescript(
+            SHAPE_0.replace("CREATE TABLE", "CREATE TABLE IF NOT EXISTS").replace(
+                "CREATE INDEX", "CREATE INDEX IF NOT EXISTS"
+            )
+        )
+        db.execute("INSERT INTO feedback VALUES (50, 2, 1, 'west', 'kind', '[]', 0, 'filed during a rollback', 'x')")
+    before = path.read_bytes()
+    with pytest.raises(ShapeError, match="1 notes in its old feedback table"):
+        Store(path)
+    assert path.read_bytes() == before
+
+
+def test_a_rollback_that_filed_nothing_does_not_stop_the_start(tmp_path: Path) -> None:
+    path = shape_0(tmp_path / "matinee.sqlite")
+    Store(path)
+    with sqlite3.connect(path) as db:
+        db.executescript(
+            SHAPE_0.replace("CREATE TABLE", "CREATE TABLE IF NOT EXISTS").replace(
+                "CREATE INDEX", "CREATE INDEX IF NOT EXISTS"
+            )
+        )
+    assert [n.id for n in Store(path).notes()] == [n[0] for n in NOTES]
+
+
+def test_a_start_that_keeps_failing_keeps_one_copy(tmp_path: Path) -> None:
+    path = shape_0(tmp_path / "matinee.sqlite")
+    with sqlite3.connect(path) as db:
+        db.execute("DROP TABLE feedback")
+    for _ in range(3):
+        with pytest.raises(ShapeError):
+            Store(path)
+    assert len(copies(path)) == 1

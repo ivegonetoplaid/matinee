@@ -122,6 +122,8 @@ def test_a_genre_note_keeps_every_tree_it_names_the_kids_tree_included(site: Any
     assert client.post("/api/notes", json=note).status_code == 200
     with sqlite3.connect(tmp_path / "matinee.sqlite") as db:
         assert db.execute("SELECT kind, belongs FROM notes").fetchall() == [("genre", '["east", "kids"]')]
+    many = {**note, "belongs": ["east", "kids"] * 7}  # every box the panel can offer, and then some, ticked
+    assert client.post("/api/notes", json=many).status_code == 200
 
 
 def test_where_a_film_belongs_is_only_another_known_tree_on_a_genre_note(site: Any, tmp_path: Path) -> None:
@@ -130,5 +132,5 @@ def test_where_a_film_belongs_is_only_another_known_tree_on_a_genre_note(site: A
     base = {"profile_id": me, "tmdb": 5, "tree": "west", "kind": "genre"}
     for bad in ({"belongs": ["nowhere"]}, {"belongs": ["west"]}, {"kind": "kind", "belongs": ["east"]}):
         assert client.post("/api/notes", json={**base, **bad}).status_code == 400
-    assert client.post("/api/notes", json={**base, "belongs": ["east"] * 13}).status_code == 422
+    assert client.post("/api/notes", json={**base, "belongs": ["east"] * 33}).status_code == 422
     assert note_rows(tmp_path) == []

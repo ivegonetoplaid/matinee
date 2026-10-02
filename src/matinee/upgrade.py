@@ -7,8 +7,10 @@ shape and leaves a current file alone. It carries a shape-0 file to the current
 shape in one transaction, keeping where each "Not <genre> at all" note said its
 film belongs from the correction saved with it and giving every note the status
 `open`, after copying the file as it stood to a new file beside
-it, which nothing ever overwrites. It refuses, and changes nothing in the store
-file, a file newer than this code, a file that is not a SQLite database, and an
+it, which nothing ever overwrites; a start that finds such a copy already there
+makes no other. It refuses, and changes nothing in the store file, a current
+file in which older code has since filed notes into its old `feedback` table, a
+file newer than this code, a file that is not a SQLite database, and an
 upgrade that fails or would lose a profile, a token or a note.
 """
 
@@ -124,8 +126,21 @@ def _counts(db: sqlite3.Connection, notes: str) -> tuple[int, int, int]:
     return count("profiles"), count("tokens"), count(notes)
 
 
-def _keep_copy(db: sqlite3.Connection, path: Path) -> Path:
-    """A copy of the store as it stands, in a new file beside it whose name says what it was kept before."""
+def _stranded(db: sqlite3.Connection) -> int:
+    """Notes that code from before shapes were recorded filed into its own `feedback` table after the upgrade."""
+    if db.execute("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'feedback'").fetchone() is None:
+        return 0
+    return int(db.execute(COUNTS["feedback"]).fetchone()[0])
+
+
+def _keep_copy(db: sqlite3.Connection, path: Path) -> Path | None:
+    """A copy of the store as it stands, in a new file beside it whose name says what it was kept before.
+
+    None when such a copy is already there: a refused upgrade leaves the store unchanged, so the first copy
+    still holds it, and a start that keeps failing must not fill the disk with copies.
+    """
+    if next(path.parent.glob(f"{path.name}.before-shape-{SHAPE}-*"), None) is not None:
+        return None
     stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%S%fZ")
     copy = path.with_name(f"{path.name}.before-shape-{SHAPE}-{stamp}")
     with closing(sqlite3.connect(copy)) as dest:
@@ -163,12 +178,23 @@ def _upgrade_from_0(db: sqlite3.Connection) -> None:
         raise
 
 
+def _refuse_stranded(db: sqlite3.Connection) -> None:
+    """Code from before shapes were recorded still opens a current file and files notes where no queue reads them."""
+    stranded = _stranded(db)
+    if stranded:
+        raise ShapeError(
+            f"the store file holds {stranded} notes in its old feedback table, filed by older code after the upgrade;"
+            " move them into notes by hand before starting"
+        )
+
+
 def prepare(path: Path) -> None:
     """Bring the store file at `path` to the current shape, or raise ShapeError having changed nothing in it."""
     with closing(_connect(path)) as db:
         try:
             shape = _shape(db)
             if shape == SHAPE:
+                _refuse_stranded(db)
                 return
             if shape > SHAPE:
                 raise ShapeError(f"the store file has shape {shape}, newer than this code's {SHAPE}")
