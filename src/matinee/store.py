@@ -354,6 +354,15 @@ class Store:
             )
         return _filed(row)
 
+    def delete(self, profile_id: int) -> Profile:
+        """Delete a profile with its exclusions and every device token issued for it; its notes stay, naming no one."""
+        with closing(self._connect()) as db, db:
+            row = db.execute("SELECT * FROM profiles WHERE id = ?", (profile_id,)).fetchone()
+            if row is None:
+                raise StoreError("no_profile", "no such profile")
+            db.execute("DELETE FROM profiles WHERE id = ?", (profile_id,))
+        return self._profile(row)
+
     def clear_pin(self, name: str) -> Profile:
         """Clear the PIN and any lockout of the profile with this name, ignoring case; refuses an unknown name."""
         with closing(self._connect()) as db, db:

@@ -43,6 +43,12 @@ class Suggestion(BaseModel):
     has_pin: bool
 
 
+class Deleted(BaseModel):
+    """A profile just deleted: its name, for the page's last word on it."""
+
+    name: str
+
+
 class Door(BaseModel):
     now_showing: int
     profiles: list[Seat]

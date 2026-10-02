@@ -12,7 +12,7 @@ from fastapi.testclient import TestClient
 
 from matinee.dtdd import Dtdd
 from matinee.engine import load_catalog
-from matinee.store import LOCKOUT_S, MAX_PROFILES, Locked, Store, StoreError, edits, names_match
+from matinee.store import LOCKOUT_S, MAX_PROFILES, Locked, Note, Store, StoreError, edits, names_match
 from matinee.table import FilmTable
 from matinee.web.app import create_app
 from matinee.web.common import TOKENS_COOKIE
@@ -275,3 +275,46 @@ def test_request_fields_are_bounded(door: Any) -> None:
     assert client.post("/api/names", json={"typed": "x" * 81}).status_code == 422
     assert client.post("/api/profiles", json={"name": "x" * 81}).status_code == 422
     assert client.post("/api/profiles", json={"name": "ok", "topics": list(range(401))}).status_code == 422
+
+
+def test_a_device_holding_a_profile_deletes_it_everywhere_and_its_notes_stay(door: Any, tmp_path: Path) -> None:
+    client, store = door
+    other_device = TestClient(client.app, base_url="https://testserver")
+    gone = client.post("/api/profiles", json={"name": "Leaving", "pin": "4321", "exclusions": ["superheroes"]}).json()
+    kept = client.post("/api/profiles", json={"name": "Staying"}).json()
+    assert other_device.post(f"/api/profiles/{gone['id']}/open", json={"pin": "4321"}).status_code == 200
+    store.note(Note(gone["id"], 5, "west", "kind", ("Cowboys.",), False, "kept after"))
+    resp = client.delete(f"/api/profiles/{gone['id']}")
+    assert resp.status_code == 200 and resp.json() == {"name": "Leaving"}
+    with sqlite3.connect(tmp_path / "matinee.sqlite") as db:
+        assert db.execute("SELECT name FROM profiles").fetchall() == [("Staying",)]
+        assert db.execute("SELECT COUNT(*) FROM tokens WHERE profile_id = ?", (gone["id"],)).fetchone() == (0,)
+    assert [(n.comment, n.profile) for n in store.notes()] == [("kept after", None)]
+    left = resp.headers["set-cookie"].split(";")[0].split("=", 1)[1].split(".")
+    assert [p.name for p in store.holding(left).values()] == ["Staying"]  # the deleting device keeps its others
+    assert [p["name"] for p in client.get("/api/door").json()["profiles"]] == ["Staying"]
+    assert other_device.get("/api/door").json()["profiles"] == []  # the other device's token went with it
+    assert kept["name"] == "Staying"
+
+
+def test_a_device_that_does_not_hold_a_profile_cannot_delete_it(door: Any, tmp_path: Path) -> None:
+    client, store = door
+    guarded, _ = store.create("Guarded", "1111", [], ["superheroes"])
+    client.post("/api/profiles", json={"name": "Mine"})
+    for target in (guarded.id, 999):
+        assert client.delete(f"/api/profiles/{target}").status_code == 403
+    with sqlite3.connect(tmp_path / "matinee.sqlite") as db:
+        assert db.execute("SELECT name, exclusions FROM profiles ORDER BY id").fetchall() == [
+            ("Guarded", '["superheroes"]'),
+            ("Mine", "[]"),
+        ]
+
+
+def test_deleting_the_last_held_profile_clears_the_cookie(door: Any) -> None:
+    client, _ = door
+    only = client.post("/api/profiles", json={"name": "Only"}).json()
+    resp = client.delete(f"/api/profiles/{only['id']}")
+    assert resp.status_code == 200
+    cookie = resp.headers["set-cookie"]
+    assert cookie.startswith(f'{TOKENS_COOKIE}=""') or "Max-Age=0" in cookie
+    assert client.get("/api/door").json()["profiles"] == []

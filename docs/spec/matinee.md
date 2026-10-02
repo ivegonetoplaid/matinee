@@ -687,12 +687,19 @@ picks nothing until it opens or makes a profile.
   It never carries the profile's exclusions.
 - A token for a deleted profile is ignored. The door's reply clears it from the
   cookie.
+- **Deleting a profile.** A device holding a profile may delete it, with no
+  PIN asked, as it opens it with none. The profile, its exclusions and every
+  device token issued for it go, on every device; its notes stay (section 10).
+  The deleting device's cookie keeps its other tokens and drops this one. A
+  device that does not hold the profile is refused with 403, so a profile with
+  a PIN cannot be deleted by number without it. A profile without a PIN opens on
+  any admitted device, which may then delete it; Matinee adds no further guard.
 - There is no PIN reset and no administrative surface on the web. Whoever runs
   the installation clears a forgotten PIN with the notes tool's
   `clear-pin "<profile name>"` (section 10), which matches the name ignoring
   case, clears the PIN and any lockout on it, and refuses a name no profile has.
 - A request naming a profile (the first question, a walk, a pick, saving
-  exclusions or saving a note) is refused with 403 unless this device
+  exclusions, saving a note or deleting the profile) is refused with 403 unless this device
   holds a token for it. A walk or a pick naming no profile is refused with 403.
 
 ### 7.1 The store file
@@ -916,6 +923,7 @@ would hand one device's profiles to another.
 | POST | `/api/profiles` | create a profile and issue this device a token |
 | POST | `/api/profiles/{id}/open` | open a profile by PIN, or at once when held or PIN-less |
 | PUT | `/api/profiles/{id}/exclusions` | replace a held profile's exclusions |
+| DELETE | `/api/profiles/{id}` | delete a held profile, its exclusions and its tokens; answers its name |
 | GET | `/api/topics` | DoesTheDogDie's topic list, with its credit |
 | GET | `/api/exclusions` | Matinee's own exclusions |
 | GET | `/api/quips` | the pick's lines and their caps (section 2.7) |

@@ -29,6 +29,7 @@ from matinee.store import Locked, Store, StoreError
 from matinee.table import TableError
 from matinee.web.common import (
     PROFILE_LINES,
+    Deleted,
     Door,
     NameQuery,
     NewProfile,
@@ -189,6 +190,20 @@ def add_door_routes(app: FastAPI, theatre: Theatre, store: Store, clock: Callabl
         return seat(profile)
 
 
+def add_delete_route(app: FastAPI, store: Store) -> None:
+    @app.delete("/api/profiles/{profile_id}")
+    def delete_profile(profile_id: int, request: Request, response: Response) -> Deleted:
+        """Only a device holding the profile may delete it; the profile's tokens go with it, on every device."""
+        tokens = device_tokens(request)
+        held = store.holding(tokens)
+        mine = [t for t, p in held.items() if p.id == profile_id]
+        if not mine:
+            raise HTTPException(status_code=403, detail="refused")
+        gone = store.delete(profile_id)
+        set_tokens(response, [t for t in tokens if t in held and t not in mine])
+        return Deleted(name=gone.name)
+
+
 STATIC = Path(__file__).resolve().parent / "static"
 SECURITY_HEADERS = {
     "Content-Security-Policy": (
@@ -251,6 +266,7 @@ def create_app(
     add_film_routes(app, theatre, config.seerr_url)
     add_page(app)
     add_door_routes(app, theatre, store, clock)
+    add_delete_route(app, store)
     add_viewing_routes(app, theatre, store, dtdd)
     add_pick_routes(app, theatre, store, picker or Picker(dtdd, DeviceCap()))
     add_note_routes(app, theatre, store)
