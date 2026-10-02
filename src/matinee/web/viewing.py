@@ -22,7 +22,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from matinee.dtdd import Dtdd, DtddError
-from matinee.engine import Answer, Catalog, Correction, Viewer, first_question, gentlest, opening_pool, walk
+from matinee.engine import Answer, Catalog, Viewer, first_question, gentlest, opening_pool, walk
 from matinee.pick import Pick, Picker, candidates
 from matinee.store import Note, Profile, Store
 from matinee.trees import Tree
@@ -118,15 +118,10 @@ class TopicsOut(BaseModel):
     link: str
 
 
-class CorrectionIn(BaseModel):
-    profile_id: int
-    tmdb: int
-    remove_from: str = Field(max_length=40)
-    add_to: list[str] = Field(default=[], max_length=12)
+class NoteOut(BaseModel):
+    """What the viewer is told once a note is saved: a gold line, then a cream one."""
 
-
-class CorrectionOut(BaseModel):
-    line: str
+    lines: list[str]
 
 
 class NoteIn(BaseModel):
@@ -198,8 +193,7 @@ def resolve(request: Request, store: Store, v: ViewerIn) -> tuple[Viewer, Profil
     if v.profile_id is None:
         return Viewer(), None
     profile = held_profile(request, store, v.profile_id)
-    fixes = tuple(Correction(c.tmdb, c.tree, c.direction) for c in store.corrections(profile.id))
-    return Viewer(exclusions=profile.exclusions, topics=profile.topics, corrections=fixes), profile
+    return Viewer(exclusions=profile.exclusions, topics=profile.topics), profile
 
 
 def resolve_held(request: Request, store: Store, v: ViewerIn) -> Viewer:
@@ -339,30 +333,12 @@ def add_viewing_routes(app: FastAPI, theatre: Theatre, store: Store, dtdd: Dtdd)
         )
 
 
-CORRECTED = "Got it. I'll remember that for you."
-
-
 def banded(tree: Tree) -> bool:
-    """A tree whose answers re-apply a gated age band: a correction cannot add a film to it, so it is refused."""
+    """A tree whose answers re-apply a gated age band: the note panel does not offer it as where a film belongs."""
     return any(o.filter.kids_band is not None for q in tree.questions for o in q.options)
 
 
-def add_correction_routes(app: FastAPI, theatre: Theatre, store: Store) -> None:
-    @app.post("/api/corrections")
-    def correct(body: CorrectionIn, request: Request) -> CorrectionOut:
-        """One correction for a profile this device holds; a visitor is asked for a name first, by the page."""
-        held_profile(request, store, body.profile_id)
-        cat = theatre.showing().catalog
-        trees = {body.remove_from, *body.add_to}
-        if body.tmdb not in cat.table.films.index or trees - set(cat.trees):
-            raise HTTPException(status_code=400, detail="refused")
-        if any(banded(cat.trees[t]) for t in body.add_to):
-            raise HTTPException(status_code=400, detail="refused")
-        store.correct(body.profile_id, body.tmdb, body.remove_from, body.add_to)
-        return CorrectionOut(line=CORRECTED)
-
-
-NOTED = "Thanks. I've kept that for whoever tunes Matinee."
+NOTED = ["Thanks. That's gone to whoever runs Matinee.", "If they agree, it moves for everyone."]
 
 
 def answer_says(tree: Tree, answers: Sequence[AnswerIn]) -> list[str]:
@@ -379,8 +355,8 @@ def answer_says(tree: Tree, answers: Sequence[AnswerIn]) -> list[str]:
 
 def add_note_routes(app: FastAPI, theatre: Theatre, store: Store) -> None:
     @app.post("/api/notes")
-    def note(body: NoteIn, request: Request) -> CorrectionOut:
-        """Keep a viewer's note on a pick for review; it changes nothing the viewer is shown."""
+    def note(body: NoteIn, request: Request) -> NoteOut:
+        """Keep a viewer's note on a pick for whoever runs Matinee; it changes nothing any viewer is shown."""
         held_profile(request, store, body.profile_id)
         cat = theatre.showing().catalog
         tree = cat.trees.get(body.tree)
@@ -388,7 +364,7 @@ def add_note_routes(app: FastAPI, theatre: Theatre, store: Store) -> None:
             raise HTTPException(status_code=400, detail="refused")
         path = tuple(answer_says(tree, body.answers))
         store.note(Note(body.profile_id, body.tmdb, body.tree, body.kind, path, body.rushed, body.comment.strip()))
-        return CorrectionOut(line=NOTED)
+        return NoteOut(lines=NOTED)
 
 
 def pick_pool(cat: Catalog, viewer: Viewer, body: PickIn) -> tuple[list[int], str | None]:

@@ -1,0 +1,154 @@
+"""The store file's upgrade: a store from before shapes were recorded comes through whole, or not at all."""
+
+from __future__ import annotations
+
+import hashlib
+import sqlite3
+from pathlib import Path
+from typing import Any
+
+import pytest
+
+from matinee import upgrade
+from matinee.store import Store
+from matinee.upgrade import SHAPE, ShapeError
+
+# The store's tables as every file written before shapes were recorded holds them (user_version 0).
+SHAPE_0 = """
+CREATE TABLE profiles (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL,
+    name_key TEXT NOT NULL UNIQUE,
+    pin_salt BLOB,
+    pin_hash BLOB,
+    failed INTEGER NOT NULL DEFAULT 0,
+    locked_until REAL NOT NULL DEFAULT 0,
+    topics TEXT NOT NULL DEFAULT '[]',
+    exclusions TEXT NOT NULL DEFAULT '[]',
+    created_at TEXT NOT NULL
+);
+CREATE TABLE corrections (
+    id INTEGER PRIMARY KEY,
+    override_id TEXT NOT NULL,
+    profile_id INTEGER NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+    tmdb INTEGER NOT NULL,
+    tree TEXT NOT NULL,
+    direction TEXT NOT NULL CHECK (direction IN ('remove', 'add')),
+    at TEXT NOT NULL
+);
+CREATE INDEX corrections_by_profile ON corrections (profile_id);
+CREATE TABLE feedback (
+    id INTEGER PRIMARY KEY,
+    profile_id INTEGER NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+    tmdb INTEGER NOT NULL,
+    tree TEXT NOT NULL,
+    kind TEXT NOT NULL CHECK (kind IN ('genre', 'kind', 'quality')),
+    path TEXT NOT NULL,
+    rushed INTEGER NOT NULL,
+    comment TEXT NOT NULL,
+    at TEXT NOT NULL
+);
+CREATE TABLE tokens (
+    token_hash TEXT PRIMARY KEY,
+    profile_id INTEGER NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+    created_at TEXT NOT NULL
+);
+"""
+TOKEN = "a-device-token-issued-before-the-upgrade"
+PROFILES = [
+    (1, "Ada", "ada", None, None, 0, 0.0, "[188]", '["superheroes"]', "2026-09-01T00:00:00+00:00"),
+    (2, "Bo", "bo", b"s" * 16, b"h" * 32, 2, 0.0, "[]", "[]", "2026-09-02T00:00:00+00:00"),
+]
+NOTES = [
+    (4, 1, 603, "horror", "genre", '["Scary."]', 0, "", "2026-09-10T00:00:00+00:00"),
+    (9, 2, 105, "comedy", "kind", '["Funny.", "Silly."]', 1, "too goofy", "2026-09-11T00:00:00+00:00"),
+]
+CORRECTIONS = [
+    (1, "ab", 1, 603, "horror", "remove", "2026-09-10T00:00:00+00:00"),
+    (2, "ab", 1, 603, "thriller", "add", "2026-09-10T00:00:00+00:00"),
+]
+
+
+def shape_0(path: Path) -> Path:
+    """A store file in the shape every store held before this upgrade, holding two profiles, a token and notes."""
+    with sqlite3.connect(path) as db:
+        db.executescript(SHAPE_0)
+        db.executemany("INSERT INTO profiles VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", PROFILES)
+        db.execute(
+            "INSERT INTO tokens VALUES (?, 1, '2026-09-01T00:00:00+00:00')",
+            (hashlib.sha256(TOKEN.encode()).hexdigest(),),
+        )
+        db.executemany("INSERT INTO feedback VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", NOTES)
+        db.executemany("INSERT INTO corrections VALUES (?, ?, ?, ?, ?, ?, ?)", CORRECTIONS)
+    return path
+
+
+def rows(path: Path, sql: str) -> list[Any]:
+    with sqlite3.connect(path) as db:
+        return db.execute(sql).fetchall()
+
+
+def copies(path: Path) -> list[Path]:
+    return sorted(path.parent.glob(f"{path.name}.before-shape-*"))
+
+
+def test_an_old_store_loses_only_its_corrections(tmp_path: Path) -> None:
+    path = shape_0(tmp_path / "matinee.sqlite")
+    store = Store(path)
+    assert rows(path, "PRAGMA user_version") == [(SHAPE,)]
+    assert rows(path, "SELECT * FROM profiles ORDER BY id") == PROFILES
+    assert rows(path, "SELECT id, profile_id, tmdb, tree, kind, path, rushed, comment, at FROM notes") == NOTES
+    tables = {r[0] for r in rows(path, "SELECT name FROM sqlite_master WHERE type = 'table'")}
+    assert tables == {"profiles", "notes", "tokens"}
+    assert [p.name for p in store.holding([TOKEN]).values()] == ["Ada"]  # the device keeps its profile
+
+
+def test_the_upgrade_keeps_a_copy_of_the_old_file_and_never_overwrites_it(tmp_path: Path) -> None:
+    path = shape_0(tmp_path / "matinee.sqlite")
+    before = path.read_bytes()
+    Store(path)
+    [kept] = copies(path)
+    assert rows(kept, "PRAGMA user_version") == [(0,)]
+    assert rows(kept, "SELECT * FROM corrections ORDER BY id") == CORRECTIONS
+    assert rows(kept, "SELECT * FROM feedback ORDER BY id") == NOTES
+    kept_bytes = kept.read_bytes()
+    assert path.read_bytes() != before
+    Store(path)  # a later start on the upgraded file
+    assert copies(path) == [kept] and kept.read_bytes() == kept_bytes
+
+
+def test_a_new_store_is_made_at_the_current_shape_with_no_copy(tmp_path: Path) -> None:
+    path = tmp_path / "matinee.sqlite"
+    Store(path).create("Cy", None, [], [])
+    assert rows(path, "PRAGMA user_version") == [(SHAPE,)]
+    assert copies(path) == []
+
+
+@pytest.mark.parametrize("damage", ["newer", "not_sqlite", "unknown_shape", "missing_table"])
+def test_a_store_the_code_cannot_read_stops_the_start_and_is_unchanged(tmp_path: Path, damage: str) -> None:
+    path = tmp_path / "matinee.sqlite"
+    if damage == "not_sqlite":
+        path.write_bytes(b"this is not a database, just some bytes" * 100)
+    else:
+        shape_0(path)
+        with sqlite3.connect(path) as db:
+            if damage == "newer":
+                db.execute(f"PRAGMA user_version = {SHAPE + 1}")
+            if damage == "unknown_shape":
+                db.execute("PRAGMA user_version = -3")
+            if damage == "missing_table":
+                db.execute("DROP TABLE feedback")
+    before = path.read_bytes()
+    with pytest.raises(ShapeError):
+        Store(path)
+    assert path.read_bytes() == before
+
+
+def test_an_upgrade_that_would_lose_a_note_is_undone(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    path = shape_0(tmp_path / "matinee.sqlite")
+    losing = tuple(s.replace("FROM feedback", "FROM feedback WHERE id > 4") for s in upgrade.FROM_SHAPE_0)
+    monkeypatch.setattr(upgrade, "FROM_SHAPE_0", losing)
+    before = path.read_bytes()
+    with pytest.raises(ShapeError, match="profiles, tokens and notes"):
+        Store(path)
+    assert path.read_bytes() == before

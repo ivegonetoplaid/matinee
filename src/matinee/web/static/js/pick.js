@@ -147,7 +147,7 @@ function choices(info, film, result, actions, note) {
     info.seerr ? h("a", { class: "seerr", href: info.seerr, target: "_blank", rel: "noopener noreferrer" }, "More on Seerr") : null,
     h("button", { class: "link-button", type: "button", onclick: actions.startOver }, "Start over"),
   );
-  return [buttons, note ? firstPickReveal(result, note) : null, actions.correction(film)].filter(Boolean);
+  return [buttons, note ? firstPickReveal(result, note) : null, actions.noteLink(film)].filter(Boolean);
 }
 
 // The resting page: the film's details rise, and the landed poster, where there is one, moves from the
@@ -241,7 +241,7 @@ async function bringOut({ wall, frame, pause, posterReady, left, lines, gold, fu
   return { shown, sharp, typing };
 }
 
-// The page's pick screen. `actions` holds notThatOne, rollAgain, justPick, startOver, failed and the correction
+// The page's pick screen. `actions` holds notThatOne, rollAgain, justPick, startOver, failed and the note link
 // panel's builder. `readUntil` (a performance.now() time) holds the hunt until the line on screen has
 // been read. After every wait the pick checks that its screen is still showing and that the pick was
 // not ended on the wall: a trail answer or the name tag can end it at any moment, and a pick the viewer

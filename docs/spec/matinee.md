@@ -38,7 +38,7 @@ contract is listed under [Known gaps](#known-gaps).
 3. **Library mode only.** Matinee offers only films the library holds at the
    moment of the request. A film gone from the library is never offered.
 4. **Matinee's own state is its own.** Profiles, device tokens, saved exclusions
-   and corrections live in Matinee's store. None of it reaches a media server.
+   and viewers' notes live in Matinee's store. None of it reaches a media server.
 5. **No public API and no viewer CLI.** The HTTP routes serve Matinee's own page
    only. The command-line tools are for whoever runs the installation: the
    nightly rebuild, the tree checker and the reference builder.
@@ -75,10 +75,10 @@ The answers, their order and the tree or mode each leads to are data in
 | Something to fall asleep to | `fall-asleep` (a mode) |
 
 - An answer is shown only when its tree or mode holds at least one film for this
-  viewer, after the viewer's corrections and exclusions.
+  viewer, after the viewer's exclusions.
 - Every answer must carry a `label`. The engine refuses to load a first question
   whose answer lacks one. The label names the door where a short name is needed,
-  such as the correction panel. Each door's label is its name.
+  such as the note panel. Each door's label is its name.
 - Matinee's reply to a door is the opening line of the tree or mode it leads to.
 - Stand-up specials are not a door. They are an answer under Comedy (section
   2.3).
@@ -561,7 +561,6 @@ comedy answer and under the scary ones.
 
 Every pin must also be an answer-key fixture asserting the pinned placement. The
 checker fails otherwise, so a later rule change cannot silently undo a pin.
-Personal corrections (section 10) apply on top of house pins.
 
 ## 5. The offline film table
 
@@ -642,18 +641,20 @@ The server refuses to start, and logs why, when any of these holds:
 - the labels file is absent, malformed, or names a tree no file defines or a
   kind its tree does not label;
 - the pick's lines (`data/quips.json`) are missing or malformed, or universal
-  lacks reveal lines or nope lines (section 2.7).
+  lacks reveal lines or nope lines (section 2.7);
+- the store file is newer than the code, is not a SQLite database, or cannot be
+  upgraded to the current shape (section 7.1). The file is left unchanged.
 
 ## 6. What one viewer's pool is
 
 For each tree, the viewer's starting pool is built in this order:
 
 1. The tree's pool, with house pins already applied.
-2. The viewer's corrections for that tree, oldest first, so a later one wins.
-3. Matinee's own exclusions the viewer holds remove every film they match. A
-   correction can never bring back an excluded film.
-4. Every question the viewer's DoesTheDogDie topics skip applies its `treat_as`
+2. Matinee's own exclusions the viewer holds remove every film they match.
+3. Every question the viewer's DoesTheDogDie topics skip applies its `treat_as`
    answer.
+
+A viewer's notes (section 10) never change a pool.
 
 Answers narrow that pool from there (section 2.4).
 
@@ -666,7 +667,7 @@ picks nothing until it opens or makes a profile.
 
 | Rule | Value |
 |---|---|
-| A profile holds | a display name, an optional four-digit PIN, DoesTheDogDie topics, Matinee's own exclusions, and corrections |
+| A profile holds | a display name, an optional four-digit PIN, DoesTheDogDie topics and Matinee's own exclusions |
 | Most profiles | **50**; creating a fifty-first is refused |
 | Name | 1 to 40 characters after NFKC normalisation, trimming and collapsing spaces; no character of Unicode category C (control, format, private-use, unassigned); unique ignoring case (NFKC, case-folded) |
 | PIN | exactly four ASCII digits, or none |
@@ -689,8 +690,28 @@ picks nothing until it opens or makes a profile.
 - There is no PIN reset and no administrative surface. Whoever runs the
   installation clears a forgotten PIN in Matinee's store.
 - A request naming a profile (the first question, a walk, a pick, saving
-  exclusions or saving a correction) is refused with 403 unless this device
+  exclusions or saving a note) is refused with 403 unless this device
   holds a token for it. A walk or a pick naming no profile is refused with 403.
+
+### 7.1 The store file
+
+The store is one SQLite file, `matinee.sqlite`, in the state directory. It
+records its shape in SQLite's `user_version`; the current shape is **1**. A file
+from before shapes were recorded reads 0 and holds profiles, tokens, notes (in a
+table named `feedback`) and personal corrections.
+
+- A missing or empty file is made at the current shape.
+- A shape-0 file is upgraded in place when Matinee starts, in one transaction.
+  The upgrade keeps every profile, token and note, each note under its own id,
+  and removes the corrections. It is kept only when the counts of profiles,
+  tokens and notes are the same after it as before and no row points at nothing.
+- Before its first change to a shape-0 file, the upgrade copies the file as it
+  stood to a new file beside it, named
+  `matinee.sqlite.before-shape-1-<UTC time>`. Nothing ever overwrites that copy,
+  and a later start on the upgraded file makes none.
+- A file newer than the code, a file that is not a SQLite database, a shape no
+  upgrade starts from, and an upgrade that fails all stop the start. The store
+  file is left unchanged.
 
 ## 8. Exclusions
 
@@ -807,39 +828,33 @@ never kept. No tree, scale or score is built from DoesTheDogDie data.
 - Every request names Matinee in its user agent, because DoesTheDogDie refuses
   the default one.
 
-## 10. Corrections
+## 10. Notes
 
-A correction says a film is not really the kind of film the tree offered it as.
+A note is a viewer's complaint about a pick, kept for whoever runs Matinee. It
+changes nothing any viewer is shown.
 
-- It belongs to one profile and changes only that profile's results.
-- It removes the film from the tree that offered it and adds it to each tree the
-  viewer names. Both halves are written together as one override.
-- Each override is stored as structured rows sharing an override id. Each row
-  carries the profile, the film's TMDB id, the tree, the direction (`remove` or
-  `add`) and a UTC timestamp, so it can later be exported or pooled.
-- A visitor is asked for a name, which creates a profile, before a correction is
-  saved.
-- A correction naming a film not in the library, or a tree that does not exist,
-  is refused.
-- A correction adding a film to a tree whose answers re-apply a kids age band is
-  refused. A film joins the kids tree only through a house pin. Such trees are not offered as "belongs to", and the panel says why: "Kids'
-  films are picked for the whole house, so I can't add one just for you. Ask
-  whoever runs Matinee to add it." Removing a film from the kids tree is allowed.
-- The correction link is offered only on a pick that came through a tree. It is
-  a small "Something wrong with this pick?" link that opens a panel and never
-  dominates the result.
+- The note link is offered only on a pick that came through a tree. It is a
+  small "Something wrong with this pick?" link that opens a panel and never
+  dominates the result. The pick always belongs to a profile this device holds,
+  so the panel never asks for a name.
 - The panel opens with "How you got here:" and the viewer's answers in order,
   ending with "Just pick one!" when that ended the questions.
 - The panel asks what is wrong, with three choices, and offers an optional "Why?"
   box of at most 500 characters:
-  - "Not <genre> at all" asks where the film belongs and saves a correction.
-  - "<Genre>, but not the kind I asked for" changes nothing the viewer is shown.
-  - "The right kind, just not a good pick" changes nothing the viewer is shown.
-- Every choice is also kept as a note for whoever tunes Matinee: the profile,
-  the film, the tree, the choice, the answers that led to the pick in words,
-  whether "Just pick one!" ended the questions, the comment and a UTC timestamp.
-  A note needs a held profile. Its answers are resolved against the tree when it
-  is saved, and an answer the tree does not have is refused.
+  - "Not <genre> at all", which asks where the film belongs;
+  - "<Genre>, but not the kind I asked for";
+  - "The right kind, just not a good pick".
+- A tree whose answers re-apply a kids age band is not offered as where a film
+  belongs, and the panel says why: "Kids' films are picked for the whole house,
+  so I can't add one just for you. Ask whoever runs Matinee to add it."
+- Every choice saves a note and nothing else: the profile, the film, the tree,
+  the choice, the answers that led to the pick in words, whether "Just pick
+  one!" ended the questions, the comment and a UTC timestamp. A note needs a
+  held profile. Its answers are resolved against the tree when it is saved, and
+  an answer the tree does not have, a tree that does not exist or a film not in
+  the library is refused.
+- Once the note is saved the panel says "Thanks. That's gone to whoever runs
+  Matinee." in gold and "If they agree, it moves for everyone." in cream.
 
 ## 11. The web surface
 
@@ -869,7 +884,6 @@ would hand one device's profiles to another.
 | POST | `/api/first` | the first question for this viewer, and the pool behind it |
 | POST | `/api/walk` | the next question and the pool, given a tree and answers |
 | POST | `/api/pick` | one checked film from the pool the answers leave |
-| POST | `/api/corrections` | save one correction for a held profile |
 | POST | `/api/notes` | keep one note on a pick for a held profile |
 
 ### 11.2 What the browser may name
@@ -887,7 +901,7 @@ would hand one device's profiles to another.
 - **An answer** as a question id and an option index, never as a filter.
 - **Request sizes** are capped: a typed name 80 characters; a profile name 80
   and a PIN 8; topics 400; exclusions 20; answers 12; tree names 40; option
-  indexes 0 to 50; films already seen 200; trees a correction adds 12. A pick
+  indexes 0 to 50; films already seen 200. A pick
   with no tree may carry no answers.
 
 ### 11.3 What no response carries
@@ -1098,15 +1112,15 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
   and synopsis, shown without a tap. The left column hangs from the top of the
   screen: the line, then `Not that one`, a "More on Seerr" link to the film's
   page on the configured Seerr and `Start over` in one row, then the
-  correction link.
+  note link.
 
   On a phone Matinee's words keep the foot of the pick screen, which is about a
   third of the screen (36 per cent of its height, never under 270 px) and holds,
-  from its top, the line, `Not that one` and "More on Seerr", the correction
+  from its top, the line, `Not that one` and "More on Seerr", the note
   link, then the trail on one line, each crumb cut to 16 characters, and the
   credits. The foot has no backing of its own; the wall shows through it.
   `Start over` is not shown there: the trail's `Start` beneath does the same.
-  Anything taller than the foot, such as the open correction panel, scrolls
+  Anything taller than the foot, such as the open note panel, scrolls
   inside it. The foot's top never moves from the first word of a pick to the
   last, through `Not that one` and the next pick. The space above it scrolls on
   its own, runs to the screen's sides and fades at its top and foot, so nothing
@@ -1303,7 +1317,7 @@ Not part of this build, and not to be added until asked:
 - personal modes learned from examples;
 - a Plex reader;
 - a TV layout;
-- corrections shared or pooled between installations;
+- notes shared or pooled between installations;
 - any administrative surface, including PIN reset;
 - offline use of the installed page.
 
@@ -1316,21 +1330,17 @@ as the code stood on 2026-09-30.
 
 **Short of the contract:**
 
-1. **The profile API does not require anything to save.** `POST /api/profiles`
-   accepts empty topics and exclusions from any caller. The page's own "Save
-   and continue" refuses to send that request and asks the viewer to choose
-   something or untick Remember me, so only a caller bypassing the page can
-   create an empty profile. Any caller may still do this until the cap of 50
-   fills. (`src/matinee/web/app.py:171`, `src/matinee/store.py:207`)
+1. **A profile needs nothing chosen to save.** `POST /api/profiles` accepts
+   empty topics and exclusions, as the page's own picker does. Any caller may
+   create profiles until the cap of 50 fills. (`src/matinee/web/app.py::add_door_routes`,
+   `src/matinee/store.py::Store.create`)
 2. **A film with no genres fails reachability.** It is not set apart as a
    metadata fault. (`tools/check_trees.py::check_reachability`)
 
 **Deliberately absent or open:**
 
-3. **No cap on corrections or notes per profile.** Identical corrections are not
-   deduplicated. One held profile can grow its correction rows without bound,
-   which slows that profile's walks, and its note rows likewise.
-   (`src/matinee/store.py:281`, `src/matinee/store.py:296`)
+3. **No cap on notes per profile.** One held profile can file notes without
+   bound. (`src/matinee/store.py::Store.note`)
 4. **The per-device allowance is per cookie.** A client that discards
    `matinee_device` is issued a new one with a fresh allowance. The
    installation's hourly ceiling still bounds it. (`src/matinee/web/viewing.py:232`)
@@ -1416,7 +1426,7 @@ symbol when one does not match.
 | `src/matinee/engine.py::load_catalog` | `src/matinee/engine.py:363` | 2026-09-30 |
 | `src/matinee/engine.py::_first_option` (label required) | `src/matinee/engine.py:307` | 2026-09-30 |
 | `src/matinee/engine.py::first_question` | `src/matinee/engine.py:535` | 2026-09-30 |
-| `src/matinee/engine.py::base_pool` (order of corrections, exclusions, topic skip) | `src/matinee/engine.py:398` | 2026-09-30 |
+| `src/matinee/engine.py::base_pool` (order of exclusions, topic skip) | `src/matinee/engine.py:398` | 2026-09-30 |
 | `src/matinee/engine.py::walk` | `src/matinee/engine.py:483` | 2026-09-30 |
 | `src/matinee/engine.py::_gate` (`only_if_pool_over`, `skip_if_topics`) | `src/matinee/engine.py:466` | 2026-09-30 |
 | `src/matinee/engine.py::_shown` (empty answers hidden, `not_after`, small kinds hidden) | `src/matinee/engine.py:443` | 2026-09-30 |
@@ -1528,7 +1538,7 @@ symbol when one does not match.
 | `src/matinee/table.py::with_live` | `src/matinee/table.py:198` | 2026-09-26 |
 | `src/matinee/web/theatre.py::Theatre.showing` (`LIVE_TTL`, `RETRY_AFTER`) | `src/matinee/web/theatre.py:69` | 2026-09-26 |
 
-### Profiles, devices and corrections
+### Profiles, devices and notes
 
 | Handle | Where | Verified |
 |---|---|---|
@@ -1541,13 +1551,11 @@ symbol when one does not match.
 | `src/matinee/store.py::Store.open` / `_check_pin` (lockout) | `src/matinee/store.py:321` | 2026-09-26 |
 | `src/matinee/store.py::Store._issue` (token pruning) | `src/matinee/store.py:199` | 2026-09-26 |
 | `src/matinee/store.py::Store.note` / `Note` | `src/matinee/store.py:296` | 2026-09-26 |
-| `src/matinee/store.py::Store.correct` / `corrections` | `src/matinee/store.py:281` | 2026-09-26 |
 | `src/matinee/web/common.py::set_tokens` / `TOKENS_COOKIE` / `MAX_TOKENS` | `src/matinee/web/common.py:81` | 2026-09-26 |
 | `src/matinee/web/common.py::Suggestion` | `src/matinee/web/common.py:38` | 2026-09-26 |
 | `src/matinee/web/viewing.py::held_profile` | `src/matinee/web/viewing.py:183` | 2026-09-30 |
 | `src/matinee/web/viewing.py::resolve` | `src/matinee/web/viewing.py:197` | 2026-09-30 |
 | `src/matinee/web/viewing.py::add_note_routes` / `answer_says` | `src/matinee/web/viewing.py:373` | 2026-09-30 |
-| `src/matinee/web/viewing.py::add_correction_routes` | `src/matinee/web/viewing.py:343` | 2026-09-30 |
 | `src/matinee/web/viewing.py::banded` | `src/matinee/web/viewing.py:338` | 2026-09-30 |
 
 ### Exclusions and the DoesTheDogDie check
@@ -1670,8 +1678,8 @@ symbol when one does not match.
 | `src/matinee/web/static/js/pick.js::showNoFilm` | `src/matinee/web/static/js/pick.js:117` | 2026-09-30 |
 | `src/matinee/web/static/js/pick.js::firstPickReveal` | `src/matinee/web/static/js/pick.js:92` | 2026-09-30 |
 | `src/matinee/web/static/js/pick.js::creditBeneath` (DoesTheDogDie's credit before its line types) | `src/matinee/web/static/js/pick.js:84` | 2026-09-30 |
-| `src/matinee/web/static/js/correct.js::GATED_NOTE` | `src/matinee/web/static/js/correct.js:10` | 2026-09-26 |
-| `src/matinee/web/static/js/correct.js::correctionLink` / `ensureProfile` | `src/matinee/web/static/js/correct.js:91` | 2026-09-26 |
+| `src/matinee/web/static/js/note.js::GATED_NOTE` | `src/matinee/web/static/js/note.js:9` | 2026-10-02 |
+| `src/matinee/web/static/js/note.js::noteLink` | `src/matinee/web/static/js/note.js:62` | 2026-10-02 |
 | `src/matinee/web/static/js/credits.js::credits` | `src/matinee/web/static/js/credits.js:23` | 2026-09-30 |
 | `src/matinee/web/static/js/credits.js::aboutLink` | `src/matinee/web/static/js/credits.js:18` | 2026-09-30 |
 | `src/matinee/web/static/js/dom.js::h` (text nodes only) | `src/matinee/web/static/js/dom.js:12` | 2026-09-26 |

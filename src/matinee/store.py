@@ -1,10 +1,10 @@
-"""Matinee's own store: profiles, the device tokens that remember them, and what each profile saved.
+"""Matinee's own store: profiles, the device tokens that remember them, and the notes viewers file.
 
-A profile holds a display name, an optional four-digit PIN, the viewer's
-exclusions and their corrections. A correction is one override written as
-structured rows sharing an override id, one per tree and direction, each with
-the film's TMDB id and a timestamp, so it can later be exported or pooled. Matinee never writes any of
-this to a media server.
+A profile holds a display name, an optional four-digit PIN and the viewer's
+exclusions. A note is a viewer's complaint about a pick, kept for whoever runs
+Matinee; it changes nothing any viewer is shown. The file's shape and its
+upgrade live in `matinee.upgrade`. Matinee never writes any of this to a media
+server.
 
 Device tokens are random, issued here, and stored only as SHA-256 digests, so a
 copy of the store cannot be replayed as a cookie. A PIN is stored as a salted
@@ -29,6 +29,8 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Literal
 
+from matinee.upgrade import prepare
+
 MAX_PROFILES = 50
 MAX_NAME = 40
 PIN_TRIES = 5
@@ -38,47 +40,6 @@ SUGGEST_AT_MOST = 3
 MAX_EDITS = 2
 SCRYPT = {"n": 2**14, "r": 8, "p": 1, "dklen": 32}
 TOKEN_LIFE_S = 400 * 24 * 3600  # the cookie's own lifetime
-
-SCHEMA = """
-CREATE TABLE IF NOT EXISTS profiles (
-    id INTEGER PRIMARY KEY,
-    name TEXT NOT NULL,
-    name_key TEXT NOT NULL UNIQUE,
-    pin_salt BLOB,
-    pin_hash BLOB,
-    failed INTEGER NOT NULL DEFAULT 0,
-    locked_until REAL NOT NULL DEFAULT 0,
-    topics TEXT NOT NULL DEFAULT '[]',
-    exclusions TEXT NOT NULL DEFAULT '[]',
-    created_at TEXT NOT NULL
-);
-CREATE TABLE IF NOT EXISTS corrections (
-    id INTEGER PRIMARY KEY,
-    override_id TEXT NOT NULL,
-    profile_id INTEGER NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-    tmdb INTEGER NOT NULL,
-    tree TEXT NOT NULL,
-    direction TEXT NOT NULL CHECK (direction IN ('remove', 'add')),
-    at TEXT NOT NULL
-);
-CREATE INDEX IF NOT EXISTS corrections_by_profile ON corrections (profile_id);
-CREATE TABLE IF NOT EXISTS feedback (
-    id INTEGER PRIMARY KEY,
-    profile_id INTEGER NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-    tmdb INTEGER NOT NULL,
-    tree TEXT NOT NULL,
-    kind TEXT NOT NULL CHECK (kind IN ('genre', 'kind', 'quality')),
-    path TEXT NOT NULL,
-    rushed INTEGER NOT NULL,
-    comment TEXT NOT NULL,
-    at TEXT NOT NULL
-);
-CREATE TABLE IF NOT EXISTS tokens (
-    token_hash TEXT PRIMARY KEY,
-    profile_id INTEGER NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-    created_at TEXT NOT NULL
-);
-"""
 
 
 @dataclass(frozen=True)
@@ -106,13 +67,6 @@ class Locked(StoreError):
     def __init__(self, until: float) -> None:
         super().__init__("locked", "this profile is locked against PIN entry")
         self.until = until
-
-
-@dataclass(frozen=True)
-class SavedCorrection:
-    tmdb: int
-    tree: str
-    direction: Literal["remove", "add"]
 
 
 @dataclass(frozen=True)
@@ -177,8 +131,7 @@ class Store:
         if not path.parent.is_dir():
             raise StoreError("no_store", f"the store's directory {path.parent} does not exist")
         self._path = path
-        with closing(self._connect()) as db, db:
-            db.executescript(SCHEMA)
+        prepare(path)
 
     def _connect(self) -> sqlite3.Connection:
         db = sqlite3.connect(self._path, timeout=10)
@@ -278,45 +231,16 @@ class Store:
             raise StoreError("no_profile", "no such profile")
         return self._profile(row)
 
-    def correct(self, profile_id: int, tmdb: int, remove_from: str, add_to: Iterable[str]) -> None:
-        """Record one correction: the film leaves one tree and joins others, for this profile only."""
-        override = secrets.token_hex(8)
-        at = _now()
-        rows = [(override, profile_id, tmdb, remove_from, "remove", at)]
-        rows += [(override, profile_id, tmdb, tree, "add", at) for tree in sorted(set(add_to) - {remove_from})]
-        with closing(self._connect()) as db, db:
-            if db.execute("SELECT 1 FROM profiles WHERE id = ?", (profile_id,)).fetchone() is None:
-                raise StoreError("no_profile", "no such profile")
-            db.executemany(
-                "INSERT INTO corrections (override_id, profile_id, tmdb, tree, direction, at)"
-                " VALUES (?, ?, ?, ?, ?, ?)",
-                rows,
-            )
-
     def note(self, n: Note) -> None:
         """Keep one viewer's note on a pick for review: what was wrong, the answers that led to it, and why."""
         with closing(self._connect()) as db, db:
             if db.execute("SELECT 1 FROM profiles WHERE id = ?", (n.profile_id,)).fetchone() is None:
                 raise StoreError("no_profile", "no such profile")
             db.execute(
-                "INSERT INTO feedback (profile_id, tmdb, tree, kind, path, rushed, comment, at)"
+                "INSERT INTO notes (profile_id, tmdb, tree, kind, path, rushed, comment, at)"
                 " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                 (n.profile_id, n.tmdb, n.tree, n.kind, json.dumps(list(n.path)), int(n.rushed), n.comment, _now()),
             )
-
-    def corrections(self, profile_id: int) -> list[SavedCorrection]:
-        """This profile's corrections, oldest first, so a later one wins."""
-        with closing(self._connect()) as db:
-            rows = db.execute(
-                "SELECT tmdb, tree, direction FROM corrections WHERE profile_id = ? ORDER BY id", (profile_id,)
-            ).fetchall()
-        out = []
-        for r in rows:
-            direction = str(r["direction"])
-            if direction not in ("remove", "add"):
-                raise StoreError("bad_row", f"a stored correction has direction {direction!r}")
-            out.append(SavedCorrection(int(r["tmdb"]), str(r["tree"]), "add" if direction == "add" else "remove"))
-        return out
 
     def open(self, profile_id: int, pin: str | None, now: float) -> tuple[Profile, str]:
         """A device token for a profile found by name: needs its PIN when it has one."""

@@ -5,9 +5,8 @@ tree checker are two callers of the same module, so they cannot disagree about a
 pool.
 
 A viewer's pool for a tree starts from the tree's pool (house pins already
-applied), applies the viewer's personal corrections, then drops films the
-viewer's own exclusions match, so a correction never brings back an excluded
-film. Each answer narrows it. Questioning stops when
+applied), then drops films the viewer's own exclusions match. Each answer
+narrows it. Questioning stops when
 the tree has no more questions, or fewer than `STOP_UNDER` films remain. A
 question marked `only_if_pool_over` is skipped unless the pool is larger; one
 marked `skip_if_topics` is skipped for a viewer excluding any of those
@@ -42,7 +41,7 @@ import math
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any
 
 import numpy as np
 import numpy.typing as npt
@@ -65,19 +64,9 @@ class EngineError(ValueError):
 
 
 @dataclass(frozen=True)
-class Correction:
-    """One personal correction: a film removed from, or added to, one tree for one viewer."""
-
-    tmdb: int
-    tree: str
-    direction: Literal["remove", "add"]
-
-
-@dataclass(frozen=True)
 class Viewer:
     exclusions: frozenset[str] = frozenset()
     topics: frozenset[int] = frozenset()
-    corrections: tuple[Correction, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -398,19 +387,14 @@ def load_catalog(
 def base_pool(cat: Catalog, tree_id: str, viewer: Viewer) -> Mask:
     """The tree's pool for this viewer before any answer.
 
-    Personal corrections apply first, then the viewer's exclusions, so a
-    correction can never bring back a film an exclusion removes. A question the
-    viewer's DoesTheDogDie topics skip applies its `treat_as` answer here, to the
-    whole starting pool, so every answer shown and every stop count already sees it.
+    The viewer's exclusions apply first. A question the viewer's DoesTheDogDie
+    topics skip applies its `treat_as` answer here, to the whole starting pool,
+    so every answer shown and every stop count already sees it.
     """
     tree = cat.trees.get(tree_id)
     if tree is None:
         raise EngineError(f"no tree '{tree_id}'")
     pool = cat.pools[tree.pool].copy()
-    ids = cat.ids
-    for c in viewer.corrections:
-        if c.tree == tree_id:
-            pool[ids == c.tmdb] = c.direction == "add"
     for name in viewer.exclusions:
         if name not in cat.exclusions:
             raise EngineError(f"no exclusion '{name}'")

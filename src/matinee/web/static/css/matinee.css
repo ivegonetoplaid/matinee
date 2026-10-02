@@ -751,6 +751,16 @@ button {
   display: none;
 }
 
+/* A saved note's two lines: the first in gold, the second in cream. */
+.correct-panel .note .ack {
+  color: var(--gold);
+  font-weight: 600;
+}
+
+.correct-panel .note .ask {
+  color: var(--text);
+}
+
 .tree-choices {
   display: flex;
   flex-wrap: wrap;

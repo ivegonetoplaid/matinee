@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Iterable
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -14,7 +15,6 @@ import pytest
 from matinee.engine import (
     Answer,
     Catalog,
-    Correction,
     EngineError,
     Viewer,
     first_question,
@@ -74,6 +74,12 @@ def relevance(t: int) -> dict[str, float] | None:
     rel["gore_a"] = 0.8 if t <= 5 else 0.0
     rel["hero"] = 0.7 if t == 3 else 0.0
     return rel
+
+
+def without(table: FilmTable, gone: Iterable[int]) -> FilmTable:
+    """The table less the films in `gone`, its genome rows kept aligned."""
+    keep = ~table.films.index.isin(list(gone))
+    return FilmTable(table.films[keep], table.tags, table.genome[keep], table.built_at, None, table.release)
 
 
 def make_table() -> FilmTable:
@@ -206,15 +212,16 @@ def test_answers_narrow_reply_and_prefer(cat: Catalog) -> None:
     assert step.question is not None and step.question.id == "kind"
 
 
-def test_asks_while_twelve_or_more_remain_and_stops_under(cat: Catalog) -> None:
+def test_asks_while_twelve_or_more_remain_and_stops_under(cat: Catalog, tmp_path: Path) -> None:
     short = walk(cat, "west", Viewer(), [Answer("era", 0), Answer("gore", 0)])  # films 1-20: over 15
     assert short.question is not None and short.question.id == "kind"
     assert [o.index for o in short.question.options] == [0, 1]  # spooky hidden after "old."
-    fewer = Viewer(corrections=tuple(Correction(t, "west", "remove") for t in range(1, 10)))
-    stopped = walk(cat, "west", fewer, [Answer("era", 0)])  # films 10-20: eleven left
+    data = write_data(tmp_path / "d")
+    fewer = load_catalog(without(make_table(), range(1, 10)), data, reference())
+    stopped = walk(fewer, "west", Viewer(), [Answer("era", 0)])  # films 10-20: eleven left
     assert stopped.question is None and stopped.pool == tuple(range(10, 21))
-    twelve = Viewer(corrections=tuple(Correction(t, "west", "remove") for t in range(1, 9)))
-    assert walk(cat, "west", twelve, [Answer("era", 0)]).question is not None
+    twelve = load_catalog(without(make_table(), range(1, 9)), data, reference())
+    assert walk(twelve, "west", Viewer(), [Answer("era", 0)]).question is not None
 
 
 def test_only_if_pool_over(cat: Catalog, tmp_path: Path) -> None:
@@ -237,10 +244,10 @@ def test_topic_skip_narrows_the_starting_pool(cat: Catalog) -> None:
         walk(cat, "west", squeamish, [Answer("era", 1), Answer("gore", 0)])
 
 
-def test_topic_skip_applies_even_when_the_walk_stops_first(cat: Catalog) -> None:
-    few = tuple(Correction(t, "west", "remove") for t in range(1, 30))  # 30-40 remain: all long or unknown
-    squeamish = Viewer(topics=frozenset({188}), corrections=few)
-    step = walk(cat, "west", squeamish, [])
+def test_topic_skip_applies_even_when_the_walk_stops_first(tmp_path: Path) -> None:
+    few = load_catalog(without(make_table(), range(1, 30)), write_data(tmp_path / "d"), reference())  # 30-40 left
+    squeamish = Viewer(topics=frozenset({188}))
+    step = walk(few, "west", squeamish, [])
     assert step.question is None and step.pool == (40,)
 
 
@@ -255,16 +262,12 @@ def test_misfit_and_leftover_answers_are_refused(cat: Catalog) -> None:
         walk(cat, "nope", Viewer(), [])
 
 
-def test_exclusions_and_corrections(cat: Catalog) -> None:
+def test_exclusions(cat: Catalog) -> None:
     pool = walk(cat, "west", Viewer(exclusions=frozenset({"superheroes"})), []).pool
     assert 7 not in pool and len(pool) == N - 1
     assert walk(cat, "west", Viewer(exclusions=frozenset({"heroes"})), []).pool == tuple(
         t for t in range(1, N + 1) if t != 3
     )
-    readd = Viewer(exclusions=frozenset({"superheroes"}), corrections=(Correction(7, "west", "add"),))
-    assert 7 not in walk(cat, "west", readd, []).pool
-    fixes = (Correction(3, "west", "remove"), Correction(3, "elsewhere", "add"))
-    assert 3 not in walk(cat, "west", Viewer(corrections=fixes), []).pool
     with pytest.raises(EngineError):
         walk(cat, "west", Viewer(exclusions=frozenset({"nope"})), [])
 
@@ -277,10 +280,10 @@ def test_not_after_hides_an_option(cat: Catalog) -> None:
     assert wide.question is not None and 2 in [o.index for o in wide.question.options]
 
 
-def test_first_question_hides_missing_and_empty_trees(cat: Catalog) -> None:
+def test_first_question_hides_missing_and_empty_trees(cat: Catalog, tmp_path: Path) -> None:
     assert [o.tree for o in first_question(cat, Viewer())] == ["west"]
-    everyone = tuple(Correction(t, "west", "remove") for t in range(1, N + 1))
-    assert first_question(cat, Viewer(corrections=everyone)) == ()
+    two = load_catalog(without(make_table(), set(range(1, N + 1)) - {3, 7}), write_data(tmp_path / "d"), reference())
+    assert first_question(two, Viewer(exclusions=frozenset({"heroes", "superheroes"}))) == ()
 
 
 def test_stale_reference_refuses_to_load(tmp_path: Path) -> None:
@@ -433,8 +436,8 @@ def test_reachable_is_the_union_of_walk_ends(cat: Catalog, tmp_path: Path) -> No
     tree["questions"][0]["options"] = [{"say": "old.", "reply": "", "filter": {"year_max": 2000}}]
     narrow = load_catalog(make_table(), write_data(tmp_path / "e", tree), reference())
     assert {int(t) for t in narrow.ids[reachable(narrow, "west")]} == set(range(1, 31))
-    few = Viewer(corrections=tuple(Correction(t, "west", "remove") for t in range(1, 30)))
-    assert {int(t) for t in narrow.ids[reachable(narrow, "west", few)]} == set(range(30, N + 1))
+    few = load_catalog(without(make_table(), range(1, 30)), write_data(tmp_path / "f", tree), reference())
+    assert {int(t) for t in few.ids[reachable(few, "west")]} == set(range(30, N + 1))  # under twelve: no question
 
 
 def test_a_first_answer_without_a_label_refuses_to_load(tmp_path: Path) -> None:

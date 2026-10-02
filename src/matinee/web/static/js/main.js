@@ -1,7 +1,7 @@
 // Matinee's page: the box office, then the questions on the poster wall, then the pick.
 
 import { get, post } from "./api.js";
-import { correctionLink } from "./correct.js";
+import { noteLink } from "./note.js";
 import { credits } from "./credits.js";
 import { Door } from "./door.js";
 import { clear, h, isPhone, prefersLessMotion, sentenceCase, wait } from "./dom.js";
@@ -419,7 +419,7 @@ async function pickNow(opening = "", risk = false, again = false, destruct = nul
       },
       startOver: () => leaveTo(start),
       failed: (data) => problem(data, start),
-      correction: (film) => correctionLink({ visit, film, trees: visit.trees }),
+      noteLink: (film) => noteLink({ visit, film, trees: visit.trees }),
     },
   });
 }
