@@ -41,7 +41,7 @@ contract is listed under [Known gaps](#known-gaps).
    and viewers' notes live in Matinee's store. None of it reaches a media server.
 5. **No public API and no viewer CLI.** The HTTP routes serve Matinee's own page
    only. The command-line tools are for whoever runs the installation: the
-   nightly rebuild, the tree checker and the reference builder.
+   nightly rebuild, the tree checker, the reference builder and the notes tool.
 6. **The engine is a plain module.** The tree walk imports no web framework and
    reads no request state. The web page and the tree checker call the same
    engine, so they cannot disagree about a pool.
@@ -876,6 +876,20 @@ changes nothing any viewer is shown.
   the same note replaces the earlier one. A ruling changes no film's placement:
   an accepted note is fixed for every viewer through the operator's label
   rulings and the settle step. Matinee offers no note review on the web.
+- **The notes tool**, `tools/notes.py`, is run on the server inside the server's
+  image against the state directory (`--state`, or `MATINEE_STATE`). It never
+  creates a store, and it writes only Matinee's own store, never a film's
+  placement, labels or pins.
+  - `list` prints every open note, oldest first: its id, the film's title and
+    year (from the film table), the door's label, the time, the profile's name
+    or "a deleted profile", the answers in order (ending "Just pick one!" when
+    that ended the questions), what was wrong in the panel's own words with
+    where the film belongs, and the comment.
+  - `accept <note> "<reason>" --ruling "<the label ruling that fixed it>"` and
+    `reject <note> "<reason>"` print the note's film, then record the ruling.
+    Where the note was already ruled, the tool prints the ruling it replaced.
+  - A note that does not exist, an empty or multi-line reason, or an accept
+    without its label ruling is refused, and nothing is written.
 
 ## 11. The web surface
 
