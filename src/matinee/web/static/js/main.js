@@ -96,26 +96,25 @@ function nameTag() {
   );
 }
 
-// The answers so far, first to last, at the foot of the screen. Each re-asks the question it answered.
-function trail() {
+// The way here, at the foot of the screen: "Start", the door, then each answer so far. A crumb takes the
+// viewer to the screen it led to; the crumb for the screen they are on, `here`, is plain text.
+function trail(here) {
   if (!visit.tree) return null;
-  const crumbs = [visit.firstSay, ...visit.says].map((say, i) =>
-    h(
-      "li",
-      {},
-      h(
-        "button",
-        {
-          class: "crumb",
-          type: "button",
-          title: sentenceCase(say),
-          onclick: () => leaveTo(() => backTo(i)),
-        },
-        sentenceCase(say),
-      ),
-    ),
-  );
-  return h("nav", { class: "trail", "aria-label": "Your answers so far" }, h("ol", {}, crumbs));
+  const crumbs = ["Start", visit.firstSay, ...visit.says].map((say, i) => {
+    const words = sentenceCase(say);
+    const crumb =
+      i === here
+        ? h("span", { class: "crumb here", "aria-current": "page", title: words }, words)
+        : h("button", { class: "crumb", type: "button", title: words, onclick: () => leaveTo(() => goTo(i)) }, words);
+    return h("li", {}, crumb);
+  });
+  return h("nav", { class: "trail", "aria-label": "The way here" }, h("ol", {}, crumbs));
+}
+
+// The trail's last crumb, which led to the screen showing now; on a pick "Just pick one!" ended early,
+// the last crumb led to a question, so none.
+function lastCrumb(onPick) {
+  return onPick && visit.rushed ? null : visit.says.length + 1;
 }
 
 // A question screen. "Just pick one!" stands last, beneath the answers and any footnote, and shows with them.
@@ -140,7 +139,7 @@ function frame({ count, footnote }) {
   clear(stage).append(
     topbar(nameTag(), h("div", { class: "count" }, count)),
     h("section", { class: "talk" }, line, answers, note, pick),
-    h("div", { class: "bottombar" }, trail(), h("span"), credits()),
+    h("div", { class: "bottombar" }, trail(lastCrumb(false)), h("span"), credits()),
   );
   return { line, answers, note, pick };
 }
@@ -238,8 +237,9 @@ function chooseTree(option) {
   step();
 }
 
-// Crumb 0 is the first question; crumb i re-asks the question answers[i - 1] answered.
-function backTo(i) {
+// Crumb 0 ("Start") is the first question; crumb 1, the door, is its first question; crumb i above that
+// is the screen answers[i - 2] led to.
+function goTo(i) {
   if (i === 0) return start();
   visit.answers = visit.answers.slice(0, i - 1);
   visit.says = visit.says.slice(0, i - 1);
@@ -279,7 +279,7 @@ function pickFrame() {
   clear(stage).append(
     topbar(nameTag() || h("span")),
     showing,
-    h("footer", { class: "bottombar" }, trail(), h("span"), credits()),
+    h("footer", { class: "bottombar" }, trail(lastCrumb(true)), h("span"), credits()),
   );
   return { line, aside, left, showing };
 }

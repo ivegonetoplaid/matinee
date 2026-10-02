@@ -184,7 +184,7 @@ button {
   }
 }
 
-/* The answers so far, bottom centre in the pinned bar: small, gold, one crumb per answer. */
+/* The way here, bottom centre in the pinned bar: small, gold, one crumb per step. */
 .trail ol {
   display: flex;
   flex-wrap: wrap;
@@ -229,8 +229,16 @@ button {
   cursor: pointer;
 }
 
+/* The crumb for the screen showing now: the same words, not a link. */
+.crumb.here {
+  display: inline-block;
+  line-height: 32px;
+  text-decoration: none;
+  cursor: default;
+}
+
 @media (hover: hover) {
-  .crumb:hover {
+  button.crumb:hover {
     color: var(--gold-hover);
     text-decoration-color: currentColor;
   }

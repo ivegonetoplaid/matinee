@@ -276,10 +276,12 @@ offered after "the little ones. nothing scary.".
   door's pool for this viewer before any answer, less the flavour that door's
   tree holds apart.
 - **The trail.** On each question after the first, and on the pick screen, the
-  page lists the viewer's answers so far, first to last, in gold at the bottom
-  centre. Choosing one asks its question again
-  and forgets every answer after it; choosing the first returns to the first
-  question.
+  page shows the way here in gold at the bottom centre: `Start`, the door, then
+  each answer so far. Choosing a crumb goes to the screen it led to and forgets
+  every answer after it: `Start` returns to the first question, the door asks
+  the door's first question, and an answer asks the question that followed it.
+  The crumb for the screen showing now is plain text, not a link; on a pick
+  that `Just pick one!` ended early, every crumb is a link.
 
 ### 2.5 Every film stays reachable
 
@@ -1609,10 +1611,10 @@ symbol when one does not match.
 | `src/matinee/web/static/js/wall.js::Wall.place` / `lay` / `picture` / `request` (`BLANK`) | `src/matinee/web/static/js/wall.js:555` | 2026-09-28 |
 | `src/matinee/web/static/js/wall.js::Wall.resort` / `slide` / `depart` | `src/matinee/web/static/js/wall.js:635` | 2026-09-28 |
 | `src/matinee/web/static/js/main.js::lockStage` / `leaveTo` / `nameTag` | `src/matinee/web/static/js/main.js:56` | 2026-09-30 |
-| `src/matinee/web/static/js/main.js::trail` | `src/matinee/web/static/js/main.js:100` | 2026-09-30 |
+| `src/matinee/web/static/js/main.js::trail` / `lastCrumb` | `src/matinee/web/static/js/main.js:101` | 2026-10-01 |
 | `src/matinee/web/static/js/main.js::frame` / `ask` (the footnote) | `src/matinee/web/static/js/main.js:122` | 2026-09-30 |
 | `src/matinee/web/static/js/main.js::start` | `src/matinee/web/static/js/main.js:214` | 2026-09-30 |
-| `src/matinee/web/static/js/main.js::backTo` / `step` | `src/matinee/web/static/js/main.js:242` | 2026-09-30 |
+| `src/matinee/web/static/js/main.js::goTo` / `step` | `src/matinee/web/static/js/main.js:242` | 2026-10-01 |
 | `src/matinee/web/static/js/main.js::checking` / `fadeTalk` (`READ_MS`) | `src/matinee/web/static/js/main.js:292` | 2026-09-30 |
 | `src/matinee/web/static/js/main.js::pickLines` | `src/matinee/web/static/js/main.js:310` | 2026-09-30 |
 | `src/matinee/web/static/js/main.js::clearForPick` / `requestPick` / `openPick` | `src/matinee/web/static/js/main.js:324` | 2026-09-30 |
