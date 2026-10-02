@@ -2,7 +2,10 @@
 
 A profile holds a display name, an optional four-digit PIN and the viewer's
 exclusions. A note is a viewer's complaint about a pick, kept for whoever runs
-Matinee; it changes nothing any viewer is shown. The file's shape and its
+Matinee; it changes nothing any viewer is shown. Every note has a review status:
+`open` when filed, then `accepted` with a one-line reason and the label ruling
+that fixed it, or `rejected` with a one-line reason. A later ruling replaces an
+earlier one. The file's shape and its
 upgrade live in `matinee.upgrade`. Matinee never writes any of this to a media
 server.
 
@@ -40,6 +43,9 @@ SUGGEST_AT_MOST = 3
 MAX_EDITS = 2
 SCRYPT = {"n": 2**14, "r": 8, "p": 1, "dklen": 32}
 TOKEN_LIFE_S = 400 * 24 * 3600  # the cookie's own lifetime
+MAX_REASON = 300
+Status = Literal["open", "accepted", "rejected"]
+NOTE_SELECT = "SELECT n.*, p.name AS profile FROM notes AS n LEFT JOIN profiles AS p ON p.id = n.profile_id"
 
 
 @dataclass(frozen=True)
@@ -54,6 +60,26 @@ class Note:
     rushed: bool
     comment: str
     belongs: tuple[str, ...] = ()  # where a "Not <genre> at all" note says the film belongs
+
+
+@dataclass(frozen=True)
+class FiledNote:
+    """A note as the store holds it, with the profile's name (None when the profile is gone) and its review."""
+
+    id: int
+    profile: str | None
+    tmdb: int
+    tree: str
+    kind: str
+    path: tuple[str, ...]
+    rushed: bool
+    comment: str
+    at: str
+    belongs: tuple[str, ...]
+    status: Status
+    reason: str | None
+    ruling: str | None
+    ruled_at: str | None
 
 
 class StoreError(ValueError):
@@ -97,6 +123,43 @@ def clean_pin(pin: str | None) -> str | None:
     if len(pin) != 4 or not pin.isascii() or not pin.isdigit():
         raise StoreError("bad_pin", "a PIN is four digits")
     return pin
+
+
+def one_line(raw: str, what: str) -> str:
+    """A reason or a ruling as stored: trimmed, one to MAX_REASON characters, on one line, no control characters."""
+    text = raw.strip()
+    if not text or len(text) > MAX_REASON or any(unicodedata.category(c).startswith("C") for c in text):
+        raise StoreError("bad_reason", f"a {what} is one line of 1 to {MAX_REASON} characters")
+    return text
+
+
+def _status(raw: str) -> Status:
+    if raw == "open":
+        return "open"
+    if raw == "accepted":
+        return "accepted"
+    if raw == "rejected":
+        return "rejected"
+    raise StoreError("bad_row", f"a stored note has status {raw!r}")
+
+
+def _filed(row: sqlite3.Row) -> FiledNote:
+    return FiledNote(
+        id=int(row["id"]),
+        profile=None if row["profile"] is None else str(row["profile"]),
+        tmdb=int(row["tmdb"]),
+        tree=str(row["tree"]),
+        kind=str(row["kind"]),
+        path=tuple(str(p) for p in json.loads(row["path"])),
+        rushed=bool(row["rushed"]),
+        comment=str(row["comment"]),
+        at=str(row["at"]),
+        belongs=tuple(str(t) for t in json.loads(row["belongs"])),
+        status=_status(str(row["status"])),
+        reason=row["reason"],
+        ruling=row["ruling"],
+        ruled_at=row["ruled_at"],
+    )
 
 
 def edits(a: str, b: str) -> int:
@@ -252,6 +315,43 @@ class Store:
                     json.dumps(sorted(set(n.belongs))),
                 ),
             )
+
+    def notes(self, status: Status = "open") -> list[FiledNote]:
+        """Every note with this status, oldest first."""
+        with closing(self._connect()) as db:
+            rows = db.execute(f"{NOTE_SELECT} WHERE n.status = ? ORDER BY n.id", (status,)).fetchall()
+        return [_filed(r) for r in rows]
+
+    def filed(self, note_id: int) -> FiledNote:
+        """One note by its id; refuses an id no note has."""
+        with closing(self._connect()) as db:
+            row = db.execute(f"{NOTE_SELECT} WHERE n.id = ?", (note_id,)).fetchone()
+        if row is None:
+            raise StoreError("no_note", f"no note {note_id}")
+        return _filed(row)
+
+    def rule(
+        self, note_id: int, status: Literal["accepted", "rejected"], reason: str, ruling: str | None = None
+    ) -> FiledNote:
+        """Record a ruling on one note, replacing any earlier one, and return the note as it stood before.
+
+        An accepted note needs the label ruling that fixed it; a rejected one takes none. A ruling changes no
+        film's placement.
+        """
+        reason = one_line(reason, "reason")
+        if (status == "accepted") != (ruling is not None):
+            raise StoreError("bad_ruling", "an accepted note names its label ruling, and a rejected one names none")
+        kept = None if ruling is None else one_line(ruling, "ruling")
+        with closing(self._connect()) as db, db:
+            db.execute("BEGIN IMMEDIATE")
+            row = db.execute(f"{NOTE_SELECT} WHERE n.id = ?", (note_id,)).fetchone()
+            if row is None:
+                raise StoreError("no_note", f"no note {note_id}")
+            db.execute(
+                "UPDATE notes SET status = ?, reason = ?, ruling = ?, ruled_at = ? WHERE id = ?",
+                (status, reason, kept, _now(), note_id),
+            )
+        return _filed(row)
 
     def open(self, profile_id: int, pin: str | None, now: float) -> tuple[Profile, str]:
         """A device token for a profile found by name: needs its PIN when it has one."""

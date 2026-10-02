@@ -119,6 +119,13 @@ def test_a_genre_note_keeps_where_its_own_correction_said_the_film_belongs(tmp_p
     assert belongs == {4: '["thriller"]', 9: "[]", 11: '["drama","war"]', 12: "[]"}
 
 
+def test_every_note_arrives_open_in_the_review_queue(tmp_path: Path) -> None:
+    path = shape_0(tmp_path / "matinee.sqlite")
+    queue = Store(path).notes()
+    assert [n.id for n in queue] == [n[0] for n in NOTES]
+    assert {(n.status, n.reason, n.ruling, n.ruled_at) for n in queue} == {("open", None, None, None)}
+
+
 def test_the_upgrade_keeps_a_copy_of_the_old_file_and_never_overwrites_it(tmp_path: Path) -> None:
     path = shape_0(tmp_path / "matinee.sqlite")
     before = path.read_bytes()

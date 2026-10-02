@@ -706,7 +706,7 @@ table named `feedback`) and personal corrections.
   and removes the corrections. A "Not <genre> at all" note first takes, as where
   its film belongs, the trees its own correction added the film to: the
   correction with the note's profile, film and tree saved at or before the
-  note, the latest of them. It is kept only when the counts of profiles,
+  note, the latest of them. Every note arrives with the status `open`. It is kept only when the counts of profiles,
   tokens and notes are the same after it as before and no row points at nothing.
 - Before its first change to a shape-0 file, the upgrade copies the file as it
   stood to a new file beside it, named
@@ -860,6 +860,13 @@ changes nothing any viewer is shown.
   viewer is shown.
 - Once the note is saved the panel says "Thanks. That's gone to whoever runs
   Matinee." in gold and "If they agree, it moves for everyone." in cream.
+- Every note has a review status. A new note is `open`. A ruling sets it to
+  `accepted`, with a one-line reason and the label ruling that fixed it, or to
+  `rejected`, with a one-line reason; the store refuses any other combination. A
+  reason or a label ruling is one line of 1 to 300 characters. A later ruling on
+  the same note replaces the earlier one. A ruling changes no film's placement:
+  an accepted note is fixed for every viewer through the operator's label
+  rulings and the settle step. Matinee offers no note review on the web.
 
 ## 11. The web surface
 
@@ -1556,6 +1563,8 @@ symbol when one does not match.
 | `src/matinee/store.py::Store.open` / `_check_pin` (lockout) | `src/matinee/store.py:321` | 2026-09-26 |
 | `src/matinee/store.py::Store._issue` (token pruning) | `src/matinee/store.py:199` | 2026-09-26 |
 | `src/matinee/store.py::Store.note` / `Note` | `src/matinee/store.py:296` | 2026-09-26 |
+| `src/matinee/store.py::Store.notes` / `filed` / `rule` / `FiledNote` / `one_line` | `src/matinee/store.py` | 2026-10-02 |
+| `src/matinee/upgrade.py::prepare` / `TABLES` / `FROM_SHAPE_0` / `BELONGS_FROM_CORRECTIONS` | `src/matinee/upgrade.py` | 2026-10-02 |
 | `src/matinee/web/common.py::set_tokens` / `TOKENS_COOKIE` / `MAX_TOKENS` | `src/matinee/web/common.py:81` | 2026-09-26 |
 | `src/matinee/web/common.py::Suggestion` | `src/matinee/web/common.py:38` | 2026-09-26 |
 | `src/matinee/web/viewing.py::held_profile` | `src/matinee/web/viewing.py:183` | 2026-09-30 |

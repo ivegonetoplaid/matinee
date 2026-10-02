@@ -5,7 +5,8 @@ shapes were recorded reads 0 and holds the tables `profiles`, `corrections`,
 `feedback` and `tokens`. `prepare` creates a missing or empty file at the current
 shape and leaves a current file alone. It carries a shape-0 file to the current
 shape in one transaction, keeping where each "Not <genre> at all" note said its
-film belongs from the correction saved with it, after copying the file as it stood to a new file beside
+film belongs from the correction saved with it and giving every note the status
+`open`, after copying the file as it stood to a new file beside
 it, which nothing ever overwrites. It refuses, and changes nothing in the store
 file, a file newer than this code, a file that is not a SQLite database, and an
 upgrade that fails or would lose a profile, a token or a note.
@@ -43,7 +44,16 @@ TABLES = (
     rushed INTEGER NOT NULL,
     comment TEXT NOT NULL,
     at TEXT NOT NULL,
-    belongs TEXT NOT NULL DEFAULT '[]'
+    belongs TEXT NOT NULL DEFAULT '[]',
+    status TEXT NOT NULL DEFAULT 'open',
+    reason TEXT,
+    ruling TEXT,
+    ruled_at TEXT,
+    CHECK (
+        (status = 'open' AND reason IS NULL AND ruling IS NULL AND ruled_at IS NULL)
+        OR (status = 'rejected' AND reason IS NOT NULL AND ruling IS NULL AND ruled_at IS NOT NULL)
+        OR (status = 'accepted' AND reason IS NOT NULL AND ruling IS NOT NULL AND ruled_at IS NOT NULL)
+    )
 )""",
     """CREATE TABLE tokens (
     token_hash TEXT PRIMARY KEY,
