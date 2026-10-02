@@ -1,74 +1,82 @@
 {
   "genre": "Action and adventure",
   "pool": "action",
-  "opening": "excellent. I'll turn the speakers up.",
-  "note": "Decision 88: the door runs on the labels (the labels file in Matinee's state directory). One question, its kinds, then \"anything\". A film sits under every kind it is labelled with, at most two; a film not yet labelled waits behind the door under \"anything\" and \"Just pick one!\" only. A kind under 30 films in the library is not offered.",
+  "opening": "I have a bad feeling about this...",
+  "note": "Decision 88: the door runs on the labels (the labels file in Matinee's state directory). One question, its kinds, then \"anything\". A film sits under every kind it is labelled with; a film not yet labelled waits behind the door under \"anything\" and \"Just pick one!\" only. A kind under 30 films in the library is not offered. The spies answer speaks Thriller's spies reply and self-destructs with it.",
   "questions": [
     {
       "id": "kind",
-      "ask": "so, what kind of mayhem are we after?",
+      "ask": "so, what are we up against?",
       "options": [
         {
-          "say": "superheroes. capes, powers, and comic-book heroics.",
-          "reply": "of course. cue the superhero landing.",
+          "say": "superheroes. capes, powers, and saving the world before dinner.",
+          "reply": "cue the superhero landing. terrible for the knees.",
           "filter": {
             "flavour": "superheroes"
           }
         },
         {
-          "say": "martial arts. fists, feet, and blades do the talking.",
-          "reply": "very good. push the furniture back.",
+          "say": "skip the speeches. let the fists do the talking.",
+          "reply": "peace was never really an option.",
           "filter": {
             "flavour": "martial_arts"
           }
         },
         {
-          "say": "one against an army. someone picked the wrong fight.",
-          "reply": "ah. a reckoning.",
+          "say": "one against an army. hardly seems fair.",
+          "reply": "I know. they really should've brought more.",
           "filter": {
             "flavour": "revenge"
           }
         },
         {
-          "say": "spies and secret agents. gadgets, disguises, and a lot of running.",
-          "reply": "shaken, not stirred. obviously.",
+          "say": "spies, secret agents, and international intrigue. give me the briefing.",
+          "reply": "your assignment is classified. this message will self-destruct in five seconds.",
           "filter": {
             "flavour": "spies"
-          }
+          },
+          "self_destruct": 5
         },
         {
-          "say": "robots, space wars, and broken futures.",
-          "reply": "excellent. the future's on fire again.",
+          "say": "give me a broken future or a distant galaxy, and something worth fighting over.",
+          "reply": "tomorrow appears to be heavily armed.",
           "filter": {
             "flavour": "scifi_action"
           }
         },
         {
-          "say": "quests, treasure, and pirates. take me somewhere far away.",
+          "say": "give me a map and send me on a quest.",
           "reply": "pack light. we're not coming back for anything.",
           "filter": {
             "flavour": "quests"
           }
         },
         {
-          "say": "disaster and survival. nature, catastrophe, or stranded with no help coming.",
-          "reply": "run, then.",
+          "say": "disaster, survival, and everything going very wrong.",
+          "reply": "I have the situation completely under control.",
           "filter": {
             "flavour": "disaster_survival"
           }
         },
         {
-          "say": "war, on the front line. the battle, up close.",
-          "reply": "boots on. stay low.",
+          "say": "put me on the front lines. I want the war up close.",
+          "reply": "war. war never changes.",
           "filter": {
             "flavour": "war_battle"
           }
         },
         {
-          "say": "action comedies. big explosions, bigger mouths.",
-          "reply": "lovely. expect one-liners at terrible moments.",
+          "say": "I want the bullets flying and the jokes landing.",
+          "reply": "I'll find one where nobody ever reloads.",
           "filter": {
             "flavour": "action_comedy"
+          }
+        },
+        {
+          "say": "give me fast cars, big chases, and a very capable driver.",
+          "reply": "buckle up.",
+          "filter": {
+            "flavour": "cars"
           }
         },
         {
@@ -85,7 +93,8 @@
       "note": "shared with the scifi and fantasy and animation doors, so a film behind both holds it at both or neither."
     },
     "martial_arts": {
-      "labelled": true
+      "labelled": true,
+      "note": "fight-heavy films: martial arts, swords and blades, brawls and long fights, not martial arts alone."
     },
     "revenge": {
       "labelled": true
@@ -110,6 +119,10 @@
     "action_comedy": {
       "labelled": true,
       "note": "shared with the comedy door, so a film behind both holds it at both or neither."
+    },
+    "cars": {
+      "labelled": true,
+      "note": "films where driving, racing or the chase is the main event: street racing, getaway drivers, motor racing, chases on wheels."
     }
   }
 }

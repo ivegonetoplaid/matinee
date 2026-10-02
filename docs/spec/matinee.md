@@ -125,8 +125,10 @@ Loading is strict:
   and takes nothing else. Only a labelled flavour may be marked
   `always_shown`, and only as `true`.
 - An answer may carry `self_destruct`, a whole number of seconds from 1 to 9. Any
-  other value is refused, and so is a second answer carrying it anywhere across
-  the trees and modes: the self-destructing reply is a one-off.
+  other value is refused. Every answer carrying it, across the trees and modes,
+  must speak the same reply, or the trees refuse to load: the self-destructing
+  reply is one joke, told by the spies answer behind Thriller and behind Action
+  and nowhere else.
 
 ### 2.3 Answers are filters
 
@@ -394,7 +396,7 @@ page reads it through `GET /api/quips`, which returns the file as loaded
 - A category is `universal`, or a tree or mode by its file name. It may hold
   `reveal` lines, said as a film arrives, and `nope` lines, said after
   `Not that one`. The shipped file holds universal (16 reveal, 22 nope),
-  horror (18, 19) and comedy (22, 29). A tree or mode with no category of its
+  horror (18, 19), comedy (22, 29) and action (16, 19). A tree or mode with no category of its
   own, such as thriller or crime, draws universal's lines. No category draws
   another tree's lines.
 - `caps.line` is the most characters one line may hold. `caps.pair` is the
@@ -1162,7 +1164,7 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
   glow colour and the quip deal are modules that touch no page. Their tests
   under `tests/js/` run with `node --test` from `./check.sh`.
 - **The self-destructing reply.** When the last answer carries `self_destruct`
-  (the thriller tree's spies answer),
+  (the spies answer, behind Thriller and behind Action),
   its reply types in gold as usual, then counts down on its own one-second
   clock, whatever the hunt is doing: a large gold number beneath the reply
   shows each second in turn, fading in and out in the same place. One second

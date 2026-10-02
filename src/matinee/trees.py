@@ -263,13 +263,14 @@ def load_trees(dirs: Sequence[Path] = (DATA / "trees", DATA / "modes")) -> dict[
 
 
 def _one_self_destruct(trees: Mapping[str, Tree]) -> None:
-    """The self-destructing reply is a one-off: at most one answer across every tree may carry it."""
-    carriers = [
-        f"{t.id}/{q.id}/{i}"
+    """The self-destructing reply is one joke: every answer across the trees that carries it speaks the
+    same reply, so it may sit behind each door offering that answer and nowhere else."""
+    replies = {
+        o.reply: f"{t.id}/{q.id}/{i}"
         for t in trees.values()
         for q in t.questions
         for i, o in enumerate(q.options)
         if o.self_destruct
-    ]
-    if len(carriers) > 1:
-        raise TreeError(f"only one answer may self-destruct; found {len(carriers)}: {', '.join(carriers)}")
+    }
+    if len(replies) > 1:
+        raise TreeError(f"only one reply may self-destruct; found {len(replies)}: {', '.join(replies.values())}")

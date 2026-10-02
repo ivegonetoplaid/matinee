@@ -148,6 +148,47 @@
         "I was joking with that selection. This is the real one.",
         "That one doesn't DO IT for you, huh?"
       ]
+    },
+    "action": {
+      "reveal": [
+        "Stand back. This one's loaded.",
+        "Found one with a body count.",
+        "This one doesn't bother with brakes.",
+        "Brace yourself. This one hits hard.",
+        "I'd move the coffee table for this one.",
+        "This one should rattle the windows.",
+        "Explosions confirmed.",
+        "Tonight, something blows up.",
+        "This one comes out swinging.",
+        "Turn it up. The neighbours will cope.",
+        "Somebody's about to have a very bad day.",
+        "This one runs on adrenaline and bad ideas.",
+        "Mind the shrapnel.",
+        "I found you a hero. Possibly several.",
+        "This one never once slows down.",
+        "Cue the slow walk away from the explosion."
+      ],
+      "nope": [
+        "Not enough explosions?",
+        "Very well. Reloading.",
+        "No? I have louder ones.",
+        "Fine. Let's blow up something else.",
+        "Stand down. Next mission.",
+        "Not that fight. Understood.",
+        "Off the team, then.",
+        "Mission scrubbed. Regrouping.",
+        "No? Back to the armoury.",
+        "That hero didn't make the cut.",
+        "Not your kind of trouble?",
+        "Tough crowd. Calling in reinforcements.",
+        "Abort, abort. Finding another.",
+        "No? I've got a bigger one.",
+        "Right. Back to base.",
+        "That one's been taken out.",
+        "Understood. Changing targets.",
+        "Not dangerous enough for you?",
+        "We'll leave that one in the rubble."
+      ]
     }
   }
 }
