@@ -27,10 +27,12 @@ const DRIFT_PX_S = 10; // upward, timed by the clock, never by frames
 const MAX_STEP_S = 0.25; // a frame after a long pause (a hidden tab) moves the wall no further than this
 const RESORT_MS = 800; // each answer's re-sort
 const RESORT_EASE = "cubic-bezier(0.2, 0.8, 0.2, 1)";
-const PRELOAD_MS = 600; // the re-sort waits this long at most for the posters it brings on screen
+const PRELOAD_MS = 1500; // the re-sort waits this long at most for the posters it brings on screen
+const FIRST_MS = 2500; // a wall laid fresh waits this long at most for its pictures before it fades in
+const ARRIVE_MS = 300; // a picture that arrives after its tile is showing fades in over this long
 const DROPPED_SCALE = 0.5; // a dropped film's poster shrinks to this and fades where it stands
 const BLANK = "/static/blank.svg"; // a tile with no picture shows this, so it is a dark cell, never a broken image
-const SIZES = ["l", "m", "s"];
+const SIZES = ["l", "m", "s", "xs"];
 const GROW = 2.4; // the landed poster grows to this many times a poster at the resting size
 const GROW_MS = 750;
 const GROW_EASE = bezier(0.2, 0.8, 0.2, 1);
@@ -78,6 +80,14 @@ function within(ms, promises) {
   return Promise.race([Promise.allSettled(promises), new Promise((done) => setTimeout(done, ms))]);
 }
 
+// Shows `src` on `img`. A dark cell whose picture has arrived fades it in rather than snapping to it.
+function setPicture(img, src) {
+  const was = img.getAttribute("src");
+  if (was === src) return;
+  img.src = src;
+  if (was === BLANK && src !== BLANK && !lessMotion.matches) img.animate([{ opacity: 0, offset: 0 }], ARRIVE_MS);
+}
+
 export class Wall {
   constructor(root) {
     this.root = root;
@@ -91,6 +101,7 @@ export class Wall {
     this.resting = false;
     this.layout = null;
     this.cam = { x: 0, y: 0 }; // the point of the wall at the screen's centre, in px
+    this.liftRows = 0; // during a pick, how many rows below its aim the camera stands, so the aim sits higher
     this.corner = null; // the top-left cell the tiles are laid from, as "i,j"
     this.dirty = false; // a picture arrived: tiles showing a dark cell look again
     this.showing = null; // the latest pool shown; an earlier one still preparing gives way
@@ -130,7 +141,7 @@ export class Wall {
     if (!this.layout?.films || !order.length) {
       this.setPool(order, resting);
       this.relayout(next, null);
-      this.still = Promise.resolve();
+      this.still = this.fadeIn();
       return;
     }
     const cam = this.camFor(next, resortAnchor(this.onScreen(), order, next));
@@ -146,6 +157,16 @@ export class Wall {
       for (const tile of old) tile.img.remove();
       return undefined;
     });
+  }
+
+  // A wall laid fresh stays unseen until its tiles' pictures can be drawn, or for FIRST_MS, then fades
+  // in whole (the stylesheet's .waiting), so it never fills in a cell at a time.
+  async fadeIn() {
+    if (!this.layout.films) return;
+    this.layer.classList.add("waiting");
+    const urls = this.tiles.filter((tile) => tile.id !== null).map((tile) => `/img/poster/${tile.id}/${this.size}`);
+    await within(FIRST_MS, urls.map((url) => this.pictures.get(url)?.settled));
+    this.layer.classList.remove("waiting");
   }
 
   clear() {
@@ -169,6 +190,7 @@ export class Wall {
     this.drifting = true;
     this.landed = null;
     this.look = null;
+    this.liftRows = 0;
     this.glow = GOLD;
     this.frontCell = null;
     this.front.hidden = true;
@@ -199,7 +221,7 @@ export class Wall {
 
   // Centres the camera on column `i`, row `j`, which may be fractional.
   aim(i, j) {
-    this.cam = centreOf({ i, j }, this.layout);
+    this.cam = centreOf({ i, j: j + this.liftRows }, this.layout);
   }
 
   // The hunt for film `id`. It waits for any re-sort to end and until `notBefore` (a
@@ -209,13 +231,13 @@ export class Wall {
   // after the last hop, in seconds, or null when the pick was ended (`endPick`, a new pool or a
   // cleared wall) at any point. Under reduced motion the camera jumps straight to the landing cell.
   // The camera is steered in cells, so a window resized mid-hunt only rescales it.
-  async hunt(id, { rand = Math.random, notBefore = 0, onStop = () => {} } = {}) {
+  async hunt(id, { rand = Math.random, notBefore = 0, onStop = () => {}, lift = 0 } = {}) {
     const round = this.round;
     if (!(await this.readyToHunt(round, notBefore))) return null;
     this.lift(false);
     this.drifting = false;
     onStop();
-    const from = await this.settle();
+    const from = await this.settle(lift);
     if (!from || round !== this.round) return null;
     const plan = planHunt({ n: hopCount(rand), rand, layout: this.layout, from });
     this.placed = new Map([...this.placed, ...placeLanding(plan, id)]);
@@ -246,15 +268,27 @@ export class Wall {
   }
 
   // Eases the camera forward to the next whole row in the drift's direction and resolves to that
-  // cell, or to null when the pick was ended meanwhile. Under reduced motion it moves at once.
-  async settle() {
+  // cell, or to null when the pick was ended meanwhile. Over the same ease the aim rises `lift` px above
+  // the screen's centre, where the hunt then lands. Under reduced motion it moves at once.
+  async settle(lift = 0) {
     const L = this.layout;
-    const row = (this.cam.y - L.h / 2) / L.sy;
-    const from = camCell(L, settledCamera(this.cam, L));
+    const was = this.liftRows;
+    const to = lift / L.sy;
+    const base = { x: this.cam.x, y: this.cam.y - was * L.sy }; // the camera's aim, without its lift
+    const row = (base.y - L.h / 2) / L.sy;
+    const from = camCell(L, settledCamera(base, L));
     if (!lessMotion.matches) {
-      const eased = await this.tween(SETTLE_S * 1000, (t) => this.aim(from.i, row + (from.j - row) * t), SETTLE_EASE);
+      const eased = await this.tween(
+        SETTLE_S * 1000,
+        (t) => {
+          this.liftRows = was + (to - was) * t;
+          this.aim(from.i, row + (from.j - row) * t);
+        },
+        SETTLE_EASE,
+      );
       if (!eased) return null;
     }
+    this.liftRows = to;
     this.aim(from.i, from.j);
     return from;
   }
@@ -580,7 +614,7 @@ export class Wall {
     }
     tile.id = filmAt(view.layout, view.order, view.placed || NONE_PLACED, i, j);
     const src = (tile.id === null ? null : this.picture(tile.id, view.size)) || BLANK;
-    if (tile.img.getAttribute("src") !== src) tile.img.src = src;
+    setPicture(tile.img, src);
     tile.img.style.visibility = view.lifted === `${i},${j}` ? "hidden" : "";
     if (view.placed) this.dress(tile, i, j, view.layout);
   }

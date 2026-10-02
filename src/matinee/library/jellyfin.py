@@ -23,6 +23,9 @@ IMAGE_TIMEOUT_S = 10
 MAX_IMAGE_BYTES = 8 * 1024 * 1024
 ITEM_ID = re.compile(r"^[0-9a-f]{32}$")
 IMAGE_PATHS = {"poster": "Primary", "backdrop": "Backdrop/0"}
+SMALL_IMAGE_PX = 160  # an image this wide or narrower is a wall tile, shown dimmed, so it is fetched lighter
+SMALL_IMAGE_QUALITY = 60
+IMAGE_QUALITY = 80
 
 
 def _int_or_none(value: object) -> int | None:
@@ -93,8 +96,11 @@ class JellyfinReader:
         return overview if isinstance(overview, str) and overview.strip() else None
 
     def image(self, item_id: str, kind: ImageKind, width: int) -> Image:
-        """Jellyfin serves images without a key, so the request carries none."""
-        url = f"{self._base}/Items/{self._item(item_id)}/Images/{IMAGE_PATHS[kind]}?maxWidth={int(width)}&quality=80"
+        """Jellyfin serves images without a key, so the request carries none. An image at most
+        SMALL_IMAGE_PX wide is asked for at SMALL_IMAGE_QUALITY, any other at IMAGE_QUALITY."""
+        quality = SMALL_IMAGE_QUALITY if width <= SMALL_IMAGE_PX else IMAGE_QUALITY
+        query = f"maxWidth={int(width)}&quality={quality}"
+        url = f"{self._base}/Items/{self._item(item_id)}/Images/{IMAGE_PATHS[kind]}?{query}"
         req = urllib.request.Request(url, method="GET")
         try:
             with urllib.request.urlopen(req, timeout=IMAGE_TIMEOUT_S) as resp:

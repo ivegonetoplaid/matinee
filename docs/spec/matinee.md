@@ -125,8 +125,10 @@ Loading is strict:
   and takes nothing else. Only a labelled flavour may be marked
   `always_shown`, and only as `true`.
 - An answer may carry `self_destruct`, a whole number of seconds from 1 to 9. Any
-  other value is refused, and so is a second answer carrying it anywhere across
-  the trees and modes: the self-destructing reply is a one-off.
+  other value is refused. Every answer carrying it, across the trees and modes,
+  must speak the same reply, or the trees refuse to load: the self-destructing
+  reply is one joke, told by the spies answer behind Thriller and behind Action
+  and nowhere else.
 
 ### 2.3 Answers are filters
 
@@ -276,10 +278,12 @@ offered after "the little ones. nothing scary.".
   door's pool for this viewer before any answer, less the flavour that door's
   tree holds apart.
 - **The trail.** On each question after the first, and on the pick screen, the
-  page lists the viewer's answers so far, first to last, in gold at the bottom
-  centre. Choosing one asks its question again
-  and forgets every answer after it; choosing the first returns to the first
-  question.
+  page shows the way here in gold at the bottom centre: `Start`, the door, then
+  each answer so far. Choosing a crumb goes to the screen it led to and forgets
+  every answer after it: `Start` returns to the first question, the door asks
+  the door's first question, and an answer asks the question that followed it.
+  The crumb for the screen showing now is plain text, not a link; on a pick
+  that `Just pick one!` ended early, every crumb is a link.
 
 ### 2.5 Every film stays reachable
 
@@ -392,7 +396,7 @@ page reads it through `GET /api/quips`, which returns the file as loaded
 - A category is `universal`, or a tree or mode by its file name. It may hold
   `reveal` lines, said as a film arrives, and `nope` lines, said after
   `Not that one`. The shipped file holds universal (16 reveal, 22 nope),
-  horror (18, 19) and comedy (22, 29). A tree or mode with no category of its
+  horror (18, 19), comedy (22, 29) and action (16, 19). A tree or mode with no category of its
   own, such as thriller or crime, draws universal's lines. No category draws
   another tree's lines.
 - `caps.line` is the most characters one line may hold. `caps.pair` is the
@@ -873,11 +877,14 @@ would hand one device's profiles to another.
 
 - **A film** only by a TMDB id in the current live film list. Any other id
   answers 404 before any request leaves for the media server.
-- **An image** only as `poster` at `s` (160 px), `m` (320 px) or `l` (640 px),
-  or `backdrop` at `m` (960 px) or `l` (1600 px). The media-server item id is
+- **An image** only as `poster` at `xs` (100 px), `s` (160 px), `m` (320 px)
+  or `l` (640 px), or `backdrop` at `m` (960 px) or `l` (1600 px). The media-server item id is
   never taken from the browser. It must be 32 hexadecimal characters before it
   is joined into a request. An image answer must be `image/*` and at most
-  8 MiB. Images are served with `Cache-Control: public, max-age=3600`.
+  8 MiB. An image 160 px wide or narrower, a wall tile shown dimmed, is asked
+  of the media server at quality 60; any other at quality 80. Images are served
+  with `Cache-Control: public, max-age=2592000` (30 days), so a return visit
+  draws the wall from the browser's cache.
 - **An answer** as a question id and an option index, never as a filter.
 - **Request sizes** are capped: a typed name 80 characters; a profile name 80
   and a PIN 8; topics 400; exclusions 20; answers 12; tree names 40; option
@@ -1003,7 +1010,7 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
   14 px gap, or 8 px. The answer that ends the questions brings the posters to
   10 across, or 5.2, the size they keep through the pick; "Just pick one!"
   keeps the size the wall has. Each answer re-sorts the wall in place: the
-  page waits up to 0.6 s for the pictures of the posters the new layout puts
+  page waits up to 1.5 s for the pictures of the posters the new layout puts
   on screen, then, over 0.8 s, each of them slides from the nearest place its
   film stood on screen, or in from the screen's edge toward its film's old
   place, or grows in place when its film is new to the wall; the posters of
@@ -1013,11 +1020,15 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
   nearest the screen's centre. The wall never dims between answers, and under
   reduced motion it changes without sliding. The wall drifts upward at 10 px a second,
   timed by the clock, and stands still under reduced motion. Each poster uses
-  the smallest picture (160, 320 or 640 px wide) that covers its cell at the
-  screen's pixel density; while it loads, a picture of the same film already
-  loaded at another size stands in, and with none the cell is dark, never a
-  broken-image mark. A picture that fails is not asked for again on that
-  page load. The posters ignore taps and clicks.
+  the smallest picture (100, 160, 320 or 640 px wide) that covers its cell at
+  the screen's pixel density; while it loads, a picture of the same film
+  already loaded at another size stands in, and with none the cell is dark,
+  never a broken-image mark. A dark cell whose picture arrives fades it in over
+  0.3 s. A wall laid fresh, on the page's first pool or after an empty one,
+  stays unseen until every tile's picture has loaded or failed, or for 2.5 s,
+  then fades in whole over 0.4 s, so it never fills in a cell at a time; under
+  reduced motion neither fades. A picture that fails is not asked for again on
+  that page load. The posters ignore taps and clicks.
 - **Questions.** Matinee's line types out (an acknowledgement, then the
   question), and the answers appear once it finishes. The line and the answers
   keep apart, and nothing re-centres as the line types or the answers appear:
@@ -1052,7 +1063,8 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
   the poster spacing along its axis in 1/60 s; a hop that would takes longer,
   its length unchanged. Before the hunt the whole plan is made and the picked
   film is placed in the landing cell, which is off screen until the hunt
-  brings it to the centre. Under reduced motion there is no ease and no
+  brings it to the centre (on a phone, the middle of the space above the
+  foot, below). Under reduced motion there is no ease and no
   hunt: the wall moves to the landing cell at once, and the pick waits up to
   1 s for that cell to draw the picked film. Over the last hop's pause the
   landed poster brightens to full strength while the rest of the wall dims
@@ -1080,12 +1092,26 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
   it rests. It keeps its glow at rest, at full strength, sized from its resting width. The wall stays at 12 per cent behind the resting page. On a
   desktop the resting place is the foot of the left column, as large as the height left there allows at 2:3 (never under
   160 px), while the backdrop rises on the right, fading into the title, year
-  and synopsis, shown without a tap. On a phone the poster fills the width at
-  the top, the details follow without a backdrop, and after 2.2 seconds the
-  page scrolls gently to them. The left column hangs from the top of the
+  and synopsis, shown without a tap. The left column hangs from the top of the
   screen: the line, then `Not that one`, a "More on Seerr" link to the film's
   page on the configured Seerr and `Start over` in one row, then the
-  correction link. The poster at rest is the sharp 640 px picture when it has
+  correction link.
+
+  On a phone the pick screen never scrolls, and Matinee's words keep the foot.
+  The foot is about a third of the screen (36 per cent of its height, never
+  under 270 px) and holds, from its top, the line, `Not that one` and "More on
+  Seerr", the correction link, then the trail on one line, each crumb cut to
+  16 characters, and the credits. `Start over` is not shown there: the trail's
+  `Start` beneath does the same. The wall fades out behind the foot so the
+  words read over any poster, and anything taller than the foot, such as the
+  open correction panel, scrolls inside it. The foot's top never moves from the
+  first word of a pick to the last, through `Not that one` and the next pick.
+  The space above it holds the hunt: the hunt lands, and the poster grows, at
+  the middle of the space between the top bar and the foot, not at the
+  screen's centre, the camera rising there over the same ease that stops the
+  drift. At rest the poster stands centred in that space, as large as it
+  allows at 2:3, with the title and year and a synopsis of at most three lines
+  beneath it, and no backdrop. The poster at rest is the sharp 640 px picture when it has
   loaded, else a decoded copy of the wall's own picture of the film, replaced
   by the sharp picture when it arrives; with neither, no poster rests. A backdrop that fails is left out, and a phone fetches none.
 
@@ -1138,7 +1164,7 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
   glow colour and the quip deal are modules that touch no page. Their tests
   under `tests/js/` run with `node --test` from `./check.sh`.
 - **The self-destructing reply.** When the last answer carries `self_destruct`
-  (the thriller tree's spies answer),
+  (the spies answer, behind Thriller and behind Action),
   its reply types in gold as usual, then counts down on its own one-second
   clock, whatever the hunt is doing: a large gold number beneath the reply
   shows each second in turn, fading in and out in the same place. One second
@@ -1359,11 +1385,11 @@ symbol when one does not match.
 |---|---|---|
 | `src/matinee/library/__init__.py::Library` | `src/matinee/library/__init__.py:44` | 2026-09-26 |
 | `src/matinee/library/__init__.py::LibraryFilm` | `src/matinee/library/__init__.py:20` | 2026-09-26 |
-| `src/matinee/library/jellyfin.py::JellyfinReader` | `src/matinee/library/jellyfin.py:60` | 2026-09-26 |
-| `src/matinee/library/jellyfin.py::JellyfinReader.films` | `src/matinee/library/jellyfin.py:111` | 2026-09-26 |
-| `src/matinee/library/jellyfin.py::JellyfinReader.image` (no key, size and type caps) | `src/matinee/library/jellyfin.py:95` | 2026-09-26 |
+| `src/matinee/library/jellyfin.py::JellyfinReader` | `src/matinee/library/jellyfin.py:63` | 2026-09-26 |
+| `src/matinee/library/jellyfin.py::JellyfinReader.films` | `src/matinee/library/jellyfin.py:117` | 2026-09-26 |
+| `src/matinee/library/jellyfin.py::JellyfinReader.image` (no key, size and type caps) | `src/matinee/library/jellyfin.py:98` | 2026-10-01 |
 | `src/matinee/library/jellyfin.py::ITEM_ID` | `src/matinee/library/jellyfin.py:24` | 2026-09-26 |
-| `src/matinee/library/jellyfin.py::parse_film` (`{tmdb-N}` folder tag) | `src/matinee/library/jellyfin.py:40` | 2026-09-26 |
+| `src/matinee/library/jellyfin.py::parse_film` (`{tmdb-N}` folder tag) | `src/matinee/library/jellyfin.py:43` | 2026-09-26 |
 
 ### Conversation model
 
@@ -1408,22 +1434,22 @@ symbol when one does not match.
 
 | Handle | Where | Verified |
 |---|---|---|
-| `tools/check_trees.py::main` | `tools/check_trees.py:450` | 2026-09-30 |
-| `tools/check_trees.py::SAMPLES` | `tools/check_trees.py:64` | 2026-09-30 |
-| `tools/check_trees.py::check_answer_coverage` | `tools/check_trees.py:291` | 2026-09-30 |
-| `tools/check_trees.py::check_same_answers` | `tools/check_trees.py:320` | 2026-09-30 |
-| `tools/check_trees.py::check_sample` | `tools/check_trees.py:349` | 2026-09-30 |
-| `tools/check_trees.py::check_homes` | `tools/check_trees.py:337` | 2026-09-30 |
-| `tools/check_trees.py::door_pools` (only doors are homes) | `tools/check_trees.py:112` | 2026-09-30 |
-| `tools/check_trees.py::check_apart` | `tools/check_trees.py:118` | 2026-09-30 |
-| `tools/check_trees.py::check_kinds` / `report_waiting` | `tools/check_trees.py:378` | 2026-09-30 |
-| `tools/check_trees.py::check_hidden` | `tools/check_trees.py:404` | 2026-09-30 |
-| `tools/check_trees.py::check_pins_in_key` | `tools/check_trees.py:237` | 2026-09-30 |
-| `tools/check_trees.py::SPECIALS_KIND` (a `specials` pin's fixture) | `tools/check_trees.py:67` | 2026-09-30 |
-| `tools/check_trees.py::check_gore` | `tools/check_trees.py:280` | 2026-09-30 |
-| `tools/check_trees.py::check_lists` | `tools/check_trees.py:131` | 2026-09-30 |
-| `tools/check_trees.py::check_data` | `tools/check_trees.py:440` | 2026-09-30 |
-| `tools/check_trees.py::check_quips` | `tools/check_trees.py:430` | 2026-09-30 |
+| `tools/check_trees.py::main` | `tools/check_trees.py:498` | 2026-09-30 |
+| `tools/check_trees.py::SAMPLES` | `tools/check_trees.py:67` | 2026-09-30 |
+| `tools/check_trees.py::check_answer_coverage` | `tools/check_trees.py:295` | 2026-09-30 |
+| `tools/check_trees.py::check_same_answers` | `tools/check_trees.py:324` | 2026-09-30 |
+| `tools/check_trees.py::check_sample` | `tools/check_trees.py:353` | 2026-09-30 |
+| `tools/check_trees.py::check_homes` | `tools/check_trees.py:341` | 2026-09-30 |
+| `tools/check_trees.py::door_pools` (only doors are homes) | `tools/check_trees.py:116` | 2026-09-30 |
+| `tools/check_trees.py::check_apart` | `tools/check_trees.py:122` | 2026-09-30 |
+| `tools/check_trees.py::check_kinds` / `report_waiting` | `tools/check_trees.py:382` | 2026-09-30 |
+| `tools/check_trees.py::check_hidden` | `tools/check_trees.py:452` | 2026-09-30 |
+| `tools/check_trees.py::check_pins_in_key` | `tools/check_trees.py:241` | 2026-09-30 |
+| `tools/check_trees.py::SPECIALS_KIND` (a `specials` pin's fixture) | `tools/check_trees.py:71` | 2026-09-30 |
+| `tools/check_trees.py::check_gore` | `tools/check_trees.py:284` | 2026-09-30 |
+| `tools/check_trees.py::check_lists` | `tools/check_trees.py:135` | 2026-09-30 |
+| `tools/check_trees.py::check_data` | `tools/check_trees.py:488` | 2026-09-30 |
+| `tools/check_trees.py::check_quips` | `tools/check_trees.py:478` | 2026-09-30 |
 | `data/answer_key.json` list tags | `data/answer_key.json:3` | 2026-09-30 |
 | `data/answer_key.json` `hidden` | `data/answer_key.json:18` | 2026-09-30 |
 
@@ -1441,12 +1467,12 @@ symbol when one does not match.
 
 | Handle | Where | Verified |
 |---|---|---|
-| `src/matinee/pools.py::build_pools` (labelled films, the waiting room and pins; comedy holds the specials) | `src/matinee/pools.py:184` | 2026-09-30 |
+| `src/matinee/pools.py::build_pools` (labelled films, the waiting room and pins; comedy holds the specials) | `src/matinee/pools.py:187` | 2026-09-30 |
 | `src/matinee/pools.py::SCORES` (the fall-asleep mode) | `src/matinee/pools.py:46` | 2026-09-30 |
-| `src/matinee/pools.py::kids_bands` / `kids_band` / `CERTIFICATE_BANDS` | `src/matinee/pools.py:138` | 2026-09-30 |
-| `src/matinee/pools.py::waiting` / `WAITING_ROOM` / `GENRE_DOORS` | `src/matinee/pools.py:177` | 2026-09-30 |
-| `src/matinee/pools.py::standup_specials` | `src/matinee/pools.py:155` | 2026-09-30 |
-| `src/matinee/pools.py::specials` (the rule plus `specials` pins) | `src/matinee/pools.py:172` | 2026-09-30 |
+| `src/matinee/pools.py::kids_bands` / `kids_band` / `CERTIFICATE_BANDS` | `src/matinee/pools.py:141` | 2026-09-30 |
+| `src/matinee/pools.py::waiting` / `WAITING_ROOM` / `GENRE_DOORS` | `src/matinee/pools.py:180` | 2026-09-30 |
+| `src/matinee/pools.py::standup_specials` | `src/matinee/pools.py:158` | 2026-09-30 |
+| `src/matinee/pools.py::specials` (the rule plus `specials` pins) | `src/matinee/pools.py:175` | 2026-09-30 |
 | `src/matinee/reference.py::reference_films` | `src/matinee/reference.py:140` | 2026-09-30 |
 | `src/matinee/reference.py::compute_tree` | `src/matinee/reference.py:155` | 2026-09-30 |
 | `src/matinee/reference.py::problems` | `src/matinee/reference.py:225` | 2026-09-30 |
@@ -1467,7 +1493,7 @@ symbol when one does not match.
 | `data/trees/horror.json` gore scale | `data/trees/horror.json:38` | 2026-09-26 |
 | `data/trees/horror.json` gore question, `skip_if_topics`, `treat_as` | `data/trees/horror.json:134` | 2026-09-27 |
 | `data/trees/horror.json` labelled flavours (the kinds' rules) | `data/trees/horror.json:244` | 2026-09-30 |
-| `src/matinee/labels.py::load_labels` (format 2; format 1 refused) / `Labels` / `TreeLabels` | `src/matinee/labels.py:74` | 2026-09-30 |
+| `src/matinee/labels.py::load_labels` (format 2; format 1 refused) / `Labels` / `TreeLabels` | `src/matinee/labels.py:75` | 2026-09-30 |
 | `src/matinee/pools.py::load_house` / `House` (`House.specials`) | `src/matinee/pools.py:93` | 2026-09-30 |
 | `src/matinee/engine.py::_check_labels` (unknown tree or kind refused) | `src/matinee/engine.py:313` | 2026-09-30 |
 | `src/matinee/engine.py::house_flavour` (a `specials` flavour holds the standup specials) | `src/matinee/engine.py:171` | 2026-09-30 |
@@ -1543,14 +1569,14 @@ symbol when one does not match.
 |---|---|---|
 | `src/matinee/web/main.py::build` (reads the quips) | `src/matinee/web/main.py:27` | 2026-09-28 |
 | `src/matinee/web/config.py::from_env` | `src/matinee/web/config.py:47` | 2026-09-26 |
-| `src/matinee/web/app.py::create_app` (docs disabled) | `src/matinee/web/app.py:235` | 2026-09-28 |
-| `src/matinee/web/app.py::SECURITY_HEADERS` | `src/matinee/web/app.py:191` | 2026-09-28 |
-| `src/matinee/web/app.py::add_page` | `src/matinee/web/app.py:203` | 2026-09-28 |
-| `src/matinee/web/app.py::add_quip_routes` (`GET /api/quips`) | `src/matinee/web/app.py:228` | 2026-09-28 |
-| `src/matinee/web/app.py::add_film_routes` / `IMAGE_WIDTHS` | `src/matinee/web/app.py:124` | 2026-09-28 |
-| `src/matinee/web/app.py::held` | `src/matinee/web/app.py:84` | 2026-09-28 |
-| `src/matinee/web/app.py::add_door_routes` | `src/matinee/web/app.py:156` | 2026-09-28 |
-| `src/matinee/web/app.py::add_error_handlers` | `src/matinee/web/app.py:93` | 2026-09-28 |
+| `src/matinee/web/app.py::create_app` (docs disabled) | `src/matinee/web/app.py:238` | 2026-09-28 |
+| `src/matinee/web/app.py::SECURITY_HEADERS` | `src/matinee/web/app.py:194` | 2026-09-28 |
+| `src/matinee/web/app.py::add_page` | `src/matinee/web/app.py:206` | 2026-09-28 |
+| `src/matinee/web/app.py::add_quip_routes` (`GET /api/quips`) | `src/matinee/web/app.py:231` | 2026-09-28 |
+| `src/matinee/web/app.py::add_film_routes` / `IMAGE_WIDTHS` | `src/matinee/web/app.py:126` | 2026-10-01 |
+| `src/matinee/web/app.py::held` | `src/matinee/web/app.py:86` | 2026-09-28 |
+| `src/matinee/web/app.py::add_door_routes` | `src/matinee/web/app.py:159` | 2026-09-28 |
+| `src/matinee/web/app.py::add_error_handlers` | `src/matinee/web/app.py:95` | 2026-09-28 |
 | `src/matinee/web/common.py::Problem` | `src/matinee/web/common.py:102` | 2026-09-26 |
 | `src/matinee/web/viewing.py::add_viewing_routes` | `src/matinee/web/viewing.py:269` | 2026-09-30 |
 | `src/matinee/web/viewing.py::WalkIn` / `PickIn` (request caps) | `src/matinee/web/viewing.py:48` | 2026-09-30 |
@@ -1575,14 +1601,14 @@ symbol when one does not match.
 | `src/matinee/web/static/js/about.js::openAbout` | `src/matinee/web/static/js/about.js:111` | 2026-09-30 |
 | `src/matinee/web/static/js/about.js::close` (popstate; Escape steps back) | `src/matinee/web/static/js/about.js:94` | 2026-09-30 |
 | `src/matinee/web/static/js/about.js::copy` (the About page's words and links) | `src/matinee/web/static/js/about.js:21` | 2026-09-30 |
-| `src/matinee/web/static/js/wall-grid.js::posterAcross` / `ACROSS` / `GAP` | `src/matinee/web/static/js/wall-grid.js:26` | 2026-09-28 |
-| `src/matinee/web/static/js/wall-grid.js::wallLayout` | `src/matinee/web/static/js/wall-grid.js:36` | 2026-09-28 |
-| `src/matinee/web/static/js/wall-grid.js::bestStride` / `repeatDistance` | `src/matinee/web/static/js/wall-grid.js:60` | 2026-09-28 |
-| `src/matinee/web/static/js/wall-grid.js::filmIndex` / `nearestCell` / `filmAt` | `src/matinee/web/static/js/wall-grid.js:70` | 2026-09-28 |
-| `src/matinee/web/static/js/wall-grid.js::pictureSize` | `src/matinee/web/static/js/wall-grid.js:88` | 2026-09-28 |
-| `src/matinee/web/static/js/wall-grid.js::rankPool` (the page's order) | `src/matinee/web/static/js/wall-grid.js:97` | 2026-09-28 |
-| `src/matinee/web/static/js/wall-grid.js::resortAnchor` | `src/matinee/web/static/js/wall-grid.js:140` | 2026-09-28 |
-| `src/matinee/web/static/js/wall-grid.js::resortPlan` | `src/matinee/web/static/js/wall-grid.js:167` | 2026-09-28 |
+| `src/matinee/web/static/js/wall-grid.js::posterAcross` / `ACROSS` / `GAP` | `src/matinee/web/static/js/wall-grid.js:27` | 2026-09-28 |
+| `src/matinee/web/static/js/wall-grid.js::wallLayout` | `src/matinee/web/static/js/wall-grid.js:37` | 2026-09-28 |
+| `src/matinee/web/static/js/wall-grid.js::bestStride` / `repeatDistance` | `src/matinee/web/static/js/wall-grid.js:61` | 2026-09-28 |
+| `src/matinee/web/static/js/wall-grid.js::filmIndex` / `nearestCell` / `filmAt` | `src/matinee/web/static/js/wall-grid.js:71` | 2026-09-28 |
+| `src/matinee/web/static/js/wall-grid.js::pictureSize` | `src/matinee/web/static/js/wall-grid.js:89` | 2026-10-01 |
+| `src/matinee/web/static/js/wall-grid.js::rankPool` (the page's order) | `src/matinee/web/static/js/wall-grid.js:98` | 2026-09-28 |
+| `src/matinee/web/static/js/wall-grid.js::resortAnchor` | `src/matinee/web/static/js/wall-grid.js:141` | 2026-09-28 |
+| `src/matinee/web/static/js/wall-grid.js::resortPlan` | `src/matinee/web/static/js/wall-grid.js:168` | 2026-09-28 |
 | `src/matinee/web/static/js/hunt-plan.js::HOP_TABLE` / `hopCount` | `src/matinee/web/static/js/hunt-plan.js:7` | 2026-09-28 |
 | `src/matinee/web/static/js/hunt-plan.js::hopOffset` (the tick) / `TICK_PX` | `src/matinee/web/static/js/hunt-plan.js:58` | 2026-09-28 |
 | `src/matinee/web/static/js/hunt-plan.js::peakStep` / `limitedTime` (the speed limit) | `src/matinee/web/static/js/hunt-plan.js:65` | 2026-09-28 |
@@ -1593,40 +1619,40 @@ symbol when one does not match.
 | `src/matinee/web/static/js/quips.js::setFor` | `src/matinee/web/static/js/quips.js:9` | 2026-09-30 |
 | `src/matinee/web/static/js/quips.js::Deck` | `src/matinee/web/static/js/quips.js:19` | 2026-09-30 |
 | `src/matinee/web/static/js/quips.js::dealPair` / `dealBeneath` | `src/matinee/web/static/js/quips.js:51` | 2026-09-30 |
-| `src/matinee/web/static/js/wall.js::Wall` | `src/matinee/web/static/js/wall.js:81` | 2026-09-28 |
-| `src/matinee/web/static/js/wall.js::Wall.show` / `clear` / `whenStill` | `src/matinee/web/static/js/wall.js:123` | 2026-09-28 |
-| `src/matinee/web/static/js/wall.js::Wall.endPick` | `src/matinee/web/static/js/wall.js:167` | 2026-09-28 |
-| `src/matinee/web/static/js/wall.js::Wall.hunt` / `jump` / `readyToHunt` / `settle` / `hop` | `src/matinee/web/static/js/wall.js:212` | 2026-09-28 |
-| `src/matinee/web/static/js/wall.js::Wall.stepBack` / `grownScale` | `src/matinee/web/static/js/wall.js:287` | 2026-09-28 |
-| `src/matinee/web/static/js/wall.js::Wall.useSharp` (the front element) | `src/matinee/web/static/js/wall.js:309` | 2026-09-28 |
-| `src/matinee/web/static/js/wall.js::Wall.bringForward` | `src/matinee/web/static/js/wall.js:328` | 2026-09-28 |
-| `src/matinee/web/static/js/wall.js::Wall.dress` / `glowShadow` / `glowAt` | `src/matinee/web/static/js/wall.js:350` | 2026-09-29 |
-| `src/matinee/web/static/js/wall.js::glowOf` | `src/matinee/web/static/js/wall.js:52` | 2026-09-28 |
-| `src/matinee/web/static/js/wall.js::Wall.putBack` / `returnPoster` / `liftDim` / `settleBack` | `src/matinee/web/static/js/wall.js:391` | 2026-09-28 |
-| `src/matinee/web/static/js/wall.js::Wall.relayout` / `makeTiles` | `src/matinee/web/static/js/wall.js:491` | 2026-09-28 |
-| `src/matinee/web/static/js/wall.js::Wall.prepare` (the re-sort's wait) | `src/matinee/web/static/js/wall.js:524` | 2026-09-28 |
-| `src/matinee/web/static/js/wall.js::Wall.frame` (the drift, `DRIFT_PX_S`) | `src/matinee/web/static/js/wall.js:544` | 2026-09-28 |
-| `src/matinee/web/static/js/wall.js::Wall.place` / `lay` / `picture` / `request` (`BLANK`) | `src/matinee/web/static/js/wall.js:555` | 2026-09-28 |
-| `src/matinee/web/static/js/wall.js::Wall.resort` / `slide` / `depart` | `src/matinee/web/static/js/wall.js:635` | 2026-09-28 |
+| `src/matinee/web/static/js/wall.js::Wall` | `src/matinee/web/static/js/wall.js:91` | 2026-09-28 |
+| `src/matinee/web/static/js/wall.js::Wall.show` / `fadeIn` / `clear` / `whenStill` | `src/matinee/web/static/js/wall.js:134` | 2026-10-01 |
+| `src/matinee/web/static/js/wall.js::Wall.endPick` | `src/matinee/web/static/js/wall.js:188` | 2026-09-28 |
+| `src/matinee/web/static/js/wall.js::Wall.hunt` / `jump` / `readyToHunt` / `settle` / `hop` | `src/matinee/web/static/js/wall.js:234` | 2026-10-01 |
+| `src/matinee/web/static/js/wall.js::Wall.stepBack` / `grownScale` | `src/matinee/web/static/js/wall.js:321` | 2026-09-28 |
+| `src/matinee/web/static/js/wall.js::Wall.useSharp` (the front element) | `src/matinee/web/static/js/wall.js:343` | 2026-09-28 |
+| `src/matinee/web/static/js/wall.js::Wall.bringForward` | `src/matinee/web/static/js/wall.js:362` | 2026-09-28 |
+| `src/matinee/web/static/js/wall.js::Wall.dress` / `glowShadow` / `glowAt` | `src/matinee/web/static/js/wall.js:384` | 2026-09-29 |
+| `src/matinee/web/static/js/wall.js::glowOf` | `src/matinee/web/static/js/wall.js:54` | 2026-09-28 |
+| `src/matinee/web/static/js/wall.js::Wall.putBack` / `returnPoster` / `liftDim` / `settleBack` | `src/matinee/web/static/js/wall.js:431` | 2026-09-28 |
+| `src/matinee/web/static/js/wall.js::Wall.relayout` / `makeTiles` | `src/matinee/web/static/js/wall.js:531` | 2026-09-28 |
+| `src/matinee/web/static/js/wall.js::Wall.prepare` (the re-sort's wait) | `src/matinee/web/static/js/wall.js:564` | 2026-10-01 |
+| `src/matinee/web/static/js/wall.js::Wall.frame` (the drift, `DRIFT_PX_S`) | `src/matinee/web/static/js/wall.js:584` | 2026-09-28 |
+| `src/matinee/web/static/js/wall.js::Wall.place` / `lay` / `picture` / `request` (`BLANK`) | `src/matinee/web/static/js/wall.js:595` | 2026-09-28 |
+| `src/matinee/web/static/js/wall.js::Wall.resort` / `slide` / `depart` | `src/matinee/web/static/js/wall.js:675` | 2026-09-28 |
 | `src/matinee/web/static/js/main.js::lockStage` / `leaveTo` / `nameTag` | `src/matinee/web/static/js/main.js:56` | 2026-09-30 |
-| `src/matinee/web/static/js/main.js::trail` | `src/matinee/web/static/js/main.js:100` | 2026-09-30 |
-| `src/matinee/web/static/js/main.js::frame` / `ask` (the footnote) | `src/matinee/web/static/js/main.js:122` | 2026-09-30 |
-| `src/matinee/web/static/js/main.js::start` | `src/matinee/web/static/js/main.js:214` | 2026-09-30 |
-| `src/matinee/web/static/js/main.js::backTo` / `step` | `src/matinee/web/static/js/main.js:242` | 2026-09-30 |
+| `src/matinee/web/static/js/main.js::trail` / `lastCrumb` | `src/matinee/web/static/js/main.js:101` | 2026-10-01 |
+| `src/matinee/web/static/js/main.js::frame` / `ask` (the footnote) | `src/matinee/web/static/js/main.js:121` | 2026-09-30 |
+| `src/matinee/web/static/js/main.js::start` | `src/matinee/web/static/js/main.js:213` | 2026-09-30 |
+| `src/matinee/web/static/js/main.js::goTo` / `step` | `src/matinee/web/static/js/main.js:242` | 2026-10-01 |
 | `src/matinee/web/static/js/main.js::checking` / `fadeTalk` (`READ_MS`) | `src/matinee/web/static/js/main.js:292` | 2026-09-30 |
 | `src/matinee/web/static/js/main.js::pickLines` | `src/matinee/web/static/js/main.js:310` | 2026-09-30 |
 | `src/matinee/web/static/js/main.js::clearForPick` / `requestPick` / `openPick` | `src/matinee/web/static/js/main.js:324` | 2026-09-30 |
 | `src/matinee/web/static/js/main.js::pickNow` (`notThatOne`, `rollAgain`, `justPick`) | `src/matinee/web/static/js/main.js:368` | 2026-09-30 |
-| `src/matinee/web/static/js/main.js::enter` (the start asked at the tap, the question after the landing) | `src/matinee/web/static/js/main.js:204` | 2026-09-30 |
+| `src/matinee/web/static/js/main.js::enter` (the start asked at the tap, the question after the landing) | `src/matinee/web/static/js/main.js:203` | 2026-09-30 |
 | `src/matinee/web/static/js/main.js::topbar` (settles a landed name) | `src/matinee/web/static/js/main.js:70` | 2026-09-30 |
-| `src/matinee/web/static/js/main.js::problem` (`keep`: the failed start's posters) | `src/matinee/web/static/js/main.js:177` | 2026-09-30 |
-| `src/matinee/web/static/js/pick.js::showPick` | `src/matinee/web/static/js/pick.js:239` | 2026-09-30 |
-| `src/matinee/web/static/js/pick.js::goldLine` | `src/matinee/web/static/js/pick.js:193` | 2026-09-30 |
-| `src/matinee/web/static/js/pick.js::bringOut` | `src/matinee/web/static/js/pick.js:217` | 2026-09-30 |
-| `src/matinee/web/static/js/pick.js::toRest` (`BEAT_MS`, `STILL_HOLD_MS`) | `src/matinee/web/static/js/pick.js:262` | 2026-09-30 |
-| `src/matinee/web/static/js/pick.js::fetchFilm` / `picture` | `src/matinee/web/static/js/pick.js:275` | 2026-09-30 |
-| `src/matinee/web/static/js/pick.js::restingPoster` | `src/matinee/web/static/js/pick.js:176` | 2026-09-30 |
-| `src/matinee/web/static/js/pick.js::rest` | `src/matinee/web/static/js/pick.js:154` | 2026-09-30 |
+| `src/matinee/web/static/js/main.js::problem` (`keep`: the failed start's posters) | `src/matinee/web/static/js/main.js:176` | 2026-09-30 |
+| `src/matinee/web/static/js/pick.js::showPick` / `huntLift` | `src/matinee/web/static/js/pick.js:243` | 2026-10-01 |
+| `src/matinee/web/static/js/pick.js::goldLine` | `src/matinee/web/static/js/pick.js:188` | 2026-09-30 |
+| `src/matinee/web/static/js/pick.js::bringOut` | `src/matinee/web/static/js/pick.js:221` | 2026-09-30 |
+| `src/matinee/web/static/js/pick.js::toRest` (`BEAT_MS`, `STILL_HOLD_MS`) | `src/matinee/web/static/js/pick.js:266` | 2026-09-30 |
+| `src/matinee/web/static/js/pick.js::fetchFilm` / `picture` | `src/matinee/web/static/js/pick.js:279` | 2026-09-30 |
+| `src/matinee/web/static/js/pick.js::restingPoster` | `src/matinee/web/static/js/pick.js:171` | 2026-09-30 |
+| `src/matinee/web/static/js/pick.js::rest` | `src/matinee/web/static/js/pick.js:154` | 2026-10-01 |
 | `src/matinee/web/static/js/pick.js::settle` / `fit` | `src/matinee/web/static/js/pick.js:42` | 2026-09-30 |
 | `src/matinee/web/static/js/fuse.js::lightFuse` / `fuseTimeline` | `src/matinee/web/static/js/fuse.js:37` | 2026-09-30 |
 | `src/matinee/trees.py::_self_destruct` / `_one_self_destruct` | `src/matinee/trees.py:178` | 2026-09-30 |

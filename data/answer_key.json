@@ -1216,6 +1216,24 @@
         "crime"
       ],
       "note": "a film for the whole family never counts as crime (the operator, 2026-09-30)"
+    },
+    {
+      "title": "Fast Five",
+      "tmdb": 51497,
+      "must_reach": [
+        "action",
+        "crime"
+      ],
+      "note": "Action's cars answer reaches it, beside Crime's heists (2026-10-01)"
+    },
+    {
+      "title": "Speed",
+      "tmdb": 1637,
+      "must_reach": [
+        "action",
+        "thriller"
+      ],
+      "note": "Action's cars answer reaches it, beside Thriller's trapped (2026-10-01)"
     }
   ]
 }

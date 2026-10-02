@@ -29,7 +29,7 @@ def test_the_caps_are_the_measured_ones() -> None:
 def test_the_file_holds_every_approved_line() -> None:
     quips = load_quips()
     counts = {name: (len(s.reveal), len(s.nope)) for name, s in quips.categories.items()}
-    assert counts == {"universal": (16, 22), "horror": (18, 19), "comedy": (22, 29)}
+    assert counts == {"universal": (16, 22), "horror": (18, 19), "comedy": (22, 29), "action": (16, 19)}
 
 
 @pytest.mark.parametrize(

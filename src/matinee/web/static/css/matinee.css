@@ -98,6 +98,13 @@ button {
   left: 0;
   top: 0;
   will-change: transform;
+  transition: opacity 400ms ease-out;
+}
+
+/* A wall laid fresh, unseen until its pictures can be drawn (wall.js fadeIn). */
+.wall-tiles.waiting {
+  opacity: 0;
+  transition: none;
 }
 
 .wall-tiles[hidden],
@@ -184,7 +191,7 @@ button {
   }
 }
 
-/* The answers so far, bottom centre in the pinned bar: small, gold, one crumb per answer. */
+/* The way here, bottom centre in the pinned bar: small, gold, one crumb per step. */
 .trail ol {
   display: flex;
   flex-wrap: wrap;
@@ -229,8 +236,16 @@ button {
   cursor: pointer;
 }
 
+/* The crumb for the screen showing now: the same words, not a link. */
+.crumb.here {
+  display: inline-block;
+  line-height: 32px;
+  text-decoration: none;
+  cursor: default;
+}
+
 @media (hover: hover) {
-  .crumb:hover {
+  button.crumb:hover {
     color: var(--gold-hover);
     text-decoration-color: currentColor;
   }
@@ -601,6 +616,10 @@ button {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .wall-tiles {
+    transition: none;
+  }
+
   .countdown.tick {
     animation: none;
     opacity: 1;
@@ -826,64 +845,104 @@ button {
   }
 }
 
+/* On a phone the pick fills the screen and never scrolls. The top two thirds hold the hunt and the
+   resting poster, with its title and synopsis beneath it. The foot, about a third of the screen,
+   holds Matinee's line, the buttons and the trail; its top never moves from the first word of a pick
+   to the last, and anything taller than it (the correction panel) scrolls inside it. */
 @media (max-width: 600px) {
-  .showing {
+  .stage:has(> .showing) {
+    --pick-talk: calc(max(270px, 36svh) - 64px);
+    display: grid;
     grid-template-columns: minmax(0, 1fr);
-    align-content: end;
-    gap: 20px;
+    grid-template-rows: auto minmax(0, 1fr) auto var(--pick-talk) auto;
+    gap: 12px;
+    overflow: hidden;
   }
 
-  .stage.revealed .showing {
-    align-content: start;
-  }
-
-  /* On a phone the poster fills the first screen, the details follow, and the aside comes last. */
+  .showing,
   .pick-left {
     display: contents;
   }
 
   .poster-slot {
-    grid-row: 1;
-    height: calc(100svh - 150px);
+    grid-row: 2;
+    min-height: 0;
     justify-content: center;
-    align-items: flex-start;
+    align-items: center;
   }
 
   .feature {
     grid-column: 1;
-    grid-row: 2;
-    margin: 0 calc(var(--pad) * -1);
-  }
-
-  .showing:has(.poster-slot) .backdrop {
-    display: none;
-  }
-
-  .showing:has(.poster-slot) .feature-text {
-    margin-top: 0;
+    grid-row: 3;
   }
 
   .backdrop {
-    height: 34vh;
-    border-radius: 0;
+    display: none;
   }
 
   .feature-text {
-    padding: 0 var(--pad);
-    margin-top: -50px;
+    padding: 0;
+    margin-top: 0;
+    gap: 4px;
   }
 
   .film-title {
-    font-size: 34px;
+    font-size: 30px;
   }
 
   .synopsis {
-    font-size: 16px;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 3;
+    overflow: hidden;
+    font-size: 15px;
+  }
+
+  /* The foot's backing: the wall fades out behind Matinee's words, so they read over any poster. */
+  .stage:has(> .showing)::after {
+    content: "";
+    position: fixed;
+    inset: auto 0 0;
+    height: calc(var(--pick-talk) + 120px);
+    background: linear-gradient(to top, rgba(7, 8, 13, 0.92) calc(100% - 56px), rgba(7, 8, 13, 0));
+    pointer-events: none;
   }
 
   .aside {
-    grid-row: 3;
+    grid-row: 4;
+    position: relative;
+    z-index: 1;
     max-width: none;
+    min-height: 0;
+    overflow-y: auto;
+    gap: 8px;
+  }
+
+  .aside .correct > .link-button {
+    min-height: 32px;
+  }
+
+  /* "Start over" is the trail's "Start", just beneath; the foot keeps the room for the correction. */
+  .aside .choices > .link-button {
+    display: none;
+  }
+
+  .stage:has(> .showing) > .bottombar {
+    grid-row: 5;
+    position: relative;
+    z-index: 1;
+    padding-top: 0;
+    row-gap: 2px;
+    background: none;
+  }
+
+  /* One line of crumbs, each shortened, so the foot keeps its height on every pick. */
+  .stage:has(> .showing) .trail ol {
+    flex-wrap: nowrap;
+  }
+
+  .stage:has(> .showing) .crumb {
+    max-width: 16ch;
   }
 }
 

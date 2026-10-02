@@ -314,12 +314,20 @@ def test_a_bad_self_destruct_refuses_to_load(tmp_path: Path, seconds: Any) -> No
         load_catalog(make_table(), write_data(tmp_path, tree), reference())
 
 
-def test_only_one_answer_may_self_destruct(tmp_path: Path) -> None:
+def test_only_one_reply_may_self_destruct(tmp_path: Path) -> None:
     tree = json.loads(json.dumps(TREE))
     tree["questions"][2]["options"][0]["self_destruct"] = 5
     tree["questions"][2]["options"][1]["self_destruct"] = 5
-    with pytest.raises(ValueError, match="only one answer may self-destruct"):
+    with pytest.raises(ValueError, match="only one reply may self-destruct"):
         load_catalog(make_table(), write_data(tmp_path, tree), reference())
+
+
+def test_the_one_self_destructing_reply_may_stand_behind_two_answers(tmp_path: Path) -> None:
+    tree = json.loads(json.dumps(TREE))
+    for option in tree["questions"][2]["options"][:2]:
+        option["self_destruct"] = 5
+        option["reply"] = "this message will self-destruct."
+    load_catalog(make_table(), write_data(tmp_path, tree), reference())
 
 
 def mask_of(cat: Catalog, **kw: Any) -> list[int]:
