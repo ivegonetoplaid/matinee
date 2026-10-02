@@ -54,9 +54,11 @@ from matinee.web.viewing import (
 
 log = logging.getLogger("matinee.web")
 IMAGE_WIDTHS: dict[ImageKind, dict[str, int]] = {
-    "poster": {"s": 160, "m": 320, "l": 640},
+    "poster": {"xs": 100, "s": 160, "m": 320, "l": 640},
     "backdrop": {"m": 960, "l": 1600},
 }
+# A film's poster seldom changes; a month spares every return visit the wall's downloads.
+IMAGE_MAX_AGE_S = 30 * 24 * 3600
 UNREACHABLE = "I can't reach the film library right now."
 NOT_READY = "Matinee isn't ready: its film data needs rebuilding."
 NOT_FOUND = "I don't have that one."
@@ -133,7 +135,8 @@ def add_film_routes(app: FastAPI, theatre: Theatre, seerr: str) -> None:
         except LibraryError as exc:
             log.warning("image %s for tmdb %s: %s", kind, tmdb, exc)
             raise HTTPException(status_code=404, detail="not_found") from exc
-        return Response(img.body, media_type=img.content_type, headers={"Cache-Control": "public, max-age=3600"})
+        cache = {"Cache-Control": f"public, max-age={IMAGE_MAX_AGE_S}"}
+        return Response(img.body, media_type=img.content_type, headers=cache)
 
     @app.get("/api/film/{tmdb}")
     def film(tmdb: int) -> FilmCard:

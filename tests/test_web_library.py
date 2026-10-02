@@ -100,7 +100,7 @@ def test_image_is_served_by_tmdb_id_at_a_fixed_size(world: Any) -> None:
     resp = client.get("/img/poster/5/m")
     assert resp.status_code == 200 and resp.content == b"\xff\xd8jpeg"
     assert resp.headers["content-type"] == "image/jpeg"
-    assert resp.headers["cache-control"] == "public, max-age=3600"
+    assert resp.headers["cache-control"] == "public, max-age=2592000"
     assert ("image", ("f" * 32, "poster", 320)) in library.calls  # the live item id, not the table's
     assert client.get("/img/backdrop/6/l").status_code == 200
     assert ("image", (item(6), "backdrop", 1600)) in library.calls
@@ -215,10 +215,12 @@ def test_the_jellyfin_image_request_carries_no_key_and_refuses_odd_ids(monkeypat
     assert sent[0].get_method() == "GET"
     assert sent[0].full_url == f"{SECRET_URL}/Items/{item(5)}/Images/Backdrop/0?maxWidth=960&quality=80"
     assert not {k.lower() for k in sent[0].headers} & {"x-emby-token", "authorization"}
+    reader.image(item(5), "poster", 160)
+    assert sent[1].full_url.endswith("/Images/Primary?maxWidth=160&quality=60")
     for bad in ("../../System", "5", item(5) + "/x"):
         with pytest.raises(LibraryError):
             reader.image(bad, "poster", 320)
-    assert len(sent) == 1
+    assert len(sent) == 2
 
 
 def test_config_refuses_missing_settings_and_a_missing_state_dir(tmp_path: Path) -> None:

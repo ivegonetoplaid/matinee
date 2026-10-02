@@ -76,6 +76,7 @@ test("posters grow as the pool narrows and rest at the resting size", () => {
 });
 
 test("the wall picture is the smallest that covers the cell", () => {
+  assert.equal(pictureSize(28, 3), "xs");
   assert.equal(pictureSize(128, 1), "s");
   assert.equal(pictureSize(160, 1), "s");
   assert.equal(pictureSize(192, 1), "m");

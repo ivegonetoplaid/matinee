@@ -98,6 +98,13 @@ button {
   left: 0;
   top: 0;
   will-change: transform;
+  transition: opacity 400ms ease-out;
+}
+
+/* A wall laid fresh, unseen until its pictures can be drawn (wall.js fadeIn). */
+.wall-tiles.waiting {
+  opacity: 0;
+  transition: none;
 }
 
 .wall-tiles[hidden],
@@ -609,6 +616,10 @@ button {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .wall-tiles {
+    transition: none;
+  }
+
   .countdown.tick {
     animation: none;
     opacity: 1;

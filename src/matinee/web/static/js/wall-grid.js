@@ -14,6 +14,7 @@ export const POSTER_RATIO = 1.5; // height over width
 const REPEAT_ROWS = 64; // rows searched for a film's nearest repeat when choosing the stride
 // Poster picture widths the server offers, smallest first.
 const PICTURE_WIDTHS = [
+  ["xs", 100],
   ["s", 160],
   ["m", 320],
   ["l", 640],
