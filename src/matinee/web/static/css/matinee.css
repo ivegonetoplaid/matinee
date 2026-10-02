@@ -845,35 +845,44 @@ button {
   }
 }
 
-/* On a phone the pick fills the screen and never scrolls. The top two thirds hold the hunt and the
-   resting poster, with its title and synopsis beneath it. The foot, about a third of the screen,
-   holds Matinee's line, the buttons and the trail; its top never moves from the first word of a pick
-   to the last, and anything taller than it (the correction panel) scrolls inside it. */
+/* On a phone Matinee's words keep the foot of the pick, about a third of the screen: the line, the
+   buttons and the correction link, then the trail on one line and the credits; its top never moves from
+   the first word of a pick to the last. Above it the showing scrolls on its own and ends at the foot, so
+   nothing passes behind the words: the poster fills it first, and the details follow beneath. */
 @media (max-width: 600px) {
   .stage:has(> .showing) {
     --pick-talk: calc(max(270px, 36svh) - 64px);
     display: grid;
     grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: auto minmax(0, 1fr) auto var(--pick-talk) auto;
+    grid-template-rows: auto minmax(0, 1fr) var(--pick-talk) auto;
     gap: 12px;
     overflow: hidden;
   }
 
-  .showing,
+  /* Runs to the screen's sides, and fades at its top and foot, so the poster's glow is never cut square. */
+  .showing {
+    display: block;
+    min-height: 0;
+    margin: 0 calc(var(--pad) * -1);
+    padding: 0 var(--pad);
+    overflow-y: auto;
+    scrollbar-width: none;
+    mask-image: linear-gradient(transparent, #000 28px, #000 calc(100% - 28px), transparent);
+  }
+
   .pick-left {
     display: contents;
   }
 
   .poster-slot {
-    grid-row: 2;
-    min-height: 0;
+    height: calc(100% - 56px);
+    margin: 28px 0;
     justify-content: center;
     align-items: center;
   }
 
   .feature {
-    grid-column: 1;
-    grid-row: 3;
+    padding-top: 20px;
   }
 
   .backdrop {
@@ -883,35 +892,17 @@ button {
   .feature-text {
     padding: 0;
     margin-top: 0;
-    gap: 4px;
   }
 
   .film-title {
-    font-size: 30px;
+    font-size: 34px;
   }
 
   .synopsis {
-    display: -webkit-box;
-    -webkit-box-orient: vertical;
-    -webkit-line-clamp: 3;
-    overflow: hidden;
-    font-size: 15px;
-  }
-
-  /* The foot's backing: the wall fades out behind Matinee's words, so they read over any poster. */
-  .stage:has(> .showing)::after {
-    content: "";
-    position: fixed;
-    inset: auto 0 0;
-    height: calc(var(--pick-talk) + 120px);
-    background: linear-gradient(to top, rgba(7, 8, 13, 0.92) calc(100% - 56px), rgba(7, 8, 13, 0));
-    pointer-events: none;
+    font-size: 16px;
   }
 
   .aside {
-    grid-row: 4;
-    position: relative;
-    z-index: 1;
     max-width: none;
     min-height: 0;
     overflow-y: auto;
@@ -928,9 +919,7 @@ button {
   }
 
   .stage:has(> .showing) > .bottombar {
-    grid-row: 5;
-    position: relative;
-    z-index: 1;
+    position: static;
     padding-top: 0;
     row-gap: 2px;
     background: none;

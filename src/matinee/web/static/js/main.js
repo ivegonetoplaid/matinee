@@ -4,7 +4,7 @@ import { get, post } from "./api.js";
 import { correctionLink } from "./correct.js";
 import { credits } from "./credits.js";
 import { Door } from "./door.js";
-import { clear, h, prefersLessMotion, sentenceCase, wait } from "./dom.js";
+import { clear, h, isPhone, prefersLessMotion, sentenceCase, wait } from "./dom.js";
 import { showPick } from "./pick.js";
 import { Deck, dealBeneath, dealPair, setFor } from "./quips.js";
 import { lightFuse } from "./fuse.js";
@@ -271,16 +271,16 @@ async function step() {
 
 // The pick screen. The aside hangs from the top of the left column, so nothing re-centres as the film
 // arrives; the poster settles beneath it, in the column's foot.
+// On a phone the aside stands outside the showing, which scrolls on its own above it, so Matinee's words
+// keep the foot while the poster and the details scroll.
 function pickFrame() {
   const line = h("h1", { class: "line pick-line", "aria-live": "polite" });
   const aside = h("div", { class: "aside" }, line);
-  const left = h("div", { class: "pick-left" }, aside);
+  const phone = isPhone();
+  const left = h("div", { class: "pick-left" }, phone ? null : aside);
   const showing = h("section", { class: "showing" }, left);
-  clear(stage).append(
-    topbar(nameTag() || h("span")),
-    showing,
-    h("footer", { class: "bottombar" }, trail(lastCrumb(true)), h("span"), credits()),
-  );
+  const foot = h("footer", { class: "bottombar" }, trail(lastCrumb(true)), h("span"), credits());
+  clear(stage).append(topbar(nameTag() || h("span")), showing, ...(phone ? [aside] : []), foot);
   return { line, aside, left, showing };
 }
 

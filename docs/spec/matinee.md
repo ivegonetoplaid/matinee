@@ -1097,21 +1097,22 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
   page on the configured Seerr and `Start over` in one row, then the
   correction link.
 
-  On a phone the pick screen never scrolls, and Matinee's words keep the foot.
-  The foot is about a third of the screen (36 per cent of its height, never
-  under 270 px) and holds, from its top, the line, `Not that one` and "More on
-  Seerr", the correction link, then the trail on one line, each crumb cut to
-  16 characters, and the credits. `Start over` is not shown there: the trail's
-  `Start` beneath does the same. The wall fades out behind the foot so the
-  words read over any poster, and anything taller than the foot, such as the
-  open correction panel, scrolls inside it. The foot's top never moves from the
-  first word of a pick to the last, through `Not that one` and the next pick.
-  The space above it holds the hunt: the hunt lands, and the poster grows, at
-  the middle of the space between the top bar and the foot, not at the
-  screen's centre, the camera rising there over the same ease that stops the
-  drift. At rest the poster stands centred in that space, as large as it
-  allows at 2:3, with the title and year and a synopsis of at most three lines
-  beneath it, and no backdrop. The poster at rest is the sharp 640 px picture when it has
+  On a phone Matinee's words keep the foot of the pick screen, which is about a
+  third of the screen (36 per cent of its height, never under 270 px) and holds,
+  from its top, the line, `Not that one` and "More on Seerr", the correction
+  link, then the trail on one line, each crumb cut to 16 characters, and the
+  credits. The foot has no backing of its own; the wall shows through it.
+  `Start over` is not shown there: the trail's `Start` beneath does the same.
+  Anything taller than the foot, such as the open correction panel, scrolls
+  inside it. The foot's top never moves from the first word of a pick to the
+  last, through `Not that one` and the next pick. The space above it scrolls on
+  its own, runs to the screen's sides and fades at its top and foot, so nothing
+  passes behind the words and the poster's glow is never cut square. The hunt
+  lands, and the poster grows, at the middle of that space, not at the screen's
+  centre, the camera rising there over the same ease that stops the drift. At
+  rest the poster fills that space at 2:3, the title, year and synopsis follow
+  beneath it without a backdrop, and after 2.2 seconds the space scrolls gently
+  to them. The poster at rest is the sharp 640 px picture when it has
   loaded, else a decoded copy of the wall's own picture of the film, replaced
   by the sharp picture when it arrives; with neither, no poster rests. A backdrop that fails is left out, and a phone fetches none.
 
@@ -1646,21 +1647,21 @@ symbol when one does not match.
 | `src/matinee/web/static/js/main.js::enter` (the start asked at the tap, the question after the landing) | `src/matinee/web/static/js/main.js:203` | 2026-09-30 |
 | `src/matinee/web/static/js/main.js::topbar` (settles a landed name) | `src/matinee/web/static/js/main.js:70` | 2026-09-30 |
 | `src/matinee/web/static/js/main.js::problem` (`keep`: the failed start's posters) | `src/matinee/web/static/js/main.js:176` | 2026-09-30 |
-| `src/matinee/web/static/js/pick.js::showPick` / `huntLift` | `src/matinee/web/static/js/pick.js:243` | 2026-10-01 |
-| `src/matinee/web/static/js/pick.js::goldLine` | `src/matinee/web/static/js/pick.js:188` | 2026-09-30 |
-| `src/matinee/web/static/js/pick.js::bringOut` | `src/matinee/web/static/js/pick.js:221` | 2026-09-30 |
-| `src/matinee/web/static/js/pick.js::toRest` (`BEAT_MS`, `STILL_HOLD_MS`) | `src/matinee/web/static/js/pick.js:266` | 2026-09-30 |
-| `src/matinee/web/static/js/pick.js::fetchFilm` / `picture` | `src/matinee/web/static/js/pick.js:279` | 2026-09-30 |
-| `src/matinee/web/static/js/pick.js::restingPoster` | `src/matinee/web/static/js/pick.js:171` | 2026-09-30 |
-| `src/matinee/web/static/js/pick.js::rest` | `src/matinee/web/static/js/pick.js:154` | 2026-10-01 |
-| `src/matinee/web/static/js/pick.js::settle` / `fit` | `src/matinee/web/static/js/pick.js:42` | 2026-09-30 |
+| `src/matinee/web/static/js/pick.js::showPick` / `huntLift` | `src/matinee/web/static/js/pick.js:249` | 2026-10-01 |
+| `src/matinee/web/static/js/pick.js::goldLine` | `src/matinee/web/static/js/pick.js:194` | 2026-09-30 |
+| `src/matinee/web/static/js/pick.js::bringOut` | `src/matinee/web/static/js/pick.js:227` | 2026-09-30 |
+| `src/matinee/web/static/js/pick.js::toRest` (`BEAT_MS`, `STILL_HOLD_MS`) | `src/matinee/web/static/js/pick.js:272` | 2026-09-30 |
+| `src/matinee/web/static/js/pick.js::fetchFilm` / `picture` | `src/matinee/web/static/js/pick.js:285` | 2026-09-30 |
+| `src/matinee/web/static/js/pick.js::restingPoster` | `src/matinee/web/static/js/pick.js:177` | 2026-09-30 |
+| `src/matinee/web/static/js/pick.js::rest` | `src/matinee/web/static/js/pick.js:155` | 2026-10-01 |
+| `src/matinee/web/static/js/pick.js::settle` / `fit` | `src/matinee/web/static/js/pick.js:43` | 2026-09-30 |
 | `src/matinee/web/static/js/fuse.js::lightFuse` / `fuseTimeline` | `src/matinee/web/static/js/fuse.js:37` | 2026-09-30 |
 | `src/matinee/trees.py::_self_destruct` / `_one_self_destruct` | `src/matinee/trees.py:178` | 2026-09-30 |
-| `src/matinee/web/static/js/pick.js::feature` | `src/matinee/web/static/js/pick.js:65` | 2026-09-30 |
-| `src/matinee/web/static/js/pick.js::choices` | `src/matinee/web/static/js/pick.js:141` | 2026-09-30 |
-| `src/matinee/web/static/js/pick.js::showNoFilm` | `src/matinee/web/static/js/pick.js:116` | 2026-09-30 |
-| `src/matinee/web/static/js/pick.js::firstPickReveal` | `src/matinee/web/static/js/pick.js:91` | 2026-09-30 |
-| `src/matinee/web/static/js/pick.js::creditBeneath` (DoesTheDogDie's credit before its line types) | `src/matinee/web/static/js/pick.js:83` | 2026-09-30 |
+| `src/matinee/web/static/js/pick.js::feature` | `src/matinee/web/static/js/pick.js:66` | 2026-09-30 |
+| `src/matinee/web/static/js/pick.js::choices` | `src/matinee/web/static/js/pick.js:142` | 2026-09-30 |
+| `src/matinee/web/static/js/pick.js::showNoFilm` | `src/matinee/web/static/js/pick.js:117` | 2026-09-30 |
+| `src/matinee/web/static/js/pick.js::firstPickReveal` | `src/matinee/web/static/js/pick.js:92` | 2026-09-30 |
+| `src/matinee/web/static/js/pick.js::creditBeneath` (DoesTheDogDie's credit before its line types) | `src/matinee/web/static/js/pick.js:84` | 2026-09-30 |
 | `src/matinee/web/static/js/correct.js::GATED_NOTE` | `src/matinee/web/static/js/correct.js:10` | 2026-09-26 |
 | `src/matinee/web/static/js/correct.js::correctionLink` / `ensureProfile` | `src/matinee/web/static/js/correct.js:91` | 2026-09-26 |
 | `src/matinee/web/static/js/credits.js::credits` | `src/matinee/web/static/js/credits.js:23` | 2026-09-30 |
