@@ -27,9 +27,8 @@ const DRIFT_PX_S = 10; // upward, timed by the clock, never by frames
 const MAX_STEP_S = 0.25; // a frame after a long pause (a hidden tab) moves the wall no further than this
 const RESORT_MS = 800; // each answer's re-sort
 const RESORT_EASE = "cubic-bezier(0.2, 0.8, 0.2, 1)";
-const PRELOAD_MS = 1500; // the re-sort waits this long at most for the posters it brings on screen
+const PRELOAD_MS = 600; // the re-sort waits this long at most for the posters it brings on screen
 const FIRST_MS = 2500; // a wall laid fresh waits this long at most for its pictures before it fades in
-const ARRIVE_MS = 300; // a picture that arrives after its tile is showing fades in over this long
 const DROPPED_SCALE = 0.5; // a dropped film's poster shrinks to this and fades where it stands
 const BLANK = "/static/blank.svg"; // a tile with no picture shows this, so it is a dark cell, never a broken image
 const SIZES = ["l", "m", "s", "xs"];
@@ -78,14 +77,6 @@ function grownBox(i, j, layout, scale) {
 // Resolves once every promise has settled or `ms` has passed, whichever comes first.
 function within(ms, promises) {
   return Promise.race([Promise.allSettled(promises), new Promise((done) => setTimeout(done, ms))]);
-}
-
-// Shows `src` on `img`. A dark cell whose picture has arrived fades it in rather than snapping to it.
-function setPicture(img, src) {
-  const was = img.getAttribute("src");
-  if (was === src) return;
-  img.src = src;
-  if (was === BLANK && src !== BLANK && !lessMotion.matches) img.animate([{ opacity: 0, offset: 0 }], ARRIVE_MS);
 }
 
 export class Wall {
@@ -617,7 +608,7 @@ export class Wall {
     }
     tile.id = filmAt(view.layout, view.order, view.placed || NONE_PLACED, i, j);
     const src = (tile.id === null ? null : this.picture(tile.id, view.size)) || BLANK;
-    setPicture(tile.img, src);
+    if (tile.img.getAttribute("src") !== src) tile.img.src = src;
     tile.img.style.visibility = view.lifted === `${i},${j}` ? "hidden" : "";
     if (view.placed) this.dress(tile, i, j, view.layout);
   }
