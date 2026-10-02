@@ -330,12 +330,15 @@ export class Wall {
     return (GROW * resting) / this.layout.w;
   }
 
-  // Whether the landed poster can draw a picture of its film: its sharper picture has decoded, or its
-  // tile has drawn the wall's picture (the blank of a dark cell does not count).
+  // Whether the landed poster can draw a picture of its film fit to grow: its sharper picture has decoded,
+  // or its tile has drawn the wall's picture at the wall's size. A smaller picture standing in, or the
+  // blank of a dark cell, does not count.
   landedHasPicture() {
     if (this.frontCell) return true;
-    const img = this.landedTile()?.img;
-    return Boolean(img && img.getAttribute("src") !== BLANK && img.complete && img.naturalWidth > 1);
+    const tile = this.landedTile();
+    const img = tile?.img;
+    const own = tile && `/img/poster/${tile.id}/${this.size}`;
+    return Boolean(img && img.getAttribute("src") === own && img.complete && img.naturalWidth > 1);
   }
 
   // Puts `url`, the landed poster's sharper picture, on the front element and shows it over the landed

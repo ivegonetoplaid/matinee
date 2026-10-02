@@ -1081,7 +1081,8 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
   glow grows in with the poster, and its blur and spread follow the grown
   poster's width. The poster grows by its laid-out size, so its picture stays
   sharp. The sharp 640 px picture is shown over the wall's picture, in the
-  same box, only once it has decoded. A landed poster with no picture waits
+  same box, only once it has decoded. A landed poster with no picture of its
+  own at the wall's size (a smaller picture standing in does not count) waits
   for the sharp one; with neither, nothing grows, the wall dims to 12 per
   cent over 0.35 s and the pick goes to the resting page without a poster.
   Under reduced motion the wall is not dimmed before it moves; once there, the
@@ -1625,16 +1626,16 @@ symbol when one does not match.
 | `src/matinee/web/static/js/wall.js::Wall.endPick` | `src/matinee/web/static/js/wall.js:188` | 2026-09-28 |
 | `src/matinee/web/static/js/wall.js::Wall.hunt` / `jump` / `readyToHunt` / `settle` / `hop` | `src/matinee/web/static/js/wall.js:234` | 2026-10-01 |
 | `src/matinee/web/static/js/wall.js::Wall.stepBack` / `grownScale` | `src/matinee/web/static/js/wall.js:321` | 2026-09-28 |
-| `src/matinee/web/static/js/wall.js::Wall.useSharp` (the front element) | `src/matinee/web/static/js/wall.js:343` | 2026-09-28 |
-| `src/matinee/web/static/js/wall.js::Wall.bringForward` | `src/matinee/web/static/js/wall.js:362` | 2026-09-28 |
-| `src/matinee/web/static/js/wall.js::Wall.dress` / `glowShadow` / `glowAt` | `src/matinee/web/static/js/wall.js:384` | 2026-09-29 |
+| `src/matinee/web/static/js/wall.js::Wall.useSharp` (the front element) | `src/matinee/web/static/js/wall.js:346` | 2026-09-28 |
+| `src/matinee/web/static/js/wall.js::Wall.bringForward` | `src/matinee/web/static/js/wall.js:365` | 2026-09-28 |
+| `src/matinee/web/static/js/wall.js::Wall.dress` / `glowShadow` / `glowAt` | `src/matinee/web/static/js/wall.js:387` | 2026-09-29 |
 | `src/matinee/web/static/js/wall.js::glowOf` | `src/matinee/web/static/js/wall.js:54` | 2026-09-28 |
-| `src/matinee/web/static/js/wall.js::Wall.putBack` / `returnPoster` / `liftDim` / `settleBack` | `src/matinee/web/static/js/wall.js:431` | 2026-09-28 |
-| `src/matinee/web/static/js/wall.js::Wall.relayout` / `makeTiles` | `src/matinee/web/static/js/wall.js:531` | 2026-09-28 |
-| `src/matinee/web/static/js/wall.js::Wall.prepare` (the re-sort's wait) | `src/matinee/web/static/js/wall.js:564` | 2026-10-01 |
-| `src/matinee/web/static/js/wall.js::Wall.frame` (the drift, `DRIFT_PX_S`) | `src/matinee/web/static/js/wall.js:584` | 2026-09-28 |
-| `src/matinee/web/static/js/wall.js::Wall.place` / `lay` / `picture` / `request` (`BLANK`) | `src/matinee/web/static/js/wall.js:595` | 2026-09-28 |
-| `src/matinee/web/static/js/wall.js::Wall.resort` / `slide` / `depart` | `src/matinee/web/static/js/wall.js:675` | 2026-09-28 |
+| `src/matinee/web/static/js/wall.js::Wall.putBack` / `returnPoster` / `liftDim` / `settleBack` | `src/matinee/web/static/js/wall.js:434` | 2026-09-28 |
+| `src/matinee/web/static/js/wall.js::Wall.relayout` / `makeTiles` | `src/matinee/web/static/js/wall.js:534` | 2026-09-28 |
+| `src/matinee/web/static/js/wall.js::Wall.prepare` (the re-sort's wait) | `src/matinee/web/static/js/wall.js:567` | 2026-10-01 |
+| `src/matinee/web/static/js/wall.js::Wall.frame` (the drift, `DRIFT_PX_S`) | `src/matinee/web/static/js/wall.js:587` | 2026-09-28 |
+| `src/matinee/web/static/js/wall.js::Wall.place` / `lay` / `picture` / `request` (`BLANK`) | `src/matinee/web/static/js/wall.js:598` | 2026-09-28 |
+| `src/matinee/web/static/js/wall.js::Wall.resort` / `slide` / `depart` | `src/matinee/web/static/js/wall.js:678` | 2026-09-28 |
 | `src/matinee/web/static/js/main.js::lockStage` / `leaveTo` / `nameTag` | `src/matinee/web/static/js/main.js:56` | 2026-09-30 |
 | `src/matinee/web/static/js/main.js::trail` / `lastCrumb` | `src/matinee/web/static/js/main.js:101` | 2026-10-01 |
 | `src/matinee/web/static/js/main.js::frame` / `ask` (the footnote) | `src/matinee/web/static/js/main.js:121` | 2026-09-30 |
