@@ -25,8 +25,8 @@ import {
 
 const DRIFT_PX_S = 10; // upward, timed by the clock, never by frames
 const MAX_STEP_S = 0.25; // a frame after a long pause (a hidden tab) moves the wall no further than this
-const RESORT_MS = 800; // each answer's re-sort
-const RESORT_EASE = "cubic-bezier(0.2, 0.8, 0.2, 1)";
+const RESORT_MS = 1400; // each answer's re-sort
+const RESORT_EASE = "cubic-bezier(0.45, 0, 0.25, 1)"; // eases out of place, glides, and settles; never a dash then a crawl
 const PRELOAD_MS = 600; // the re-sort waits this long at most for the posters it brings on screen
 const FIRST_MS = 2500; // a wall laid fresh waits this long at most for its pictures before it fades in
 const DROPPED_SCALE = 0.5; // a dropped film's poster shrinks to this and fades where it stands

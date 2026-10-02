@@ -1011,7 +1011,8 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
   10 across, or 5.2, the size they keep through the pick; "Just pick one!"
   keeps the size the wall has. Each answer re-sorts the wall in place: the
   page waits up to 0.6 s for the pictures of the posters the new layout puts
-  on screen, then, over 0.8 s, each of them slides from the nearest place its
+  on screen, then, over 1.4 s on an even S-curve (easing out of place, gliding,
+  and settling gently), each of them slides from the nearest place its
   film stood on screen, or in from the screen's edge toward its film's old
   place, or grows in place when its film is new to the wall; the posters of
   dropped films shrink to half size and fade where they stand, and a film
