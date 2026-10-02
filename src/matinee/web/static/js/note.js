@@ -1,17 +1,15 @@
 // The unobtrusive note link on a result: what was wrong with the pick, and why. Every
 // answer is kept as a note, with the path that led to the pick, for whoever runs
 // Matinee; it changes nothing any viewer is shown. The pick always belongs to a profile
-// this device holds. A tree gated by age (kids) is not offered; the panel says why.
+// this device holds. "Not this genre at all" asks where the film belongs, offering every
+// other tree, the kids tree included, and the note keeps every tree ticked.
 
 import { post } from "./api.js";
 import { h, sentenceCase } from "./dom.js";
 
-const GATED_NOTE =
-  "Kids' films are picked for the whole house, so I can't add one just for you. Ask whoever runs Matinee to add it.";
-
 function treeChoices(trees, current) {
   return trees
-    .filter((t) => t.correctable && t.tree !== current)
+    .filter((t) => t.tree !== current)
     .map((t) =>
       h(
         "label",
@@ -42,7 +40,7 @@ function kindChoices(label, onchange) {
   );
 }
 
-function send(visit, film, kind, comment) {
+function send(visit, film, kind, belongs, comment) {
   return post("/api/notes", {
     profile_id: visit.viewer.profile_id,
     tmdb: film.tmdb,
@@ -51,6 +49,7 @@ function send(visit, film, kind, comment) {
     answers: visit.answers,
     rushed: visit.rushed,
     comment,
+    belongs: kind === "genre" ? belongs : [],
   });
 }
 
@@ -82,13 +81,11 @@ export function noteLink({ visit, film, trees }) {
     "Something wrong with this pick?",
   );
   const choices = treeChoices(trees, visit.tree);
-  const gated = trees.some((t) => !t.correctable && t.tree !== visit.tree);
   const belongs = h(
     "div",
     { class: "belongs", hidden: true },
     h("p", { class: "note" }, "Where does it belong?"),
     h("div", { class: "tree-choices" }, choices),
-    gated ? h("p", { class: "note small" }, GATED_NOTE) : null,
   );
   const picked = () => panel.querySelector("input[name=what-wrong]:checked")?.value;
   const what = h(
@@ -109,7 +106,8 @@ export function noteLink({ visit, film, trees }) {
         const kind = picked();
         if (!kind) return say("Tell me what's wrong with it first.");
         save.disabled = true;
-        const res = await send(visit, film, kind, why.value);
+        const belongsTo = choices.map((c) => c.querySelector("input")).filter((i) => i.checked).map((i) => i.value);
+        const res = await send(visit, film, kind, belongsTo, why.value);
         if (res.ok) {
           say(...noted(res.data.lines));
           open.remove();

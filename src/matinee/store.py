@@ -53,6 +53,7 @@ class Note:
     path: tuple[str, ...]
     rushed: bool
     comment: str
+    belongs: tuple[str, ...] = ()  # where a "Not <genre> at all" note says the film belongs
 
 
 class StoreError(ValueError):
@@ -237,9 +238,19 @@ class Store:
             if db.execute("SELECT 1 FROM profiles WHERE id = ?", (n.profile_id,)).fetchone() is None:
                 raise StoreError("no_profile", "no such profile")
             db.execute(
-                "INSERT INTO notes (profile_id, tmdb, tree, kind, path, rushed, comment, at)"
-                " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-                (n.profile_id, n.tmdb, n.tree, n.kind, json.dumps(list(n.path)), int(n.rushed), n.comment, _now()),
+                "INSERT INTO notes (profile_id, tmdb, tree, kind, path, rushed, comment, at, belongs)"
+                " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (
+                    n.profile_id,
+                    n.tmdb,
+                    n.tree,
+                    n.kind,
+                    json.dumps(list(n.path)),
+                    int(n.rushed),
+                    n.comment,
+                    _now(),
+                    json.dumps(sorted(set(n.belongs))),
+                ),
             )
 
     def open(self, profile_id: int, pin: str | None, now: float) -> tuple[Profile, str]:

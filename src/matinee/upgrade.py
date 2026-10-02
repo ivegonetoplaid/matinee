@@ -4,7 +4,8 @@ A store file records its shape in SQLite's `user_version`. A file from before
 shapes were recorded reads 0 and holds the tables `profiles`, `corrections`,
 `feedback` and `tokens`. `prepare` creates a missing or empty file at the current
 shape and leaves a current file alone. It carries a shape-0 file to the current
-shape in one transaction, after copying the file as it stood to a new file beside
+shape in one transaction, keeping where each "Not <genre> at all" note said its
+film belongs from the correction saved with it, after copying the file as it stood to a new file beside
 it, which nothing ever overwrites. It refuses, and changes nothing in the store
 file, a file newer than this code, a file that is not a SQLite database, and an
 upgrade that fails or would lose a profile, a token or a note.
@@ -41,7 +42,8 @@ TABLES = (
     path TEXT NOT NULL,
     rushed INTEGER NOT NULL,
     comment TEXT NOT NULL,
-    at TEXT NOT NULL
+    at TEXT NOT NULL,
+    belongs TEXT NOT NULL DEFAULT '[]'
 )""",
     """CREATE TABLE tokens (
     token_hash TEXT PRIMARY KEY,
@@ -50,11 +52,25 @@ TABLES = (
 )""",
 )
 
+# Where a "Not <genre> at all" note says its film belongs was kept only in the correction saved with it: the
+# override whose removal names the note's profile, film and tree, saved at or before the note, latest first.
+BELONGS_FROM_CORRECTIONS = """UPDATE notes SET belongs = (
+    SELECT json_group_array(tree) FROM (
+        SELECT added.tree FROM corrections AS added
+        WHERE added.direction = 'add' AND added.override_id = (
+            SELECT removed.override_id FROM corrections AS removed
+            WHERE removed.direction = 'remove' AND removed.profile_id = notes.profile_id
+              AND removed.tmdb = notes.tmdb AND removed.tree = notes.tree AND removed.at <= notes.at
+            ORDER BY removed.at DESC, removed.id DESC LIMIT 1)
+        ORDER BY added.tree))
+WHERE kind = 'genre'"""
+
 # Shape 0 to the current shape. Each note keeps its id, so a note named before the upgrade is the same note after.
 FROM_SHAPE_0 = (
     TABLES[1],
     "INSERT INTO notes (id, profile_id, tmdb, tree, kind, path, rushed, comment, at)"
     " SELECT id, profile_id, tmdb, tree, kind, path, rushed, comment, at FROM feedback",
+    BELONGS_FROM_CORRECTIONS,
     "DROP TABLE feedback",
     "DROP INDEX IF EXISTS corrections_by_profile",
     "DROP TABLE corrections",

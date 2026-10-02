@@ -62,10 +62,19 @@ PROFILES = [
 NOTES = [
     (4, 1, 603, "horror", "genre", '["Scary."]', 0, "", "2026-09-10T00:00:00+00:00"),
     (9, 2, 105, "comedy", "kind", '["Funny.", "Silly."]', 1, "too goofy", "2026-09-11T00:00:00+00:00"),
+    (11, 1, 603, "horror", "genre", "[]", 0, "again", "2026-09-12T00:00:01+00:00"),
+    (12, 2, 77, "drama", "genre", "[]", 0, "", "2026-09-12T00:00:00+00:00"),
 ]
+# Note 4's correction, saved with it; note 11's, saved later for the same film, which a match must tell apart;
+# Bo's correction of film 77 under drama, saved after note 12 and so not its own.
 CORRECTIONS = [
     (1, "ab", 1, 603, "horror", "remove", "2026-09-10T00:00:00+00:00"),
     (2, "ab", 1, 603, "thriller", "add", "2026-09-10T00:00:00+00:00"),
+    (3, "cd", 1, 603, "horror", "remove", "2026-09-12T00:00:00+00:00"),
+    (4, "cd", 1, 603, "war", "add", "2026-09-12T00:00:00+00:00"),
+    (5, "cd", 1, 603, "drama", "add", "2026-09-12T00:00:00+00:00"),
+    (6, "ef", 2, 77, "drama", "remove", "2026-09-13T00:00:00+00:00"),
+    (7, "ef", 2, 77, "comedy", "add", "2026-09-13T00:00:00+00:00"),
 ]
 
 
@@ -101,6 +110,13 @@ def test_an_old_store_loses_only_its_corrections(tmp_path: Path) -> None:
     tables = {r[0] for r in rows(path, "SELECT name FROM sqlite_master WHERE type = 'table'")}
     assert tables == {"profiles", "notes", "tokens"}
     assert [p.name for p in store.holding([TOKEN]).values()] == ["Ada"]  # the device keeps its profile
+
+
+def test_a_genre_note_keeps_where_its_own_correction_said_the_film_belongs(tmp_path: Path) -> None:
+    path = shape_0(tmp_path / "matinee.sqlite")
+    Store(path)
+    belongs = dict(rows(path, "SELECT id, belongs FROM notes"))
+    assert belongs == {4: '["thriller"]', 9: "[]", 11: '["drama","war"]', 12: "[]"}
 
 
 def test_the_upgrade_keeps_a_copy_of_the_old_file_and_never_overwrites_it(tmp_path: Path) -> None:

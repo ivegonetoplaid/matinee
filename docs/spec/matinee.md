@@ -703,7 +703,10 @@ table named `feedback`) and personal corrections.
 - A missing or empty file is made at the current shape.
 - A shape-0 file is upgraded in place when Matinee starts, in one transaction.
   The upgrade keeps every profile, token and note, each note under its own id,
-  and removes the corrections. It is kept only when the counts of profiles,
+  and removes the corrections. A "Not <genre> at all" note first takes, as where
+  its film belongs, the trees its own correction added the film to: the
+  correction with the note's profile, film and tree saved at or before the
+  note, the latest of them. It is kept only when the counts of profiles,
   tokens and notes are the same after it as before and no row points at nothing.
 - Before its first change to a shape-0 file, the upgrade copies the file as it
   stood to a new file beside it, named
@@ -841,18 +844,20 @@ changes nothing any viewer is shown.
   ending with "Just pick one!" when that ended the questions.
 - The panel asks what is wrong, with three choices, and offers an optional "Why?"
   box of at most 500 characters:
-  - "Not <genre> at all", which asks where the film belongs;
+  - "Not <genre> at all", which asks where the film belongs. It offers every
+    tree except the one that offered the film, the kids tree included, and the
+    note keeps every tree ticked;
   - "<Genre>, but not the kind I asked for";
   - "The right kind, just not a good pick".
-- A tree whose answers re-apply a kids age band is not offered as where a film
-  belongs, and the panel says why: "Kids' films are picked for the whole house,
-  so I can't add one just for you. Ask whoever runs Matinee to add it."
 - Every choice saves a note and nothing else: the profile, the film, the tree,
   the choice, the answers that led to the pick in words, whether "Just pick
   one!" ended the questions, the comment and a UTC timestamp. A note needs a
   held profile. Its answers are resolved against the tree when it is saved, and
   an answer the tree does not have, a tree that does not exist or a film not in
-  the library is refused.
+  the library is refused. Where the film belongs is kept only on a "Not <genre>
+  at all" note, and only as trees the catalogue holds other than the one that
+  offered the film; anything else is refused. Naming a tree changes nothing any
+  viewer is shown.
 - Once the note is saved the panel says "Thanks. That's gone to whoever runs
   Matinee." in gold and "If they agree, it moves for everyone." in cream.
 
@@ -901,7 +906,7 @@ would hand one device's profiles to another.
 - **An answer** as a question id and an option index, never as a filter.
 - **Request sizes** are capped: a typed name 80 characters; a profile name 80
   and a PIN 8; topics 400; exclusions 20; answers 12; tree names 40; option
-  indexes 0 to 50; films already seen 200. A pick
+  indexes 0 to 50; films already seen 200; trees a note says a film belongs in 12. A pick
   with no tree may carry no answers.
 
 ### 11.3 What no response carries
@@ -1556,7 +1561,6 @@ symbol when one does not match.
 | `src/matinee/web/viewing.py::held_profile` | `src/matinee/web/viewing.py:183` | 2026-09-30 |
 | `src/matinee/web/viewing.py::resolve` | `src/matinee/web/viewing.py:197` | 2026-09-30 |
 | `src/matinee/web/viewing.py::add_note_routes` / `answer_says` | `src/matinee/web/viewing.py:373` | 2026-09-30 |
-| `src/matinee/web/viewing.py::banded` | `src/matinee/web/viewing.py:338` | 2026-09-30 |
 
 ### Exclusions and the DoesTheDogDie check
 
@@ -1678,7 +1682,6 @@ symbol when one does not match.
 | `src/matinee/web/static/js/pick.js::showNoFilm` | `src/matinee/web/static/js/pick.js:117` | 2026-09-30 |
 | `src/matinee/web/static/js/pick.js::firstPickReveal` | `src/matinee/web/static/js/pick.js:92` | 2026-09-30 |
 | `src/matinee/web/static/js/pick.js::creditBeneath` (DoesTheDogDie's credit before its line types) | `src/matinee/web/static/js/pick.js:84` | 2026-09-30 |
-| `src/matinee/web/static/js/note.js::GATED_NOTE` | `src/matinee/web/static/js/note.js:9` | 2026-10-02 |
 | `src/matinee/web/static/js/note.js::noteLink` | `src/matinee/web/static/js/note.js:62` | 2026-10-02 |
 | `src/matinee/web/static/js/credits.js::credits` | `src/matinee/web/static/js/credits.js:23` | 2026-09-30 |
 | `src/matinee/web/static/js/credits.js::aboutLink` | `src/matinee/web/static/js/credits.js:18` | 2026-09-30 |

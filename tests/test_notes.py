@@ -25,6 +25,12 @@ from test_web_library import SECRET_KEY, SECRET_URL, FakeLibrary, seat_for, writ
 def site(tmp_path: Path) -> tuple[TestClient, Store]:
     data = write_data(tmp_path / "data", dict(TREE))
     (data / "trees" / "east.json").write_text('{"pool": "horror", "opening": "boo.", "questions": []}')
+    kids = {
+        "pool": "kids",
+        "opening": "hi!",
+        "questions": [{"id": "age", "ask": "who?", "options": [{"say": "little.", "filter": {"kids_band": "little"}}]}],
+    }
+    (data / "trees" / "kids.json").write_text(json.dumps(kids))
     write_film_table(tmp_path / "films.sqlite")
 
     def catalog_of(table: FilmTable) -> Any:
@@ -107,3 +113,22 @@ def test_the_corrections_route_is_gone(site: Any) -> None:
     me = client.post("/api/profiles", json={"name": "Me"}).json()["id"]
     body = {"profile_id": me, "tmdb": 5, "remove_from": "west", "add_to": []}
     assert client.post("/api/corrections", json=body).status_code in (404, 405)
+
+
+def test_a_genre_note_keeps_every_tree_it_names_the_kids_tree_included(site: Any, tmp_path: Path) -> None:
+    client, _ = site
+    me = client.post("/api/profiles", json={"name": "Me"}).json()["id"]
+    note = {"profile_id": me, "tmdb": 5, "tree": "west", "kind": "genre", "belongs": ["kids", "east"]}
+    assert client.post("/api/notes", json=note).status_code == 200
+    with sqlite3.connect(tmp_path / "matinee.sqlite") as db:
+        assert db.execute("SELECT kind, belongs FROM notes").fetchall() == [("genre", '["east", "kids"]')]
+
+
+def test_where_a_film_belongs_is_only_another_known_tree_on_a_genre_note(site: Any, tmp_path: Path) -> None:
+    client, _ = site
+    me = client.post("/api/profiles", json={"name": "Me"}).json()["id"]
+    base = {"profile_id": me, "tmdb": 5, "tree": "west", "kind": "genre"}
+    for bad in ({"belongs": ["nowhere"]}, {"belongs": ["west"]}, {"kind": "kind", "belongs": ["east"]}):
+        assert client.post("/api/notes", json={**base, **bad}).status_code == 400
+    assert client.post("/api/notes", json={**base, "belongs": ["east"] * 13}).status_code == 422
+    assert note_rows(tmp_path) == []

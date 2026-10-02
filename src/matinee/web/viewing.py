@@ -94,7 +94,6 @@ class FirstOptionOut(BaseModel):
     say: str
     tree: str
     label: str
-    correctable: bool
 
 
 class FirstOut(BaseModel):
@@ -132,6 +131,7 @@ class NoteIn(BaseModel):
     answers: list[AnswerIn] = Field(default=[], max_length=12)
     rushed: bool = False
     comment: str = Field(default="", max_length=500)
+    belongs: list[str] = Field(default=[], max_length=12)  # "Not <genre> at all": where the film belongs
 
 
 class ExclusionOut(BaseModel):
@@ -300,10 +300,7 @@ def add_viewing_routes(app: FastAPI, theatre: Theatre, store: Store, dtdd: Dtdd)
     def first(body: FirstIn, request: Request) -> FirstOut:
         cat = theatre.showing().catalog
         viewer, profile = resolve(request, store, body.viewer)
-        options = [
-            FirstOptionOut(say=o.say, tree=o.tree, label=o.label, correctable=not banded(cat.trees[o.tree]))
-            for o in first_question(cat, viewer)
-        ]
+        options = [FirstOptionOut(say=o.say, tree=o.tree, label=o.label) for o in first_question(cat, viewer)]
         return FirstOut(
             lines=list(cat.first_lines),
             name=profile.name if profile else None,
@@ -333,11 +330,6 @@ def add_viewing_routes(app: FastAPI, theatre: Theatre, store: Store, dtdd: Dtdd)
         )
 
 
-def banded(tree: Tree) -> bool:
-    """A tree whose answers re-apply a gated age band: the note panel does not offer it as where a film belongs."""
-    return any(o.filter.kids_band is not None for q in tree.questions for o in q.options)
-
-
 NOTED = ["Thanks. That's gone to whoever runs Matinee.", "If they agree, it moves for everyone."]
 
 
@@ -353,6 +345,14 @@ def answer_says(tree: Tree, answers: Sequence[AnswerIn]) -> list[str]:
     return says
 
 
+def check_belongs(cat: Catalog, body: NoteIn) -> None:
+    """Where a film belongs is named only on "Not <genre> at all", and only as other trees the catalogue holds."""
+    if body.belongs and body.kind != "genre":
+        raise HTTPException(status_code=400, detail="refused")
+    if set(body.belongs) - set(cat.trees) or body.tree in body.belongs:
+        raise HTTPException(status_code=400, detail="refused")
+
+
 def add_note_routes(app: FastAPI, theatre: Theatre, store: Store) -> None:
     @app.post("/api/notes")
     def note(body: NoteIn, request: Request) -> NoteOut:
@@ -362,8 +362,10 @@ def add_note_routes(app: FastAPI, theatre: Theatre, store: Store) -> None:
         tree = cat.trees.get(body.tree)
         if tree is None or body.tmdb not in cat.table.films.index:
             raise HTTPException(status_code=400, detail="refused")
+        check_belongs(cat, body)
         path = tuple(answer_says(tree, body.answers))
-        store.note(Note(body.profile_id, body.tmdb, body.tree, body.kind, path, body.rushed, body.comment.strip()))
+        comment, belongs = body.comment.strip(), tuple(body.belongs)
+        store.note(Note(body.profile_id, body.tmdb, body.tree, body.kind, path, body.rushed, comment, belongs))
         return NoteOut(lines=NOTED)
 
 
