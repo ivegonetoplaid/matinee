@@ -101,6 +101,7 @@ export class Wall {
     this.resting = false;
     this.layout = null;
     this.cam = { x: 0, y: 0 }; // the point of the wall at the screen's centre, in px
+    this.liftRows = 0; // during a pick, how many rows below its aim the camera stands, so the aim sits higher
     this.corner = null; // the top-left cell the tiles are laid from, as "i,j"
     this.dirty = false; // a picture arrived: tiles showing a dark cell look again
     this.showing = null; // the latest pool shown; an earlier one still preparing gives way
@@ -189,6 +190,7 @@ export class Wall {
     this.drifting = true;
     this.landed = null;
     this.look = null;
+    this.liftRows = 0;
     this.glow = GOLD;
     this.frontCell = null;
     this.front.hidden = true;
@@ -219,7 +221,7 @@ export class Wall {
 
   // Centres the camera on column `i`, row `j`, which may be fractional.
   aim(i, j) {
-    this.cam = centreOf({ i, j }, this.layout);
+    this.cam = centreOf({ i, j: j + this.liftRows }, this.layout);
   }
 
   // The hunt for film `id`. It waits for any re-sort to end and until `notBefore` (a
@@ -229,13 +231,13 @@ export class Wall {
   // after the last hop, in seconds, or null when the pick was ended (`endPick`, a new pool or a
   // cleared wall) at any point. Under reduced motion the camera jumps straight to the landing cell.
   // The camera is steered in cells, so a window resized mid-hunt only rescales it.
-  async hunt(id, { rand = Math.random, notBefore = 0, onStop = () => {} } = {}) {
+  async hunt(id, { rand = Math.random, notBefore = 0, onStop = () => {}, lift = 0 } = {}) {
     const round = this.round;
     if (!(await this.readyToHunt(round, notBefore))) return null;
     this.lift(false);
     this.drifting = false;
     onStop();
-    const from = await this.settle();
+    const from = await this.settle(lift);
     if (!from || round !== this.round) return null;
     const plan = planHunt({ n: hopCount(rand), rand, layout: this.layout, from });
     this.placed = new Map([...this.placed, ...placeLanding(plan, id)]);
@@ -266,15 +268,27 @@ export class Wall {
   }
 
   // Eases the camera forward to the next whole row in the drift's direction and resolves to that
-  // cell, or to null when the pick was ended meanwhile. Under reduced motion it moves at once.
-  async settle() {
+  // cell, or to null when the pick was ended meanwhile. Over the same ease the aim rises `lift` px above
+  // the screen's centre, where the hunt then lands. Under reduced motion it moves at once.
+  async settle(lift = 0) {
     const L = this.layout;
-    const row = (this.cam.y - L.h / 2) / L.sy;
-    const from = camCell(L, settledCamera(this.cam, L));
+    const was = this.liftRows;
+    const to = lift / L.sy;
+    const base = { x: this.cam.x, y: this.cam.y - was * L.sy }; // the camera's aim, without its lift
+    const row = (base.y - L.h / 2) / L.sy;
+    const from = camCell(L, settledCamera(base, L));
     if (!lessMotion.matches) {
-      const eased = await this.tween(SETTLE_S * 1000, (t) => this.aim(from.i, row + (from.j - row) * t), SETTLE_EASE);
+      const eased = await this.tween(
+        SETTLE_S * 1000,
+        (t) => {
+          this.liftRows = was + (to - was) * t;
+          this.aim(from.i, row + (from.j - row) * t);
+        },
+        SETTLE_EASE,
+      );
       if (!eased) return null;
     }
+    this.liftRows = to;
     this.aim(from.i, from.j);
     return from;
   }

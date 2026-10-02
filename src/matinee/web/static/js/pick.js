@@ -2,8 +2,9 @@
 // screen. The poster brightens as the rest of the wall dims, then grows in place while the pick's line
 // types out. After a beat it travels from exactly where it hangs to its resting place. On a desktop
 // that is the foot of the left column, as large as the space allows, while the film's backdrop rises on
-// the right with its title, year and synopsis. On a phone the poster fills the screen, then the page
-// scrolls gently to the details.
+// the right with its title, year and synopsis. On a phone the screen never scrolls: the hunt lands and
+// the poster rests in the top two thirds, above its title and synopsis, and Matinee's line keeps the
+// foot.
 // The film is tonight's showing, never a search result.
 
 import { get } from "./api.js";
@@ -13,7 +14,6 @@ import { typeLine } from "./type.js";
 const BEAT_MS = 500; // the grown poster holds for one beat before it moves to rest
 const STILL_HOLD_MS = 2000; // under reduced motion there is no hunt or growth; the grown poster holds about as long
 const SETTLE_MS = 1300;
-const PHONE_HOLD_MS = 2200;
 const POSTER_RATIO = 1.5; // height over width
 const POSTER_MIN_H = 160; // below this the page scrolls rather than shrink the poster further
 
@@ -151,7 +151,7 @@ function choices(info, film, result, actions, note) {
 
 // The resting page: the film's details rise, and the landed poster, where there is one, moves from the
 // wall to its place and leaves its cell empty until the pick ends.
-async function rest({ stage, wall, frame, film, result, actions, info, backdrop, poster }) {
+function rest({ stage, wall, frame, film, result, actions, info, backdrop, poster }) {
   stage.classList.add("revealed");
   const shown = feature(info, film, result, backdrop);
   frame.showing.append(shown);
@@ -163,11 +163,6 @@ async function rest({ stage, wall, frame, film, result, actions, info, backdrop,
     frame.left.append(slot);
     settle(poster, from, slot, (w) => wall.glowAt(w));
     wall.lift(true);
-  }
-  if (isPhone()) {
-    stage.scrollTop = 0;
-    await wait(PHONE_HOLD_MS);
-    shown.scrollIntoView({ behavior: prefersLessMotion() ? "auto" : "smooth", block: "start" });
   }
 }
 
@@ -208,6 +203,15 @@ function revealLine({ line, gold, lines, wait: ms, fuse }) {
   if (fuse?.lit()) return Promise.resolve();
   if (!gold) line.replaceChildren();
   return wait(ms).then(() => typeLine(line, gold, lines.reveal, { shown: gold.length }));
+}
+
+// On a phone, how far above the screen's centre the hunt lands: at the middle of the space between the
+// top bar and Matinee's line, which keeps the foot. On a desktop, 0.
+function huntLift(stage, frame) {
+  if (!isPhone()) return 0;
+  const top = stage.querySelector(".topbar")?.getBoundingClientRect().bottom || 0;
+  const foot = frame.aside.getBoundingClientRect().top;
+  return window.innerHeight / 2 - (top + foot) / 2;
 }
 
 // From the landing to the grown poster. The sharp picture takes the wall picture's place as soon as it
@@ -251,7 +255,7 @@ export async function showPick({ stage, wall, result, frame, readUntil = 0, line
   const onStop = () => {
     if (!gold && !fuse?.lit()) frame.line.classList.add("hushed");
   };
-  const pause = await wall.hunt(film.tmdb, { notBefore: readUntil, onStop });
+  const pause = await wall.hunt(film.tmdb, { notBefore: readUntil, onStop, lift: huntLift(stage, frame) });
   if (pause === null || left()) return undefined;
   const out = await bringOut({ wall, frame, pause, posterReady, left, lines, gold, fuse });
   if (!out) return undefined;
