@@ -175,3 +175,12 @@ def test_an_upgrade_that_would_lose_a_note_is_undone(tmp_path: Path, monkeypatch
     with pytest.raises(ShapeError, match="profiles, tokens and notes"):
         Store(path)
     assert path.read_bytes() == before
+
+
+def test_after_the_upgrade_deleting_a_profile_keeps_its_notes(tmp_path: Path) -> None:
+    path = shape_0(tmp_path / "matinee.sqlite")
+    store = Store(path)
+    with sqlite3.connect(path) as db:
+        db.execute("PRAGMA foreign_keys = ON")
+        db.execute("DELETE FROM profiles WHERE id = 1")
+    assert [(n.id, n.profile) for n in store.notes()] == [(4, None), (9, "Bo"), (11, None), (12, "Bo")]

@@ -860,6 +860,9 @@ changes nothing any viewer is shown.
   viewer is shown.
 - Once the note is saved the panel says "Thanks. That's gone to whoever runs
   Matinee." in gold and "If they agree, it moves for everyone." in cream.
+- A note outlives the profile that filed it. Deleting a profile leaves every
+  note it filed in the store, naming no profile, and anything that lists the
+  note shows it as from a deleted profile.
 - Every note has a review status. A new note is `open`. A ruling sets it to
   `accepted`, with a one-line reason and the label ruling that fixed it, or to
   `rejected`, with a one-line reason; the store refuses any other combination. A

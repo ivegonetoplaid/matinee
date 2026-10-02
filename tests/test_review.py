@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sqlite3
 from pathlib import Path
 
 import pytest
@@ -82,3 +83,16 @@ def test_a_ruling_on_a_note_that_does_not_exist_is_refused(store: Store) -> None
 def test_the_queue_lists_oldest_first(store: Store) -> None:
     first, second = filed(store, "Ada", 1), filed(store, "Bo", 2)
     assert [n.id for n in store.notes()] == [first, second]
+
+
+def test_a_note_outlives_the_profile_that_filed_it(store: Store, tmp_path: Path) -> None:
+    note_id = filed(store, "Gone")
+    keeper = filed(store, "Stays", 2)
+    with sqlite3.connect(tmp_path / "matinee.sqlite") as db:
+        db.execute("PRAGMA foreign_keys = ON")
+        db.execute("DELETE FROM profiles WHERE name = 'Gone'")
+    queue = store.notes()
+    assert [(n.id, n.profile) for n in queue] == [(note_id, None), (keeper, "Stays")]
+    assert queue[0].comment == "not scary" and queue[0].status == "open"
+    store.rule(note_id, "rejected", "the viewer is gone, the film is right")
+    assert store.filed(note_id).profile is None

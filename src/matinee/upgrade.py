@@ -36,7 +36,7 @@ TABLES = (
 )""",
     """CREATE TABLE notes (
     id INTEGER PRIMARY KEY,
-    profile_id INTEGER NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+    profile_id INTEGER REFERENCES profiles(id) ON DELETE SET NULL,
     tmdb INTEGER NOT NULL,
     tree TEXT NOT NULL,
     kind TEXT NOT NULL CHECK (kind IN ('genre', 'kind', 'quality')),
@@ -75,7 +75,8 @@ BELONGS_FROM_CORRECTIONS = """UPDATE notes SET belongs = (
         ORDER BY added.tree))
 WHERE kind = 'genre'"""
 
-# Shape 0 to the current shape. Each note keeps its id, so a note named before the upgrade is the same note after.
+# Shape 0 to the current shape. Each note keeps its id, so a note named before the upgrade is the same note after,
+# and outlives the profile that filed it: deleting the profile leaves the note with no profile.
 FROM_SHAPE_0 = (
     TABLES[1],
     "INSERT INTO notes (id, profile_id, tmdb, tree, kind, path, rushed, comment, at)"

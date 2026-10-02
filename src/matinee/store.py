@@ -2,7 +2,8 @@
 
 A profile holds a display name, an optional four-digit PIN and the viewer's
 exclusions. A note is a viewer's complaint about a pick, kept for whoever runs
-Matinee; it changes nothing any viewer is shown. Every note has a review status:
+Matinee; it changes nothing any viewer is shown. A note outlives the profile
+that filed it, and then names no profile. Every note has a review status:
 `open` when filed, then `accepted` with a one-line reason and the label ruling
 that fixed it, or `rejected` with a one-line reason. A later ruling replaces an
 earlier one. The file's shape and its
