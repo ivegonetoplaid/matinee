@@ -881,8 +881,9 @@ button {
     align-items: center;
   }
 
+  /* Clear of the showing's fades at both ends, so the title and the synopsis's last line read in full. */
   .feature {
-    padding-top: 20px;
+    padding: 28px 0 52px;
   }
 
   .backdrop {
