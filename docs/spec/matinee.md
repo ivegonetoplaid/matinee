@@ -985,7 +985,7 @@ would hand one device's profiles to another.
 | GET | `/` | the page (`Cache-Control: no-cache`) |
 | GET | `/api/admission` | whether the site is locked, whether this device is admitted, and the locked door's greeting |
 | POST | `/api/admission` | give the door word; the right one sets the admission cookie |
-| GET | `/static/…` | scripts, styles, self-hosted fonts, icons, pails, avatars, manifest (`Cache-Control: no-cache`, so a deploy is never seen half-applied) |
+| GET | `/static/…` | scripts, styles, self-hosted fonts, icons, pails, avatars, the locked door's art, manifest (`Cache-Control: no-cache`, so a deploy is never seen half-applied) |
 | GET | `/img/{kind}/{tmdb}/{size}` | a poster or backdrop, read from the media server |
 | GET | `/api/film/{tmdb}` | title, year, runtime, synopsis and the Seerr link for one film |
 | GET | `/api/door` | the film count, every profile (marking those this device holds) and the avatars offered |
@@ -1101,6 +1101,30 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
   board, with no name; it returns to full size when the picker closes. The
   marquee stays on screen until the viewer goes in or opens
   About.
+  - **The locked door.** When a door word is set and the device has not given
+    it (section 7.2), the page asks `GET /api/admission` first and nothing
+    else: no film list, poster, count, profile or line is requested until the
+    word is right. The marquee's letter board reads "Now showing" "Private
+    screening", and beneath it, in place of the poster wall, stands a wall of
+    black glazed subway tile (a static SVG pattern, warm glow above, vignette at
+    the edges), a wooden frame and step drawn by the page, and the painted door
+    (`static/door/door.webp`, an 800 by 1200 derivative of the workbench's
+    source). The door hangs 28 px under the marquee's foot, sized to the
+    window's height (at most 600 px tall, two thirds as wide). Matinee types
+    the greeting as it types the pick's line, first sentence gold, the rest
+    cream: left of the door on a desktop, over a feathered dark scrim; between
+    the marquee and the door under 1000 px wide. On a phone the tile is not
+    shown and the door takes the screen's width inside the side margins. The
+    door's painted slot holds the password field, covered by a sliding metal
+    cover, with no text or placeholder. The field takes input once the
+    greeting is typed; each character pushes the cover open in proportion,
+    fully at ten, and the dots show from the slot's left edge. A small dim eye
+    button under the slot shows or hides what is typed. Enter gives the word.
+    A wrong word clears the field, shuts the cover (0.4 s) and types "That
+    ain't it, pal." in gold and "Try again, or take a walk." in cream in the
+    greeting's place, and the field takes input again. Under reduced motion
+    the greeting appears whole and the cover moves at once. The marquee stays
+    in place when the door opens, and the front door adopts it.
   - Every viewing runs under a profile. The door offers no way in without one.
   - **The front door** types its line, then shows every profile as a tile,
     sorted by name, with a "+ New" tile last. A tile is the profile's mark (its

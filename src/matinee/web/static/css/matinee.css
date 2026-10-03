@@ -2445,3 +2445,254 @@ a.wordmark:focus-visible {
     row-gap: 10px;
   }
 }
+
+/* ---------- the locked door ---------- */
+
+/* Before admission the locked door stands in the poster wall's place, under the marquee, which stands
+   above every layer and does not move. Back to front: subway tile, the wooden frame and step, the painted
+   door, the slot's cover over the password field. The scene hangs from the marquee's foot, which the page
+   measures into --marquee-bottom. */
+.stage.at-locked .marquee {
+  z-index: 2;
+}
+
+.locked {
+  --door-top: calc(var(--marquee-bottom, 360px) + 28px);
+  --door-h: max(240px, min(600px, calc(100vh - var(--door-top) - 76px)));
+  --door-w: calc(var(--door-h) * 2 / 3);
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  background: var(--base);
+}
+
+/* Black subway tile with light grey grout, glazed: a highlight along each tile's top edge, slight grit,
+   uneven shading; a warm glow from above and a dark vignette at the edges. */
+.subway {
+  position: absolute;
+  inset: 0;
+  background: #0d0d0f url("../door/subway-tile.svg");
+}
+
+.subway::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse 50% 55% at 50% 20%, rgba(242, 179, 61, 0.2), transparent 70%),
+    radial-gradient(ellipse 120% 90% at 50% 50%, transparent 40%, rgba(0, 0, 0, 0.78));
+}
+
+.entrance {
+  position: absolute;
+  top: var(--door-top);
+  left: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transform: translateX(-50%);
+}
+
+.door-frame {
+  position: relative;
+  width: calc(var(--door-w) + 48px);
+  height: calc(var(--door-h) + 24px);
+  padding: 24px 24px 0;
+  border-radius: 6px 6px 0 0;
+  background: linear-gradient(90deg, #2a1c10, #3b2716 12%, #2e1f12 50%, #3b2716 88%, #2a1c10);
+  box-shadow: 0 0 0 2px #120c06, 0 20px 60px rgba(0, 0, 0, 0.8);
+  perspective: 1400px;
+}
+
+/* Behind the door: the warm glow it swings open onto. */
+.doorway {
+  position: absolute;
+  inset: 24px 24px 0;
+  background: radial-gradient(ellipse at 50% 40%, rgba(255, 214, 140, 0.9), rgba(200, 120, 40, 0.45) 55%, #1a0e05);
+}
+
+.locked-door {
+  position: relative;
+  width: var(--door-w);
+  height: var(--door-h);
+  transform-origin: left center;
+  background: url("../door/door.webp") center / cover;
+  box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.5);
+  transition: transform 0.9s cubic-bezier(0.5, 0, 0.25, 1);
+}
+
+.door-step {
+  width: calc(var(--door-w) + 88px);
+  height: 16px;
+  border-radius: 2px;
+  background: linear-gradient(#3a3a3e, #1c1c1f);
+}
+
+/* The slot: the painted opening sits 18.5-81.5 per cent across and 28.6-34.6 per cent down the door. The
+   typed characters show as dots from its left edge, where the cover uncovers them first. */
+.slot {
+  position: absolute;
+  top: 28.6%;
+  right: 18.5%;
+  left: 18.5%;
+  height: 6%;
+  margin: 0;
+  overflow: hidden;
+}
+
+.slot-word {
+  width: 100%;
+  height: 100%;
+  padding: 0 14px;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--text);
+  caret-color: var(--gold);
+  font: 600 clamp(16px, 2.6vh, 22px) var(--body);
+  letter-spacing: 0.15em;
+  text-align: left;
+}
+
+.slot-word:focus-visible {
+  box-shadow: inset 0 0 0 2px rgba(242, 179, 61, 0.6);
+}
+
+.slot-cover {
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(90deg, #3a3634 0 3px, #2a2624 3px 18px);
+  box-shadow: inset 0 0 8px rgba(0, 0, 0, 0.8);
+  transition: transform 0.22s ease-out;
+  pointer-events: none;
+}
+
+.slot.shutting .slot-cover {
+  transition-duration: 0.4s;
+}
+
+/* The control that shows what is typed: a small dim eye just under the slot. */
+.peek {
+  position: absolute;
+  top: 36%;
+  left: 50%;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid rgba(243, 234, 216, 0.25);
+  border-radius: 50%;
+  background: rgba(10, 8, 6, 0.55);
+  opacity: 0.55;
+  transform: translateX(-50%);
+  cursor: pointer;
+}
+
+.peek:hover,
+.peek:focus-visible,
+.peek[aria-pressed="true"] {
+  opacity: 1;
+}
+
+.peek:focus-visible {
+  outline: 2px solid var(--gold-hover);
+  outline-offset: 2px;
+}
+
+.peek:disabled {
+  cursor: default;
+}
+
+/* Matinee's line, typed as the pick's is, left of the door on a wide screen. A feathered dark patch behind
+   it keeps the grout's bright edges from fighting the letters. */
+.line.locked-line {
+  position: absolute;
+  top: calc(var(--door-top) + 36px);
+  right: calc(50% + var(--door-w) / 2 + 80px);
+  width: min(380px, calc(50% - var(--door-w) / 2 - 120px));
+  min-height: 0;
+  isolation: isolate;
+  font-size: clamp(28px, min(3.2vw, 5.4vh), 40px);
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.9);
+  text-wrap: balance;
+  transition: opacity 0.35s ease;
+}
+
+.line.locked-line .ask {
+  margin-top: 0.15em;
+}
+
+.line.locked-line::before {
+  content: "";
+  position: absolute;
+  inset: -56px -64px;
+  z-index: -1;
+  pointer-events: none;
+  background: radial-gradient(closest-side, rgba(7, 8, 13, 0.92), rgba(7, 8, 13, 0.78) 55%, rgba(7, 8, 13, 0));
+}
+
+/* A narrower screen: the line stands between the marquee and the door. */
+@media (max-width: 1000px) {
+  .locked {
+    --line-top: calc(var(--marquee-bottom, 300px) + 12px);
+    --door-top: calc(var(--line-top) + 104px);
+    --door-h: max(220px, calc(100vh - var(--door-top) - 60px));
+  }
+
+  .line.locked-line {
+    top: var(--line-top);
+    right: auto;
+    left: 50%;
+    width: min(560px, calc(100% - 32px));
+    min-height: 3.2em;
+    font-size: clamp(24px, 4.6vw, 32px);
+    text-align: center;
+    transform: translateX(-50%);
+  }
+}
+
+/* A phone: no tile, and the door takes the screen's width inside the page's side margins. */
+@media (max-width: 600px) {
+  .locked {
+    --door-w: calc(100vw - 2 * var(--pad) - 36px);
+    --door-top: calc(var(--line-top) + 112px);
+    --door-h: max(220px, calc(100vh - var(--door-top) - 40px));
+  }
+
+  .subway {
+    background: var(--base);
+  }
+
+  .subway::after {
+    display: none;
+  }
+
+  .door-frame {
+    width: calc(var(--door-w) + 36px);
+    height: calc(var(--door-h) + 18px);
+    padding: 18px 18px 0;
+  }
+
+  .doorway {
+    inset: 18px 18px 0;
+  }
+
+  .door-step {
+    width: calc(100vw - 2 * var(--pad));
+  }
+
+  .line.locked-line {
+    width: calc(100% - 2 * var(--pad));
+    font-size: 24px;
+    text-align: left;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .locked-door,
+  .slot-cover,
+  .line.locked-line {
+    transition: none;
+  }
+}

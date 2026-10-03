@@ -72,10 +72,14 @@ function crown() {
   return h("div", { class: "crown", "aria-hidden": "true" }, parts.map((p) => h("div", { class: p })));
 }
 
-// The sign: "Matinee", the largest thing on it, over a small letter board with the live film count,
-// inside a thin gold frame and a ring of bulbs.
+function filmCount(count) {
+  return `${count.toLocaleString("en")} ${count === 1 ? "film" : "films"}`;
+}
+
+// The sign: "Matinee", the largest thing on it, over a small letter board with the live film count, or
+// "Private screening" before the device is admitted, inside a thin gold frame and a ring of bulbs.
 function sign(count) {
-  const films = `${count.toLocaleString("en")} ${count === 1 ? "film" : "films"}`;
+  const films = count === null ? "Private screening" : filmCount(count);
   const face = h(
     "div",
     { class: "sign" },
@@ -120,6 +124,16 @@ function field(props) {
   return h("input", { class: "field", autocomplete: "off", spellcheck: "false", ...props });
 }
 
+// The marquee: the crown over the lit sign. `count` null shows "Private screening".
+export function buildMarquee(count) {
+  return h("div", { class: "marquee" }, h("div", { class: "marquee-glow", "aria-hidden": "true" }), crown(), sign(count));
+}
+
+// The letter board shows the library's film count.
+export function showCount(marquee, count) {
+  marquee.querySelector(".board-big").textContent = filmCount(count);
+}
+
 // The door and what it asks. `onEnter` takes the viewer into the theatre, and is handed this door, whose
 // name has flown to the wordmark's place by then.
 export class Door {
@@ -135,23 +149,33 @@ export class Door {
 
   // Build the door and open on the front door's tiles, or on `screen` when given: a new profile ("new"),
   // or the viewer's list ("list"). `said` replaces the front door's line, as after a profile is deleted.
-  async open({ door, screen = null, profileId = null, said = null }) {
+  // `marquee` is one already standing (the locked door's), kept in place rather than built again.
+  async open({ door, screen = null, profileId = null, said = null, marquee = null }) {
     this.profiles = door.profiles;
     this.avatars = door.avatars;
     this.held = door.profiles.filter((p) => p.held);
-    this.wall = h("div", { class: "door-wall" });
-    this.marquee = h("div", { class: "marquee" }, h("div", { class: "marquee-glow", "aria-hidden": "true" }), crown(), sign(door.now_showing));
-    clear(this.stage).append(
-      h("h1", { class: "sr-only" }, "Matinee box office"),
-      this.marquee,
-      this.wall,
-      h("footer", { class: "door-foot" }, credits({ around: this })),
-    );
+    this.build(door.now_showing, marquee);
     if (screen === "new") return this.first();
     const tile = this.held.find((p) => p.id === profileId);
     const profile = screen === "list" && tile ? (await this.seatOf(tile)).seat : null;
     if (profile) return this.picker({ editing: profile });
     return this.greet(said);
+  }
+
+  // The stage: the marquee, the wall where Matinee's words are typed, and the credit line. A marquee already
+  // standing keeps its place, and its letter board turns to the film count.
+  build(count, marquee) {
+    this.wall = h("div", { class: "door-wall" });
+    const foot = h("footer", { class: "door-foot" }, credits({ around: this }));
+    if (!marquee) {
+      this.marquee = buildMarquee(count);
+      clear(this.stage).append(h("h1", { class: "sr-only" }, "Matinee box office"), this.marquee, this.wall, foot);
+      return;
+    }
+    this.marquee = marquee;
+    showCount(marquee, count);
+    for (const node of [...this.stage.children]) if (node !== marquee && node.tagName !== "H1") node.remove();
+    this.stage.append(this.wall, foot);
   }
 
   // The front door: every profile's tile, sorted by name as the server sends them, then "+ New".

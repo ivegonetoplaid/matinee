@@ -3,7 +3,8 @@
 import { del, get, post, put } from "./api.js";
 import { noteLink } from "./note.js";
 import { credits } from "./credits.js";
-import { Door } from "./door.js";
+import { Door, buildMarquee } from "./door.js";
+import { LockedDoor } from "./locked.js";
 import { clear, h, isPhone, prefersLessMotion, sentenceCase, wait } from "./dom.js";
 import { showPick } from "./pick.js";
 import { Deck, dealBeneath, dealPair, setFor } from "./quips.js";
@@ -38,13 +39,19 @@ function countText(n) {
   return `${n.toLocaleString("en")} ${n === 1 ? "film" : "films"} to choose from`;
 }
 
-// The pick's lines, fetched once per page; null until they arrive, or when they could not be read.
+// The pick's lines, fetched once per page, once the device is admitted; null until they arrive, or when they
+// could not be read.
 let quips = null;
+let quipsAsked = false;
 const deck = new Deck(); // one per visit: no line repeats until its set has run out
-get("/api/quips").then((res) => {
-  if (res.ok) quips = res.data;
-  else console.warn("the pick's lines could not be read; picks show no line", res.data);
-});
+function loadQuips() {
+  if (quipsAsked) return;
+  quipsAsked = true;
+  get("/api/quips").then((res) => {
+    if (res.ok) quips = res.data;
+    else console.warn("the pick's lines could not be read; picks show no line", res.data);
+  });
+}
 
 // The avatars the server offers, as the door's reply names them.
 let avatarsOffered = [];
@@ -205,7 +212,13 @@ function problem(data, again, keep = false) {
 }
 
 // The box office. `opts.screen` opens it on a new profile ("new") or the viewer's list ("list").
+// When a door word is set and this device has not given it, the locked door stands in its place, and
+// nothing about the films is asked for until the word is right.
 async function boot(opts = {}) {
+  const gate = await get("/api/admission");
+  if (!gate.ok) return problem(gate.data, () => boot(opts));
+  if (!gate.data.admitted) return lockedDoor(gate.data.greeting);
+  loadQuips();
   const [door, first] = await Promise.all([get("/api/door"), post("/api/first", { viewer: {} })]);
   if (!door.ok) return problem(door.data, () => boot(opts));
   avatarsOffered = door.data.avatars;
@@ -213,6 +226,19 @@ async function boot(opts = {}) {
   stage.classList.add("at-door");
   if (first.ok) wall.show(first.data.pool);
   await new Door({ stage, onEnter: enter }).open({ door: door.data, ...opts });
+}
+
+function lockedDoor(greeting) {
+  wall.clear();
+  stage.classList.remove("revealed");
+  stage.classList.add("at-door", "at-locked");
+  const marquee = buildMarquee(null);
+  clear(stage).append(h("h1", { class: "sr-only" }, "Matinee: a private screening"), marquee);
+  const onAdmitted = () => {
+    stage.classList.remove("at-locked");
+    return boot({ marquee });
+  };
+  return new LockedDoor({ stage, marquee, greeting, onAdmitted }).show();
 }
 
 // Going in: the start is asked for at once, while the door's name flies to the wordmark's place, and the
