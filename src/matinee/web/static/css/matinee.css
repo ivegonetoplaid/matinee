@@ -157,6 +157,22 @@ button {
   text-transform: uppercase;
 }
 
+a.wordmark {
+  text-decoration: none;
+}
+
+a.wordmark:focus-visible {
+  outline: 2px solid var(--gold-hover);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+
+@media (hover: hover) {
+  a.wordmark:hover {
+    color: var(--gold-hover);
+  }
+}
+
 .count {
   font-size: 15px;
   color: var(--dim);

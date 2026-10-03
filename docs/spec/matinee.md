@@ -1160,6 +1160,10 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
   strip lifts, and the question still waits the flight's time. Under reduced
   motion the change is instant. "Edit my list" and "Not <name>?" return to the
   door with the marquee already in place and lit; the name does not fly back.
+- **The wordmark.** Inside the theatre the top bar's wordmark "Matinee" is a
+  link: activating it, by click, tap or keyboard, does what `Start over` does,
+  back to the first question as the same viewer. On the front door the marquee
+  stands in its place, so there it does nothing.
 - **The poster wall.** A flat grid of the posters of the films still in the
   pool, each its own image element, sharp and upright, held at 35 per cent
   strength, with no backing behind Matinee's words. The wall holds that one

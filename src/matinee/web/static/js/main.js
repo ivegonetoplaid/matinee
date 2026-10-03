@@ -65,10 +65,20 @@ function leaveTo(next) {
   next();
 }
 
+// The wordmark is a link that does what "Start over" does: back to the first question, as the same viewer.
+// Without a viewer (a problem before going in) it goes back to the door.
+function wordmark() {
+  const go = (e) => {
+    e.preventDefault();
+    leaveTo(visit.viewer.profile_id ? start : boot);
+  };
+  return h("a", { class: "wordmark", href: "/", onclick: go }, "Matinee");
+}
+
 // The theatre's top bar, the wordmark at its left. A name that flew in from the door gives way to it, and
 // the door, faded since going in, is no longer the stage's.
 function topbar(...rest) {
-  const bar = h("header", { class: "topbar" }, h("div", { class: "wordmark" }, "Matinee"), ...rest);
+  const bar = h("header", { class: "topbar" }, wordmark(), ...rest);
   landing?.settle();
   landing = null;
   stage.classList.remove("at-door", "leaving");
