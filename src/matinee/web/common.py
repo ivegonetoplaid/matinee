@@ -10,7 +10,16 @@ from pydantic import BaseModel, Field
 
 from matinee.store import Profile
 
-ErrorCode = Literal["library_unreachable", "not_ready", "not_found", "refused", "profile", "topics_unavailable"]
+ErrorCode = Literal[
+    "library_unreachable",
+    "not_ready",
+    "not_found",
+    "refused",
+    "profile",
+    "topics_unavailable",
+    "not_admitted",
+    "wrong_word",
+]
 TOKENS_COOKIE = "matinee_tokens"
 MAX_TOKENS = 8
 COOKIE_AGE_S = 400 * 24 * 3600

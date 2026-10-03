@@ -38,6 +38,9 @@ JELLYFIN_API_KEY=... DTDD_API_KEY=... \
 uvicorn --factory matinee.web.main:build --workers 1
 ```
 
+`MATINEE_DOOR_WORD` optionally locks the site behind a word; `MATINEE_DOOR_MATCH`
+(`relaxed` or `strict`) and `MATINEE_DOOR_GREETING` tune it (spec section 7.2).
+
 The `Dockerfile` builds the same server. Run exactly one worker: every
 DoesTheDogDie limit, hold and remembered answer lives in the process.
 

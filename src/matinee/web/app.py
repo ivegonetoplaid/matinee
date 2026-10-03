@@ -8,6 +8,7 @@ server's address or key, a file path or a disk location.
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 from collections.abc import Awaitable, Callable
@@ -27,6 +28,9 @@ from matinee.pick import DeviceCap, Picker
 from matinee.quips import Quips, load_quips
 from matinee.store import Locked, Store, StoreError
 from matinee.table import TableError
+from matinee.web.admission import COOKIE as ADMISSION_COOKIE
+from matinee.web.admission import LIFE_S as ADMISSION_LIFE_S
+from matinee.web.admission import Admission, load_secret
 from matinee.web.common import (
     PROFILE_LINES,
     AvatarChoice,
@@ -214,6 +218,69 @@ def add_delete_route(app: FastAPI, store: Store) -> None:
         return Deleted(name=gone.name)
 
 
+NOT_ADMITTED = "Matinee is a private screening. Give the word at the door."
+WRONG_WORD = "That's not the word."
+WRONG_WORD_DELAY_S = 2.0
+
+
+class AdmissionOut(BaseModel):
+    """Whether the site is locked, whether this device is admitted, and the locked door's greeting."""
+
+    locked: bool
+    admitted: bool
+    greeting: str | None
+
+
+class WordIn(BaseModel):
+    word: str
+
+
+def open_before_admission(path: str) -> bool:
+    """The page, its static files (the locked door's art among them) and the word check; nothing else."""
+    return path in ("/", "/api/admission") or path.startswith("/static/")
+
+
+def add_admission(app: FastAPI, admission: Admission, greeting: str, clock: Callable[[], float], delay: float) -> None:
+    """The locked door: every other route refuses a device the door word has not admitted.
+
+    A wrong word is answered after `delay` seconds, and words are checked one at a time across the installation.
+    The wait is an asynchronous sleep, so waiting guesses hold no worker and delay no other route.
+    """
+    checking = asyncio.Lock()
+
+    def status(request: Request) -> AdmissionOut:
+        admitted = admission.admits(request.cookies.get(ADMISSION_COOKIE), clock())
+        return AdmissionOut(locked=admission.locked, admitted=admitted, greeting=greeting if admission.locked else None)
+
+    @app.middleware("http")
+    async def gate(request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
+        path = request.url.path
+        if open_before_admission(path) or admission.admits(request.cookies.get(ADMISSION_COOKIE), clock()):
+            return await call_next(request)
+        return problem(401, "not_admitted", NOT_ADMITTED)
+
+    @app.get("/api/admission")
+    def admitted(request: Request) -> AdmissionOut:
+        return status(request)
+
+    @app.post("/api/admission", response_model=None)
+    async def give_word(body: WordIn, request: Request, response: Response) -> AdmissionOut | JSONResponse:
+        async with checking:
+            if admission.matches(body.word):
+                response.set_cookie(
+                    ADMISSION_COOKIE,
+                    admission.issue(clock()),
+                    max_age=ADMISSION_LIFE_S,
+                    path="/",
+                    secure=True,
+                    httponly=True,
+                    samesite="lax",
+                )
+                return AdmissionOut(locked=admission.locked, admitted=True, greeting=None)
+            await asyncio.sleep(delay)
+        return problem(401, "wrong_word", WRONG_WORD)
+
+
 STATIC = Path(__file__).resolve().parent / "static"
 SECURITY_HEADERS = {
     "Content-Security-Policy": (
@@ -269,10 +336,19 @@ def create_app(
     clock: Callable[[], float] = time.time,
     picker: Picker | None = None,
     quips: Quips | None = None,
+    wrong_word_delay_s: float = WRONG_WORD_DELAY_S,
 ) -> FastAPI:
-    """The app. `quips` defaults to data/quips.json, read now, so a malformed file stops the start."""
+    """The app. `quips` defaults to data/quips.json, read now, so a malformed file stops the start.
+
+    With a door word set, the installation secret is read, or made at the first start, now; an unreadable one
+    stops the start.
+    """
     app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
+    secret = load_secret(config.state) if config.door_word is not None else b""
+    admission = Admission(config.door_word, config.door_match, secret)
     add_error_handlers(app, clock)
+    # Registered before the page's headers, so the headers wrap the locked door's refusals too.
+    add_admission(app, admission, config.door_greeting, clock, wrong_word_delay_s)
     add_film_routes(app, theatre, config.seerr_url)
     add_page(app)
     add_door_routes(app, theatre, store, clock)

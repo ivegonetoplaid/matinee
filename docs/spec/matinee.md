@@ -642,6 +642,8 @@ The server refuses to start, and logs why, when any of these holds:
   kind its tree does not label;
 - the pick's lines (`data/quips.json`) are missing or malformed, or universal
   lacks reveal lines or nope lines (section 2.7);
+- the door word is shorter than its mode allows, the door mode names no mode,
+  or the door's secret cannot be read (section 7.2);
 - the store file is newer than the code, is not a SQLite database, or cannot be
   upgraded to the current shape (section 7.1). The file is left unchanged.
 
@@ -743,6 +745,48 @@ table named `feedback`) and personal corrections.
 - A file newer than the code, a file that is not a SQLite database, a shape no
   upgrade starts from, and an upgrade that fails all stop the start. The store
   file is left unchanged.
+
+### 7.2 The door word
+
+The door word is optional. With none set (`MATINEE_DOOR_WORD` unset or empty),
+every device is admitted. With one set, a device that is not admitted reaches
+only the page, its static files (the locked door's art among them) and the word
+check, `/api/admission`. Every other route answers `401 not_admitted`, with the
+usual headers. The protection is sized for a household film picker.
+
+- **Admission.** The right word sets the cookie `matinee_admit` (`HttpOnly`,
+  `Secure`, `SameSite=Lax`, path `/`, 400 days). Its value is the time it was
+  issued and an HMAC-SHA256 over that time, the match mode and the door word,
+  keyed by the installation's secret. Only the server can make or check one: a
+  value set by hand admits nothing, and holding one gives no way of testing
+  guesses away from the server. The server also refuses a cookie issued more
+  than 400 days ago.
+- **The secret** is 32 random bytes in `door.key` in the state directory, made
+  at the first start with a door word, owner-only. An admission survives a
+  restart and a redeploy. A secret that cannot be read, or is not 32 bytes,
+  stops the start.
+- **Changing the word or the mode** ends every admission.
+- **A profile token never admits a device.** A device that held a profile
+  before the word was set gives the word once, like any other.
+- **Matching.** In relaxed mode (the default) both words are NFKC-normalised,
+  case-folded and stripped of everything but letters and digits, and they may
+  differ by at most one insertion, deletion or substitution. In strict mode the
+  typed word must equal the door word exactly. A typed word over 200 characters
+  is wrong without being compared. The start is refused when a relaxed word is
+  under 8 letters and digits, a strict word under 12 characters, or
+  `MATINEE_DOOR_MATCH` names no mode; the message names the setting, never the
+  word.
+- **A wrong word** is answered after 2 seconds, and words are checked one at a
+  time across the installation. The wait is an asynchronous sleep: waiting
+  guesses hold no worker, and every other route answers at its usual speed. The
+  wait is not keyed on the client's address.
+- **The greeting** (`MATINEE_DOOR_GREETING`): `show` (the default) is "State
+  your business. Make it quick, the show's about to start."; `gin` is "State
+  your business. And it better be sweeter than bathtub gin, or I'll feed you to
+  the copper pipes."; any other text is the operator's own greeting.
+  `GET /api/admission` carries it while the site is locked.
+- The door word is never written to a log, a reply, an error or either
+  repository.
 
 ## 8. Exclusions
 
@@ -933,6 +977,8 @@ would hand one device's profiles to another.
 | Method | Path | Does |
 |---|---|---|
 | GET | `/` | the page (`Cache-Control: no-cache`) |
+| GET | `/api/admission` | whether the site is locked, whether this device is admitted, and the locked door's greeting |
+| POST | `/api/admission` | give the door word; the right one sets the admission cookie |
 | GET | `/static/…` | scripts, styles, self-hosted fonts, icons, pails, avatars, manifest (`Cache-Control: no-cache`, so a deploy is never seen half-applied) |
 | GET | `/img/{kind}/{tmdb}/{size}` | a poster or backdrop, read from the media server |
 | GET | `/api/film/{tmdb}` | title, year, runtime, synopsis and the Seerr link for one film |
@@ -985,6 +1031,8 @@ Every error leaves as `{"error": <code>, "message": <sentence>}`:
 | `not_ready` | 503 | the film table is too old to serve |
 | `topics_unavailable` | 503 | the topic list cannot be fetched |
 | `not_found` | 404 | an unknown film, image or path |
+| `not_admitted` | 401 | a door word is set and this device has not given it (section 7.2) |
+| `wrong_word` | 401 | the word given at the door is not the door word; answered after 2 seconds |
 | `refused` | 400, 403 or other | answers that no longer fit, an unknown exclusion or tree, a profile this device does not hold, a malformed request |
 | `profile` | 400, 401, 404, 409 or 423 | a profile rule refused the request; the body adds `code` (`bad_name`, `bad_pin`, `bad_avatar`, `name_taken`, `full`, `no_profile`, `wrong_pin`, `locked`) |
 
@@ -1323,6 +1371,7 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
   rebuild with `--daily`.
 - **State** is one directory mounted at `/state` (`MATINEE_STATE`). It holds
   the film table (`films.sqlite`), Matinee's store (`matinee.sqlite`), the
+  door's secret (`door.key`, made at the first start with a door word), the
   labels (`labels.json`, section 2.6), the TMDB cache (`tmdb/films.jsonl`) and
   the MovieLens genome (`ml-latest/`, or `MATINEE_ML`). None of it is in the
   image.
@@ -1338,6 +1387,9 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
 | `DTDD_API_KEY` | server | the DoesTheDogDie key |
 | `TMDB_READ_TOKEN` | rebuild | the TMDB read token |
 | `MATINEE_ML` | rebuild | the genome directory, if not under the state directory |
+| `MATINEE_DOOR_WORD` | server, optional | the door word (section 7.2); unset or empty means no lock |
+| `MATINEE_DOOR_MATCH` | server, optional | `relaxed` (the default) or `strict` |
+| `MATINEE_DOOR_GREETING` | server, optional | `show` (the default), `gin`, or the operator's own greeting |
 
 ## 14. Third-party terms
 
