@@ -27,3 +27,43 @@ export function mark({ name, avatar }, size = "door") {
     : h("span", { class: "mark-initials" }, initials(name));
   return h("span", { class: `mark ${size}`, "aria-hidden": "true" }, inner);
 }
+
+// What each avatar shows, for a screen reader.
+const AVATAR_NAMES = {
+  "3d-glasses": "3D glasses",
+  camera: "Film camera",
+  candy: "Box of candy",
+  chair: "Director's chair",
+  clapperboard: "Clapperboard",
+  "comedy-tragedy": "Comedy and tragedy masks",
+  "director-megaphone": "Megaphone",
+  "film-reel": "Film reel",
+  hotdog: "Hot dog",
+  nachos: "Nachos",
+  popcorn: "Popcorn",
+  soda: "Soda cup",
+  "theater-seat": "Theatre seat",
+  ticket: "Ticket",
+  vhs: "VHS tape",
+};
+
+// The avatars to choose from, as buttons; `onPick` is handed the avatar chosen. `current` is pressed.
+export function avatarChoices(avatars, onPick, current = null) {
+  return h(
+    "div",
+    { class: "avatar-choices", role: "group", "aria-label": "Avatars" },
+    avatars.map((avatar) =>
+      h(
+        "button",
+        {
+          class: "avatar-choice",
+          type: "button",
+          "aria-label": AVATAR_NAMES[avatar] ?? avatar,
+          "aria-pressed": String(avatar === current),
+          onclick: () => onPick(avatar),
+        },
+        mark({ name: "", avatar }, "door"),
+      ),
+    ),
+  );
+}

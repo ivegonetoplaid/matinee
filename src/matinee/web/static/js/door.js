@@ -7,7 +7,7 @@ import { get, post, put } from "./api.js";
 import { credits } from "./credits.js";
 import { clear, h, isPhone, prefersLessMotion, sentenceCase, wait } from "./dom.js";
 import { FLIGHT_MS, copyAt, fly, nameAt, riseOf, wordmarkAt } from "./flight.js";
-import { mark } from "./mark.js";
+import { avatarChoices, mark } from "./mark.js";
 import { typeLine } from "./type.js";
 
 // Bulbs round the sign and the gap between them, as on the design boards. Two dark bulbs chase clockwise,
@@ -16,7 +16,6 @@ const BULBS = { desktop: { count: 156, inset: 9 }, phone: { count: 64, inset: 6 
 const CHASE_S = 12;
 const PIN_LENGTH = 4;
 
-const NOTE_REMEMBER = "Keeps your list for next time. Add a PIN to keep it private.";
 
 // Where each bulb sits on a ring `inset` pixels inside a w × h sign, walking clockwise from the top left.
 function ringAt(k, n, w, h, inset) {
@@ -125,6 +124,11 @@ function doorLines(profiles) {
   return ["Welcome.", "Pick your seat, or introduce yourself and I'll find you something to watch."];
 }
 
+// A name as the store compares it: case and runs of spaces ignored.
+function nameKey(name) {
+  return name.normalize("NFKC").trim().replace(/\s+/g, " ").toLocaleLowerCase();
+}
+
 function field(props) {
   return h("input", { class: "field", autocomplete: "off", spellcheck: "false", ...props });
 }
@@ -146,6 +150,7 @@ export class Door {
   // or the viewer's list ("list"). `said` replaces the front door's line, as after a profile is deleted.
   async open({ door, screen = null, profileId = null, said = null }) {
     this.profiles = door.profiles;
+    this.avatars = door.avatars;
     this.held = door.profiles.filter((p) => p.held);
     this.wall = h("div", { class: "door-wall" });
     this.marquee = h("div", { class: "marquee" }, h("div", { class: "marquee-glow", "aria-hidden": "true" }), crown(), sign(door.now_showing));
@@ -193,9 +198,91 @@ export class Door {
     first?.focus({ preventScroll: true, focusVisible: first.tagName === "INPUT" });
   }
 
-  // Every viewing runs under a profile: a viewer new to this device makes one on the picker.
+  // Making a profile: its name, then its avatar or initials, then an optional PIN. The profile is made once
+  // those are known; the list question follows, then "Find me something to watch".
   first() {
-    return this.picker({});
+    return this.askName("Pull up a chair.", "What should I call you?");
+  }
+
+  askName(ack, ask, said = "") {
+    const name = field({ type: "text", maxlength: 40, placeholder: "Your name", "aria-label": "Your name", autocomplete: "nickname" });
+    const status = h("p", { class: "note", role: "status" }, said);
+    const go = () => {
+      const typed = name.value.trim().replace(/\s+/g, " ");
+      if (!typed) return name.focus();
+      const taken = this.profiles.find((p) => nameKey(p.name) === nameKey(typed));
+      if (taken) return this.taken(taken);
+      return this.askAvatar({ name: typed });
+    };
+    name.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") go();
+    });
+    const form = h("div", { class: "door-form" }, name, status, h("button", { class: "pill solid", type: "button", onclick: go }, "Continue"));
+    return this.talk(ack, ask, [form, linkButton("Never mind", () => this.greet())]);
+  }
+
+  // The name typed is already a profile's: "Yes" opens that profile, asking its PIN when it has one.
+  taken(profile) {
+    return this.talk(`I already have a ${profile.name}.`, "Is that you?", [
+      strip("Yes, that's me", () => this.choose(profile)),
+      strip("No, someone else", () => this.askName("Then I'll need another name,", "so I can tell you two apart.")),
+    ]);
+  }
+
+  askAvatar(draft) {
+    return this.talk(`Nice to meet you, ${draft.name}.`, "Would you like to set an avatar?", [
+      avatarChoices(this.avatars, (avatar) => this.askPin({ ...draft, avatar })),
+      strip("Just my initials", () => this.askPin({ ...draft, avatar: null })),
+    ]);
+  }
+
+  // "Set a PIN" opens the PIN's field in place; four digits make the profile.
+  askPin(draft) {
+    const entry = field({
+      type: "password",
+      inputmode: "numeric",
+      maxlength: PIN_LENGTH,
+      placeholder: "4 digits",
+      "aria-label": "PIN, four digits",
+      autocomplete: "new-password",
+      class: "field pin",
+    });
+    const form = h("div", { class: "door-form narrow", hidden: true }, entry);
+    const choices = [
+      strip("Set a PIN", () => {
+        for (const b of choices) b.hidden = true;
+        form.hidden = false;
+        entry.focus();
+      }),
+      strip("No PIN", () => this.create({ ...draft, pin: null })),
+    ];
+    entry.addEventListener("input", () => {
+      entry.value = entry.value.replace(/\D/g, "").slice(0, PIN_LENGTH);
+      if (entry.value.length === PIN_LENGTH) {
+        entry.disabled = true;
+        this.create({ ...draft, pin: entry.value });
+      }
+    });
+    return this.talk("Want a PIN?", "Four digits keeps your list private.", [choices, form]);
+  }
+
+  async create(draft) {
+    for (const b of this.stage.querySelectorAll(".door-controls button")) b.disabled = true;
+    const res = await post("/api/profiles", draft);
+    if (!res.ok) return this.askName("Pull up a chair.", "What should I call you?", res.data.message);
+    return this.askList(res.data);
+  }
+
+  askList(seat) {
+    return this.talk("", "Anything you never want to see?", [
+      strip("Nope, show me everything.", () => this.done(seat)),
+      strip("Yes, there are a few things.", () => this.picker({ editing: seat, fresh: true })),
+    ]);
+  }
+
+  done(seat) {
+    const go = h("button", { class: "pill gold find-me", type: "button", onclick: () => this.enterAs(seat) }, "Find me something to watch");
+    return this.talk(`You're all set, ${seat.name}.`, "", [go]);
   }
 
   pin(suggestion) {
@@ -293,15 +380,17 @@ export class Door {
     this.settle();
   }
 
-  // The trigger picker, which is also the preferences page when `editing` names a held profile.
-  async picker({ editing = null }) {
-    this.picked = new Set(editing ? editing.topics : []);
-    this.excluded = new Set(editing ? editing.exclusions : []);
+  // The trigger picker, which is also the preferences page, for `editing`, a held profile. `fresh` is a
+  // profile just made, whose list saved leads to "Find me something to watch".
+  async picker({ editing, fresh = false }) {
+    this.fresh = fresh;
+    this.picked = new Set(editing.topics);
+    this.excluded = new Set(editing.exclusions);
     this.marquee.classList.add("compact");
     const heading = h(
       "p",
       { class: "line door-line done" },
-      h("span", { class: "ack" }, editing ? "Your list." : "No problem."),
+      h("span", { class: "ack" }, fresh ? "No problem." : "Your list."),
       h("span", { class: "ask" }, "What should I steer around?"),
     );
     this.status = h("p", { class: "note picker-status", role: "status" });
@@ -311,40 +400,21 @@ export class Door {
       heading,
       h("p", { class: "note picker-lead" }, "I'll check each pick against these and pass on any that hits one."),
       topics,
-      editing ? null : this.who(),
       this.status,
-      h(
-        "div",
-        { class: "picker-actions" },
-        this.saveButton(editing, this.status),
-        editing ? linkButton("Never mind, keep my list", () => this.enterAs(editing)) : null,
-      ),
+      h("div", { class: "picker-actions" }, this.saveButton(editing, this.status), this.neverMind(editing, linkButton)),
     ];
     clear(this.wall).append(h("div", { class: "picker" }, parts));
     await this.fillTopics(topics, editing);
   }
 
-  // The new profile's name and optional PIN.
-  who() {
-    const note = h("p", { class: "note remember-note" }, NOTE_REMEMBER);
-    this.nameField = field({ type: "text", maxlength: 40, placeholder: "Your name", "aria-label": "Your name" });
-    this.pinField = field({
-      type: "password",
-      inputmode: "numeric",
-      maxlength: PIN_LENGTH,
-      placeholder: "PIN",
-      "aria-label": "PIN, optional, four digits",
-      autocomplete: "new-password",
-    });
-    this.pinField.addEventListener("input", () => {
-      this.pinField.value = this.pinField.value.replace(/\D/g, "").slice(0, PIN_LENGTH);
-    });
-    return h("div", { class: "remember" }, note, h("div", { class: "remember-who" }, this.nameField, this.pinField));
+  // The way out of the picker without saving: back to a just-made profile's last step, or into the theatre.
+  neverMind(editing, as) {
+    if (this.fresh) return as("Never mind, show me everything", () => this.done(editing));
+    return as("Never mind, keep my list", () => this.enterAs(editing));
   }
 
   saveButton(editing, status) {
-    this.saveLabel = h("span", {}, editing ? "Save my list" : "Save and continue");
-    const button = h("button", { class: "pill solid", type: "button" }, this.saveLabel);
+    const button = h("button", { class: "pill solid", type: "button" }, this.fresh ? "Save and continue" : "Save my list");
     button.addEventListener("click", async () => {
       button.disabled = true;
       const said = await this.save(editing);
@@ -356,22 +426,12 @@ export class Door {
     return button;
   }
 
-  // Saves and goes in, or returns what to tell the viewer.
+  // Saves the list and moves on, or returns what to tell the viewer.
   async save(editing) {
-    const topics = [...this.picked];
-    const exclusions = [...this.excluded];
-    if (editing) {
-      const res = await put(`/api/profiles/${editing.id}/exclusions`, { topics, exclusions });
-      return res.ok ? this.enterAs(res.data) : res.data.message;
-    }
-    const name = this.nameField.value.trim();
-    if (!name) {
-      this.nameField.focus();
-      return "I'll need a name to remember you.";
-    }
-    const pin = this.pinField.value || null;
-    const res = await post("/api/profiles", { name, pin, topics, exclusions });
-    return res.ok ? this.enterAs(res.data) : res.data.message;
+    const body = { topics: [...this.picked], exclusions: [...this.excluded] };
+    const res = await put(`/api/profiles/${editing.id}/exclusions`, body);
+    if (!res.ok) return res.data.message;
+    return this.fresh ? this.done(res.data) : this.enterAs(res.data);
   }
 
   // Matinee's own exclusions first, then DoesTheDogDie's topics, fetched now and never kept.
@@ -415,7 +475,7 @@ export class Door {
       h(
         "div",
         { class: "picker-actions" },
-        editing ? strip("Never mind, keep my list", () => this.enterAs(editing)) : null,
+        this.neverMind(editing, strip),
         linkButton("Try again", () => this.fillTopics(box, editing)),
       ),
     );

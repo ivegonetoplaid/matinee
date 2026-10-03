@@ -1115,6 +1115,24 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
     when this device holds it or it has no PIN. Otherwise the door asks "Hi,
     <name>. What's your PIN?", with "That's not me" back to the tiles. Going in
     keeps the name's flight to the wordmark.
+  - **Making a profile.** "+ New" runs these steps on the wall, each typed as
+    gold then cream: "Pull up a chair. What should I call you?", a name field
+    and "Continue" (with "Never mind" back to the tiles). A name that is already
+    a profile's, ignoring case and runs of spaces, asks "I already have a
+    <name>. Is that you?": "Yes, that's me" opens that profile as its tile would,
+    asking its PIN when it has one; "No, someone else" asks "Then I'll need
+    another name, so I can tell you two apart." Then "Nice to meet you, <name>.
+    Would you like to set an avatar?" with the fifteen avatars at 88 px (five
+    across on a phone) and "Just my initials". Then "Want a PIN? Four digits
+    keeps your list private." with "Set a PIN", which opens a four-digit field
+    in place, and "No PIN". The profile is made once the name, the avatar or
+    initials and the PIN choice are known, whether or not anything is chosen to
+    steer around; a refusal returns to the name step with its reason. Then
+    "Anything you never want to see?" with "Nope, show me everything." and "Yes,
+    there are a few things.", which opens the trigger picker for the new profile
+    ("No problem. What should I steer around?", "Save and continue", "Never
+    mind, show me everything"). Last, "You're all set, <name>." over a large,
+    centred "Find me something to watch", which goes in to the first question.
 - **Going in.** Every answer at the door that leads into the theatre asks for
   the first question at the tap, and a door is entered once: a second tap or
   Enter changes nothing. The door's words and the corner credit line fade out

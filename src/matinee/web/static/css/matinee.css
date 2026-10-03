@@ -1620,6 +1620,10 @@ button {
   max-width: 260px;
 }
 
+.door-form[hidden] {
+  display: none;
+}
+
 /* ---------- a profile's mark, and the front door's tiles ---------- */
 
 /* A profile's mark: its avatar, or its initials, in a rounded square, the same on the door and in the bar. */
@@ -1724,6 +1728,54 @@ button {
   cursor: default;
 }
 
+/* Choosing an avatar: the fifteen as smaller marks, in rows. */
+.avatar-choices {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, 88px);
+  gap: 12px;
+}
+
+.avatar-choice {
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+
+.avatar-choice .mark.door {
+  width: 88px;
+  height: 88px;
+  border-radius: 15px;
+}
+
+.avatar-choice[aria-pressed="true"] .mark {
+  border-color: var(--gold);
+  box-shadow: 0 0 18px rgba(242, 179, 61, 0.45);
+}
+
+@media (hover: hover) {
+  .avatar-choice:hover .mark {
+    border-color: var(--gold);
+  }
+}
+
+.avatar-choice:focus-visible {
+  outline: none;
+}
+
+.avatar-choice:focus-visible .mark {
+  outline: 2px solid var(--gold-hover);
+  outline-offset: 3px;
+}
+
+/* The last step of making a profile: one large, centred button. */
+.door-controls .find-me {
+  align-self: center;
+  margin-top: 18px;
+  padding: 16px 34px;
+  font-size: 24px;
+}
+
 .field {
   width: 100%;
   min-height: 44px;
@@ -1791,10 +1843,6 @@ button {
 
 .picker-lead {
   grid-row: 2;
-}
-
-.picker .remember {
-  grid-row: 4;
 }
 
 .picker-status {
@@ -1866,31 +1914,6 @@ button {
 
 .note.small a {
   color: rgba(242, 179, 61, 0.75);
-}
-
-.remember {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.remember-note {
-  font-size: 14px;
-}
-
-.remember-who {
-  display: flex;
-  gap: 10px;
-}
-
-.remember-who .field:first-child {
-  flex: 2 1 0;
-  min-width: 0;
-}
-
-.remember-who .field:last-child {
-  flex: 1 1 0;
-  min-width: 0;
 }
 
 .picker-actions {
@@ -1991,6 +2014,23 @@ button {
     height: 96px;
     border-radius: 16px;
     font-size: 40px;
+  }
+
+  .avatar-choices {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .avatar-choice .mark.door {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1;
+    border-radius: 12px;
+  }
+
+  .door-controls .find-me {
+    align-self: stretch;
+    font-size: 21px;
   }
 
   .picker {
