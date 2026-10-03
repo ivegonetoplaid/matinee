@@ -1522,7 +1522,10 @@ as written. A phone is a viewport 600 px wide or less.
 
   The wall's geometry and re-sort plan, the hop plan and its speed limit, the
   glow colour and the quip deal are modules that touch no page. Their tests
-  under `tests/js/` run with `node --test` from `./check.sh`.
+  under `tests/js/` run with `node --test` from `./check.sh`. The page's
+  mechanical design rules (`DESIGN_STANDARDS.md` section 9) are held by
+  `tests/test_design_standards.py`, which reads the stylesheet and the page
+  scripts as text.
 - **The self-destructing reply.** When the last answer carries `self_destruct`
   (the spies answer, behind Thriller and behind Action),
   its reply types in gold as usual, then counts down on its own one-second
