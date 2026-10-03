@@ -167,7 +167,8 @@ export class Door {
   // standing keeps its place, and its letter board turns to the film count.
   build(count, marquee) {
     this.wall = h("div", { class: "door-wall" });
-    const foot = h("footer", { class: "door-foot" }, credits({ around: this }));
+    const foot = h("footer", { class: "door-foot" }, credits({ around: this, dtdd: true }));
+    this.dtddCredit = foot.querySelector(".dtdd-credit");
     if (!marquee) {
       this.marquee = buildMarquee(count);
       clear(this.stage).append(h("h1", { class: "sr-only" }, "Matinee box office"), this.marquee, this.wall, foot);
@@ -220,6 +221,7 @@ export class Door {
   // beneath Matinee's, when there is one. `tiles` lets the profile tiles take the width the line keeps.
   async talk(ack, ask, controls, { tiles = false, detail = null } = {}) {
     this.marquee.classList.remove("compact");
+    this.dtddCredit.hidden = true;
     const line = h("p", { class: "line door-line", "aria-live": "polite" });
     const more = detail ? h("p", { class: "note door-detail", hidden: true }, detail) : null;
     const below = h("div", { class: "door-controls", hidden: true }, controls);
@@ -441,6 +443,7 @@ export class Door {
     this.picked = new Set(editing.topics);
     this.excluded = new Set(editing.exclusions);
     this.marquee.classList.add("compact");
+    this.dtddCredit.hidden = false; // the picker shows DoesTheDogDie's topics
     const heading = h(
       "p",
       { class: "line door-line done" },
@@ -512,15 +515,14 @@ export class Door {
       nothing.hidden = shown > 0;
     });
     count();
-    const credit = dtdd.ok
-      ? [" · Best effort, from crowd votes · ", h("a", { href: dtdd.data.link, target: "_blank", rel: "noopener noreferrer" }, dtdd.data.credit)]
-      : [];
+    this.dtddCredit.hidden = !dtdd.ok;
+    const effort = dtdd.ok ? " · Best effort, from crowd votes" : "";
     const trouble = dtdd.ok ? [] : [this.topicsTrouble(box, dtdd.data.message, editing)];
     // Under the topics, beside their count, a way to read about them on DoesTheDogDie: never beside saving.
     const readMore = dtdd.ok
       ? h("a", { class: "action petrol", href: dtdd.data.link, target: "_blank", rel: "noopener noreferrer" }, "Read about these on DoesTheDogDie ↗")
       : null;
-    clear(box).append(search, ...trouble, nothing, list, h("div", { class: "topic-foot" }, h("p", { class: "note small" }, tally, credit), readMore));
+    clear(box).append(search, ...trouble, nothing, list, h("div", { class: "topic-foot" }, h("p", { class: "note" }, tally, effort), readMore));
     count();
   }
 

@@ -1,6 +1,6 @@
-// The corner credit line: "Posters and film data from TMDB [logo] · About". TMDB's notice and the
-// MovieLens citations are on the About page, and DoesTheDogDie is credited beside its own data wherever
-// that shows. The TMDB logo is always smaller than Matinee's own mark.
+// The corner credit line: "Posters and film data from TMDB [logo] · About", in the foot band. TMDB's notice
+// and the MovieLens citations are on the About page. On a screen that shows DoesTheDogDie's data the line
+// carries "Powered by DoesTheDogDie.com" too. The TMDB logo is always smaller than Matinee's own mark.
 
 import { openAbout } from "./about.js";
 import { h } from "./dom.js";
@@ -20,6 +20,17 @@ function aboutLink(around) {
   return button;
 }
 
-export function credits({ around = null } = {}) {
-  return h("p", { class: "credits" }, "Posters and film data from TMDB ", tmdbLogo(), " · ", aboutLink(around));
+// DoesTheDogDie's credit, built hidden: the screen shows it before a line built on DoesTheDogDie's data
+// starts to type, and it stays for as long as the screen does.
+function dtddCredit() {
+  return h(
+    "span",
+    { class: "dtdd-credit", hidden: true },
+    h("a", { href: "https://www.doesthedogdie.com", target: "_blank", rel: "noopener noreferrer" }, "Powered by DoesTheDogDie.com"),
+  );
+}
+
+// `dtdd` makes room for DoesTheDogDie's credit, on a screen that may show its data.
+export function credits({ around = null, dtdd = false } = {}) {
+  return h("p", { class: "credits" }, "Posters and film data from TMDB ", tmdbLogo(), " · ", aboutLink(around), dtdd ? dtddCredit() : null);
 }

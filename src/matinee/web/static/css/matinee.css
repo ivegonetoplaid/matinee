@@ -927,7 +927,7 @@ a.wordmark:focus-visible {
    nothing passes behind the words: the poster fills it first, and the details follow beneath. */
 @media (max-width: 600px) {
   .stage:has(> .showing) {
-    --pick-talk: calc(max(270px, 36svh) - 32px); /* with room for the foot's fades (.aside) */
+    --pick-talk: calc(max(270px, 36svh) - 46px); /* with room for the foot's fades and its second credit line */
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto minmax(0, 1fr) var(--pick-talk) auto;
@@ -1013,6 +1013,20 @@ a.wordmark:focus-visible {
 
   .stage:has(> .showing) > .bottombar::before {
     top: calc(-1 * var(--band-fade));
+  }
+
+  /* DoesTheDogDie's credit takes a line of its own, kept for it whether or not it shows, so the foot never
+     changes height when it appears. */
+  .stage:has(> .showing) .dtdd-credit {
+    display: block;
+  }
+
+  .stage:has(> .showing) .dtdd-credit[hidden] {
+    visibility: hidden;
+  }
+
+  .stage:has(> .showing) .dtdd-credit::before {
+    content: none;
   }
 
   /* One line of crumbs, each shortened, so the foot keeps its height on every pick. */
@@ -1513,6 +1527,11 @@ a.wordmark:focus-visible {
 
 .credits a {
   color: rgba(242, 179, 61, 0.75);
+}
+
+/* DoesTheDogDie's credit joins the line on a screen that shows its data. */
+.dtdd-credit::before {
+  content: " · ";
 }
 
 /* TMDB's logo sits in the credit line at text height, well below Matinee's own mark. */
@@ -2119,17 +2138,28 @@ a.wordmark:focus-visible {
   display: none;
 }
 
-.note.small a {
-  color: rgba(242, 179, 61, 0.75);
-}
-
-/* Under the topics: their count, and DoesTheDogDie's action beside it. */
+/* Under the topics: their count, and DoesTheDogDie's action beside it; on a desktop the count wraps its own
+   words so the action stays beside it, and on a phone the action drops beneath. */
 .topic-foot {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 10px 16px;
+}
+
+@media (min-width: 761px) {
+  .topic-foot {
+    flex-wrap: nowrap;
+  }
+
+  .topic-foot > .note {
+    min-width: 0;
+  }
+
+  .topic-foot > .action {
+    flex-shrink: 0;
+  }
 }
 
 .picker-actions {

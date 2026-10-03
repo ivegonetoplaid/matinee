@@ -825,7 +825,8 @@ than no.**
   **30 days** old.
 - The trigger picker, which is also the preferences page, offers Matinee's own
   exclusions and the DoesTheDogDie topics. It says the check is best effort from
-  crowd votes and carries "Powered by DoesTheDogDie.com", linked.
+  crowd votes beside the count of chosen topics, and its credit line carries
+  "Powered by DoesTheDogDie.com", linked, in the foot band.
 - When the topic list cannot be fetched, the picker says so, still offers
   Matinee's own exclusions, and offers "Try again". Its way out stays beside
   saving: "Never mind, keep my list" when editing a list, or "Never mind, show
@@ -884,8 +885,8 @@ never kept. No tree, scale or score is built from DoesTheDogDie data.
   viewer with topics looks its film up whatever the request carries.
 - **Turned-away films.** Every film a pick turns away is reported to the page
   and joins the visit's seen list. The page sends the 200 most recent.
-- **Unchecked.** The film is shown with a note, and the DoesTheDogDie credit
-  beside it, when any of these holds:
+- **Unchecked.** The film is shown with a note, and DoesTheDogDie's credit in
+  the foot band, when any of these holds:
   - DoesTheDogDie is slow (no turn, or no answer, within **3 seconds** per
     request) or refuses;
   - DoesTheDogDie holds no record, or a vote row cannot be read;
@@ -1490,11 +1491,12 @@ as written. A phone is a viewport 600 px wide or less.
   wait and the hunt, and the reveal line types beneath it in the text colour
   as the new poster grows. Where the check turned a film away, its reason
   types in gold in the nope line's place and stays, and only the reveal line
-  is redealt to fit beneath it within the cap. DoesTheDogDie's credit is placed
-  beneath the reason before it starts to type and stays through the hunt; on
-  the resting page it moves beneath the actions, joined by the cream "What
-  were you going to show me?" action. The three-in-a-row and exhausted-pool lines likewise
-  have their credit on screen before they type. A pick with no film speaks no quip; its line types its first sentence in
+  is redealt to fit beneath it within the cap. DoesTheDogDie's credit shows in the
+  foot band before the reason starts to type and stays for the rest of the
+  pick; on the resting page the cream "What were you going to show me?" action
+  stands beneath the actions. The three-in-a-row and exhausted-pool lines, and
+  the trip of a film shown after three in a row, likewise have the credit on
+  screen before they type. A pick with no film speaks no quip; its line types its first sentence in
   gold and the rest in cream.
 
   `Not that one` asks for the next film at the tap and carries the resting
@@ -1537,10 +1539,12 @@ as written. A phone is a viewport 600 px wide or less.
   [logo] · About", the logo linked to TMDB and "About" a button that opens the
   About page. It sits at the bottom right of the door, the question screens and
   the pick screen on a desktop (13 px), and centred at the foot on a phone
-  (11 px). The TMDB logo is smaller than Matinee's own mark. MovieLens and
-  DoesTheDogDie are not on the line: MovieLens is credited on the About page,
-  and "Powered by DoesTheDogDie.com", linked, stands beside DoesTheDogDie's
-  data wherever it shows (section 14).
+  (11 px). The TMDB logo is smaller than Matinee's own mark. MovieLens is
+  credited on the About page. On a screen that shows DoesTheDogDie's data (the
+  trigger picker and the pick screens, section 14) the line ends with
+  "Powered by DoesTheDogDie.com", linked; nowhere on the wall carries it. On a
+  phone's pick screen it takes a second line, kept for it whether or not it
+  shows, so the foot never changes height when it appears.
 - **About.** A screen inside the page, with no address of its own and no
   server route. It opens over whatever screen is showing, as a centred dark
   panel 65 per cent opaque over the poster wall, 1040 px wide on a desktop and
@@ -1638,14 +1642,14 @@ The terms of each source are part of the design.
   answer for a film, and the topic list, are remembered for at most 30 days, the
   refresh period the terms set for a performance cache (sections 8 and 9). "Powered by
   DoesTheDogDie.com", linked to `https://www.doesthedogdie.com`, appears
-  wherever its data does: the trigger picker, the swap reason, the unchecked
-  note and the exhausted pool. It also appears beside the three-in-a-row line, beside the film shown after it
-  and on the About page. The page gives the used-up line (section 9) the same
-  credit, whether or not the viewer holds topics, because that line reaches the
-  page in the same field as the exhausted pool's. Beside a line typed from its
-  data, it is on screen before the line starts to type and stays while the line
-  does. The corner credit line does not carry it. The free tier is
-  non-commercial.
+  in the foot band's credit line of every screen that shows its data: the
+  trigger picker, the swap reason, the unchecked note, the exhausted pool, the
+  three-in-a-row line and the film shown after it. It also appears on the About
+  page. The page gives the used-up line (section 9) the same credit, whether or
+  not the viewer holds topics, because that line reaches the page in the same
+  field as the exhausted pool's. Where a line is typed from its data, the
+  credit is on screen before the line starts to type and stays while the line
+  does. The free tier is non-commercial.
 
 ## 15. Out of scope
 
@@ -2115,7 +2119,7 @@ symbol when one does not match.
 | `src/matinee/web/static/js/pick.js::choices` | `src/matinee/web/static/js/pick.js:142` | 2026-10-02 |
 | `src/matinee/web/static/js/pick.js::showNoFilm` | `src/matinee/web/static/js/pick.js:117` | 2026-10-02 |
 | `src/matinee/web/static/js/pick.js::firstPickReveal` | `src/matinee/web/static/js/pick.js:92` | 2026-10-02 |
-| `src/matinee/web/static/js/pick.js::creditBeneath` (DoesTheDogDie's credit before its line types) | `src/matinee/web/static/js/pick.js:84` | 2026-10-02 |
+| `src/matinee/web/static/js/pick.js::showCredit` (DoesTheDogDie's credit in the foot band before its line types) | `src/matinee/web/static/js/pick.js:84` | 2026-10-02 |
 | `src/matinee/web/static/js/note.js::noteLink` | `src/matinee/web/static/js/note.js:61` | 2026-10-02 |
 | `src/matinee/web/static/js/credits.js::credits` | `src/matinee/web/static/js/credits.js:23` | 2026-09-30 |
 | `src/matinee/web/static/js/credits.js::aboutLink` | `src/matinee/web/static/js/credits.js:18` | 2026-09-30 |

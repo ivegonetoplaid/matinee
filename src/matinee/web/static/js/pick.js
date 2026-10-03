@@ -66,7 +66,7 @@ function heading(film) {
 // resting page shows no backdrop, and a backdrop that failed is left out.
 function feature(card, film, result, backdrop) {
   if (backdrop) backdrop.className = "backdrop";
-  const unchecked = result.unchecked ? [h("p", { class: "note" }, result.unchecked, " ", credit(result)), lookUp(result)] : [];
+  const unchecked = result.unchecked ? [h("p", { class: "note" }, result.unchecked), lookUp(result)] : [];
   return h(
     "div",
     { class: "feature" },
@@ -82,21 +82,14 @@ function lookUp(result) {
   return h("a", { class: "action petrol", href, target: "_blank", rel: "noopener noreferrer" }, "Look it up on DoesTheDogDie ↗");
 }
 
-// DoesTheDogDie's credit, shown wherever its data is.
-function credit(result) {
-  return h("a", { href: result.link, target: "_blank", rel: "noopener noreferrer" }, result.credit);
-}
-
-// DoesTheDogDie's credit beneath the line in `aside`, placed before a line built on its data starts to
-// type, so the credit is on screen for as long as that line is. At rest it moves beneath the buttons.
-function creditBeneath(aside, result) {
-  const note = h("div", { class: "swap-note" }, h("p", { class: "note" }, credit(result)));
-  aside.append(note);
-  return note;
+// DoesTheDogDie's credit in the foot band: shown before a line built on its data starts to type, so it is on
+// screen for as long as that line is, and for the rest of the pick.
+function showCredit(frame) {
+  frame.credit.hidden = false;
 }
 
 // Adds "What were you going to show me?", which reveals the film the check turned away, to `note`, the
-// swap reason's credit.
+// place beneath the actions kept for it.
 function firstPickReveal(result, note) {
   const swapped = result.swapped;
   const shown = h("p", { class: "note", hidden: true });
@@ -115,21 +108,21 @@ function firstPickReveal(result, note) {
     },
     swapped.reveal,
   );
-  // The reason itself is the pick's line; the note carries its credit and the way to see the film.
+  // The reason itself is the pick's line; the note carries the way to see the film.
   note.append(ask, shown);
   return note;
 }
 
 // No film: every film left tripped the list, or three in a row did and the viewer may roll again or see
 // the last of them, its trip named.
-async function showNoFilm(result, { line, aside }, actions) {
-  const note = h("p", { class: "note" }, credit(result));
-  aside.append(note);
+async function showNoFilm(result, frame, actions) {
+  const { line, aside } = frame;
+  showCredit(frame);
   const [said, more] = twoParts(result.tired || result.exhausted); // first sentence gold, the rest cream
   await typeLine(line, said, more);
   const startOver = h("button", { class: "action cream", type: "button", onclick: actions.startOver }, "Start over");
   if (!result.tired) {
-    aside.append(startOver, note);
+    aside.append(startOver);
     return;
   }
   aside.append(
@@ -140,7 +133,6 @@ async function showNoFilm(result, { line, aside }, actions) {
       h("button", { class: "action gold", type: "button", onclick: () => actions.showPicked(result) }, "Just show me what you picked"),
     ),
     startOver,
-    note,
   );
 }
 
@@ -163,6 +155,7 @@ function choices(info, film, result, actions, note) {
 // wall to its place and leaves its cell empty until the pick ends.
 async function rest({ stage, wall, frame, film, result, actions, info, backdrop, poster }) {
   stage.classList.add("revealed");
+  if (result.unchecked) showCredit(frame); // the warning is DoesTheDogDie's data
   const shown = feature(info, film, result, backdrop);
   frame.showing.append(shown);
   frame.aside.append(...choices(info, film, result, actions, frame.aside.querySelector(".swap-note")));
@@ -198,16 +191,17 @@ async function restingPoster(sharp, wall, film) {
 
 // Where the check turned the first pick away, the line says so before the new pick lands.
 // Where the check turned a film away, its reason takes the nope line's place in gold at once, with
-// DoesTheDogDie's credit beneath it, and only the reveal line is redealt to fit beneath it. Resolves to
+// DoesTheDogDie's credit in the foot band, and only the reveal line is redealt to fit beneath it. Resolves to
 // the gold line that stays through the hunt: the reason, or the nope line, or "" when nothing stays.
-async function goldLine({ line, aside }, result, lines, fuse) {
-  // A film shown after three tripped the list names its trip from DoesTheDogDie's data, so its credit stands
-  // before that line types.
-  if (result.last) aside.append(h("p", { class: "note" }, credit(result)));
+async function goldLine(frame, result, lines, fuse) {
+  const { line, aside } = frame;
+  // A film shown after three tripped the list names its trip from DoesTheDogDie's data.
+  if (result.last) showCredit(frame);
   if (!result.swapped) return lines.gold || "";
   fuse?.cancel();
   lines.reveal = lines.beneath(result.swapped.line);
-  creditBeneath(aside, result);
+  showCredit(frame);
+  aside.append(h("div", { class: "swap-note" }));
   await typeLine(line, result.swapped.line, "");
   return result.swapped.line;
 }

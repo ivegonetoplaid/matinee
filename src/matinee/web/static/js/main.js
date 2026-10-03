@@ -340,9 +340,9 @@ function pickFrame() {
   const phone = isPhone();
   const left = h("div", { class: "pick-left" }, phone ? null : aside);
   const showing = h("section", { class: "showing" }, left);
-  const foot = h("footer", { class: "bottombar" }, trail(lastCrumb(true)), h("span"), credits());
+  const foot = h("footer", { class: "bottombar" }, trail(lastCrumb(true)), h("span"), credits({ dtdd: true }));
   clear(stage).append(topbar(nameTag() || h("span")), showing, ...(phone ? [aside] : []), foot);
-  return { line, aside, left, showing };
+  return { line, aside, left, showing, credit: foot.querySelector(".dtdd-credit") };
 }
 
 function hasTopics() {
