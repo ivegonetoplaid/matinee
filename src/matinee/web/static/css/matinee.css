@@ -22,7 +22,6 @@
   --gold: #f2b33d;
   --velvet: #e0566b;
   --petrol: #3b7c8c;
-  --chip: rgba(14, 16, 26, 0.8);
   --strip: #f4efe2;
   --strip-ink: #121212;
   --strip-edge: #2a2622;
@@ -391,6 +390,11 @@ a.wordmark:focus-visible {
   width: min(1180px, 100%);
 }
 
+/* A problem screen's "Try again" stands at the left, under the message. */
+.talk > .action {
+  align-self: flex-start;
+}
+
 /* A question's footnote: one small line beneath the answers, above "Just pick one!". */
 .talk > .footnote {
   margin: -14px 0 0;
@@ -696,24 +700,6 @@ a.wordmark:focus-visible {
   gap: 12px;
   flex-wrap: wrap;
   align-items: center;
-}
-
-.link-button {
-  align-self: flex-start;
-  background: none;
-  border: 0;
-  padding: 0;
-  color: var(--dim);
-  font-size: 15px;
-  text-decoration: underline;
-  cursor: pointer;
-  min-height: 44px;
-}
-
-@media (hover: hover) {
-  .link-button:hover {
-    color: var(--text);
-  }
 }
 
 .note {
@@ -1060,22 +1046,6 @@ a.wordmark:focus-visible {
   .action {
     font-size: 16px;
   }
-}
-
-.pill {
-  font-family: var(--body);
-  font-size: 18px;
-  font-weight: 600;
-  background: var(--chip);
-  border-radius: 999px;
-  padding: 12px 22px;
-  min-height: 44px;
-  cursor: pointer;
-}
-
-.pill.gold {
-  color: var(--gold);
-  border: 1.5px solid var(--gold);
 }
 
 @keyframes fade {
@@ -1589,9 +1559,8 @@ a.wordmark:focus-visible {
   gap: 18px;
 }
 
-.about-back {
-  min-height: 32px;
-  font-size: 16px;
+.about-head > .action {
+  align-self: flex-start;
 }
 
 .about-title {

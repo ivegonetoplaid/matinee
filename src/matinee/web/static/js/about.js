@@ -110,7 +110,7 @@ window.addEventListener("keydown", (e) => {
 // door, when About opens from it: its name flies to the wordmark's place before the screen is hidden.
 export async function openAbout(opener = null, around = null) {
   if (shown) return;
-  const back = h("button", { class: "link-button about-back", type: "button", onclick: () => history.back() }, "Back");
+  const back = h("button", { class: "action cream", type: "button", onclick: () => history.back() }, "Back");
   const layer = h(
     "div",
     { class: around ? "about from-door flying" : "about", role: "dialog", "aria-modal": "true", "aria-labelledby": "about-title" },

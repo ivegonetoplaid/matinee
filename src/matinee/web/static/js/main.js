@@ -148,7 +148,7 @@ function frame({ count, footnote }) {
   const pick = h(
     "button",
     {
-      class: "pill gold just-pick",
+      class: "action gold just-pick",
       type: "button",
       onclick: () => {
         lockStage();
@@ -206,7 +206,7 @@ function problem(data, again, keep = false) {
       "section",
       { class: "talk" },
       line,
-      h("div", { class: "answers" }, h("button", { class: "answer", type: "button", onclick: again }, "Try again")),
+      h("button", { class: "action cream", type: "button", onclick: again }, "Try again"),
     ),
   );
 }
