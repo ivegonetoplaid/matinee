@@ -75,6 +75,18 @@ def test_a_search_matching_twice_takes_the_movie_or_goes_unchecked() -> None:
     assert look_up(dtdd, 8, frozenset({153}), ItemIds()).hits == (Hit(153, "topic 153"),)  # the Movie's votes
     both_shows = Twice([show, {**show, "id": 1010}], {})
     assert look_up(both_shows, 8, frozenset({153}), ItemIds()).unchecked == "no_record"
+    ids = ItemIds()  # a lone TV show sharing the film's TMDB number is another title: no record, no item
+    assert look_up(Twice([show], {}), 8, frozenset({153}), ids).unchecked == "no_record"
+    assert ids.get(8) == (True, None)
+
+
+def test_an_answer_older_than_thirty_days_is_no_longer_held_in_memory() -> None:
+    now = [0.0]
+    ids = ItemIds(clock=lambda: now[0])
+    ids.put(578, 10154)
+    now[0] = ID_KEEP_S
+    ids.put(1, 1001)
+    assert 578 not in ids.known and ids.get(1) == (True, 1001)
 
 
 class ScriptedDtdd(Dtdd):
@@ -93,7 +105,7 @@ class ScriptedDtdd(Dtdd):
             answer = self.films.get(tmdb)
             if isinstance(answer, Exception):
                 raise answer
-            return [] if answer is None else [{"id": 1000 + tmdb, "tmdbId": tmdb}]
+            return [] if answer is None else [{"id": 1000 + tmdb, "tmdbId": tmdb, "itemTypeName": "Movie"}]
         return {"topicItemStats": self.films[int(path.rsplit("/", 1)[1]) - 1000]}
 
     def looked_up(self) -> list[int]:
@@ -295,7 +307,7 @@ def test_a_film_with_no_vote_list_or_another_films_record_is_unchecked() -> None
         def get(self, path: str, timeout: float, wait: float) -> Any:
             self.paths.append(path)
             if path.startswith("/items?tmdb=7"):
-                return [{"id": 1007, "tmdbId": 7}]
+                return [{"id": 1007, "tmdbId": 7, "itemTypeName": "Movie"}]
             if path.startswith("/items?tmdb=8"):
                 return [{"id": 1099, "tmdbId": 99}]
             if path == "/items/1099":
@@ -403,6 +415,46 @@ def test_the_servers_own_ceiling_shows_the_film_unchecked_for_the_house() -> Non
     dtdd = ScriptedDtdd({1: DtddCeiling("hour spent")})
     result = Picker(dtdd, DeviceCap(), random.Random(0)).pick([1], frozenset({153}), "dev")
     assert result.film == 1 and result.unchecked == "house"
+
+
+def test_an_unchecked_pick_past_the_cap_carries_the_remembered_item() -> None:
+    now = [0.0]
+    ids = ItemIds(clock=lambda: now[0])
+    ids.put(1, 1001)
+    cap = DeviceCap()
+    for _ in range(LOOKUPS_PER_HOUR):
+        cap.take("dev")
+    dtdd = ScriptedDtdd({1: [stat(153, 0, 9)]})
+    result = Picker(dtdd, cap, random.Random(0), ids).pick([1], frozenset({153}), "dev")
+    assert result.unchecked == "cap" and result.item == 1001 and dtdd.paths == []
+    now[0] = ID_KEEP_S  # thirty days on, the id is no longer held and the pick carries none
+    later = Picker(dtdd, cap, random.Random(0), ids).pick([1], frozenset({153}), "dev")
+    assert later.unchecked == "cap" and later.item is None
+
+
+def test_an_unchecked_pick_carries_no_item_doesthedogdie_says_is_gone() -> None:
+    class Gone(ScriptedDtdd):
+        def get(self, path: str, timeout: float, wait: float) -> Any:
+            if path.startswith("/items/"):
+                self.paths.append(path)
+                raise DtddGone("404")
+            return super().get(path, timeout, wait)
+
+    ids = ItemIds()
+    ids.put(1, 1001)
+    result = Picker(Gone({1: [stat(153, 0, 9)]}), DeviceCap(), random.Random(0), ids).pick([1], frozenset({153}), "d")
+    assert result.unchecked == "no_record" and result.item is None
+
+
+def test_the_route_carries_the_item_only_for_an_unchecked_film(tmp_path: Path) -> None:
+    unreadable = [{"topicName": "no id"}]  # a vote row the check cannot read: unchecked, item known
+    dtdd = ScriptedDtdd({1: unreadable, 2: unreadable, 3: unreadable})
+    client = site_with(tmp_path, Picker(dtdd, DeviceCap(), random.Random(0)), dtdd)
+    body = client.post("/api/pick", json={"tree": "west", "viewer": seat_for(client, topics=[153])}).json()
+    assert body["unchecked"] is not None and body["dtdd_item"] == 1000 + body["film"]["tmdb"]
+    dtdd.films.update({t: [stat(153, 0, 9)] for t in (1, 2, 3)})
+    checked = client.post("/api/pick", json={"tree": "west", "viewer": seat_for(client, topics=[153])}).json()
+    assert checked["unchecked"] is None and checked["dtdd_item"] is None
 
 
 def test_films_in_first_are_drawn_before_the_rest() -> None:

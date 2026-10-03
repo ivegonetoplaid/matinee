@@ -66,13 +66,20 @@ function heading(film) {
 // resting page shows no backdrop, and a backdrop that failed is left out.
 function feature(card, film, result, backdrop) {
   if (backdrop) backdrop.className = "backdrop";
-  const unchecked = result.unchecked ? h("p", { class: "note" }, result.unchecked, " ", credit(result)) : null;
+  const unchecked = result.unchecked ? [h("p", { class: "note" }, result.unchecked, " ", credit(result)), lookUp(result)] : [];
   return h(
     "div",
     { class: "feature" },
     backdrop,
     h("div", { class: "feature-text" }, heading(film), h("p", { class: "synopsis" }, card.synopsis || ""), unchecked),
   );
+}
+
+// A film the check could not answer for: its own page on DoesTheDogDie when the reply carries its item,
+// else DoesTheDogDie's main page, where the viewer can search for it. The address depends on the item alone.
+function lookUp(result) {
+  const href = result.dtdd_item ? `${result.link}/media/${Number(result.dtdd_item)}` : result.link;
+  return h("a", { class: "action petrol", href, target: "_blank", rel: "noopener noreferrer" }, "Look it up on DoesTheDogDie ↗");
 }
 
 // DoesTheDogDie's credit, shown wherever its data is.

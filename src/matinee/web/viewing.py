@@ -163,6 +163,7 @@ class PickOut(BaseModel):
     swapped: SwapOut | None
     last: LastOut | None
     unchecked: str | None
+    dtdd_item: int | None  # an unchecked film's DoesTheDogDie item, when one is held: its page is /media/<id>
     exhausted: str | None
     tired: str | None
     turned_away: list[int]
@@ -275,6 +276,7 @@ def pick_out(films: Any, result: Pick) -> PickOut:
         swapped=_swap_out(films, result),
         last=_last_out(films, result),
         unchecked=None if result.unchecked is None else UNCHECKED_LINES[result.unchecked],
+        dtdd_item=result.item,
         exhausted=_no_film_line(result),
         tired=TIRED.format(topic=result.swapped_hits[0].name) if result.last is not None else None,
         turned_away=list(result.turned),

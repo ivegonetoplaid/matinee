@@ -14,7 +14,8 @@ says so. Films in a pick's `first` set are drawn before the rest.
 
 The only thing kept from a lookup is which DoesTheDogDie item a TMDB film is, or
 that it has none, for at most `ID_KEEP_S`, so a later lookup of the same film
-skips the search. Votes are never kept.
+skips the search. Votes are never kept. An unchecked pick carries the item held
+for its film at that moment, so the page can open the film's own page.
 """
 
 from __future__ import annotations
@@ -67,6 +68,7 @@ class Pick:
     used_up: bool = False
     last: int | None = None  # set only when three in a row tripped: the last of them
     last_hits: tuple[Hit, ...] = ()
+    item: int | None = None  # an unchecked film's DoesTheDogDie item, while one is held for it
 
 
 class Unreadable(ValueError):
@@ -97,16 +99,16 @@ def failing(stats: Sequence[Any], topics: frozenset[int]) -> tuple[Hit, ...]:
 
 
 def _the_film(found: Any, tmdb: int) -> int | None:
-    """The DoesTheDogDie item for this TMDB film: the one match, or the one Movie among several; else None.
+    """The DoesTheDogDie item for this TMDB film: the one Movie matching its TMDB id; else None.
 
-    Raises DtddError when the search answer is not a list, so an unreadable answer
+    TMDB numbers films and TV shows apart, and DoesTheDogDie's search returns both, so only a Movie
+    is ever taken: a TV show sharing the number is another title, and its votes and page are not
+    this film's. Raises DtddError when the search answer is not a list, so an unreadable answer
     is never taken, or remembered, as "no record".
     """
     if not isinstance(found, list):
         raise DtddError("DoesTheDogDie's search answer is not a list")
-    items = [i for i in found if isinstance(i, dict) and i.get("tmdbId") == tmdb]
-    if len(items) > 1:
-        items = [i for i in items if i.get("itemTypeName") == "Movie"]
+    items = [i for i in found if isinstance(i, dict) and i.get("tmdbId") == tmdb and i.get("itemTypeName") == "Movie"]
     if len(items) != 1 or not isinstance(items[0].get("id"), int):
         return None
     return int(items[0]["id"])
@@ -125,17 +127,25 @@ class ItemIds:
     known: dict[int, tuple[int | None, float]] = field(default_factory=dict)
     lock: threading.Lock = field(default_factory=threading.Lock)
 
+    def _drop_expired(self, now: float) -> None:
+        """Forget every answer ID_KEEP_S old, so none is kept past the terms' limit. Called under the lock."""
+        for tmdb in [t for t, (_, at) in self.known.items() if now - at >= ID_KEEP_S]:
+            del self.known[tmdb]
+
     def get(self, tmdb: int) -> tuple[bool, int | None]:
         """(True, item) while an answer younger than ID_KEEP_S is held; (False, None) otherwise."""
         with self.lock:
+            self._drop_expired(self.clock())
             held = self.known.get(tmdb)
-            if held is None or self.clock() - held[1] >= ID_KEEP_S:
+            if held is None:
                 return False, None
             return True, held[0]
 
     def put(self, tmdb: int, item: int | None) -> None:
         with self.lock:
-            self.known[tmdb] = (item, self.clock())
+            now = self.clock()
+            self._drop_expired(now)
+            self.known[tmdb] = (item, now)
 
     def forget(self, tmdb: int) -> None:
         with self.lock:
@@ -231,6 +241,10 @@ class Picker:
     rng: random.Random = field(default_factory=random.SystemRandom)
     ids: ItemIds = field(default_factory=ItemIds)
 
+    def _item(self, film: int) -> int | None:
+        """The film's DoesTheDogDie item as held now, after any lookup: none once forgotten or ID_KEEP_S old."""
+        return self.ids.get(film)[1]
+
     def _draws(self, films: Sequence[int], first: frozenset[int]) -> Iterator[int]:
         """Every film once, in random order, those in `first` before the rest."""
         for group in ([f for f in films if f in first], [f for f in films if f not in first]):
@@ -248,10 +262,11 @@ class Picker:
             if not topics:
                 return Pick(film)
             if not self.cap.take(device):
-                return Pick(film, swapped, swapped_hits, unchecked="cap", turned=tuple(turned))
+                return Pick(film, swapped, swapped_hits, unchecked="cap", turned=tuple(turned), item=self._item(film))
             verdict = look_up(self.dtdd, film, topics, self.ids)
             if not verdict.hits:
-                return Pick(film, swapped, swapped_hits, unchecked=verdict.unchecked, turned=tuple(turned))
+                item = self._item(film) if verdict.unchecked else None
+                return Pick(film, swapped, swapped_hits, unchecked=verdict.unchecked, turned=tuple(turned), item=item)
             if swapped is None:
                 swapped, swapped_hits = film, verdict.hits
             turned.append(film)

@@ -838,12 +838,14 @@ and the viewer holds DoesTheDogDie topics. Nothing is looked up ahead. Votes are
 never kept. No tree, scale or score is built from DoesTheDogDie data.
 
 - **The lookup.** By TMDB id: `/api/v3/items?tmdb={id}`, then
-  `/api/v3/items/{itemId}`. Where the search returns several items for the film,
-  the one Movie among them is used. Where that does not leave exactly one item,
-  the film counts as having no record.
+  `/api/v3/items/{itemId}`. Only a Movie item whose TMDB id is the film's is
+  taken: TMDB numbers films and TV shows apart, and a TV show sharing the
+  number is another title. Where that does not leave exactly one item, the film
+  counts as having no record.
 - **The item id is remembered.** The search's answer (the film's item id, or
   that it has none) is kept in memory for **30 days**, so a later lookup of the
-  same film skips the search. A search answer that cannot be read is not kept.
+  same film skips the search, and is dropped from memory once 30 days old. A
+  search answer that cannot be read is not kept.
   A held id is forgotten when DoesTheDogDie answers 404 for its votes.
 - **The draw.** The pick draws a film at random from the candidates. The
   candidates are the pool less the films already shown or turned away since the
@@ -897,6 +899,16 @@ never kept. No tree, scale or score is built from DoesTheDogDie data.
   spent device allowance and the installation's ceiling each have their own
   line saying so (`UNCHECKED_LINES`). The note does not name the topics: an
   unchecked film was checked against none of them.
+- **Look it up.** Every unchecked film offers a petrol "Look it up on
+  DoesTheDogDie ↗" action beneath its note, opening a new tab. The reply
+  carries `dtdd_item`, the film's DoesTheDogDie item as held at that moment,
+  read after any lookup has run: never one DoesTheDogDie has just answered 404
+  for, and never one older than 30 days. With an item the action opens
+  `https://www.doesthedogdie.com/media/<item>`, the film's own page (the API's
+  item id is the website's media id: Jaws, TMDB 578, is item 10154 and
+  `/media/10154`, confirmed 2026-10-03); with none it opens
+  `https://www.doesthedogdie.com`, where the viewer can search. The address
+  depends on the item alone. A checked film's reply carries no item.
 - **Pacing.** All DoesTheDogDie traffic, from every viewer, passes through one
   client that serialises requests. It allows a burst of **2** and refills at
   **0.45 a second**, so no 60-second window carries more than 29 requests. That

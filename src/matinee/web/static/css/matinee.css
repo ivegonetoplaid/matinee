@@ -770,6 +770,10 @@ a.wordmark:focus-visible {
   animation: fade 0.9s ease 0.5s both;
 }
 
+.feature-text > .action {
+  align-self: flex-start;
+}
+
 .feature > .feature-text:first-child {
   margin-top: 0;
 }
