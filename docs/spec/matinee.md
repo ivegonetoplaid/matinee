@@ -1313,7 +1313,7 @@ as written. A phone is a viewport 600 px wide or less.
   desktop the answers start at the same height on every question whose line
   fits in three; on a phone the answers sit at the foot of the screen. On
   desktop and on a phone the answers are letter-board strips, smaller on a phone.
-  A question's footnote appears with the answers, in small dim type beneath
+  A question's footnote appears with the answers, in 16 px cream body type beneath
   them and above "Just pick one!". The first action on a screen
   disables every button on it. The count of films still in the running stands
   beside "Just pick one!" on every question screen, reading "<N> films to
