@@ -709,8 +709,9 @@ picks nothing until it opens or makes a profile.
   PIN asked, as it opens it with none. The profile, its exclusions and every
   device token issued for it go, on every device; its notes stay (section 10).
   The deleting device's cookie keeps its other tokens and drops this one. A
-  device that does not hold the profile is refused with 403, so a profile with
-  a PIN cannot be deleted by number without it. A profile without a PIN opens on
+  device that does not hold the profile is refused with 403, so naming a
+  profile's id is never enough to delete it: a profile with a PIN must first be
+  opened with its PIN. A profile without a PIN opens on
   any admitted device, which may then delete it; Matinee adds no further guard.
 - There is no PIN reset and no administrative surface on the web. Whoever runs
   the installation clears a forgotten PIN with the notes tool's
@@ -1034,8 +1035,9 @@ would hand one device's profiles to another.
   and a PIN 8; an avatar 40; topics 400; exclusions 20; answers 12; tree names
   40; option indexes 0 to 50; films already seen 200; a note's comment 500;
   trees a note says a film belongs in 32. A pick with no tree may carry no
-  answers. The word given at the door has no size cap; one over 200
-  characters is wrong without being compared (known gap 15).
+  answers. A word given at the door over 200 characters is wrong
+  without being compared; the request itself sets no length cap on it (known
+  gap 15).
 
 ### 11.3 What no response carries
 
@@ -1122,7 +1124,7 @@ as written. A phone is a viewport 600 px wide or less.
   - **The locked door.** The page asks `GET /api/admission` before anything
     else. When a door word is set and the device has not given it (section
     7.2), it asks nothing more: no film list, poster, count, profile or line is
-    requested until the word is right. The marquee's letter board reads "Now showing" "Private
+    requested until the word is right. The marquee's letter board reads "Now showing" over "Private
     screening", and beneath it, in place of the poster wall, stands a wall of
     black glazed subway tile (a static SVG pattern, warm glow above, vignette at
     the edges), a wooden frame and step drawn by the page, and the painted door
@@ -1490,7 +1492,10 @@ as written. A phone is a viewport 600 px wide or less.
   rather than reopening About. The title is 68 px, the lead 23 px and the
   paragraphs 19 px (on a phone the title is at most 13 per cent of the screen's
   width, the lead 20 px and the paragraphs 17 px); section headings are gold,
-  in the display face. The copy, in order: a lead; "Why it exists"; "How it
+  in the display face. The copy, in order: a lead; "Why it exists", whose last paragraph says a
+  viewer can tell Matinee where a film fits best through "Something wrong with
+  this pick?" and that a note the operator agrees with moves the film for
+  everyone (section 10); "How it
   knows what a film feels like", with links to MovieLens and the tag genome
   dataset and the two MovieLens citations; "How it steers around things", with
   "Powered by DoesTheDogDie.com", linked; and "Posters and film data", with the
@@ -1666,7 +1671,7 @@ as the code stood on 2026-10-02.
 
 **Short of the contract, at the door word:**
 
-15. **The word given at the door has no size cap.** Every other request field
+15. **The door's request sets no length cap on the word.** Every other request field
     is capped (section 11.2), but `POST /api/admission` takes a word of any
     length, from a device not yet admitted, and refuses one over 200
     characters without comparing it, after the usual 2-second wait.
