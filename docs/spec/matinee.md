@@ -1125,8 +1125,9 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
     cover, with no text or placeholder. The field takes input once the
     greeting is typed; each character pushes the cover open in proportion,
     fully at ten, and the dots show from the slot's left edge. A small dim eye
-    button under the slot shows or hides what is typed; pressing it leaves the
-    focus, and the caret at the end, in the slot. Enter gives the word, and the
+    button at the slot's right end, over the cover, shows or hides what is
+    typed; the typed text never runs under it, and pressing it leaves the
+    focus, and the caret and the view at the end, in the slot. Enter gives the word, and the
     cover shuts (0.4 s) at once while the server weighs it. A wrong word
     clears the field and types "That
     ain't it, pal." in gold and "Try again, or take a walk." in cream in the

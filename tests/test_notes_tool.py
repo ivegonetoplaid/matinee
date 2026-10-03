@@ -36,7 +36,7 @@ def test_list_shows_every_open_note_in_words(state: Path, capsys: pytest.Capture
     out = capsys.readouterr().out
     assert "#1  Film 5 (1975), under Horror" in out
     assert "by Ada" in out and "answers: Scary. > Slow. > Just pick one!" in out
-    assert "wrong: Not horror at all; belongs in thriller" in out and "comment: it is a thriller" in out
+    assert "wrong: Not horror at all; belongs in Thriller" in out and "comment: it is a thriller" in out
     assert "#2  Film 6 (1976), under Comedy" in out and "by a deleted profile" in out
     assert "wrong: Comedy, but not the kind I asked for" in out
     assert "wrong: The right kind, just not a good pick" in out and "answers: (none)" in out

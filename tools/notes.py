@@ -66,10 +66,10 @@ def printable(text: str) -> str:
     return "".join("\ufffd" if unicodedata.category(c).startswith("C") else c for c in flat)
 
 
-def what_was_wrong(note: FiledNote, door: str) -> str:
-    """The viewer's choice in the panel's own words, with where a "Not <genre> at all" film belongs."""
+def what_was_wrong(note: FiledNote, door: str, names: Names) -> str:
+    """The viewer's choice in the panel's own words, with where a "Not <genre> at all" film belongs, by door."""
     if note.kind == "genre":
-        where = f"; belongs in {', '.join(note.belongs)}" if note.belongs else ""
+        where = f"; belongs in {', '.join(names.door(t) for t in note.belongs)}" if note.belongs else ""
         return f"Not {door.lower()} at all{where}"
     if note.kind == "kind":
         return f"{door}, but not the kind I asked for"
@@ -83,7 +83,7 @@ def describe(note: FiledNote, names: Names) -> list[str]:
         f"#{note.id}  {names.film(note.tmdb)}, under {door}",
         f"    filed {note.at[:16].replace('T', ' ')} UTC by {note.profile or 'a deleted profile'}",
         f"    answers: {' > '.join(answers) if answers else '(none)'}",
-        f"    wrong: {what_was_wrong(note, door)}",
+        f"    wrong: {what_was_wrong(note, door, names)}",
     ]
     if note.comment:
         lines.append(f"    comment: {printable(note.comment)}")

@@ -71,13 +71,15 @@ export class LockedDoor {
       disabled: true,
     });
     this.cover = h("div", { class: "slot-cover", "aria-hidden": "true" });
-    this.slot = h("form", { class: "slot", novalidate: true }, this.word, this.cover);
+    // The eye that shows the word stands at the slot's right end, over the cover, where a password field's
+    // show control usually sits.
     this.peek = h(
       "button",
       { class: "peek", type: "button", "aria-label": "Show the word", "aria-pressed": "false", disabled: true },
       h("img", { src: "/static/door/eye.svg", alt: "", width: 20, height: 20 }),
     );
-    this.door = h("div", { class: "locked-door" }, this.slot, this.peek);
+    this.slot = h("form", { class: "slot", novalidate: true }, this.word, this.cover, this.peek);
+    this.door = h("div", { class: "locked-door" }, this.slot);
     this.scene = h(
       "div",
       { class: "locked" },
@@ -196,6 +198,7 @@ export class LockedDoor {
     requestAnimationFrame(() => {
       const end = this.word.value.length;
       this.word.setSelectionRange(end, end);
+      this.word.scrollLeft = this.word.scrollWidth;
     });
     this.peek.setAttribute("aria-pressed", String(!showing));
     this.peek.setAttribute("aria-label", showing ? "Show the word" : "Hide the word");

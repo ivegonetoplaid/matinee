@@ -2540,6 +2540,7 @@ a.wordmark:focus-visible {
 /* The slot: the painted opening sits 18.5-81.5 per cent across and 28.6-34.6 per cent down the door. The
    typed characters show as dots from its left edge, where the cover uncovers them first. */
 .slot {
+  --slot-h: calc(var(--door-h) * 0.06);
   position: absolute;
   top: 28.6%;
   right: 18.5%;
@@ -2552,7 +2553,7 @@ a.wordmark:focus-visible {
 .slot-word {
   width: 100%;
   height: 100%;
-  padding: 0 14px;
+  padding: 0 calc(var(--slot-h) + 10px) 0 14px; /* the text never runs under the eye */
   border: 0;
   outline: none;
   background: transparent;
@@ -2580,22 +2581,26 @@ a.wordmark:focus-visible {
   transition-duration: 0.4s;
 }
 
-/* The control that shows what is typed: a small dim eye just under the slot. */
+/* The control that shows what is typed: a small dim eye at the slot's right end, over its cover. */
 .peek {
   position: absolute;
-  top: 36%;
-  left: 50%;
+  top: 0;
+  right: 0;
+  z-index: 1;
   display: grid;
   place-items: center;
-  width: 34px;
-  height: 34px;
+  width: var(--slot-h);
+  height: 100%;
   padding: 0;
-  border: 1px solid rgba(243, 234, 216, 0.25);
-  border-radius: 50%;
+  border: 0;
   background: rgba(10, 8, 6, 0.55);
-  opacity: 0.55;
-  transform: translateX(-50%);
+  opacity: 0.6;
   cursor: pointer;
+}
+
+.peek img {
+  width: 62%;
+  height: auto;
 }
 
 .peek:hover,
@@ -2606,7 +2611,7 @@ a.wordmark:focus-visible {
 
 .peek:focus-visible {
   outline: 2px solid var(--gold-hover);
-  outline-offset: 2px;
+  outline-offset: -2px;
 }
 
 .peek:disabled {
