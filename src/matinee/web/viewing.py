@@ -13,7 +13,6 @@ from __future__ import annotations
 import logging
 import secrets
 from collections.abc import Sequence
-from dataclasses import replace
 from typing import Any, Literal
 
 import numpy as np
@@ -55,7 +54,6 @@ class PickIn(BaseModel):
     answers: list[AnswerIn] = Field(default=[], max_length=12)
     viewer: ViewerIn = ViewerIn()
     seen: list[int] = Field(default=[], max_length=200)
-    risk: bool = False  # "Just pick one" after a tired pick: nothing is checked or turned away
 
 
 class FirstIn(BaseModel):
@@ -152,9 +150,18 @@ class SwapOut(BaseModel):
     reveal: str
 
 
+class LastOut(BaseModel):
+    """A tired pick's last film turned away, the topics it trips, and the two lines that show it."""
+
+    film: FilmRef
+    topics: list[str]
+    lines: list[str]
+
+
 class PickOut(BaseModel):
     film: FilmRef | None
     swapped: SwapOut | None
+    last: LastOut | None
     unchecked: str | None
     exhausted: str | None
     tired: str | None
@@ -211,7 +218,6 @@ UNCHECKED_LINES = {
     "slow": "I couldn't check this one against your list, so have a look before you press play.",
     "no_record": "I couldn't check this one against your list, so have a look before you press play.",
     "cap": "I've checked a lot of films for you this hour, so this one is unchecked. Have a look before you play.",
-    "waived": "I didn't check this one against your list, as you asked. Have a look before you press play.",
     "house": (
         "I've checked a lot of films for everyone here this hour, so this one is unchecked. "
         "Have a look before you play."
@@ -219,10 +225,8 @@ UNCHECKED_LINES = {
 }
 EXHAUSTED = "Every film left here trips something on your list. Want to start over?"
 USED_UP = "That's every film I've got for those answers. Step back along the trail, or start over."
-TIRED = (
-    "Three in a row trip your list, starting with one where {topic}. Roll again, or I can just pick one "
-    "without turning any away. It might have some of what you'd rather skip."
-)
+TIRED = "Three in a row trip your list, starting with one where {topic}. Roll again, or I can show you what I picked."
+PICKED = ("Here's what I picked.", "Heads up: it's one where {topic}.")
 
 
 def film_ref(table_films: Any, tmdb: int) -> FilmRef:
@@ -248,19 +252,31 @@ def _no_film_line(result: Pick) -> str | None:
     return EXHAUSTED if result.exhausted else None
 
 
+def _swap_out(films: Any, result: Pick) -> SwapOut | None:
+    if result.swapped is None:
+        return None
+    names = [h.name for h in result.swapped_hits]
+    return SwapOut(
+        film=film_ref(films, result.swapped), topics=names, line=SWAP_LINE.format(topic=names[0]), reveal=REVEAL
+    )
+
+
+def _last_out(films: Any, result: Pick) -> LastOut | None:
+    if result.last is None:
+        return None
+    names = [h.name for h in result.last_hits]
+    gold, cream = PICKED
+    return LastOut(film=film_ref(films, result.last), topics=names, lines=[gold, cream.format(topic=names[0])])
+
+
 def pick_out(films: Any, result: Pick) -> PickOut:
-    swapped = None
-    if result.swapped is not None:
-        names = [h.name for h in result.swapped_hits]
-        swapped = SwapOut(
-            film=film_ref(films, result.swapped), topics=names, line=SWAP_LINE.format(topic=names[0]), reveal=REVEAL
-        )
     return PickOut(
         film=None if result.film is None else film_ref(films, result.film),
-        swapped=swapped,
+        swapped=_swap_out(films, result),
+        last=_last_out(films, result),
         unchecked=None if result.unchecked is None else UNCHECKED_LINES[result.unchecked],
         exhausted=_no_film_line(result),
-        tired=TIRED.format(topic=result.swapped_hits[0].name) if result.tired else None,
+        tired=TIRED.format(topic=result.swapped_hits[0].name) if result.last is not None else None,
         turned_away=list(result.turned),
         credit=DTDD_CREDIT,
         link=DTDD_LINK,
@@ -392,9 +408,5 @@ def add_pick_routes(app: FastAPI, theatre: Theatre, store: Store, picker: Picker
         pool = candidates(left, body.seen, ratings, prefer)
         if left and not pool:
             return pick_out(films, Pick(None, used_up=True))
-        topics = frozenset() if body.risk else viewer.topics
-        device = device_id(request, response) if topics else ""
-        result = picker.pick(pool, topics, device, gentlest(cat, viewer, pool))
-        if body.risk and viewer.topics and result.film is not None:
-            result = replace(result, unchecked="waived")
-        return pick_out(films, result)
+        device = device_id(request, response) if viewer.topics else ""
+        return pick_out(films, picker.pick(pool, viewer.topics, device, gentlest(cat, viewer, pool)))

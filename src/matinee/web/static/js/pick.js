@@ -8,6 +8,7 @@
 // The film is tonight's showing, never a search result.
 
 import { get } from "./api.js";
+import { twoParts } from "./door-rules.js";
 import { h, isPhone, prefersLessMotion, sentenceCase, wait } from "./dom.js";
 import { typeLine } from "./type.js";
 
@@ -112,12 +113,13 @@ function firstPickReveal(result, note) {
   return note;
 }
 
-// No film: every film left tripped the list, or three in a row did and the viewer
-// may roll again or have one picked without the check turning any away.
+// No film: every film left tripped the list, or three in a row did and the viewer may roll again or see
+// the last of them, its trip named.
 async function showNoFilm(result, { line, aside }, actions) {
   const note = h("p", { class: "note" }, credit(result));
   aside.append(note);
-  await typeLine(line, result.tired || result.exhausted, "");
+  const [said, more] = twoParts(result.tired || result.exhausted); // first sentence gold, the rest cream
+  await typeLine(line, said, more);
   const startOver = h("button", { class: "action cream", type: "button", onclick: actions.startOver }, "Start over");
   if (!result.tired) {
     aside.append(startOver, note);
@@ -128,7 +130,7 @@ async function showNoFilm(result, { line, aside }, actions) {
       "div",
       { class: "choices" },
       h("button", { class: "action gold", type: "button", onclick: actions.rollAgain }, "Roll again"),
-      h("button", { class: "action rose", type: "button", onclick: actions.justPick }, "Just pick one"),
+      h("button", { class: "action gold", type: "button", onclick: () => actions.showPicked(result) }, "Just show me what you picked"),
     ),
     startOver,
     note,
@@ -192,6 +194,9 @@ async function restingPoster(sharp, wall, film) {
 // DoesTheDogDie's credit beneath it, and only the reveal line is redealt to fit beneath it. Resolves to
 // the gold line that stays through the hunt: the reason, or the nope line, or "" when nothing stays.
 async function goldLine({ line, aside }, result, lines, fuse) {
+  // A film shown after three tripped the list names its trip from DoesTheDogDie's data, so its credit stands
+  // before that line types.
+  if (result.last) aside.append(h("p", { class: "note" }, credit(result)));
   if (!result.swapped) return lines.gold || "";
   fuse?.cancel();
   lines.reveal = lines.beneath(result.swapped.line);
@@ -241,7 +246,7 @@ async function bringOut({ wall, frame, pause, posterReady, left, lines, gold, fu
   return { shown, sharp, typing };
 }
 
-// The page's pick screen. `actions` holds notThatOne, rollAgain, justPick, startOver, failed and the note link
+// The page's pick screen. `actions` holds notThatOne, rollAgain, showPicked, startOver, failed and the note link
 // panel's builder. `readUntil` (a performance.now() time) holds the hunt until the line on screen has
 // been read. After every wait the pick checks that its screen is still showing and that the pick was
 // not ended on the wall: a trail answer or the name tag can end it at any moment, and a pick the viewer

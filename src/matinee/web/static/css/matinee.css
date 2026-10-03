@@ -987,6 +987,12 @@ a.wordmark:focus-visible {
     gap: 8px;
   }
 
+  /* Nothing in the foot shrinks under its own height: a line longer than its four reserved lines scrolls
+     with the rest rather than lie over the actions. */
+  .aside > * {
+    flex-shrink: 0;
+  }
+
   /* "Start over" is the trail's "Start", just beneath; the foot keeps the room for the correction. */
   .aside .choices > .start-over {
     display: none;

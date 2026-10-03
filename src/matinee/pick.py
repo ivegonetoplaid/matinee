@@ -4,8 +4,9 @@ A viewer without topics causes no lookup. For a viewer with topics, the drawn
 film is looked up by TMDB id; it fails a topic that has at least five votes and
 more yes votes than no. A film that fails is replaced from the same pool, and a
 film that already failed in this pick is never looked up again. After
-`PICK_TRIES` films have failed with others still undrawn, the pick stops and
-says so. When
+`PICK_TRIES` films have failed with others still undrawn, the pick stops, says
+so, and holds the last of them with the topics it trips, for the viewer to see
+on asking. When
 DoesTheDogDie is slow (over three seconds), refuses, holds no record, or the
 device has spent its lookups or the server its requests for the hour, the film
 is shown marked unchecked, with the reason. When every film in the pool fails, the pick
@@ -37,7 +38,7 @@ HOUR_S = 3600.0
 SWEEP_S = 60.0
 ID_KEEP_S = 30 * 24 * HOUR_S
 PICK_TRIES = 3
-Unchecked = Literal["slow", "no_record", "cap", "house", "waived"]
+Unchecked = Literal["slow", "no_record", "cap", "house"]
 log = logging.getLogger("matinee.pick")
 
 
@@ -62,9 +63,10 @@ class Pick:
     swapped_hits: tuple[Hit, ...] = ()
     unchecked: Unchecked | None = None
     exhausted: bool = False
-    tired: bool = False
     turned: tuple[int, ...] = ()
     used_up: bool = False
+    last: int | None = None  # set only when three in a row tripped: the last of them
+    last_hits: tuple[Hit, ...] = ()
 
 
 class Unreadable(ValueError):
@@ -254,5 +256,5 @@ class Picker:
                 swapped, swapped_hits = film, verdict.hits
             turned.append(film)
             if len(turned) >= PICK_TRIES and len(turned) < len(films):
-                return Pick(None, swapped, swapped_hits, tired=True, turned=tuple(turned))
+                return Pick(None, swapped, swapped_hits, turned=tuple(turned), last=film, last_hits=verdict.hits)
         return Pick(None, swapped, swapped_hits, exhausted=True, turned=tuple(turned))

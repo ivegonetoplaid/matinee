@@ -867,12 +867,19 @@ never kept. No tree, scale or score is built from DoesTheDogDie data.
 - **Every film fails.** The page says "Every film left here trips something on
   your list. Want to start over?" and offers `Start over`.
 - **Three in a row.** A pick looks up at most **3** films that fail. When three
-  have failed and others remain, it stops and the page says "Three in a row
-  trip your list, starting with one where <topic>. Roll again, or I can just
-  pick one without turning any away. It might have some of what you'd rather
-  skip." It offers `Roll again`, `Just pick one` and `Start over`. `Just pick
-  one` draws a film (least gory first, where that applies) and shows it without
-  looking it up, marked unchecked.
+  have failed and others remain, it stops and the page says, in gold, "Three in
+  a row trip your list, starting with one where <topic>." and, in cream, "Roll
+  again, or I can show you what I picked." It offers `Roll again`, the gold
+  action "Just show me what you picked" and `Start over`. The reply carries the
+  third film that tripped and the topics it trips (`last`). "Just show me what
+  you picked" shows that film as a pick from the reply already held, asking
+  no new pick and nothing of DoesTheDogDie (the film's details and pictures
+  load as on any pick): "Here's what I picked." in gold
+  at the tap, and "Heads up: it's one where <topic>." in cream as its poster
+  grows, `<topic>` the first topic on the viewer's list it trips. It then
+  behaves as any pick: `Not that one`, the note and `Start over` work.
+- **Every pick is checked.** No request can ask to skip the check: a pick for a
+  viewer with topics looks its film up whatever the request carries.
 - **Turned-away films.** Every film a pick turns away is reported to the page
   and joins the visit's seen list. The page sends the 200 most recent.
 - **Unchecked.** The film is shown with a note, and the DoesTheDogDie credit
@@ -883,13 +890,12 @@ never kept. No tree, scale or score is built from DoesTheDogDie data.
   - the device has spent its allowance for the hour;
   - the installation has reached its own hourly ceiling;
   - the client is holding its requests after a refusal, or because
-    DoesTheDogDie reports the month's allowance nearly spent;
-  - the viewer chose `Just pick one` after three films failed.
+    DoesTheDogDie reports the month's allowance nearly spent.
 
   An unreadable vote row never counts as a pass. The note reads "I couldn't
   check this one against your list, so have a look before you press play." A
-  spent device allowance, the installation's ceiling and `Just pick one` each
-  have their own line saying so (`UNCHECKED_LINES`). The note does not name the topics: an
+  spent device allowance and the installation's ceiling each have their own
+  line saying so (`UNCHECKED_LINES`). The note does not name the topics: an
   unchecked film was checked against none of them.
 - **Pacing.** All DoesTheDogDie traffic, from every viewer, passes through one
   client that serialises requests. It allows a burst of **2** and refills at
@@ -1476,7 +1482,8 @@ as written. A phone is a viewport 600 px wide or less.
   beneath the reason before it starts to type and stays through the hunt; on
   the resting page it moves beneath the actions, joined by the cream "What
   were you going to show me?" action. The three-in-a-row and exhausted-pool lines likewise
-  have their credit on screen before they type. A pick with no film speaks no quip.
+  have their credit on screen before they type. A pick with no film speaks no quip; its line types its first sentence in
+  gold and the rest in cream.
 
   `Not that one` asks for the next film at the tap and carries the resting
   poster back from where it rests to its cell on the wall, at the wall's size
@@ -1487,8 +1494,7 @@ as written. A phone is a viewport 600 px wide or less.
   the screen. The next hunt starts
   from where the wall stands, by every rule above. "Roll again", after three
   films in a row were turned away, is a new pick: its check line types.
-  `Just pick one` there is a new pick that checks nothing, so no check line
-  types.
+  "Just show me what you picked" asks for nothing, so no check line types.
 
   A trail answer, the wordmark, a profile menu item that leaves the theatre
   ("Edit my list", "Switch profiles", a confirmed "Delete profile") or `Start
@@ -1621,7 +1627,7 @@ The terms of each source are part of the design.
   refresh period the terms set for a performance cache (sections 8 and 9). "Powered by
   DoesTheDogDie.com", linked to `https://www.doesthedogdie.com`, appears
   wherever its data does: the trigger picker, the swap reason, the unchecked
-  note and the exhausted pool. It also appears beside the three-in-a-row line
+  note and the exhausted pool. It also appears beside the three-in-a-row line, beside the film shown after it
   and on the About page. The page gives the used-up line (section 9) the same
   credit, whether or not the viewer holds topics, because that line reaches the
   page in the same field as the exhausted pool's. Beside a line typed from its
@@ -2073,7 +2079,7 @@ symbol when one does not match.
 | `src/matinee/web/static/js/main.js::checking` / `fadeTalk` (`READ_MS`) | `src/matinee/web/static/js/main.js:353` | 2026-10-02 |
 | `src/matinee/web/static/js/main.js::pickLines` | `src/matinee/web/static/js/main.js:385` | 2026-10-02 |
 | `src/matinee/web/static/js/main.js::clearForPick` / `requestPick` / `openPick` | `src/matinee/web/static/js/main.js:400` | 2026-10-02 |
-| `src/matinee/web/static/js/main.js::pickNow` (`notThatOne`, `rollAgain`, `justPick`) | `src/matinee/web/static/js/main.js:444` | 2026-10-02 |
+| `src/matinee/web/static/js/main.js::pickNow` (`notThatOne`, `rollAgain`) / `showPicked` | `src/matinee/web/static/js/main.js:444` | 2026-10-02 |
 | `src/matinee/web/static/js/main.js::enter` (the start asked at the tap, the question after the landing) | `src/matinee/web/static/js/main.js:263` | 2026-10-02 |
 | `src/matinee/web/static/js/main.js::topbar` (settles a landed name) | `src/matinee/web/static/js/main.js:92` | 2026-10-02 |
 | `src/matinee/web/static/js/main.js::problem` (`keep`: the failed start's posters) | `src/matinee/web/static/js/main.js:199` | 2026-10-02 |

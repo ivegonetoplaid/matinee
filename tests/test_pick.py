@@ -29,6 +29,7 @@ from matinee.table import FilmTable
 from matinee.web.app import create_app
 from matinee.web.config import Config
 from matinee.web.theatre import Theatre
+from matinee.web.viewing import PickIn
 from test_engine import gore_cut_tree, reference, write_data
 from test_web_library import SECRET_KEY, SECRET_URL, FakeLibrary, seat_for, write_film_table
 
@@ -434,7 +435,7 @@ def test_a_pick_stops_after_three_films_fail_while_others_remain() -> None:
     assert PICK_TRIES == 3
     dtdd = ScriptedDtdd({t: [stat(153, 9, 0)] for t in range(1, 11)})
     result = Picker(dtdd, DeviceCap(), random.Random(0)).pick(list(range(1, 11)), frozenset({153}), "dev")
-    assert result.film is None and result.tired and not result.exhausted
+    assert result.film is None and result.last is not None and not result.exhausted
     assert len(result.turned) == 3 and sorted(result.turned) == sorted(dtdd.looked_up())
 
 
@@ -444,8 +445,20 @@ def test_every_film_turned_away_is_reported_with_the_pick() -> None:
     assert result.film == 3 and result.turned == (1, 2)
 
 
-def test_the_route_offers_to_roll_again_or_just_pick_one_after_three_fail(tmp_path: Path) -> None:
-    dtdd = ScriptedDtdd({t: [stat(153, 9, 0)] for t in range(1, 41)})
+class TripsInTurn(ScriptedDtdd):
+    """Every film trips the list: the first two looked up on topic 153, every later one on topic 154 alone."""
+
+    def __init__(self) -> None:
+        super().__init__({t: [] for t in range(1, 41)})
+
+    def get(self, path: str, timeout: float, wait: float) -> Any:
+        body = super().get(path, timeout, wait)
+        if path.startswith("/items/"):
+            return {"topicItemStats": [stat(153 if len(self.looked_up()) <= 2 else 154, 9, 0)]}
+        return body
+
+
+def forty_film_site(tmp_path: Path, dtdd: ScriptedDtdd) -> TestClient:
     data = write_data(tmp_path / "data")
     write_film_table(tmp_path / "films.sqlite")
 
@@ -455,16 +468,29 @@ def test_the_route_offers_to_roll_again_or_just_pick_one_after_three_fail(tmp_pa
     theatre = Theatre(FakeLibrary(), tmp_path / "films.sqlite", catalog_of=catalog_of)  # all forty films
     config = Config(SECRET_URL, SECRET_KEY, tmp_path, "https://seerr.invalid", "d" * 16)
     picker = Picker(dtdd, DeviceCap(), random.Random(0))
-    client = TestClient(
-        create_app(config, theatre, Store(tmp_path / "s.sqlite"), dtdd, clock=lambda: 0.0, picker=picker),
-        base_url="https://testserver",
+    app = create_app(config, theatre, Store(tmp_path / "s.sqlite"), dtdd, clock=lambda: 0.0, picker=picker)
+    return TestClient(app, base_url="https://testserver")
+
+
+def test_three_in_a_row_hold_the_third_film_with_its_own_topic(tmp_path: Path) -> None:
+    dtdd = TripsInTurn()
+    client = forty_film_site(tmp_path, dtdd)
+    body = client.post("/api/pick", json={"tree": "west", "viewer": seat_for(client, topics=[153, 154])}).json()
+    assert body["film"] is None and body["exhausted"] is None and len(body["turned_away"]) == 3
+    assert body["tired"] == (
+        "Three in a row trip your list, starting with one where topic 153. Roll again, or I can show you what I picked."
     )
-    visit: dict[str, Any] = {"tree": "west", "viewer": seat_for(client, topics=[153])}
+    assert body["last"]["film"]["tmdb"] == body["turned_away"][2] == dtdd.looked_up()[2]
+    assert body["last"]["topics"] == ["topic 154"]
+    assert body["last"]["lines"] == ["Here's what I picked.", "Heads up: it's one where topic 154."]
+
+
+def test_a_pick_that_asks_to_skip_the_check_is_still_checked(tmp_path: Path) -> None:
+    dtdd = ScriptedDtdd({t: [stat(153, 0, 9)] for t in (1, 2, 3)})
+    client = site_with(tmp_path, Picker(dtdd, DeviceCap(), random.Random(0)), dtdd)
+    visit = {"tree": "west", "viewer": seat_for(client, topics=[153]), "risk": True, "skip_check": True}
     body = client.post("/api/pick", json=visit).json()
-    assert body["film"] is None and body["exhausted"] is None
-    assert body["tired"].startswith("Three in a row trip your list, starting with one where topic 153.")
-    assert len(body["turned_away"]) == 3
-    sent = len(dtdd.paths)
-    waived = client.post("/api/pick", json=visit | {"risk": True}).json()
-    assert waived["film"] is not None and len(dtdd.paths) == sent  # nothing looked up
-    assert waived["unchecked"].startswith("I didn't check this one against your list, as you asked.")
+    assert body["film"] is not None and body["unchecked"] is None
+    assert dtdd.looked_up() == [body["film"]["tmdb"]]
+    # Whatever it is called, nothing a pick request carries can turn the check off.
+    assert set(PickIn.model_fields) == {"tree", "answers", "viewer", "seen"}

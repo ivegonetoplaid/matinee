@@ -315,7 +315,7 @@ async function step() {
   const q = res.data.question;
   // The last answer brings the posters to the size they keep through the pick.
   wall.show(visit.pool, { resting: !q });
-  if (!q) return pickNow(res.data.line, false, false, res.data.self_destruct);
+  if (!q) return pickNow(res.data.line, false, res.data.self_destruct);
   const picture = q.presentation === "pails" && q.options.every((o) => o.image);
   const options = q.options.map((o) => ({
     say: o.say,
@@ -369,7 +369,6 @@ async function checkedPick(request, frame, lines, aloud) {
   return res;
 }
 
-// `risk` is "Just pick one" after three films tripped the list: nothing is checked or turned away.
 // The question's words fade out as a pick begins from a question screen.
 async function fadeTalk() {
   const talk = stage.querySelector(".talk");
@@ -404,9 +403,9 @@ async function clearForPick(again) {
 }
 
 // Asks the server for a pick from the answers so far, leaving out films already seen.
-function requestPick(risk) {
+function requestPick() {
   const seen = visit.seen.slice(-SEEN_MAX); // the server takes at most SEEN_MAX; the oldest may come round again
-  return post("/api/pick", { tree: visit.tree, answers: visit.answers, viewer: visit.viewer, seen, risk });
+  return post("/api/pick", { tree: visit.tree, answers: visit.answers, viewer: visit.viewer, seen });
 }
 
 // Opens the pick screen and types a line in gold: after "Not that one" the nope line, which stays
@@ -434,25 +433,25 @@ function fuseOn(frame, reply, destruct, round) {
   return lightFuse(frame.line, destruct, () => frame.showing.isConnected && wall.round === round);
 }
 
-// Whether the check's line types: on a checked pick that is not "Not that one" or rushed, with no fuse lit.
-function checksAloud(risk, again, fuse) {
-  return hasTopics() && !risk && !again && !fuse;
+// Whether the check's line types: on a pick that is not "Not that one", with no fuse lit.
+function checksAloud(again, fuse) {
+  return hasTopics() && !again && !fuse;
 }
 
 // `again` is "Not that one": the resting poster goes back to the wall while the next film is fetched,
 // and the check's line does not type. `destruct` (seconds) lights a fuse on the reply: it counts down and
 // burns away on its own clock, and the check's line does not type over it.
-async function pickNow(opening = "", risk = false, again = false, destruct = null) {
+async function pickNow(opening = "", again = false, destruct = null) {
   const round = wall.round;
   // The pick is asked for first, so the check and the fetch run while the words fade and the line types.
-  const request = requestPick(risk);
+  const request = requestPick();
   // A reply that self-destructs owns the line; any other reply stays through the hunt.
   const lines = pickLines(again, destruct ? "" : opening);
   await clearForPick(again);
   const { frame, readUntil } = await openPick(opening, lines.nope);
   const fuse = fuseOn(frame, opening, destruct, round);
   // The check's line types only on a checked pick that is not "Not that one", and never over a fuse.
-  const res = await checkedPick(request, frame, lines, checksAloud(risk, again, fuse));
+  const res = await checkedPick(request, frame, lines, checksAloud(again, fuse));
   // The viewer took a way back out while the pick was fetched.
   if (!frame.showing.isConnected || wall.round !== round) return undefined;
   if (!res.ok) return problem(res.data, start);
@@ -465,24 +464,43 @@ async function pickNow(opening = "", risk = false, again = false, destruct = nul
     readUntil,
     lines,
     fuse,
-    actions: {
-      notThatOne: () => {
-        lockStage();
-        pickNow("", false, true);
-      },
-      rollAgain: () => {
-        lockStage();
-        pickNow();
-      },
-      justPick: () => {
-        lockStage();
-        pickNow("", true);
-      },
-      startOver: () => leaveTo(start),
-      failed: (data) => problem(data, start),
-      noteLink: (film) => noteLink({ visit, film, trees: visit.trees }),
-    },
+    actions: pickActions(),
   });
+}
+
+// What the pick screen's controls do.
+function pickActions() {
+  return {
+    notThatOne: () => {
+      lockStage();
+      pickNow("", true);
+    },
+    rollAgain: () => {
+      lockStage();
+      pickNow();
+    },
+    showPicked: (held) => {
+      lockStage();
+      showPicked(held);
+    },
+    startOver: () => leaveTo(start),
+    failed: (data) => problem(data, start),
+    noteLink: (film) => noteLink({ visit, film, trees: visit.trees }),
+  };
+}
+
+// "Just show me what you picked", after three films in a row tripped the list: the last of them, from the
+// reply already held, shown as a pick with its trip named. No new pick is asked for and nothing of
+// DoesTheDogDie; the film's details and pictures load as on any pick. "Here's what I picked." types at the tap and stays through the hunt; the trip types beneath
+// it as the poster grows.
+async function showPicked(held) {
+  const round = wall.round;
+  const [gold, trip] = held.last.lines;
+  const lines = { nope: null, gold, reveal: trip, beneath: () => trip };
+  const { frame, readUntil } = await openPick(gold, null);
+  if (!frame.showing.isConnected || wall.round !== round) return undefined;
+  const result = { ...held, film: held.last.film, swapped: null, tired: null, turned_away: [] };
+  return showPick({ stage, wall, result, frame, readUntil, lines, fuse: null, actions: pickActions() });
 }
 
 boot();
