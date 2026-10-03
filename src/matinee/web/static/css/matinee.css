@@ -1923,12 +1923,15 @@ a.wordmark:focus-visible {
   outline-offset: 3px;
 }
 
-/* The last step of making a profile: one large, centred button. */
-.door-controls .find-me {
+/* The door's actions stand at the left of its column; the last step of making a profile centres its one. */
+.door-controls > .action,
+.door-form > .action {
+  align-self: flex-start;
+}
+
+.door-controls > .find-me {
   align-self: center;
   margin-top: 18px;
-  padding: 16px 34px;
-  font-size: 24px;
 }
 
 .field {
@@ -1954,18 +1957,6 @@ a.wordmark:focus-visible {
 .field.pin {
   font-size: 22px;
   letter-spacing: 0.5em;
-}
-
-.pill.solid {
-  align-self: flex-start;
-  color: var(--strip-ink);
-  background: var(--gold);
-  border: 0;
-  font-size: 16px;
-}
-
-.pill.solid:disabled {
-  opacity: 0.45;
 }
 
 /* The trigger picker: the question and saving on the left, the topics on the right.
@@ -2179,13 +2170,6 @@ a.wordmark:focus-visible {
     height: auto;
     aspect-ratio: 1;
     border-radius: 12px;
-  }
-
-  .door-controls .find-me {
-    align-self: stretch;
-    padding: 16px 18px;
-    font-size: 21px;
-    white-space: nowrap;
   }
 
   .picker {

@@ -93,8 +93,9 @@ function sign(count) {
   return face;
 }
 
-function linkButton(text, onclick) {
-  return h("button", { class: "link-button", type: "button", onclick }, text);
+// A neutral way on or back: a cream action.
+function creamAction(text, onclick) {
+  return h("button", { class: "action cream", type: "button", onclick }, text);
 }
 
 function strip(text, onclick) {
@@ -250,8 +251,8 @@ export class Door {
       e.preventDefault();
       go();
     });
-    const form = h("div", { class: "door-form" }, name, status, h("button", { class: "pill solid", type: "button", onclick: go }, "Continue"));
-    return this.talk(ack, ask, [form, linkButton("Never mind", () => this.greet())]);
+    const form = h("div", { class: "door-form" }, name, status, h("button", { class: "action gold", type: "button", onclick: go }, "Continue"));
+    return this.talk(ack, ask, [form, creamAction("Never mind", () => this.greet())]);
   }
 
   // The name typed is already a profile's: "Yes" opens that profile, asking its PIN when it has one.
@@ -322,7 +323,7 @@ export class Door {
   }
 
   done(seat) {
-    const go = h("button", { class: "pill gold find-me", type: "button", onclick: () => this.enterAs(seat) }, "Find me something to watch");
+    const go = h("button", { class: "action gold find-me", type: "button", onclick: () => this.enterAs(seat) }, "Find me something to watch");
     return this.talk(`You're all set, ${seat.name}.`, "", [go]);
   }
 
@@ -351,7 +352,7 @@ export class Door {
     });
     return this.talk(`Hi, ${suggestion.name}.`, "What's your PIN?", [
       h("div", { class: "door-form narrow" }, entry, status),
-      linkButton("That's not me", () => this.greet()),
+      creamAction("That's not me", () => this.greet()),
     ]);
   }
 
@@ -446,7 +447,7 @@ export class Door {
       h("p", { class: "note picker-lead" }, "I'll check each pick against these and pass on any that hits one."),
       topics,
       this.status,
-      h("div", { class: "picker-actions" }, this.saveButton(editing, this.status), this.neverMind(editing, linkButton)),
+      h("div", { class: "picker-actions" }, this.saveButton(editing, this.status), this.neverMind(editing, creamAction)),
     ];
     clear(this.wall).append(h("div", { class: "picker" }, parts));
     await this.fillTopics(topics, editing);
@@ -459,7 +460,7 @@ export class Door {
   }
 
   saveButton(editing, status) {
-    const button = h("button", { class: "pill solid", type: "button" }, this.fresh ? "Save and continue" : "Save my list");
+    const button = h("button", { class: "action gold", type: "button" }, this.fresh ? "Save and continue" : "Save my list");
     button.addEventListener("click", async () => {
       button.disabled = true;
       const said = await this.save(editing);
@@ -520,7 +521,7 @@ export class Door {
       h(
         "div",
         { class: "picker-actions" },
-        linkButton("Try again", () => this.fillTopics(box, editing)),
+        creamAction("Try again", () => this.fillTopics(box, editing)),
       ),
     );
   }

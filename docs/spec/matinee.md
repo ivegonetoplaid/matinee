@@ -1220,8 +1220,9 @@ as written. A phone is a viewport 600 px wide or less.
     "Anything you never want to see?" with "Nope, show me everything." and "Yes,
     there are a few things.", which opens the trigger picker for the new profile
     ("No problem. What should I steer around?", "Save and continue", "Never
-    mind, show me everything", each leading on to the last step). Last, "You're all set, <name>." over a large,
-    centred "Find me something to watch", which goes in to the first question.
+    mind, show me everything", each leading on to the last step). Last, "You're all set, <name>." over a centred
+    gold "Find me something to watch" action at the standard size, which goes in
+    to the first question.
 - **Going in.** Every answer at the door that leads into the theatre asks for
   the first question at the tap, and a door is entered once: a second tap or
   Enter changes nothing. The door's words and the corner credit line fade out
