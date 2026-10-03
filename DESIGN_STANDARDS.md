@@ -193,10 +193,12 @@ Every action and its accent:
 | "Save and continue", "Save my list" | gold |
 | "Just pick one!" (the questions) | gold |
 | "Roll again" | gold |
+| "Just show me what you picked" | gold |
 | "Save" (a note) | gold |
 | "Not that one" | rose |
 | "More on Seerr ↗" | petrol |
 | "Read about these on DoesTheDogDie ↗" | petrol |
+| "Look it up on DoesTheDogDie ↗" | petrol |
 | "Start over" | cream |
 | "Never mind", "Never mind, show me everything", "Never mind, keep my list", "That's not me" | cream |
 | "Try again" (a problem screen and the topic list) | cream |
@@ -204,23 +206,22 @@ Every action and its accent:
 | The turned-away pick's reveal button | cream |
 | "Back" (About) | cream |
 
-TODO: The no-film screen's "Just pick one" picks a film without checking the
-viewer's list. Its look is an open question in the workbench's design-standards
-discussion (§13); it is a rose action until that question settles.
-
 A new action takes the accent its meaning names. If none fits, raise it under
 section 1; do not invent a fifth.
 
 ### 5.3 Links
 
-An action that goes to another address is an `<a>` styled as an action, never a
-`<button>`.
-Every link that leaves Matinee opens in a new tab with
-`rel="noopener noreferrer"`.
+Everything a viewer uses over the poster wall is a letterbox or an action. A bare
+text link stands only in the foot band: the credit line, its "About",
+DoesTheDogDie's credit and the trail's crumbs. About's own prose keeps its
+links, and the wordmark is the brand's link.
 
-A bare link stands only in credits, attribution and reference prose: the corner
-credit line, DoesTheDogDie's credit beside its data, and About's text. Anywhere
-else a link is an action.
+"Powered by DoesTheDogDie.com" stands in the foot band of every screen that
+shows DoesTheDogDie's data.
+
+An action that goes to another address is an `<a>` styled as an action, never a
+`<button>`. Every link that leaves Matinee opens in a new tab with
+`rel="noopener noreferrer"`.
 
 ### 5.4 Everything else
 
@@ -298,8 +299,8 @@ page spec (`docs/spec/matinee.md`, section 12) gives the measurements.
 - no control uses the pill shape (a 999 px radius) or a filled accent body;
 - every action is one of the four accents, and every petrol action's words end
   with ↗;
-- no `<a>` outside the credit line, a DoesTheDogDie credit and About is styled
-  as a bare link;
+- no `<a>` or text button outside the foot band, About's prose and the
+  wordmark is styled as a bare link;
 - every external `<a>` opens in a new tab with `rel="noopener noreferrer"`;
 - the letterbox and action sizes match section 4.2.
 
