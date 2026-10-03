@@ -17,6 +17,7 @@ COOKIE_AGE_S = 400 * 24 * 3600
 PROFILE_LINES = {
     "bad_name": "Names are 1 to 40 letters, numbers or spaces.",
     "bad_pin": "A PIN is four digits.",
+    "bad_avatar": "I don't have that avatar.",
     "name_taken": "Someone already goes by that name here. Try another?",
     "full": "The theatre's full up on regulars. Ask whoever runs this place to make room.",
     "no_profile": "I can't find that one any more.",
@@ -33,6 +34,7 @@ class Seat(BaseModel):
     has_pin: bool
     topics: list[int]
     exclusions: list[str]
+    avatar: str | None
 
 
 class Suggestion(BaseModel):
@@ -61,8 +63,15 @@ class NameQuery(BaseModel):
 class NewProfile(BaseModel):
     name: str = Field(max_length=80)
     pin: str | None = Field(default=None, max_length=8)
+    avatar: str | None = Field(default=None, max_length=40)
     topics: list[int] = Field(default=[], max_length=400)
     exclusions: list[str] = Field(default=[], max_length=20)
+
+
+class AvatarChoice(BaseModel):
+    """An avatar to show, or None for the profile's initials."""
+
+    avatar: str | None = Field(max_length=40)
 
 
 class PinEntry(BaseModel):
@@ -76,6 +85,7 @@ def seat(profile: Profile) -> Seat:
         has_pin=profile.has_pin,
         topics=sorted(profile.topics),
         exclusions=sorted(profile.exclusions),
+        avatar=profile.avatar,
     )
 
 

@@ -113,7 +113,7 @@ def test_an_old_store_loses_only_its_corrections(tmp_path: Path) -> None:
     path = shape_0(tmp_path / "matinee.sqlite")
     store = Store(path)
     assert rows(path, "PRAGMA user_version") == [(SHAPE,)]
-    assert rows(path, "SELECT * FROM profiles ORDER BY id") == PROFILES
+    assert rows(path, "SELECT * FROM profiles ORDER BY id") == [(*p, None) for p in PROFILES]  # no avatar yet
     assert rows(path, "SELECT id, profile_id, tmdb, tree, kind, path, rushed, comment, at FROM notes") == NOTES
     tables = {r[0] for r in rows(path, "SELECT name FROM sqlite_master WHERE type = 'table'")}
     assert tables == {"profiles", "notes", "tokens"}

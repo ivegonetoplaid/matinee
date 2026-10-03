@@ -5,8 +5,8 @@ shapes were recorded reads 0 and holds the tables `profiles`, `corrections`,
 `feedback` and `tokens`. `prepare` creates a missing or empty file at the current
 shape and leaves a current file alone. It carries a shape-0 file to the current
 shape in one transaction, keeping where each "Not <genre> at all" note said its
-film belongs from the correction saved with it and giving every note the status
-`open`, after copying the file as it stood to a new file beside
+film belongs from the correction saved with it, giving every note the status
+`open` and every profile no avatar, after copying the file as it stood to a new file beside
 it, which nothing ever overwrites; a start that finds such a copy already there
 makes no other. It refuses, and changes nothing in the store file, a current
 file in which older code has since filed notes into its old `feedback` table, a
@@ -34,7 +34,8 @@ TABLES = (
     locked_until REAL NOT NULL DEFAULT 0,
     topics TEXT NOT NULL DEFAULT '[]',
     exclusions TEXT NOT NULL DEFAULT '[]',
-    created_at TEXT NOT NULL
+    created_at TEXT NOT NULL,
+    avatar TEXT
 )""",
     """CREATE TABLE notes (
     id INTEGER PRIMARY KEY,
@@ -87,6 +88,7 @@ FROM_SHAPE_0 = (
     "DROP TABLE feedback",
     "DROP INDEX IF EXISTS corrections_by_profile",
     "DROP TABLE corrections",
+    "ALTER TABLE profiles ADD COLUMN avatar TEXT",
 )
 
 

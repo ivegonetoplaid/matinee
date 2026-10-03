@@ -667,7 +667,8 @@ picks nothing until it opens or makes a profile.
 
 | Rule | Value |
 |---|---|
-| A profile holds | a display name, an optional four-digit PIN, DoesTheDogDie topics and Matinee's own exclusions |
+| A profile holds | a display name, an optional four-digit PIN, an optional avatar, DoesTheDogDie topics and Matinee's own exclusions |
+| Avatar | one of fifteen: `3d-glasses`, `camera`, `candy`, `chair`, `clapperboard`, `comedy-tragedy`, `director-megaphone`, `film-reel`, `hotdog`, `nachos`, `popcorn`, `soda`, `theater-seat`, `ticket`, `vhs`; or none, for initials. Two profiles may share one |
 | Most profiles | **50**; creating a fifty-first is refused |
 | Name | 1 to 40 characters after NFKC normalisation, trimming and collapsing spaces; no character of Unicode category C (control, format, private-use, unassigned); unique ignoring case (NFKC, case-folded) |
 | PIN | exactly four ASCII digits, or none |
@@ -687,6 +688,10 @@ picks nothing until it opens or makes a profile.
   It never carries the profile's exclusions.
 - A token for a deleted profile is ignored. The door's reply clears it from the
   cookie.
+- **Avatars.** A profile is made with an avatar or none, and a device holding
+  it may set or clear it at any time. Every reply describing a profile to the
+  page says which avatar it carries. An avatar Matinee does not offer is
+  refused when set (`bad_avatar`) and reads as none when found in the store.
 - **Deleting a profile.** A device holding a profile may delete it, with no
   PIN asked, as it opens it with none. The profile, its exclusions and every
   device token issued for it go, on every device; its notes stay (section 10).
@@ -715,7 +720,8 @@ table named `feedback`) and personal corrections.
   and removes the corrections. A "Not <genre> at all" note first takes, as where
   its film belongs, the trees its own correction added the film to: the
   correction with the note's profile, film and tree saved at or before the
-  note, the latest of them. Every note arrives with the status `open`. It is kept only when the counts of profiles,
+  note, the latest of them. Every note arrives with the status `open`, and
+  every profile with no avatar. It is kept only when the counts of profiles,
   tokens and notes are the same after it as before and no row points at nothing.
 - Before its first change to a shape-0 file, the upgrade copies the file as it
   stood to a new file beside it, named
@@ -928,6 +934,7 @@ would hand one device's profiles to another.
 | POST | `/api/profiles` | create a profile and issue this device a token |
 | POST | `/api/profiles/{id}/open` | open a profile by PIN, or at once when held or PIN-less |
 | PUT | `/api/profiles/{id}/exclusions` | replace a held profile's exclusions |
+| PUT | `/api/profiles/{id}/avatar` | set or clear a held profile's avatar |
 | DELETE | `/api/profiles/{id}` | delete a held profile, its exclusions and its tokens; answers its name |
 | GET | `/api/topics` | DoesTheDogDie's topic list, with its credit |
 | GET | `/api/exclusions` | Matinee's own exclusions |
@@ -972,7 +979,7 @@ Every error leaves as `{"error": <code>, "message": <sentence>}`:
 | `topics_unavailable` | 503 | the topic list cannot be fetched |
 | `not_found` | 404 | an unknown film, image or path |
 | `refused` | 400, 403 or other | answers that no longer fit, an unknown exclusion or tree, a profile this device does not hold, a malformed request |
-| `profile` | 400, 401, 404, 409 or 423 | a profile rule refused the request; the body adds `code` (`bad_name`, `bad_pin`, `name_taken`, `full`, `no_profile`, `wrong_pin`, `locked`) |
+| `profile` | 400, 401, 404, 409 or 423 | a profile rule refused the request; the body adds `code` (`bad_name`, `bad_pin`, `bad_avatar`, `name_taken`, `full`, `no_profile`, `wrong_pin`, `locked`) |
 
 One error falls outside that shape. A request body that fails validation, such
 as a field over its size cap, answers 422 with the web framework's own

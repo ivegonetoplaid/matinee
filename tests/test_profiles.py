@@ -317,3 +317,24 @@ def test_deleting_the_last_held_profile_clears_the_cookie(door: Any) -> None:
     assert resp.status_code == 200
     cookie = resp.headers["set-cookie"]
     assert cookie.startswith(f'{TOKENS_COOKIE}=""') or "Max-Age=0" in cookie
+
+
+def test_the_holding_device_sets_and_clears_its_avatar(door: Any) -> None:
+    client, store = door
+    me = client.post("/api/profiles", json={"name": "Ada", "avatar": "ticket"}).json()
+    assert me["avatar"] == "ticket"
+    changed = client.put(f"/api/profiles/{me['id']}/avatar", json={"avatar": "soda"})
+    assert changed.status_code == 200 and changed.json()["avatar"] == "soda"
+    cleared = client.put(f"/api/profiles/{me['id']}/avatar", json={"avatar": None})
+    assert cleared.status_code == 200 and cleared.json()["avatar"] is None
+    bad = client.put(f"/api/profiles/{me['id']}/avatar", json={"avatar": "spaceship"})
+    assert bad.status_code == 400 and bad.json()["code"] == "bad_avatar"
+    assert client.post("/api/profiles", json={"name": "Bo", "avatar": "spaceship"}).status_code == 400
+
+
+def test_a_device_that_does_not_hold_the_profile_cannot_change_its_avatar(door: Any) -> None:
+    client, store = door
+    other, token = store.create("Other", None, [], [], "candy")
+    elsewhere = TestClient(client.app, base_url="https://testserver")
+    assert elsewhere.put(f"/api/profiles/{other.id}/avatar", json={"avatar": "vhs"}).status_code == 403
+    assert store.holding([token])[token].avatar == "candy"

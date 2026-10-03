@@ -1,7 +1,9 @@
 """Matinee's own store: profiles, the device tokens that remember them, and the notes viewers file.
 
-A profile holds a display name, an optional four-digit PIN and the viewer's
-exclusions. A note is a viewer's complaint about a pick, kept for whoever runs
+A profile holds a display name, an optional four-digit PIN, an optional avatar
+(one of `AVATARS`; two profiles may share one) and the viewer's exclusions. An
+avatar Matinee does not offer is refused when set and reads as none when found
+in the store. A note is a viewer's complaint about a pick, kept for whoever runs
 Matinee; it changes nothing any viewer is shown. A note outlives the profile
 that filed it, and then names no profile. Every note has a review status:
 `open` when filed, then `accepted` with a one-line reason and the label ruling
@@ -45,6 +47,23 @@ MAX_EDITS = 2
 SCRYPT = {"n": 2**14, "r": 8, "p": 1, "dklen": 32}
 TOKEN_LIFE_S = 400 * 24 * 3600  # the cookie's own lifetime
 MAX_REASON = 300
+AVATARS = (
+    "3d-glasses",
+    "camera",
+    "candy",
+    "chair",
+    "clapperboard",
+    "comedy-tragedy",
+    "director-megaphone",
+    "film-reel",
+    "hotdog",
+    "nachos",
+    "popcorn",
+    "soda",
+    "theater-seat",
+    "ticket",
+    "vhs",
+)
 Status = Literal["open", "accepted", "rejected"]
 NOTE_SELECT = "SELECT n.*, p.name AS profile FROM notes AS n LEFT JOIN profiles AS p ON p.id = n.profile_id"
 
@@ -104,6 +123,7 @@ class Profile:
     has_pin: bool
     topics: frozenset[int]
     exclusions: frozenset[str]
+    avatar: str | None = None
 
 
 def name_key(name: str) -> str:
@@ -163,6 +183,12 @@ def _filed(row: sqlite3.Row) -> FiledNote:
     )
 
 
+def clean_avatar(avatar: str | None) -> str | None:
+    if avatar is not None and avatar not in AVATARS:
+        raise StoreError("bad_avatar", "that avatar is not one Matinee offers")
+    return avatar
+
+
 def edits(a: str, b: str) -> int:
     """Levenshtein distance: single-character insertions, deletions and substitutions."""
     row = list(range(len(b) + 1))
@@ -212,6 +238,7 @@ class Store:
             has_pin=row["pin_hash"] is not None,
             topics=frozenset(int(t) for t in json.loads(row["topics"])),
             exclusions=frozenset(str(e) for e in json.loads(row["exclusions"])),
+            avatar=row["avatar"] if row["avatar"] in AVATARS else None,
         )
 
     def _issue(self, db: sqlite3.Connection, profile_id: int) -> str:
@@ -223,10 +250,10 @@ class Store:
         return token
 
     def create(
-        self, name: str, pin: str | None, topics: Iterable[int], exclusions: Iterable[str]
+        self, name: str, pin: str | None, topics: Iterable[int], exclusions: Iterable[str], avatar: str | None = None
     ) -> tuple[Profile, str]:
-        """A new profile and a device token for it; refuses a taken name, a bad PIN, or a full store."""
-        display, pin = clean_name(name), clean_pin(pin)
+        """A new profile and a device token for it; refuses a taken name, a bad PIN or avatar, or a full store."""
+        display, pin, avatar = clean_name(name), clean_pin(pin), clean_avatar(avatar)
         salt = secrets.token_bytes(16) if pin else None
         with closing(self._connect()) as db, db:
             db.execute("BEGIN IMMEDIATE")
@@ -234,8 +261,8 @@ class Store:
                 raise StoreError("full", f"Matinee holds at most {MAX_PROFILES} profiles")
             try:
                 cur = db.execute(
-                    "INSERT INTO profiles (name, name_key, pin_salt, pin_hash, topics, exclusions, created_at)"
-                    " VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    "INSERT INTO profiles (name, name_key, pin_salt, pin_hash, topics, exclusions, created_at, avatar)"
+                    " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                     (
                         display,
                         name_key(display),
@@ -244,6 +271,7 @@ class Store:
                         json.dumps(sorted(set(topics))),
                         json.dumps(sorted(set(exclusions))),
                         _now(),
+                        avatar,
                     ),
                 )
             except sqlite3.IntegrityError as exc:
@@ -291,6 +319,16 @@ class Store:
                 "UPDATE profiles SET topics = ?, exclusions = ? WHERE id = ?",
                 (json.dumps(sorted(set(topics))), json.dumps(sorted(set(exclusions))), profile_id),
             )
+            row = db.execute("SELECT * FROM profiles WHERE id = ?", (profile_id,)).fetchone()
+        if row is None:
+            raise StoreError("no_profile", "no such profile")
+        return self._profile(row)
+
+    def set_avatar(self, profile_id: int, avatar: str | None) -> Profile:
+        """Set a profile's avatar, or clear it for initials; refuses an avatar Matinee does not offer."""
+        avatar = clean_avatar(avatar)
+        with closing(self._connect()) as db, db:
+            db.execute("UPDATE profiles SET avatar = ? WHERE id = ?", (avatar, profile_id))
             row = db.execute("SELECT * FROM profiles WHERE id = ?", (profile_id,)).fetchone()
         if row is None:
             raise StoreError("no_profile", "no such profile")

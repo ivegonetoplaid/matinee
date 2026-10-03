@@ -29,6 +29,7 @@ from matinee.store import Locked, Store, StoreError
 from matinee.table import TableError
 from matinee.web.common import (
     PROFILE_LINES,
+    AvatarChoice,
     Deleted,
     Door,
     NameQuery,
@@ -174,7 +175,7 @@ def add_door_routes(app: FastAPI, theatre: Theatre, store: Store, clock: Callabl
     @app.post("/api/profiles")
     def create_profile(body: NewProfile, request: Request, response: Response) -> Seat:
         check_exclusions(theatre, body.exclusions)
-        profile, token = store.create(body.name, body.pin, body.topics, body.exclusions)
+        profile, token = store.create(body.name, body.pin, body.topics, body.exclusions, body.avatar)
         with_token(request, response, token)
         return seat(profile)
 
@@ -188,6 +189,15 @@ def add_door_routes(app: FastAPI, theatre: Theatre, store: Store, clock: Callabl
         profile, token = store.open(profile_id, body.pin, clock())
         with_token(request, response, token)
         return seat(profile)
+
+
+def add_avatar_route(app: FastAPI, store: Store) -> None:
+    @app.put("/api/profiles/{profile_id}/avatar")
+    def set_avatar(profile_id: int, body: AvatarChoice, request: Request) -> Seat:
+        """A device holding the profile sets its avatar, or clears it for initials."""
+        if not any(p.id == profile_id for p in store.holding(device_tokens(request)).values()):
+            raise HTTPException(status_code=403, detail="refused")
+        return seat(store.set_avatar(profile_id, body.avatar))
 
 
 def add_delete_route(app: FastAPI, store: Store) -> None:
@@ -267,6 +277,7 @@ def create_app(
     add_page(app)
     add_door_routes(app, theatre, store, clock)
     add_delete_route(app, store)
+    add_avatar_route(app, store)
     add_viewing_routes(app, theatre, store, dtdd)
     add_pick_routes(app, theatre, store, picker or Picker(dtdd, DeviceCap()))
     add_note_routes(app, theatre, store)
