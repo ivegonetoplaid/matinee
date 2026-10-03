@@ -99,7 +99,7 @@ export function viewerTag(viewer, avatars, actions) {
       for (const b of built.querySelectorAll("button")) b.disabled = false;
       return undefined;
     };
-    const initialsOnly = h("button", { class: "answer", type: "button", onclick: () => save(null) }, "Just my initials");
+    const initialsOnly = h("button", { class: "letterbox", type: "button", onclick: () => save(null) }, "Just my initials");
     const built = panel("Change avatar", line, avatarChoices(avatars, save, viewer.avatar), initialsOnly, status);
     typeLine(line, "Which one's yours?", "");
     return built;
@@ -118,8 +118,8 @@ export function viewerTag(viewer, avatars, actions) {
     const choices = h(
       "div",
       { class: "viewer-choices" },
-      h("button", { class: "answer danger", type: "button", onclick: yes }, "Yes, delete it"),
-      h("button", { class: "answer", type: "button", "data-focus": true, onclick: () => close({ refocus: true }) }, "No, keep it"),
+      h("button", { class: "letterbox danger", type: "button", onclick: yes }, "Yes, delete it"),
+      h("button", { class: "letterbox", type: "button", "data-focus": true, onclick: () => close({ refocus: true }) }, "No, keep it"),
     );
     const built = panel(`Delete ${viewer.name}?`, line, choices, status);
     typeLine(line, `Delete ${viewer.name}?`, "Your list goes with it. Any notes you sent stay with whoever runs Matinee.");

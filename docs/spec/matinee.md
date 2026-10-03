@@ -1111,8 +1111,9 @@ as written. A phone is a viewport 600 px wide or less.
   Every question at the door is typed onto the wall below the marquee, with
   nothing behind Matinee's words. On a desktop the words are a centred column
   680 px wide, 44 px under the sign, with the line at 52 px and its answers as
-  22 px letter-board strips. On a phone the line hangs 26 px under the marquee
-  at 34 px, and the answers, 18 px strips, sit at the foot of the screen. A
+  letterboxes. On a phone the line hangs 26 px under the marquee
+  at 34 px, and the answers sit at the foot of the screen. Every letterbox on
+  every screen has one size: 24 px words on a desktop and 19 px on a phone. A
   short window closes the words up: under 820 px tall on a desktop they start
   28 px under the sign, and under 640 px tall on a phone the line is 26 px. The
   trigger picker sits on the wall too: on a desktop 1000 px wide, the question

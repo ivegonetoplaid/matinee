@@ -99,7 +99,7 @@ function creamAction(text, onclick) {
 }
 
 function strip(text, onclick) {
-  return h("button", { class: "answer", type: "button", onclick }, text);
+  return h("button", { class: "letterbox", type: "button", onclick }, text);
 }
 
 // A profile's tile: its mark, and its name in large type beneath.

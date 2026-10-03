@@ -173,7 +173,7 @@ function answerButton(o, picture) {
     lockStage();
     o.go();
   };
-  if (!picture) return h("button", { class: "answer", type: "button", onclick }, sentenceCase(o.say));
+  if (!picture) return h("button", { class: "letterbox", type: "button", onclick }, sentenceCase(o.say));
   return h(
     "button",
     { class: "pail", type: "button", onclick },

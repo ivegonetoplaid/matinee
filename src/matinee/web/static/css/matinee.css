@@ -328,7 +328,8 @@ a.wordmark:focus-visible {
   display: none;
 }
 
-.answer {
+/* A letterbox chooses something: the cream letter-board placard, one size on every screen. */
+.letterbox {
   text-align: left;
   font-family: var(--display);
   font-weight: 800;
@@ -347,34 +348,24 @@ a.wordmark:focus-visible {
 }
 
 @media (hover: hover) {
-  .answer:hover {
+  .letterbox:hover {
     box-shadow: 0 0 30px rgba(255, 236, 190, 0.6), inset 0 0 18px rgba(255, 255, 255, 0.9);
   }
 }
 
-/* A long list of answers (the first question) wraps as a row of shorter strips. */
+/* A long list of answers (the first question) wraps as a row. */
 .answers.many {
   flex-direction: row;
   flex-wrap: wrap;
 }
 
-.answers.many .answer {
-  font-size: 22px;
-  padding: 7px 16px;
-}
-
 @media (max-width: 600px) {
-  .answer {
+  .letterbox {
     font-size: 19px;
     letter-spacing: 0.04em;
     border-width: 2px;
     padding: 8px 14px;
     box-shadow: 0 0 14px rgba(255, 236, 190, 0.3), inset 0 0 14px rgba(255, 255, 255, 0.8);
-  }
-
-  .answers.many .answer {
-    font-size: 18px;
-    padding: 7px 12px;
   }
 }
 
@@ -1678,10 +1669,8 @@ a.wordmark:focus-visible {
   animation: fade 0.5s ease both;
 }
 
-.door-controls .answer {
+.door-controls .letterbox {
   align-self: flex-start;
-  font-size: 22px;
-  padding: 7px 16px;
 }
 
 .door-form {
@@ -2106,11 +2095,6 @@ a.wordmark:focus-visible {
     gap: 8px;
   }
 
-  .door-controls .answer {
-    font-size: 18px;
-    padding: 10px 14px;
-    border-width: 2px;
-  }
 
   .seats {
     grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
@@ -2337,10 +2321,6 @@ a.wordmark:focus-visible {
   border-radius: 12px;
 }
 
-.viewer-panel .answer {
-  font-size: 18px;
-}
-
 .viewer-choices {
   display: flex;
   flex-wrap: wrap;
@@ -2352,7 +2332,7 @@ a.wordmark:focus-visible {
   line-height: 1.1;
 }
 
-.answer.danger {
+.letterbox.danger {
   color: var(--velvet);
 }
 
