@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import sqlite3
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -254,7 +255,10 @@ def test_a_device_holding_a_profile_deletes_it_everywhere_and_its_notes_stay(doo
     gone = client.post("/api/profiles", json={"name": "Leaving", "pin": "4321", "exclusions": ["superheroes"]}).json()
     client.post("/api/profiles", json={"name": "Staying"})
     assert other_device.post(f"/api/profiles/{gone['id']}/open", json={"pin": "4321"}).status_code == 200
-    store.note(Note(gone["id"], 5, "west", "kind", ("Cowboys.",), False, "kept after"))
+    store.note(
+        Note(gone["id"], 5, "west", "kind", ("Cowboys.",), False, "kept after"),
+        client.cookies[TOKENS_COOKIE].split("."),
+    )
     resp = client.delete(f"/api/profiles/{gone['id']}")
     assert resp.status_code == 200 and resp.json() == {"name": "Leaving"}
     with sqlite3.connect(tmp_path / "matinee.sqlite") as db:
@@ -309,3 +313,26 @@ def test_a_device_that_does_not_hold_the_profile_cannot_change_its_avatar(door: 
     elsewhere = TestClient(client.app, base_url="https://testserver")
     assert elsewhere.put(f"/api/profiles/{other.id}/avatar", json={"avatar": "vhs"}).status_code == 403
     assert store.holding([token])[token].avatar == "candy"
+
+
+def test_a_write_never_lands_on_a_new_profile_that_reuses_a_deleted_ones_id(tmp_path: Path) -> None:
+    store = Store(tmp_path / "matinee.sqlite")
+    _, other_device = store.create("Elsewhere", None, [], [])
+    gone, stale = store.create("Gone", None, [], [])  # the newest profile, whose id SQLite hands out again
+    store.delete(gone.id, [stale])
+    victim, _ = store.create("Newcomer", None, [153], ["superheroes"], "vhs")
+    assert victim.id == gone.id
+    attempts: list[Callable[[], object]] = [
+        lambda: store.delete(gone.id, [stale]),
+        lambda: store.set_avatar(gone.id, "popcorn", [stale]),
+        lambda: store.set_exclusions(gone.id, [], [], [stale]),
+        lambda: store.note(Note(gone.id, 5, "west", "kind", (), False, "not mine"), [stale]),
+        lambda: store.delete(gone.id, [other_device]),  # a live token, for another profile
+    ]
+    for attempt in attempts:
+        with pytest.raises(StoreError) as refused:
+            attempt()
+        assert refused.value.code == "not_held"
+    [left] = [p for p in store.everyone() if p.id == victim.id]
+    assert (left.name, left.avatar, left.exclusions) == (victim.name, victim.avatar, victim.exclusions)
+    assert store.notes() == []

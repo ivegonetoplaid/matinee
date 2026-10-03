@@ -49,13 +49,14 @@ class Names:
 
 
 def load_names(state: Path, data: Path = DATA) -> Names:
-    """Film titles from the state's film table, read-only, and door labels from the first question."""
+    """Film titles from the state's film table, read-only and made printable (the media server names them), and
+    door labels from the first question."""
     films: dict[int, str] = {}
     table = state / "films.sqlite"
     if table.exists():
         with sqlite3.connect(f"file:{table}?mode=ro", uri=True) as db:
             for tmdb, name, year in db.execute("SELECT tmdb, name, year FROM films"):
-                films[int(tmdb)] = f"{name} ({year})" if year else str(name)
+                films[int(tmdb)] = printable(f"{name} ({year})" if year else str(name))
     first = json.loads((data / "first_question.json").read_text(encoding="utf-8"))
     return Names(films, {o["tree"]: o["label"] for o in first["options"]})
 

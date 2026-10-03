@@ -294,7 +294,7 @@ def add_viewing_routes(app: FastAPI, theatre: Theatre, store: Store, dtdd: Dtdd)
     def save_exclusions(profile_id: int, body: ExclusionsIn, request: Request) -> Seat:
         held_profile(request, store, profile_id)
         check_exclusions(theatre, body.exclusions)
-        return seat(store.set_exclusions(profile_id, body.topics, body.exclusions))
+        return seat(store.set_exclusions(profile_id, body.topics, body.exclusions, device_tokens(request)))
 
     @app.post("/api/first")
     def first(body: FirstIn, request: Request) -> FirstOut:
@@ -365,7 +365,8 @@ def add_note_routes(app: FastAPI, theatre: Theatre, store: Store) -> None:
         check_belongs(cat, body)
         path = tuple(answer_says(tree, body.answers))
         comment, belongs = body.comment.strip(), tuple(body.belongs)
-        store.note(Note(body.profile_id, body.tmdb, body.tree, body.kind, path, body.rushed, comment, belongs))
+        note = Note(body.profile_id, body.tmdb, body.tree, body.kind, path, body.rushed, comment, belongs)
+        store.note(note, device_tokens(request))
         return NoteOut(lines=NOTED)
 
 

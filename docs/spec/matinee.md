@@ -715,7 +715,11 @@ picks nothing until it opens or makes a profile.
   profile name is stored (case, and runs of spaces, ignored), clears the PIN and any lockout on it, and refuses a name no profile has.
 - A request naming a profile (the first question, a walk, a pick, saving
   exclusions, saving a note or deleting the profile) is refused with 403 unless this device
-  holds a token for it. A walk or a pick naming no profile is refused with 403.
+  holds a token for it. Every write to a profile (its exclusions, its avatar, a
+  note, its deletion) checks the device's token in the same store transaction as
+  the write, so a profile deleted and its id given to a new profile between a
+  device's check and its write never receives that write (`profile` error
+  `not_held`, 403). A walk or a pick naming no profile is refused with 403.
 
 ### 7.1 The store file
 
@@ -953,7 +957,7 @@ changes nothing any viewer is shown.
   creates a store, and it writes only Matinee's own store, never a film's
   placement, labels or pins.
   - `list` prints every open note, oldest first: its id, the film's title and
-    year (from the film table), the door's label, the time, the profile's name
+    year (from the film table, made printable as a comment is), the door's label, the time, the profile's name
     or "a deleted profile", the answers in order (ending "Just pick one!" when
     that ended the questions), what was wrong in the panel's own words with
     where the film belongs, and the comment. A viewer's comment is printed on
@@ -1039,7 +1043,7 @@ Every error leaves as `{"error": <code>, "message": <sentence>}`:
 | `not_admitted` | 401 | a door word is set and this device has not given it (section 7.2) |
 | `wrong_word` | 401 | the word given at the door is not the door word; answered after 2 seconds |
 | `refused` | 400, 403 or other | answers that no longer fit, an unknown exclusion or tree, a profile this device does not hold, a malformed request |
-| `profile` | 400, 401, 404, 409 or 423 | a profile rule refused the request; the body adds `code` (`bad_name`, `bad_pin`, `bad_avatar`, `name_taken`, `full`, `no_profile`, `wrong_pin`, `locked`) |
+| `profile` | 400, 401, 404, 409 or 423 | a profile rule refused the request; the body adds `code` (`bad_name`, `bad_pin`, `bad_avatar`, `not_held`, `name_taken`, `full`, `no_profile`, `wrong_pin`, `locked`) |
 
 One error falls outside that shape. A request body that fails validation, such
 as a field over its size cap, answers 422 with the web framework's own

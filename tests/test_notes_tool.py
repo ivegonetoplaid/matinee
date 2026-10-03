@@ -16,11 +16,13 @@ from test_web_library import write_film_table
 def state(tmp_path: Path) -> Path:
     write_film_table(tmp_path / "films.sqlite")
     store = Store(tmp_path / "matinee.sqlite")
-    ada, _ = store.create("Ada", None, [], [])
-    gone, _ = store.create("Gone", None, [], [])
-    store.note(Note(ada.id, 5, "horror", "genre", ("Scary.", "Slow."), True, "it is a thriller", ("thriller",)))
-    store.note(Note(gone.id, 6, "comedy", "kind", ("Funny.",), False, ""))
-    store.note(Note(ada.id, 7, "drama", "quality", (), False, ""))
+    ada, ada_token = store.create("Ada", None, [], [])
+    gone, gone_token = store.create("Gone", None, [], [])
+    store.note(
+        Note(ada.id, 5, "horror", "genre", ("Scary.", "Slow."), True, "it is a thriller", ("thriller",)), [ada_token]
+    )
+    store.note(Note(gone.id, 6, "comedy", "kind", ("Funny.",), False, ""), [gone_token])
+    store.note(Note(ada.id, 7, "drama", "quality", (), False, ""), [ada_token])
     with sqlite3.connect(tmp_path / "matinee.sqlite") as db:
         db.execute("PRAGMA foreign_keys = ON")
         db.execute("DELETE FROM profiles WHERE name = 'Gone'")
@@ -116,9 +118,10 @@ def test_a_viewers_comment_cannot_forge_a_note_or_reach_the_terminal(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     store = Store(tmp_path / "matinee.sqlite")
-    me, _ = store.create("Me", None, [], [])
+    me, my_token = store.create("Me", None, [], [])
     store.note(
-        Note(me.id, 5, "horror", "kind", (), False, "a\n#9  Forged\x1b[2K\u202e and caf\u00e9 \u2014 na\u00efve")
+        Note(me.id, 5, "horror", "kind", (), False, "a\n#9  Forged\x1b[2K\u202e and caf\u00e9 \u2014 na\u00efve"),
+        [my_token],
     )
     assert run(tmp_path, "list") == 0
     out = capsys.readouterr().out
@@ -140,3 +143,10 @@ def test_the_tool_refuses_odd_numbers_names_and_stores_in_words(
     capsys.readouterr()
     assert run(state, "list") == 1
     assert "Refused: the store file has shape 99" in capsys.readouterr().err
+
+
+def test_a_film_title_from_the_media_server_cannot_reach_the_terminal(state: Path) -> None:
+    with sqlite3.connect(state / "films.sqlite") as db:
+        db.execute("UPDATE films SET name = ? WHERE tmdb = 5", ("Evil\n#9  Forged\x1b]0;x\x07",))
+    names = tool.load_names(state)
+    assert "\n" not in names.film(5) and "\x1b" not in names.film(5) and names.film(5).startswith("Evil #9")

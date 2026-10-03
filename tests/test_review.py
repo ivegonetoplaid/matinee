@@ -16,8 +16,8 @@ def store(tmp_path: Path) -> Store:
 
 
 def filed(store: Store, name: str = "Ada", tmdb: int = 603) -> int:
-    profile, _ = store.create(name, None, [], [])
-    store.note(Note(profile.id, tmdb, "horror", "genre", ("Scary.",), True, "not scary", ("thriller",)))
+    profile, token = store.create(name, None, [], [])
+    store.note(Note(profile.id, tmdb, "horror", "genre", ("Scary.",), True, "not scary", ("thriller",)), [token])
     return store.notes()[-1].id
 
 

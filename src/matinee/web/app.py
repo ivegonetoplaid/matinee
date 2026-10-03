@@ -121,7 +121,8 @@ def add_error_handlers(app: FastAPI, clock: Callable[[], float]) -> None:
 
     @app.exception_handler(StoreError)
     def refused(_request: Request, exc: StoreError) -> JSONResponse:
-        status = {"name_taken": 409, "full": 409, "no_profile": 404, "wrong_pin": 401, "locked": 423}.get(exc.code, 400)
+        statuses = {"name_taken": 409, "full": 409, "no_profile": 404, "not_held": 403, "wrong_pin": 401, "locked": 423}
+        status = statuses.get(exc.code, 400)
         minutes = max(1, round((exc.until - clock()) / 60)) if isinstance(exc, Locked) else 0
         body = {"error": "profile", "code": exc.code, "message": PROFILE_LINES[exc.code].format(minutes=minutes)}
         return JSONResponse(status_code=status, content=body)
@@ -203,7 +204,7 @@ def add_avatar_route(app: FastAPI, store: Store) -> None:
         """A device holding the profile sets its avatar, or clears it for initials."""
         if not any(p.id == profile_id for p in store.holding(device_tokens(request)).values()):
             raise HTTPException(status_code=403, detail="refused")
-        return seat(store.set_avatar(profile_id, body.avatar))
+        return seat(store.set_avatar(profile_id, body.avatar, device_tokens(request)))
 
 
 def add_delete_route(app: FastAPI, store: Store) -> None:
@@ -215,7 +216,7 @@ def add_delete_route(app: FastAPI, store: Store) -> None:
         mine = [t for t, p in held.items() if p.id == profile_id]
         if not mine:
             raise HTTPException(status_code=403, detail="refused")
-        gone = store.delete(profile_id)
+        gone = store.delete(profile_id, tokens)
         set_tokens(response, [t for t in tokens if t in held and t not in mine])
         return Deleted(name=gone.name)
 

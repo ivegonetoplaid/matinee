@@ -30,6 +30,7 @@ PROFILE_LINES = {
     "name_taken": "Someone already goes by that name here. Try another?",
     "full": "The theatre's full up on regulars. Ask whoever runs this place to make room.",
     "no_profile": "I can't find that one any more.",
+    "not_held": "I can't find that one any more.",
     "wrong_pin": "That PIN isn't right.",
     "locked": "Too many wrong PINs. That profile is locked for {minutes} minutes.",
 }

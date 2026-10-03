@@ -281,33 +281,47 @@ class Store:
             rows = db.execute("SELECT * FROM profiles ORDER BY name_key, id").fetchall()
         return [self._profile(r) for r in rows]
 
-    def set_exclusions(self, profile_id: int, topics: Iterable[int], exclusions: Iterable[str]) -> Profile:
-        """Replace a profile's saved exclusions."""
+    @staticmethod
+    def _held(db: sqlite3.Connection, profile_id: int, tokens: Sequence[str]) -> sqlite3.Row:
+        """The profile, inside the caller's write transaction, when one of these device tokens is issued for it.
+
+        Checking and writing in one transaction means a profile deleted, and its id reused by a new profile,
+        between a device's check and its write can never receive that write: the new profile holds none of the
+        device's tokens.
+        """
+        db.execute("BEGIN IMMEDIATE")
+        issued = {str(r[0]) for r in db.execute("SELECT token_hash FROM tokens WHERE profile_id = ?", (profile_id,))}
+        held: sqlite3.Row | None = db.execute("SELECT * FROM profiles WHERE id = ?", (profile_id,)).fetchone()
+        if held is None or not issued & {_digest(t) for t in tokens}:
+            raise StoreError("not_held", "this device holds no token for that profile")
+        return held
+
+    def set_exclusions(
+        self, profile_id: int, topics: Iterable[int], exclusions: Iterable[str], by: Sequence[str]
+    ) -> Profile:
+        """Replace the saved exclusions of a profile one of the device tokens `by` is issued for."""
         with closing(self._connect()) as db, db:
+            self._held(db, profile_id, by)
             db.execute(
                 "UPDATE profiles SET topics = ?, exclusions = ? WHERE id = ?",
                 (json.dumps(sorted(set(topics))), json.dumps(sorted(set(exclusions))), profile_id),
             )
             row = db.execute("SELECT * FROM profiles WHERE id = ?", (profile_id,)).fetchone()
-        if row is None:
-            raise StoreError("no_profile", "no such profile")
         return self._profile(row)
 
-    def set_avatar(self, profile_id: int, avatar: str | None) -> Profile:
-        """Set a profile's avatar, or clear it for initials; refuses an avatar Matinee does not offer."""
+    def set_avatar(self, profile_id: int, avatar: str | None, by: Sequence[str]) -> Profile:
+        """Set the avatar of a profile `by` holds, or clear it for initials; refuses an avatar not offered."""
         avatar = clean_avatar(avatar)
         with closing(self._connect()) as db, db:
+            self._held(db, profile_id, by)
             db.execute("UPDATE profiles SET avatar = ? WHERE id = ?", (avatar, profile_id))
             row = db.execute("SELECT * FROM profiles WHERE id = ?", (profile_id,)).fetchone()
-        if row is None:
-            raise StoreError("no_profile", "no such profile")
         return self._profile(row)
 
-    def note(self, n: Note) -> None:
-        """Keep one viewer's note on a pick for review: what was wrong, the answers that led to it, and why."""
+    def note(self, n: Note, by: Sequence[str]) -> None:
+        """Keep one viewer's note on a pick for review, filed by a profile `by` holds: what was wrong and why."""
         with closing(self._connect()) as db, db:
-            if db.execute("SELECT 1 FROM profiles WHERE id = ?", (n.profile_id,)).fetchone() is None:
-                raise StoreError("no_profile", "no such profile")
+            self._held(db, n.profile_id, by)
             db.execute(
                 "INSERT INTO notes (profile_id, tmdb, tree, kind, path, rushed, comment, at, belongs)"
                 " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -361,12 +375,10 @@ class Store:
             )
         return _filed(row)
 
-    def delete(self, profile_id: int) -> Profile:
-        """Delete a profile with its exclusions and every device token issued for it; its notes stay, naming no one."""
+    def delete(self, profile_id: int, by: Sequence[str]) -> Profile:
+        """Delete a profile `by` holds, its exclusions and every device token issued for it; its notes stay."""
         with closing(self._connect()) as db, db:
-            row = db.execute("SELECT * FROM profiles WHERE id = ?", (profile_id,)).fetchone()
-            if row is None:
-                raise StoreError("no_profile", "no such profile")
+            row = self._held(db, profile_id, by)
             db.execute("DELETE FROM profiles WHERE id = ?", (profile_id,))
         return self._profile(row)
 
