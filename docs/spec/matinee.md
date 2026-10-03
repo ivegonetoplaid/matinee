@@ -1224,6 +1224,13 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
   with the current one marked, and "Just my initials". A tap saves the choice,
   closes the panel, and the bar shows the new mark at once; a refusal stays on
   the panel and says why. Escape or a tap elsewhere closes it unsaved.
+- **Delete profile** asks in a panel beneath the viewer, never in a browser
+  dialog: "Delete <name>?" in gold, "Your list goes with it. Any notes you sent
+  stay with whoever runs Matinee." in cream, then "Yes, delete it" (in red) and
+  "No, keep it", which holds the keyboard's focus. "No, keep it", Escape or a
+  tap elsewhere changes nothing. "Yes, delete it" deletes the profile (section
+  7) and returns to the front door, whose line reads "Done." and "<name>'s seat
+  is empty." over the tiles; a refusal stays on the panel and says why.
 - **The pails.** The gore question shows four pail pictures, spotless to
   overflowing, each with its answer's words beneath it as text.
 - **The pick, as a hunt.** From a question screen the question's words fade

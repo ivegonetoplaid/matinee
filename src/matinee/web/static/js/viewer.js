@@ -1,7 +1,8 @@
 // The viewer at the right of the theatre's top bar: their mark and name, which open the profile menu.
 // The menu holds "Edit my list", "Change avatar", "Switch profiles" and "Delete profile", in that order.
 // It opens on click, tap or keyboard, and closes on Escape, on a tap elsewhere, or when an item is chosen.
-// "Change avatar" opens a panel beneath it; a tap saves the choice and the bar shows it at once.
+// "Change avatar" opens a panel beneath it; a tap saves the choice and the bar shows it at once. "Delete
+// profile" asks in a panel, never a browser dialog; "No, keep it" changes nothing.
 
 import { h } from "./dom.js";
 import { avatarChoices, initials, mark } from "./mark.js";
@@ -19,8 +20,9 @@ function panel(label, ...children) {
   return h("div", { class: "viewer-panel", role: "dialog", "aria-label": label }, children);
 }
 
-// `viewer` is { name, avatar }; `avatars` are the ones offered. `actions` holds editList, switchProfiles and
-// deleteProfile, and saveAvatar(avatar), which resolves to the page's { ok, data } answer.
+// `viewer` is { name, avatar }; `avatars` are the ones offered. `actions` holds editList and switchProfiles,
+// and saveAvatar(avatar) and deleteProfile(), which resolve to the page's { ok, data } answer; a profile
+// deleted, deleteProfile leaves the theatre itself.
 export function viewerTag(viewer, avatars, actions) {
   const long = [...viewer.name].length > SHORT_NAME;
   const classes = ["viewer", long ? "long" : "", viewer.avatar ? "has-avatar" : ""].filter(Boolean).join(" ");
@@ -42,7 +44,7 @@ export function viewerTag(viewer, avatars, actions) {
     item("Edit my list", choose(actions.editList)),
     item("Change avatar", choose(() => openPanel(changeAvatar()))),
     item("Switch profiles", choose(actions.switchProfiles)),
-    item("Delete profile", choose(actions.deleteProfile), true),
+    item("Delete profile", choose(() => openPanel(confirmDelete())), true),
   );
   tag.append(menu);
   const items = () => [...menu.querySelectorAll("[role=menuitem]")];
@@ -63,7 +65,7 @@ export function viewerTag(viewer, avatars, actions) {
     shown = built;
     tag.append(built);
     document.addEventListener("pointerdown", elsewhere, true);
-    built.querySelector("button")?.focus({ preventScroll: true });
+    (built.querySelector("[data-focus]") ?? built.querySelector("button"))?.focus({ preventScroll: true });
   }
   // The bar shows a new avatar, or the initials, at once.
   function show(avatar) {
@@ -90,6 +92,28 @@ export function viewerTag(viewer, avatars, actions) {
     typeLine(line, "Which one's yours?", "");
     return built;
   }
+  function confirmDelete() {
+    const line = h("p", { class: "line viewer-line", "aria-live": "polite" });
+    const status = h("p", { class: "note", role: "status" });
+    const yes = async () => {
+      for (const b of built.querySelectorAll("button")) b.disabled = true;
+      const res = await actions.deleteProfile();
+      if (res.ok) return undefined;
+      status.textContent = res.data.message;
+      for (const b of built.querySelectorAll("button")) b.disabled = false;
+      return undefined;
+    };
+    const choices = h(
+      "div",
+      { class: "viewer-choices" },
+      h("button", { class: "answer danger", type: "button", onclick: yes }, "Yes, delete it"),
+      h("button", { class: "answer", type: "button", "data-focus": true, onclick: () => close({ refocus: true }) }, "No, keep it"),
+    );
+    const built = panel(`Delete ${viewer.name}?`, line, choices, status);
+    typeLine(line, `Delete ${viewer.name}?`, "Your list goes with it. Any notes you sent stay with whoever runs Matinee.");
+    return built;
+  }
+
   function open() {
     shown?.remove();
     shown = null;

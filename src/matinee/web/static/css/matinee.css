@@ -2298,6 +2298,21 @@ a.wordmark:focus-visible {
   font-size: 18px;
 }
 
+.viewer-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.viewer-panel .line.viewer-line .ask {
+  font-size: 24px;
+  line-height: 1.1;
+}
+
+.answer.danger {
+  color: var(--velvet);
+}
+
 /* On a phone the top bar stays one row: a name over ten characters shows as initials beside the avatar,
    or as the avatar's own initials when it has none. */
 @media (max-width: 600px) {

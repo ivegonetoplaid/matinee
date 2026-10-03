@@ -1,6 +1,6 @@
 // Matinee's page: the box office, then the questions on the poster wall, then the pick.
 
-import { get, post, put } from "./api.js";
+import { del, get, post, put } from "./api.js";
 import { noteLink } from "./note.js";
 import { credits } from "./credits.js";
 import { Door } from "./door.js";
@@ -98,7 +98,11 @@ function nameTag() {
   return viewerTag({ name: visit.name, avatar: visit.avatar }, avatarsOffered, {
     editList: () => leave({ screen: "list", profileId: id }),
     switchProfiles: () => leave({}),
-    deleteProfile: () => {},
+    deleteProfile: async () => {
+      const res = await del(`/api/profiles/${id}`);
+      if (res.ok) leave({ said: ["Done.", `${res.data.name}'s seat is empty.`] });
+      return res;
+    },
     saveAvatar: async (avatar) => {
       const res = await put(`/api/profiles/${id}/avatar`, { avatar });
       if (res.ok) visit.avatar = res.data.avatar;
