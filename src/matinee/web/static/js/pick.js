@@ -98,7 +98,7 @@ function firstPickReveal(result, note) {
   const ask = h(
     "button",
     {
-      class: "link-button",
+      class: "action cream",
       type: "button",
       onclick: () => {
         shown.hidden = false;
@@ -118,7 +118,7 @@ async function showNoFilm(result, { line, aside }, actions) {
   const note = h("p", { class: "note" }, credit(result));
   aside.append(note);
   await typeLine(line, result.tired || result.exhausted, "");
-  const startOver = h("button", { class: "pill gold", type: "button", onclick: actions.startOver }, "Start over");
+  const startOver = h("button", { class: "action cream", type: "button", onclick: actions.startOver }, "Start over");
   if (!result.tired) {
     aside.append(startOver, note);
     return;
@@ -127,15 +127,15 @@ async function showNoFilm(result, { line, aside }, actions) {
     h(
       "div",
       { class: "choices" },
-      h("button", { class: "pill gold", type: "button", onclick: actions.rollAgain }, "Roll again"),
-      h("button", { class: "pill velvet", type: "button", onclick: actions.justPick }, "Just pick one"),
+      h("button", { class: "action gold", type: "button", onclick: actions.rollAgain }, "Roll again"),
+      h("button", { class: "action rose", type: "button", onclick: actions.justPick }, "Just pick one"),
     ),
-    h("button", { class: "link-button", type: "button", onclick: actions.startOver }, "Start over"),
+    startOver,
     note,
   );
 }
 
-// What sits under the line on the resting page. The buttons come straight after the line, which keeps
+// What sits under the line on the resting page. The actions come straight after the line, which keeps
 // four lines of room whatever its words, so "Not that one" sits in the same place for every film. The
 // swap reason's credit, `note`, moves beneath them. The answers so far are in the trail at the foot of
 // the screen.
@@ -143,9 +143,9 @@ function choices(info, film, result, actions, note) {
   const buttons = h(
     "div",
     { class: "choices" },
-    h("button", { class: "pill velvet", type: "button", onclick: actions.notThatOne }, "Not that one"),
-    info.seerr ? h("a", { class: "seerr", href: info.seerr, target: "_blank", rel: "noopener noreferrer" }, "More on Seerr") : null,
-    h("button", { class: "link-button", type: "button", onclick: actions.startOver }, "Start over"),
+    h("button", { class: "action rose", type: "button", onclick: actions.notThatOne }, "Not that one"),
+    info.seerr ? h("a", { class: "action petrol", href: info.seerr, target: "_blank", rel: "noopener noreferrer" }, "More on Seerr ↗") : null,
+    h("button", { class: "action cream start-over", type: "button", onclick: actions.startOver }, "Start over"),
   );
   return [buttons, note ? firstPickReveal(result, note) : null, actions.noteLink(film)].filter(Boolean);
 }

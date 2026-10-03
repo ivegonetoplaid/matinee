@@ -1,4 +1,4 @@
-// The unobtrusive note link on a result: what was wrong with the pick, and why. Every
+// The note action on a result: what was wrong with the pick, and why. Every
 // answer is kept as a note, with the path that led to the pick, for whoever runs
 // Matinee; it changes nothing any viewer is shown. The pick always belongs to a profile
 // this device holds. "Not this genre at all" asks where the film belongs, offering every
@@ -70,7 +70,7 @@ export function noteLink({ visit, film, trees }) {
   const open = h(
     "button",
     {
-      class: "link-button",
+      class: "action cream",
       type: "button",
       "aria-expanded": "false",
       onclick: () => {
@@ -100,7 +100,7 @@ export function noteLink({ visit, film, trees }) {
   const save = h(
     "button",
     {
-      class: "pill gold",
+      class: "action gold",
       type: "button",
       onclick: async () => {
         const kind = picked();

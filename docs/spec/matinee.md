@@ -920,9 +920,9 @@ never kept. No tree, scale or score is built from DoesTheDogDie data.
 A note is a viewer's complaint about a pick, kept for whoever runs Matinee. It
 changes nothing any viewer is shown.
 
-- The note link is offered only on a pick that came through a tree. It is a
-  small "Something wrong with this pick?" link that opens a panel and never
-  dominates the result. The pick always belongs to a profile this device holds,
+- The note action is offered only on a pick that came through a tree. It is a
+  cream "Something wrong with this pick?" action beneath the pick's actions
+  that opens a panel. The pick always belongs to a profile this device holds,
   so the panel never asks for a name.
 - The panel opens with "How you got here:" and the viewer's answers in order,
   ending with "Just pick one!" when that ended the questions.
@@ -1082,8 +1082,9 @@ the server can never become part of the page's HTML.
 
 ## 12. The page
 
-One dark theme: base `#07080d`, marquee gold `#f2b33d`, velvet red `#e0566b`
-for `Not that one` only. Matinee's lines and the wordmark are set in Big
+One dark theme on base `#07080d`. The colour tokens, the two families of
+control (a letterbox chooses something, an action does something) and each
+action's accent are those of `DESIGN_STANDARDS.md`. Matinee's lines and the wordmark are set in Big
 Shoulders Display, other text in DM Sans. Both fonts are self-hosted with their
 OFL licences. All displayed text is in sentence case, except that a cream
 part carrying on its gold part's sentence after a comma keeps its first letter
@@ -1381,14 +1382,16 @@ as written. A phone is a viewport 600 px wide or less.
   desktop the resting place is the foot of the left column, as large as the height left there allows at 2:3 (never under
   160 px), while the backdrop rises on the right, fading into the title, year
   and synopsis, shown without a tap. The left column hangs from the top of the
-  screen: the line, then `Not that one`, a "More on Seerr" link to the film's
-  page on the configured Seerr and `Start over` in one row, then the
-  note link.
+  screen: the line, then `Not that one` (rose), "More on Seerr ↗" (petrol, a
+  link to the film's page on the configured Seerr, opening a new tab) and
+  `Start over` (cream), actions in one row from about 1,280 px wide, then the
+  note action. The left column takes a third of the row, widened toward
+  470 px but never past 38 per cent of it.
 
   On a phone Matinee's words keep the foot of the pick screen, which is about a
   third of the screen (36 per cent of its height, never under 270 px) and holds,
-  from its top, the line, `Not that one` and "More on Seerr", the note
-  link, then the trail on one line, each crumb cut to 16 characters, and the
+  from its top, the line, `Not that one` and "More on Seerr ↗", the note
+  action, then the trail on one line, each crumb cut to 16 characters, and the
   credits. The foot has no backing of its own; the wall shows through it.
   `Start over` is not shown there: the trail's `Start` beneath does the same.
   Anything taller than the foot, such as the open note panel, scrolls
@@ -1430,8 +1433,8 @@ as written. A phone is a viewport 600 px wide or less.
   types in gold in the nope line's place and stays, and only the reveal line
   is redealt to fit beneath it within the cap. DoesTheDogDie's credit is placed
   beneath the reason before it starts to type and stays through the hunt; on
-  the resting page it moves beneath the buttons, joined by the "What were you
-  going to show me?" link. The three-in-a-row and exhausted-pool lines likewise
+  the resting page it moves beneath the actions, joined by the cream "What
+  were you going to show me?" action. The three-in-a-row and exhausted-pool lines likewise
   have their credit on screen before they type. A pick with no film speaks no quip.
 
   `Not that one` asks for the next film at the tap and carries the resting
@@ -1546,7 +1549,7 @@ as written. A phone is a viewport 600 px wide or less.
 | `MATINEE_STATE` | server, rebuild | the state directory |
 | `MATINEE_JELLYFIN_URL` | server, rebuild | the media server's address |
 | `JELLYFIN_API_KEY` | server, rebuild | the media server's key |
-| `MATINEE_SEERR_URL` | server | the base of the "More on Seerr" link |
+| `MATINEE_SEERR_URL` | server | the base of the "More on Seerr ↗" action's address |
 | `DTDD_API_KEY` | server | the DoesTheDogDie key |
 | `TMDB_READ_TOKEN` | rebuild | the TMDB read token |
 | `MATINEE_ML` | rebuild | the genome directory, if not under the state directory |
