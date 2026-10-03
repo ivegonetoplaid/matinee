@@ -1,6 +1,6 @@
 ---
 purpose: Index of Matinee's behaviour specifications — what each spec covers, how much to trust it against the code, and the policy that keeps the two reconciled.
-updated: 2026-10-02
+updated: 2026-10-03
 ---
 
 # Matinee Specs
@@ -64,5 +64,5 @@ deleted rather than left standing. Git history holds it.
   tool, the web surface and its security headers, the page (the locked door,
   the front door's tiles and the viewer's profile menu among it), the
   deployment shape, and the terms of the three data sources. Written from the
-  code on 2026-09-26, and last reconciled with it on 2026-10-02. It ends with a list of known gaps: behaviour deliberately
+  code on 2026-09-26, and last reconciled with it on 2026-10-03. It ends with a list of known gaps: behaviour deliberately
   absent, still open, or short of the contract.

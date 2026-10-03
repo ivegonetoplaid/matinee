@@ -1,6 +1,6 @@
 ---
 purpose: The contract Matinee's first build holds to — the conversation model, the pools and scales, the offline film table, profiles and the store file, the door word, exclusions, the DoesTheDogDie check, viewers' notes, the web surface, the page, deployment and third-party terms — with a map of where each part lives.
-updated: 2026-10-02
+updated: 2026-10-03
 governs:
   - src/matinee/
   - tools/
@@ -16,7 +16,7 @@ questions and is handed one film from the library, presented as tonight's
 showing, with `Not that one` to draw again.
 
 This spec was written from the code on 2026-09-26 and last reconciled with it on
-2026-10-02. It has two halves. The
+2026-10-03. It has two halves. The
 **contract** says what Matinee must do and must refuse. It is authoritative. The
 **map** says where each part lives. It is a pointer, never proof. The
 [index](README.md) explains how to read the two when they disagree with the
@@ -262,7 +262,7 @@ offered after "the little ones. nothing scary.".
   it.
 - **An answer that would leave the pool empty is not shown.** A question with no
   answer to show is skipped.
-- A question may carry a `footnote`, a line the viewer sees in small type beneath
+- A question may carry a `footnote`, a line the viewer sees in body type beneath
   its answers and above `Just pick one!` (`footnote` in `/api/walk`). A question's
   `note` is maintainer documentation and is never shown.
 - An answer marked `not_after` is hidden when the viewer gave a named earlier
@@ -843,8 +843,12 @@ never kept. No tree, scale or score is built from DoesTheDogDie data.
   taken: TMDB numbers films and TV shows apart, and a TV show sharing the
   number is another title. Where that does not leave exactly one item, the film
   counts as having no record. A Movie whose item id is not a positive whole
-  number, or a vote count that is negative or not a whole number (a JSON true
-  included), is unreadable: the film goes unchecked and nothing is held.
+  number is unreadable: the film goes unchecked and the search's answer is not
+  kept. A vote row that is not an object, or whose topic id is negative or not
+  a whole number (a JSON true included), is unreadable. So is a vote count of
+  that kind on a row for one of the viewer's topics; a row for another topic is
+  skipped unread. An unreadable row leaves the film unchecked, and its item id
+  stays held.
 - **The item id is remembered.** The search's answer (the film's item id, or
   that it has none) is kept in memory for **30 days**, so a later lookup of the
   same film skips the search, and is dropped from memory once 30 days old. A
@@ -874,14 +878,17 @@ never kept. No tree, scale or score is built from DoesTheDogDie data.
 - **Three in a row.** A pick looks up at most **3** films that fail. When three
   have failed and others remain, it stops and the page says, in gold, "Three in
   a row trip your list, starting with one where <topic>." and, in cream, "Roll
-  again, or I can show you what I picked." It offers `Roll again`, the gold
-  action "Just show me what you picked" and `Start over`. The reply carries the
-  third film that tripped and the topics it trips (`last`). "Just show me what
+  again, or I can show you what I picked." `<topic>` there is the first topic
+  the first film that tripped trips. It offers `Roll again`, the action "Just
+  show me what you picked" and `Start over`. The reply carries the
+  third film that tripped in `last`: the film, the topics it trips and the two
+  lines that show it. "Just show me what
   you picked" shows that film as a pick from the reply already held, asking
   no new pick and nothing of DoesTheDogDie (the film's details and pictures
   load as on any pick): "Here's what I picked." in gold
   at the tap, and "Heads up: it's one where <topic>." in cream as its poster
-  grows, `<topic>` the first topic on the viewer's list it trips. It then
+  grows, `<topic>` the first of the viewer's topics it trips, in the order
+  DoesTheDogDie lists its votes. It then
   behaves as any pick: `Not that one`, the note and `Start over` work.
 - **Every pick is checked.** No request can ask to skip the check: a pick for a
   viewer with topics looks its film up whatever the request carries.
@@ -891,7 +898,8 @@ never kept. No tree, scale or score is built from DoesTheDogDie data.
   the foot band, when any of these holds:
   - DoesTheDogDie is slow (no turn, or no answer, within **3 seconds** per
     request) or refuses;
-  - DoesTheDogDie holds no record, or a vote row cannot be read;
+  - DoesTheDogDie holds no record, its search answer or item id cannot be
+    read, or a vote row cannot be read;
   - the device has spent its allowance for the hour;
   - the installation has reached its own hourly ceiling;
   - the client is holding its requests after a refusal, or because
@@ -902,8 +910,8 @@ never kept. No tree, scale or score is built from DoesTheDogDie data.
   spent device allowance and the installation's ceiling each have their own
   line saying so (`UNCHECKED_LINES`). The note does not name the topics: an
   unchecked film was checked against none of them.
-- **Look it up.** Every unchecked film offers a petrol "Look it up on
-  DoesTheDogDie ↗" action beneath its note, opening a new tab. The reply
+- **Look it up.** Every unchecked film offers an action, "Look it up on
+  DoesTheDogDie ↗", beneath its note, opening a new tab. The reply
   carries `dtdd_item`, the film's DoesTheDogDie item as held at that moment,
   read after any lookup has run: never one DoesTheDogDie has just answered 404
   for, and never one older than 30 days. With an item the action opens
@@ -941,9 +949,9 @@ never kept. No tree, scale or score is built from DoesTheDogDie data.
 A note is a viewer's complaint about a pick, kept for whoever runs Matinee. It
 changes nothing any viewer is shown.
 
-- The note action is offered only on a pick that came through a tree. It is a
-  cream "Something wrong with this pick?" action beneath the pick's actions
-  that opens a panel. The pick always belongs to a profile this device holds,
+- The note action is offered only on a pick that came through a tree. It is an
+  action, "Something wrong with this pick?", beneath the pick's actions. It
+  opens a panel. The pick always belongs to a profile this device holds,
   so the panel never asks for a name.
 - The panel opens with "How you got here:" and the viewer's answers in order,
   ending with "Just pick one!" when that ended the questions.
@@ -1103,7 +1111,7 @@ the server can never become part of the page's HTML.
 
 ## 12. The page
 
-One dark theme on base `#07080d`. The colour tokens, the two families of
+The colour tokens, the two families of
 control (a letterbox chooses something, an action does something) and each
 action's accent are those of `DESIGN_STANDARDS.md`. Matinee's lines and the wordmark are set in Big
 Shoulders Display, other text in DM Sans. Both fonts are self-hosted with their
@@ -1133,20 +1141,20 @@ as written. A phone is a viewport 600 px wide or less.
   desktop the words are a centred column
   680 px wide, 44 px under the sign, with the line at 52 px and its answers as
   letterboxes. On a phone the line hangs 26 px under the marquee
-  at 34 px, and the answers sit at the foot of the screen. Every letterbox on
-  every screen has one size: 24 px words on a desktop and 19 px on a phone. A
+  at 34 px, and the answers sit at the foot of the screen. A
   short window closes the words up: under 820 px tall on a desktop they start
   28 px under the sign, and under 640 px tall on a phone the line is 26 px. The
   trigger picker sits on the wall too: on a desktop 1000 px wide, the question
   and saving in a 360 px left column and the topics beside it; under 760 px
   wide it stacks as on a phone. Its topics are letterboxes in two aligned
-  columns on a desktop, never narrower than 200 px (one column where two would
-  be), and one on a phone; in a row of two both take the taller one's height,
+  columns on a desktop, never narrower than 200 px: one column where two would
+  each be narrower, and one on a phone; in a row of two both take the taller one's height,
   and a long topic wraps. A chosen topic shows a check mark in a gutter every
   topic keeps before its words, so choosing one never moves or resizes it.
-  Under the topics, beside the line counting the chosen ones and never beside
-  saving, a petrol "Read about these on DoesTheDogDie ↗" action opens
-  DoesTheDogDie's site in a new tab. The
+  Under the topics, never beside saving, the action "Read about these on
+  DoesTheDogDie ↗" opens DoesTheDogDie's site in a new tab. On a
+  desktop it stands beside the line counting the chosen ones; under 760 px
+  wide it drops beneath that line when the two do not fit side by side. The
   list scrolls in its own box under the search field, which filters it, and
   the field keeps its own dark fill. On a phone, while the picker is open,
   the crown fades and the sign shrinks to a lit strip of bulbs round the letter
@@ -1255,7 +1263,7 @@ as written. A phone is a viewport 600 px wide or less.
     profile ("No problem. What should I steer around?", "Save and continue",
     "Never mind, show me everything", each leading on to the last step), and
     "No, show me everything", which goes to the last step with no list. Last, "You're all set, <name>." over a centred
-    gold "Find me something to watch" action at the standard size, which goes in
+    "Find me something to watch" action, which goes in
     to the first question.
 - **Going in.** Every answer at the door that leads into the theatre asks for
   the first question at the tap, and a door is entered once: a second tap or
@@ -1289,19 +1297,19 @@ as written. A phone is a viewport 600 px wide or less.
   notes, status lines, counts, footnotes, the tile names, the film's title,
   year and synopsis, and the open "Something wrong with this pick?" panel.
   Every scrim paints behind all of a screen's text and controls. No scroll box
-  cuts a scrim: the door's wall keeps 40 px of room above its first line, and
+  cuts a scrim: the door's column (the words and tiles that scroll under
+  the marquee) keeps 40 px of room above its first line, and
   the phone pick's foot fades its top and its foot over 20 px, so a scrim at
   either end fades with its text. The locked door's greeting keeps its own scrim
   on subway tile.
 - **Bands.** Every screen over the poster wall has a dark band at the top and
-  at the foot: the page base at 92 per cent behind its bar (the top bar with
-  the wordmark and the viewer; the foot with the trail and the credit line),
-  feathering to nothing into the wall over 96 px on a desktop and 48 px on a
-  phone. The top band lies behind everything on the screen and scrolls away
-  with the top bar. The pinned foot bar is as tall as its fade, so nothing
-  rests under the fade and what scrolls beneath fades under the band. On the
+  at the foot, as `DESIGN_STANDARDS.md` 6.3 sets them: behind the top bar with the
+  wordmark and the viewer, and behind the foot with the trail and the credit
+  line. The top band lies behind everything on the screen and scrolls away
+  with the top bar. The pinned foot bar carries its fade inside its own
+  height, so nothing rests under the fade and what scrolls beneath fades under the band. On the
   door's screens the marquee's fade is the top band, and the foot band lies
-  behind the wall's last row, and what scrolls in the door's wall fades out
+  behind the door's last row, and what scrolls in the door's column fades out
   over its foot padding; going in, the credit line fades and the band stays.
   A problem screen carries the credit line at its foot. The locked door has
   no bands. About's panel stands over the bands, which stay showing beneath
@@ -1347,7 +1355,7 @@ as written. A phone is a viewport 600 px wide or less.
   the line hangs from the top of the screen with three lines reserved, so on
   desktop the answers start at the same height on every question whose line
   fits in three; on a phone the answers sit at the foot of the screen. On
-  desktop and on a phone the answers are letter-board strips, smaller on a phone.
+  desktop and on a phone the answers are letterboxes.
   A question's footnote appears with the answers, in 16 px cream body type beneath
   them and above "Just pick one!". The first action on a screen
   disables every button on it. The count of films still in the running stands
@@ -1442,11 +1450,14 @@ as written. A phone is a viewport 600 px wide or less.
   desktop the resting place is the foot of the left column, as large as the height left there allows at 2:3 (never under
   160 px), while the backdrop rises on the right, fading into the title, year
   and synopsis, shown without a tap. The left column hangs from the top of the
-  screen: the line, then `Not that one` (rose), "More on Seerr ↗" (petrol, a
-  link to the film's page on the configured Seerr, opening a new tab) and
-  `Start over` (cream), actions in one row from about 1,280 px wide, then the
+  screen: the line, then `Not that one`, "More on Seerr ↗" (a link to the
+  film's page on the configured Seerr, opening a new tab) and `Start over`,
+  actions in one row where the column is wide enough (from about 1,320 px of
+  window), wrapping beneath one another below that, then the
   note action. The left column takes a third of the row, widened toward
-  470 px but never past 38 per cent of it.
+  470 px but never past 38 per cent of it. An unchecked film's note and its
+  "Look it up on DoesTheDogDie ↗" action (section 9) follow the
+  synopsis, on a phone as on a desktop.
 
   On a phone Matinee's words keep the foot of the pick screen, which is about a
   third of the screen (36 per cent of its height, never under 270 px, and
@@ -1495,7 +1506,7 @@ as written. A phone is a viewport 600 px wide or less.
   types in gold in the nope line's place and stays, and only the reveal line
   is redealt to fit beneath it within the cap. DoesTheDogDie's credit shows in the
   foot band before the reason starts to type and stays for the rest of the
-  pick; on the resting page the cream "What were you going to show me?" action
+  pick; on the resting page the "What were you going to show me?" action
   stands beneath the actions. The three-in-a-row and exhausted-pool lines, and
   the trip of a film shown after three in a row, likewise have the credit on
   screen before they type. A pick with no film speaks no quip; its line types its first sentence in
@@ -1510,7 +1521,7 @@ as written. A phone is a viewport 600 px wide or less.
   the screen. The next hunt starts
   from where the wall stands, by every rule above. "Roll again", after three
   films in a row were turned away, is a new pick: its check line types.
-  "Just show me what you picked" asks for nothing, so no check line types.
+  "Just show me what you picked" asks for no new pick, so no check line types.
 
   A trail answer, the wordmark, a profile menu item that leaves the theatre
   ("Edit my list", "Switch profiles", a confirmed "Delete profile") or `Start
@@ -1542,12 +1553,16 @@ as written. A phone is a viewport 600 px wide or less.
   the scorch. "Not that one" and every later pick speak as usual.
 - **Credits.** The corner credit line reads "Posters and film data from TMDB
   [logo] · About", the logo linked to TMDB and "About" a button that opens the
-  About page. It sits at the bottom right of the door, the question screens and
-  the pick screen on a desktop (13 px), and centred at the foot on a phone
-  (11 px). The TMDB logo is smaller than Matinee's own mark. MovieLens is
-  credited on the About page. On a screen that shows DoesTheDogDie's data (the
-  trigger picker and the pick screens, section 14) the line ends with
-  "Powered by DoesTheDogDie.com", linked; nowhere on the wall carries it. On a
+  About page. It sits at the bottom right of the door, the question screens,
+  the pick screen and a problem screen on a desktop (13 px), and centred at the
+  foot on a phone (11 px). The TMDB logo is smaller than Matinee's own mark.
+  MovieLens is credited on the About page. Where DoesTheDogDie's data shows
+  (section 14) the line ends with "Powered by DoesTheDogDie.com", linked: on
+  the trigger picker while it holds DoesTheDogDie's topics, and on a pick
+  screen once it shows a line or note built on that data, or the used-up
+  line. Every other door
+  screen, a pick screen showing none, and a question or problem screen leave it
+  off. Nowhere on the wall carries it. On a
   phone's pick screen it takes a second line, kept for it whether or not it
   shows, so the foot never changes height when it appears.
 - **About.** A screen inside the page, with no address of its own and no
@@ -1555,7 +1570,8 @@ as written. A phone is a viewport 600 px wide or less.
   panel 65 per cent opaque over the poster wall, 1040 px wide on a desktop and
   the screen's width less a 16 px gutter each side on a phone, with no sideways
   scroll. The screen underneath, its credit line included, is hidden, never
-  rebuilt or paused, so only the posters show through; it shows again exactly
+  rebuilt or paused, so only the posters and the screen's two bands show
+  through (Bands, above); it shows again exactly
   as it stood when About closes. Matinee's wordmark stands at the theatre
   wordmark's place: fixed from 1400 px wide up, and scrolling away with the page
   below that so it never sits over the text. About scrolls as a page when the panel
@@ -1632,7 +1648,7 @@ The terms of each source are part of the design.
 - **TMDB.** Cached at most six months (section 5.2). The notice "This product
   uses the TMDB API but is not endorsed or certified by TMDB." appears on the
   About page. The TMDB logo appears there and in the corner credit line of the
-  door, the question screens and the pick screen, less prominent than
+  door, the question screens, the pick screen and a problem screen, less prominent than
   Matinee's own mark. TMDB data is non-commercial under the default licence.
 - **MovieLens tag genome.** Credited on the About page to F. Maxwell Harper and
   Joseph A. Konstan (2015), *The MovieLens Datasets: History and Context*, and
@@ -1677,7 +1693,7 @@ Not part of this build, and not to be added until asked:
 # Known gaps
 
 Behaviour that is deliberately absent, still open, or short of the contract,
-as the code stood on 2026-10-02.
+as the code stood on 2026-10-03.
 
 **Short of the contract:**
 
@@ -1700,7 +1716,7 @@ as the code stood on 2026-10-02.
    requests. Each may wait up to 3 seconds for its turn, then pause for the
    pacing allowance, then allow 3 seconds for an answer. One check can therefore
    take longer than 3 seconds before it counts as slow.
-   (`src/matinee/dtdd.py:106`, `src/matinee/pick.py:142`)
+   (`src/matinee/dtdd.py:106`, `src/matinee/pick.py:170`)
 6. **Names are compared after NFKC normalisation and case folding only.**
    Look-alike letters from other scripts count as different names. The refusal
    message says names are "letters, numbers or spaces". The rule accepts any
@@ -1750,6 +1766,18 @@ as the code stood on 2026-10-02.
     characters without comparing it, after the usual 2-second wait.
     (`src/matinee/web/app.py::WordIn`, `src/matinee/web/admission.py::MAX_TYPED`)
 
+**Short of the contract, in the page (continued):**
+
+16. **The phone's tripped screen hides an action under the foot's fade.** After three
+    films in a row trip the list, Matinee's line, five rows long in the phone foot, pushes "Just show me
+    what you picked" half under the foot's 20 px fade until the foot is scrolled.
+    (`src/matinee/web/static/css/matinee.css` phone `.aside`)
+17. **DoesTheDogDie's credit wording lives in two places.** The page writes
+    "Powered by DoesTheDogDie.com" itself, and the pick and topic replies carry `credit`
+    and `link` as well, which the page reads only for the link's address.
+    (`src/matinee/web/static/js/credits.js::dtddCredit`,
+    `src/matinee/web/viewing.py::PickOut`, `TopicsOut`)
+
 ---
 
 # Part 2 — Map
@@ -1797,8 +1825,8 @@ symbol when one does not match.
 | `src/matinee/engine.py::opening_pool` | `src/matinee/engine.py:408` | 2026-10-02 |
 | `src/matinee/engine.py::_served` (apart films stay out until their answer) | `src/matinee/engine.py:416` | 2026-10-02 |
 | `src/matinee/engine.py::_asked` / `Asked.footnote` (footnote and asterisks dropped with the apart answer) | `src/matinee/engine.py:437` | 2026-10-02 |
-| `src/matinee/web/viewing.py::everything` (the first question's pool) | `src/matinee/web/viewing.py:166` | 2026-10-02 |
-| `src/matinee/web/viewing.py::QuestionOut.footnote` | `src/matinee/web/viewing.py:81` | 2026-10-02 |
+| `src/matinee/web/viewing.py::everything` (the first question's pool) | `src/matinee/web/viewing.py:174` | 2026-10-03 |
+| `src/matinee/web/viewing.py::QuestionOut.footnote` | `src/matinee/web/viewing.py:79` | 2026-10-03 |
 | `src/matinee/engine.py::_plain_mask` / `_range_mask` (unknown values pass) | `src/matinee/engine.py:244` | 2026-10-02 |
 | `src/matinee/engine.py::walk_ends` / `reachable` | `src/matinee/engine.py:493` | 2026-10-02 |
 | `data/trees/comedy.json` room question (ceilings) | `data/trees/comedy.json:7` | 2026-09-27 |
@@ -1923,10 +1951,10 @@ symbol when one does not match.
 | `src/matinee/web/app.py::add_door_routes` (`GET /api/door`, create, open) | `src/matinee/web/app.py:164` | 2026-10-02 |
 | `src/matinee/web/app.py::add_avatar_route` (`PUT /api/profiles/{id}/avatar`) | `src/matinee/web/app.py:201` | 2026-10-02 |
 | `src/matinee/web/app.py::add_delete_route` (`DELETE /api/profiles/{id}`) | `src/matinee/web/app.py:210` | 2026-10-02 |
-| `src/matinee/web/viewing.py::ViewerIn` (a profile id only) | `src/matinee/web/viewing.py:38` | 2026-10-02 |
-| `src/matinee/web/viewing.py::held_profile` | `src/matinee/web/viewing.py:177` | 2026-10-02 |
-| `src/matinee/web/viewing.py::resolve` (no profile: the front door's pool) | `src/matinee/web/viewing.py:191` | 2026-10-02 |
-| `src/matinee/web/viewing.py::resolve_held` (walks and picks need a held profile) | `src/matinee/web/viewing.py:199` | 2026-10-02 |
+| `src/matinee/web/viewing.py::ViewerIn` (a profile id only) | `src/matinee/web/viewing.py:37` | 2026-10-03 |
+| `src/matinee/web/viewing.py::held_profile` | `src/matinee/web/viewing.py:185` | 2026-10-03 |
+| `src/matinee/web/viewing.py::resolve` (no profile: the front door's pool) | `src/matinee/web/viewing.py:199` | 2026-10-03 |
+| `src/matinee/web/viewing.py::resolve_held` (walks and picks need a held profile) | `src/matinee/web/viewing.py:207` | 2026-10-03 |
 | `tests/test_profiles.py::test_a_write_never_lands_on_a_new_profile_that_reuses_a_deleted_ones_id` | `tests/test_profiles.py:318` | 2026-10-02 |
 | `tests/test_avatar_images.py` (two square sizes each; the size budget) | `tests/test_avatar_images.py:24` | 2026-10-02 |
 | `src/matinee/web/static/avatars/` (`<avatar>-256.webp` and `<avatar>-80.webp`) | `src/matinee/web/static/avatars/` | 2026-10-02 |
@@ -1969,9 +1997,9 @@ symbol when one does not match.
 | `src/matinee/store.py::NOTE_SELECT` / `FiledNote` / `one_line` / `MAX_REASON` | `src/matinee/store.py:65` | 2026-10-02 |
 | `src/matinee/store.py::Store.note` | `src/matinee/store.py:321` | 2026-10-02 |
 | `src/matinee/store.py::Store.notes` / `filed` / `rule` | `src/matinee/store.py:341` | 2026-10-02 |
-| `src/matinee/web/viewing.py::NoteOut` / `NoteIn` (request caps) | `src/matinee/web/viewing.py:120` | 2026-10-02 |
-| `src/matinee/web/viewing.py::NOTED` / `answer_says` / `check_belongs` | `src/matinee/web/viewing.py:333` | 2026-10-02 |
-| `src/matinee/web/viewing.py::add_note_routes` (`POST /api/notes`) | `src/matinee/web/viewing.py:356` | 2026-10-02 |
+| `src/matinee/web/viewing.py::NoteOut` / `NoteIn` (request caps) | `src/matinee/web/viewing.py:118` | 2026-10-03 |
+| `src/matinee/web/viewing.py::NOTED` / `answer_says` / `check_belongs` | `src/matinee/web/viewing.py:351` | 2026-10-03 |
+| `src/matinee/web/viewing.py::add_note_routes` (`POST /api/notes`) | `src/matinee/web/viewing.py:374` | 2026-10-03 |
 | `tools/notes.py::Names` / `load_names` (titles and door labels) | `tools/notes.py:38` | 2026-10-02 |
 | `tools/notes.py::printable` | `tools/notes.py:64` | 2026-10-02 |
 | `tools/notes.py::what_was_wrong` / `describe` | `tools/notes.py:70` | 2026-10-02 |
@@ -1985,21 +2013,29 @@ symbol when one does not match.
 |---|---|---|
 | `data/exclusions.json` | `data/exclusions.json:4` | 2026-09-26 |
 | `src/matinee/engine.py::_exclusion` | `src/matinee/engine.py:284` | 2026-10-02 |
-| `src/matinee/web/viewing.py::check_exclusions` | `src/matinee/web/viewing.py:185` | 2026-10-02 |
+| `src/matinee/web/viewing.py::check_exclusions` | `src/matinee/web/viewing.py:193` | 2026-10-03 |
 | `src/matinee/dtdd.py::Dtdd.get` / `_pace` (`BURST`, `RATE_PER_S`) | `src/matinee/dtdd.py:106` | 2026-09-26 |
 | `src/matinee/dtdd.py::Dtdd._check_holds` / `_refused` / `_note_remaining` (`REQUESTS_PER_HOUR`, `MONTH_RESERVE`, `RESERVE_HOLD_S`, `BACKOFF_S`) | `src/matinee/dtdd.py:123` | 2026-09-26 |
 | `src/matinee/dtdd.py::Dtdd.topics` (`TOPICS_REFRESH_S`, `TOPICS_KEEP_S`) | `src/matinee/dtdd.py:178` | 2026-09-26 |
-| `src/matinee/pick.py::failing` (`MIN_VOTES`) | `src/matinee/pick.py:74` | 2026-09-26 |
-| `src/matinee/pick.py::ItemIds` (`ID_KEEP_S`) | `src/matinee/pick.py:114` | 2026-09-26 |
-| `src/matinee/pick.py::look_up` (`LOOKUP_S`) | `src/matinee/pick.py:143` | 2026-09-26 |
-| `src/matinee/pick.py::DeviceCap` (`LOOKUPS_PER_HOUR`) | `src/matinee/pick.py:179` | 2026-09-26 |
-| `src/matinee/pick.py::candidates` | `src/matinee/pick.py:212` | 2026-09-26 |
+| `src/matinee/pick.py::failing` (`MIN_VOTES`) | `src/matinee/pick.py:83` | 2026-10-03 |
+| `src/matinee/pick.py::_count` (a DoesTheDogDie number: a plain non-negative integer, never a boolean) | `src/matinee/pick.py:78` | 2026-10-03 |
+| `src/matinee/pick.py::_the_film` (the one Movie with the film's TMDB id; a malformed item id is unreadable) | `src/matinee/pick.py:106` | 2026-10-03 |
+| `src/matinee/pick.py::ItemIds` (`ID_KEEP_S`) | `src/matinee/pick.py:133` | 2026-10-03 |
+| `src/matinee/pick.py::ItemIds._drop_expired` (nothing held past 30 days) | `src/matinee/pick.py:145` | 2026-10-03 |
+| `src/matinee/pick.py::look_up` (`LOOKUP_S`) | `src/matinee/pick.py:170` | 2026-10-03 |
+| `src/matinee/pick.py::DeviceCap` (`LOOKUPS_PER_HOUR`) | `src/matinee/pick.py:206` | 2026-10-03 |
+| `src/matinee/pick.py::candidates` | `src/matinee/pick.py:239` | 2026-10-03 |
 | `src/matinee/engine.py::gentlest` | `src/matinee/engine.py:203` | 2026-10-02 |
-| `src/matinee/pick.py::Picker.pick` (`PICK_TRIES`) | `src/matinee/pick.py:238` | 2026-09-30 |
-| `src/matinee/web/viewing.py::device_id` / `DEVICE_COOKIE` | `src/matinee/web/viewing.py:233` | 2026-10-02 |
-| `src/matinee/web/viewing.py::SWAP_LINE` / `UNCHECKED_LINES` / `EXHAUSTED` / `TIRED` | `src/matinee/web/viewing.py:208` | 2026-10-02 |
-| `src/matinee/web/viewing.py::pick_pool` | `src/matinee/web/viewing.py:373` | 2026-10-02 |
-| `src/matinee/web/viewing.py::add_pick_routes` | `src/matinee/web/viewing.py:383` | 2026-10-02 |
+| `src/matinee/pick.py::Picker.pick` (`PICK_TRIES`) | `src/matinee/pick.py:269` | 2026-10-03 |
+| `src/matinee/pick.py::Pick` (`last` / `last_hits`: the third film of three in a row; `item`: an unchecked film's item) | `src/matinee/pick.py:61` | 2026-10-03 |
+| `src/matinee/pick.py::Picker._item` (the item as held after any lookup) | `src/matinee/pick.py:259` | 2026-10-03 |
+| `src/matinee/web/viewing.py::device_id` / `DEVICE_COOKIE` | `src/matinee/web/viewing.py:238` | 2026-10-03 |
+| `src/matinee/web/viewing.py::SWAP_LINE` / `UNCHECKED_LINES` / `EXHAUSTED` / `TIRED` / `PICKED` | `src/matinee/web/viewing.py:216` | 2026-10-03 |
+| `src/matinee/web/viewing.py::LastOut` / `PickOut` (`last`, `dtdd_item`) | `src/matinee/web/viewing.py:153` | 2026-10-03 |
+| `src/matinee/web/viewing.py::_swap_out` / `_last_out` / `pick_out` | `src/matinee/web/viewing.py:256` | 2026-10-03 |
+| `src/matinee/web/viewing.py::pick_pool` | `src/matinee/web/viewing.py:391` | 2026-10-03 |
+| `src/matinee/web/viewing.py::add_pick_routes` | `src/matinee/web/viewing.py:401` | 2026-10-03 |
+| `tests/test_pick.py::test_three_in_a_row_hold_the_third_film_with_its_own_topic` / `test_a_pick_that_asks_to_skip_the_check_is_still_checked` | `tests/test_pick.py:557` | 2026-10-03 |
 
 ### Web surface
 
@@ -2016,38 +2052,40 @@ symbol when one does not match.
 | `src/matinee/web/app.py::add_door_routes` | `src/matinee/web/app.py:164` | 2026-10-02 |
 | `src/matinee/web/app.py::add_error_handlers` | `src/matinee/web/app.py:99` | 2026-10-02 |
 | `src/matinee/web/common.py::Problem` | `src/matinee/web/common.py:127` | 2026-10-02 |
-| `src/matinee/web/viewing.py::add_viewing_routes` | `src/matinee/web/viewing.py:270` | 2026-10-02 |
-| `src/matinee/web/viewing.py::WalkIn` / `PickIn` (request caps) | `src/matinee/web/viewing.py:47` | 2026-10-02 |
+| `src/matinee/web/viewing.py::add_viewing_routes` | `src/matinee/web/viewing.py:288` | 2026-10-03 |
+| `src/matinee/web/viewing.py::WalkIn` / `PickIn` (request caps; no field skips the check) | `src/matinee/web/viewing.py:46` | 2026-10-03 |
 
 ### The page
 
 | Handle | Where | Verified |
 |---|---|---|
-| `src/matinee/web/static/js/door.js::Door` | `src/matinee/web/static/js/door.js:139` | 2026-10-02 |
-| `src/matinee/web/static/js/door.js::Door.open` (the tiles, a viewer's list, or a new profile) | `src/matinee/web/static/js/door.js:153` | 2026-10-02 |
-| `src/matinee/web/static/js/door.js::Door.talk` (a question typed onto the wall) | `src/matinee/web/static/js/door.js:220` | 2026-10-02 |
-| `src/matinee/web/static/js/door.js::Door.enter` (entered once) | `src/matinee/web/static/js/door.js:375` | 2026-10-02 |
-| `src/matinee/web/static/js/door.js::Door.leave` / `settle` / `bringBack` (the marquee leaves and returns) | `src/matinee/web/static/js/door.js:386` | 2026-10-02 |
-| `src/matinee/web/static/js/door.js::Door.picker` (sets the phone's lit strip) | `src/matinee/web/static/js/door.js:430` | 2026-10-02 |
-| `src/matinee/web/static/js/door.js::Door.fillTopics` / `topicsTrouble` | `src/matinee/web/static/js/door.js:483` | 2026-10-02 |
-| `src/matinee/web/static/js/door.js::sign` (frame, rules, name, live count) | `src/matinee/web/static/js/door.js:81` | 2026-10-02 |
-| `src/matinee/web/static/js/door.js::bulbs` / `ringAt` | `src/matinee/web/static/js/door.js:47` | 2026-10-02 |
-| `src/matinee/web/static/js/door.js::time` (the two-bulb chase's start) | `src/matinee/web/static/js/door.js:35` | 2026-10-02 |
-| `src/matinee/web/static/js/door.js::BULBS` / `CHASE_S` | `src/matinee/web/static/js/door.js:16` | 2026-10-02 |
-| `src/matinee/web/static/js/door.js::buildMarquee` / `showCount` ("Private screening" until admitted) | `src/matinee/web/static/js/door.js:128` | 2026-10-02 |
-| `src/matinee/web/static/js/door.js::Door.build` (a standing marquee adopted, never rebuilt) | `src/matinee/web/static/js/door.js:167` | 2026-10-02 |
-| `src/matinee/web/static/js/door.js::tile` / `newTile` | `src/matinee/web/static/js/door.js:105` | 2026-10-02 |
-| `src/matinee/web/static/js/door.js::Door.greet` / `choose` | `src/matinee/web/static/js/door.js:182` | 2026-10-02 |
-| `src/matinee/web/static/js/door.js::Door.lock` / `refresh` / `refused` | `src/matinee/web/static/js/door.js:200` | 2026-10-02 |
-| `src/matinee/web/static/js/door.js::Door.first` / `askName` / `taken` / `askAvatar` / `askPin` / `create` / `askList` / `done` (making a profile) | `src/matinee/web/static/js/door.js:233` | 2026-10-02 |
-| `src/matinee/web/static/js/door.js::Door.pin` (a PIN asked at a tile) | `src/matinee/web/static/js/door.js:329` | 2026-10-02 |
-| `src/matinee/web/static/js/door.js::Door.seatOf` / `enterAs` | `src/matinee/web/static/js/door.js:360` | 2026-10-02 |
-| `src/matinee/web/static/js/door.js::Door.neverMind` (the picker's way out) | `src/matinee/web/static/js/door.js:456` | 2026-10-02 |
+| `src/matinee/web/static/js/door.js::Door` | `src/matinee/web/static/js/door.js:140` | 2026-10-03 |
+| `src/matinee/web/static/js/door.js::Door.open` (the tiles, a viewer's list, or a new profile) | `src/matinee/web/static/js/door.js:154` | 2026-10-03 |
+| `src/matinee/web/static/js/door.js::Door.talk` (a question typed onto the wall; `detail`, a body-type line beneath) | `src/matinee/web/static/js/door.js:222` | 2026-10-03 |
+| `src/matinee/web/static/js/door.js::Door.enter` (entered once) | `src/matinee/web/static/js/door.js:386` | 2026-10-03 |
+| `src/matinee/web/static/js/door.js::Door.leave` / `settle` / `bringBack` (the marquee leaves and returns) | `src/matinee/web/static/js/door.js:397` | 2026-10-03 |
+| `src/matinee/web/static/js/door.js::Door.picker` (sets the phone's lit strip) | `src/matinee/web/static/js/door.js:441` | 2026-10-03 |
+| `src/matinee/web/static/js/door.js::Door.fillTopics` / `topicsTrouble` (the topics, their count, "Read about these on DoesTheDogDie ↗") | `src/matinee/web/static/js/door.js:495` | 2026-10-03 |
+| `src/matinee/web/static/js/door.js::Door.topic` (a letterbox that toggles, with a check mark) | `src/matinee/web/static/js/door.js:544` | 2026-10-03 |
+| `src/matinee/web/static/js/door.js::Door.dtddCredit` (shown on the picker, hidden on every other door screen) | `src/matinee/web/static/js/door.js:171` | 2026-10-03 |
+| `src/matinee/web/static/js/door.js::sign` (frame, rules, name, live count) | `src/matinee/web/static/js/door.js:81` | 2026-10-03 |
+| `src/matinee/web/static/js/door.js::bulbs` / `ringAt` | `src/matinee/web/static/js/door.js:47` | 2026-10-03 |
+| `src/matinee/web/static/js/door.js::time` (the two-bulb chase's start) | `src/matinee/web/static/js/door.js:35` | 2026-10-03 |
+| `src/matinee/web/static/js/door.js::BULBS` / `CHASE_S` | `src/matinee/web/static/js/door.js:16` | 2026-10-03 |
+| `src/matinee/web/static/js/door.js::buildMarquee` / `showCount` ("Private screening" until admitted) | `src/matinee/web/static/js/door.js:129` | 2026-10-03 |
+| `src/matinee/web/static/js/door.js::Door.build` (a standing marquee adopted, never rebuilt) | `src/matinee/web/static/js/door.js:168` | 2026-10-03 |
+| `src/matinee/web/static/js/door.js::tile` / `newTile` (`.seat-label` carries the name's scrim) | `src/matinee/web/static/js/door.js:106` | 2026-10-03 |
+| `src/matinee/web/static/js/door.js::Door.greet` / `choose` | `src/matinee/web/static/js/door.js:184` | 2026-10-03 |
+| `src/matinee/web/static/js/door.js::Door.lock` / `refresh` / `refused` | `src/matinee/web/static/js/door.js:202` | 2026-10-03 |
+| `src/matinee/web/static/js/door.js::Door.first` / `askName` / `taken` / `askAvatar` / `askPin` / `create` / `askList` / `done` (making a profile) | `src/matinee/web/static/js/door.js:238` | 2026-10-03 |
+| `src/matinee/web/static/js/door.js::Door.pin` (a PIN asked at a tile) | `src/matinee/web/static/js/door.js:340` | 2026-10-03 |
+| `src/matinee/web/static/js/door.js::Door.seatOf` / `enterAs` | `src/matinee/web/static/js/door.js:371` | 2026-10-03 |
+| `src/matinee/web/static/js/door.js::Door.neverMind` (the picker's way out) | `src/matinee/web/static/js/door.js:468` | 2026-10-03 |
 | `src/matinee/web/static/js/door-rules.js::doorLines` / `opensAtOnce` / `nameKey` / `findTaken` / `twoParts` | `src/matinee/web/static/js/door-rules.js:5` | 2026-10-02 |
 | `src/matinee/web/static/js/mark.js::initials` / `avatarSrc` / `mark` | `src/matinee/web/static/js/mark.js:10` | 2026-10-02 |
 | `src/matinee/web/static/js/mark.js::AVATAR_NAMES` / `avatarChoices` | `src/matinee/web/static/js/mark.js:32` | 2026-10-02 |
-| `src/matinee/web/static/js/viewer.js::SHORT_NAME` | `src/matinee/web/static/js/viewer.js:12` | 2026-10-02 |
-| `src/matinee/web/static/js/viewer.js::viewerTag` (the profile menu; its Change avatar and Delete profile panels) | `src/matinee/web/static/js/viewer.js:26` | 2026-10-02 |
+| `src/matinee/web/static/js/viewer.js::SHORT_NAME` | `src/matinee/web/static/js/viewer.js:12` | 2026-10-03 |
+| `src/matinee/web/static/js/viewer.js::viewerTag` (the profile menu; its Change avatar and Delete profile panels) | `src/matinee/web/static/js/viewer.js:26` | 2026-10-03 |
 | `src/matinee/web/static/js/locked.js::WALL_FADE_MS` / `bandsAt` / `WIPE_MS` (the band wipe) | `src/matinee/web/static/js/locked.js:25` | 2026-10-02 |
 | `src/matinee/web/static/js/locked.js::LockedDoor` (`show`, `place`, `measure`, `greet`, `slide`, `shut`) | `src/matinee/web/static/js/locked.js:52` | 2026-10-02 |
 | `src/matinee/web/static/js/locked.js::LockedDoor.open` / `wipe` (the opening) | `src/matinee/web/static/js/locked.js:160` | 2026-10-02 |
@@ -2056,9 +2094,9 @@ symbol when one does not match.
 | `tests/js/door-rules.test.mjs`, `tests/js/locked.test.mjs`, `tests/js/mark.test.mjs` | `tests/js/door-rules.test.mjs:6` | 2026-10-02 |
 | `src/matinee/web/static/js/flight.js::fly` (`FLIGHT_MS`, the fail-open) | `src/matinee/web/static/js/flight.js:63` | 2026-09-30 |
 | `src/matinee/web/static/js/flight.js::nameAt` / `wordmarkAt` / `riseOf` / `copyAt` | `src/matinee/web/static/js/flight.js:14` | 2026-09-30 |
-| `src/matinee/web/static/js/about.js::openAbout` | `src/matinee/web/static/js/about.js:111` | 2026-10-02 |
-| `src/matinee/web/static/js/about.js::close` (popstate; Escape steps back) | `src/matinee/web/static/js/about.js:94` | 2026-10-02 |
-| `src/matinee/web/static/js/about.js::copy` (the About page's words and links) | `src/matinee/web/static/js/about.js:21` | 2026-10-02 |
+| `src/matinee/web/static/js/about.js::openAbout` | `src/matinee/web/static/js/about.js:111` | 2026-10-03 |
+| `src/matinee/web/static/js/about.js::close` (popstate; Escape steps back) | `src/matinee/web/static/js/about.js:94` | 2026-10-03 |
+| `src/matinee/web/static/js/about.js::copy` (the About page's words and links) | `src/matinee/web/static/js/about.js:21` | 2026-10-03 |
 | `src/matinee/web/static/js/wall-grid.js::posterAcross` / `ACROSS` / `GAP` | `src/matinee/web/static/js/wall-grid.js:27` | 2026-09-28 |
 | `src/matinee/web/static/js/wall-grid.js::wallLayout` | `src/matinee/web/static/js/wall-grid.js:37` | 2026-09-28 |
 | `src/matinee/web/static/js/wall-grid.js::bestStride` / `repeatDistance` | `src/matinee/web/static/js/wall-grid.js:61` | 2026-09-28 |
@@ -2092,63 +2130,75 @@ symbol when one does not match.
 | `src/matinee/web/static/js/wall.js::Wall.frame` (the drift, `DRIFT_PX_S`) | `src/matinee/web/static/js/wall.js:592` | 2026-09-28 |
 | `src/matinee/web/static/js/wall.js::Wall.place` / `lay` / `picture` / `request` (`BLANK`) | `src/matinee/web/static/js/wall.js:603` | 2026-09-28 |
 | `src/matinee/web/static/js/wall.js::Wall.resort` / `slide` / `depart` | `src/matinee/web/static/js/wall.js:683` | 2026-09-28 |
-| `src/matinee/web/static/js/main.js::lockStage` / `leaveTo` | `src/matinee/web/static/js/main.js:68` | 2026-10-02 |
-| `src/matinee/web/static/js/main.js::trail` / `lastCrumb` | `src/matinee/web/static/js/main.js:123` | 2026-10-02 |
-| `src/matinee/web/static/js/main.js::frame` / `ask` (the footnote) | `src/matinee/web/static/js/main.js:144` | 2026-10-02 |
-| `src/matinee/web/static/js/main.js::start` | `src/matinee/web/static/js/main.js:273` | 2026-10-02 |
-| `src/matinee/web/static/js/main.js::goTo` / `step` | `src/matinee/web/static/js/main.js:302` | 2026-10-02 |
-| `src/matinee/web/static/js/main.js::checking` / `fadeTalk` (`READ_MS`) | `src/matinee/web/static/js/main.js:353` | 2026-10-02 |
-| `src/matinee/web/static/js/main.js::pickLines` | `src/matinee/web/static/js/main.js:385` | 2026-10-02 |
-| `src/matinee/web/static/js/main.js::clearForPick` / `requestPick` / `openPick` | `src/matinee/web/static/js/main.js:400` | 2026-10-02 |
-| `src/matinee/web/static/js/main.js::pickNow` (`notThatOne`, `rollAgain`) / `showPicked` | `src/matinee/web/static/js/main.js:444` | 2026-10-02 |
-| `src/matinee/web/static/js/main.js::enter` (the start asked at the tap, the question after the landing) | `src/matinee/web/static/js/main.js:263` | 2026-10-02 |
-| `src/matinee/web/static/js/main.js::topbar` (settles a landed name) | `src/matinee/web/static/js/main.js:92` | 2026-10-02 |
-| `src/matinee/web/static/js/main.js::problem` (`keep`: the failed start's posters) | `src/matinee/web/static/js/main.js:199` | 2026-10-02 |
-| `src/matinee/web/static/js/main.js::countText` (the films left, beside "Just pick one!") | `src/matinee/web/static/js/main.js:38` | 2026-10-02 |
-| `src/matinee/web/static/js/main.js::loadQuips` (asked once admitted) | `src/matinee/web/static/js/main.js:47` | 2026-10-02 |
-| `src/matinee/web/static/js/main.js::wordmark` (a link doing `Start over`) | `src/matinee/web/static/js/main.js:82` | 2026-10-02 |
-| `src/matinee/web/static/js/main.js::nameTag` (the viewer and its menu's actions) | `src/matinee/web/static/js/main.js:101` | 2026-10-02 |
-| `src/matinee/web/static/js/main.js::boot` / `frontDoor` / `lockedDoor` (`GET /api/admission` first) | `src/matinee/web/static/js/main.js:217` | 2026-10-02 |
+| `src/matinee/web/static/js/main.js::lockStage` / `leaveTo` | `src/matinee/web/static/js/main.js:68` | 2026-10-03 |
+| `src/matinee/web/static/js/main.js::trail` / `lastCrumb` | `src/matinee/web/static/js/main.js:123` | 2026-10-03 |
+| `src/matinee/web/static/js/main.js::frame` / `ask` (the footnote) | `src/matinee/web/static/js/main.js:144` | 2026-10-03 |
+| `src/matinee/web/static/js/main.js::start` | `src/matinee/web/static/js/main.js:274` | 2026-10-03 |
+| `src/matinee/web/static/js/main.js::goTo` / `step` | `src/matinee/web/static/js/main.js:303` | 2026-10-03 |
+| `src/matinee/web/static/js/main.js::checking` / `fadeTalk` (`READ_MS`) | `src/matinee/web/static/js/main.js:354` | 2026-10-03 |
+| `src/matinee/web/static/js/main.js::pickLines` | `src/matinee/web/static/js/main.js:385` | 2026-10-03 |
+| `src/matinee/web/static/js/main.js::clearForPick` / `requestPick` / `openPick` | `src/matinee/web/static/js/main.js:400` | 2026-10-03 |
+| `src/matinee/web/static/js/main.js::pickNow` | `src/matinee/web/static/js/main.js:444` | 2026-10-03 |
+| `src/matinee/web/static/js/main.js::pickActions` (`notThatOne`, `rollAgain`, `showPicked`) | `src/matinee/web/static/js/main.js:472` | 2026-10-03 |
+| `src/matinee/web/static/js/main.js::showPicked` ("Just show me what you picked", from the reply held) | `src/matinee/web/static/js/main.js:496` | 2026-10-03 |
+| `src/matinee/web/static/js/main.js::enter` (the start asked at the tap, the question after the landing) | `src/matinee/web/static/js/main.js:264` | 2026-10-03 |
+| `src/matinee/web/static/js/main.js::topbar` (settles a landed name) | `src/matinee/web/static/js/main.js:92` | 2026-10-03 |
+| `src/matinee/web/static/js/main.js::problem` (`keep`: the failed start's posters) | `src/matinee/web/static/js/main.js:199` | 2026-10-03 |
+| `src/matinee/web/static/js/main.js::countText` (the films left, beside "Just pick one!") | `src/matinee/web/static/js/main.js:38` | 2026-10-03 |
+| `src/matinee/web/static/js/main.js::loadQuips` (asked once admitted) | `src/matinee/web/static/js/main.js:47` | 2026-10-03 |
+| `src/matinee/web/static/js/main.js::wordmark` (a link doing `Start over`) | `src/matinee/web/static/js/main.js:82` | 2026-10-03 |
+| `src/matinee/web/static/js/main.js::nameTag` (the viewer and its menu's actions) | `src/matinee/web/static/js/main.js:101` | 2026-10-03 |
+| `src/matinee/web/static/js/main.js::boot` / `frontDoor` / `lockedDoor` (`GET /api/admission` first) | `src/matinee/web/static/js/main.js:218` | 2026-10-03 |
 | `src/matinee/web/static/js/api.js::del` | `src/matinee/web/static/js/api.js:27` | 2026-10-02 |
-| `src/matinee/web/static/js/pick.js::showPick` / `huntLift` | `src/matinee/web/static/js/pick.js:249` | 2026-10-02 |
-| `src/matinee/web/static/js/pick.js::goldLine` | `src/matinee/web/static/js/pick.js:194` | 2026-10-02 |
-| `src/matinee/web/static/js/pick.js::bringOut` | `src/matinee/web/static/js/pick.js:227` | 2026-10-02 |
-| `src/matinee/web/static/js/pick.js::toRest` (`BEAT_MS`, `STILL_HOLD_MS`) | `src/matinee/web/static/js/pick.js:272` | 2026-10-02 |
-| `src/matinee/web/static/js/pick.js::fetchFilm` / `picture` | `src/matinee/web/static/js/pick.js:285` | 2026-10-02 |
-| `src/matinee/web/static/js/pick.js::restingPoster` | `src/matinee/web/static/js/pick.js:177` | 2026-10-02 |
-| `src/matinee/web/static/js/pick.js::rest` | `src/matinee/web/static/js/pick.js:155` | 2026-10-02 |
-| `src/matinee/web/static/js/pick.js::settle` / `fit` | `src/matinee/web/static/js/pick.js:43` | 2026-10-02 |
+| `src/matinee/web/static/js/pick.js::showPick` / `huntLift` | `src/matinee/web/static/js/pick.js:255` | 2026-10-03 |
+| `src/matinee/web/static/js/pick.js::goldLine` | `src/matinee/web/static/js/pick.js:196` | 2026-10-03 |
+| `src/matinee/web/static/js/pick.js::bringOut` | `src/matinee/web/static/js/pick.js:233` | 2026-10-03 |
+| `src/matinee/web/static/js/pick.js::toRest` (`BEAT_MS`, `STILL_HOLD_MS`) | `src/matinee/web/static/js/pick.js:278` | 2026-10-03 |
+| `src/matinee/web/static/js/pick.js::fetchFilm` / `picture` | `src/matinee/web/static/js/pick.js:291` | 2026-10-03 |
+| `src/matinee/web/static/js/pick.js::restingPoster` | `src/matinee/web/static/js/pick.js:179` | 2026-10-03 |
+| `src/matinee/web/static/js/pick.js::rest` | `src/matinee/web/static/js/pick.js:156` | 2026-10-03 |
+| `src/matinee/web/static/js/pick.js::settle` / `fit` | `src/matinee/web/static/js/pick.js:44` | 2026-10-03 |
 | `src/matinee/web/static/js/fuse.js::lightFuse` / `fuseTimeline` | `src/matinee/web/static/js/fuse.js:37` | 2026-09-30 |
 | `src/matinee/trees.py::_self_destruct` / `_one_self_destruct` | `src/matinee/trees.py:178` | 2026-09-30 |
-| `src/matinee/web/static/js/pick.js::feature` | `src/matinee/web/static/js/pick.js:66` | 2026-10-02 |
-| `src/matinee/web/static/js/pick.js::choices` | `src/matinee/web/static/js/pick.js:142` | 2026-10-02 |
-| `src/matinee/web/static/js/pick.js::showNoFilm` | `src/matinee/web/static/js/pick.js:117` | 2026-10-02 |
-| `src/matinee/web/static/js/pick.js::firstPickReveal` | `src/matinee/web/static/js/pick.js:92` | 2026-10-02 |
-| `src/matinee/web/static/js/pick.js::showCredit` (DoesTheDogDie's credit in the foot band before its line types) | `src/matinee/web/static/js/pick.js:84` | 2026-10-02 |
-| `src/matinee/web/static/js/note.js::noteLink` | `src/matinee/web/static/js/note.js:61` | 2026-10-02 |
-| `src/matinee/web/static/js/credits.js::credits` | `src/matinee/web/static/js/credits.js:23` | 2026-09-30 |
-| `src/matinee/web/static/js/credits.js::aboutLink` | `src/matinee/web/static/js/credits.js:18` | 2026-09-30 |
+| `src/matinee/web/static/js/pick.js::feature` | `src/matinee/web/static/js/pick.js:67` | 2026-10-03 |
+| `src/matinee/web/static/js/pick.js::choices` | `src/matinee/web/static/js/pick.js:143` | 2026-10-03 |
+| `src/matinee/web/static/js/pick.js::showNoFilm` | `src/matinee/web/static/js/pick.js:118` | 2026-10-03 |
+| `src/matinee/web/static/js/pick.js::firstPickReveal` | `src/matinee/web/static/js/pick.js:93` | 2026-10-03 |
+| `src/matinee/web/static/js/pick.js::showCredit` (DoesTheDogDie's credit in the foot band before its line types) | `src/matinee/web/static/js/pick.js:87` | 2026-10-03 |
+| `src/matinee/web/static/js/pick.js::lookUp` ("Look it up on DoesTheDogDie ↗") | `src/matinee/web/static/js/pick.js:80` | 2026-10-03 |
+| `src/matinee/web/static/js/note.js::noteLink` | `src/matinee/web/static/js/note.js:61` | 2026-10-03 |
+| `src/matinee/web/static/js/credits.js::credits` (`dtdd`: room for DoesTheDogDie's credit) | `src/matinee/web/static/js/credits.js:34` | 2026-10-03 |
+| `src/matinee/web/static/js/credits.js::dtddCredit` (built hidden) | `src/matinee/web/static/js/credits.js:25` | 2026-10-03 |
+| `src/matinee/web/static/js/credits.js::aboutLink` | `src/matinee/web/static/js/credits.js:18` | 2026-10-03 |
 | `src/matinee/web/static/js/dom.js::h` (text nodes only) | `src/matinee/web/static/js/dom.js:12` | 2026-09-26 |
 | `src/matinee/web/static/js/type.js::typeLine` (`shown`: a gold line kept while the rest types beneath) | `src/matinee/web/static/js/type.js:11` | 2026-10-02 |
 | `src/matinee/web/static/manifest.webmanifest` | `src/matinee/web/static/manifest.webmanifest:1` | 2026-09-26 |
-| `src/matinee/web/static/css/matinee.css` reduced-motion rules (the marquee and the door's words change at once) | `src/matinee/web/static/css/matinee.css:1037` | 2026-10-02 |
-| `src/matinee/web/static/css/matinee.css` `.wall`, `.wall-tiles`, `.tile` (`--tile`, the one strength; the dark cell) | `src/matinee/web/static/css/matinee.css:86` | 2026-10-02 |
-| `src/matinee/web/static/css/matinee.css` `.marquee` (its measures as properties, the top fade, the short windows' scaling) | `src/matinee/web/static/css/matinee.css:1068` | 2026-10-02 |
-| `src/matinee/web/static/css/matinee.css` `.marquee.lifted`, `.stage.leaving`, `.flying-name` (going in) | `src/matinee/web/static/css/matinee.css:1098` | 2026-10-02 |
-| `src/matinee/web/static/css/matinee.css` `.sign`, `.bulb`, `@keyframes chase` | `src/matinee/web/static/css/matinee.css:1272` | 2026-10-02 |
-| `src/matinee/web/static/css/matinee.css` `.door-wall`, `.door-talk`, `.door-foot` | `src/matinee/web/static/css/matinee.css:1609` | 2026-10-02 |
-| `src/matinee/web/static/css/matinee.css` `.picker` | `src/matinee/web/static/css/matinee.css:1920` | 2026-10-02 |
-| `src/matinee/web/static/css/matinee.css` phone door: `.marquee` sizes, `.marquee.compact` (the lit strip) | `src/matinee/web/static/css/matinee.css:2033` | 2026-10-02 |
-| `src/matinee/web/static/css/matinee.css` `.credits`, `.tmdb-logo`, `.bottombar .credits`, `.inline-link` | `src/matinee/web/static/css/matinee.css:1422` | 2026-10-02 |
-| `src/matinee/web/static/css/matinee.css` `.stage.behind-about`, `.about`, `.about-wordmark`, `.about-panel` | `src/matinee/web/static/css/matinee.css:1463` | 2026-10-02 |
-| `src/matinee/web/static/css/matinee.css` `.pick-line` (size, four lines reserved), `.hushed` | `src/matinee/web/static/css/matinee.css:552` | 2026-10-02 |
-| `src/matinee/web/static/css/matinee.css` `.talk > .footnote` | `src/matinee/web/static/css/matinee.css:390` | 2026-10-02 |
-| `src/matinee/web/static/css/matinee.css` `a.wordmark` | `src/matinee/web/static/css/matinee.css:160` | 2026-10-02 |
-| `src/matinee/web/static/css/matinee.css` `.just-pick-row` (the count beside the button) | `src/matinee/web/static/css/matinee.css:402` | 2026-10-02 |
-| `src/matinee/web/static/css/matinee.css` `.mark`, `.seats`, `.seat` (the tiles; the short window's sizes) | `src/matinee/web/static/css/matinee.css:1682` | 2026-10-02 |
-| `src/matinee/web/static/css/matinee.css` `.avatar-choices` | `src/matinee/web/static/css/matinee.css:1820` | 2026-10-02 |
-| `src/matinee/web/static/css/matinee.css` `.viewer`, `.viewer-menu`, `.viewer-panel` (the phone's initials) | `src/matinee/web/static/css/matinee.css:2201` | 2026-10-02 |
-| `src/matinee/web/static/css/matinee.css` the locked door: `.locked`, `.subway`, `.door-frame`, `.locked-door`, `.slot`, `.peek`, `.line.locked-line` | `src/matinee/web/static/css/matinee.css:2449` | 2026-10-02 |
+| `src/matinee/web/static/css/matinee.css` `:root` (the standard's colour tokens, `--shade`, `--band-fade`) | `src/matinee/web/static/css/matinee.css:17` | 2026-10-03 |
+| `src/matinee/web/static/css/matinee.css` `.action`, `.action.rose`, `.action.petrol`, `.action.cream` (gold is the base rule) | `src/matinee/web/static/css/matinee.css:1067` | 2026-10-03 |
+| `src/matinee/web/static/css/matinee.css` `.letterbox` (one size) | `src/matinee/web/static/css/matinee.css:387` | 2026-10-03 |
+| `src/matinee/web/static/css/matinee.css` the scrims: `.line > .ack`/`.ask`, `.countdown`, `.note`, `.footnote`, `.count`, `.seat-label`, `.feature-text`, `.correct-panel` | `src/matinee/web/static/css/matinee.css:347` | 2026-10-03 |
+| `src/matinee/web/static/css/matinee.css` the bands: `.topbar::before`, `.bottombar::before`, `.door-foot::before`, `.stage.at-door.behind-about::before` | `src/matinee/web/static/css/matinee.css:169` | 2026-10-03 |
+| `src/matinee/web/static/css/matinee.css` `.showing` (the pick's left column) | `src/matinee/web/static/css/matinee.css:553` | 2026-10-03 |
+| `src/matinee/web/static/css/matinee.css` `.topic-list`, `.topic`, `.topic-foot` (the picker's topics) | `src/matinee/web/static/css/matinee.css:2116` | 2026-10-03 |
+| `tests/test_design_standards.py` (the standard's mechanical rules; `declarations`, `built`, `enclosing`, `PERMITTED`, `ARTWORK`) | `tests/test_design_standards.py:21` | 2026-10-03 |
+| `src/matinee/web/static/css/matinee.css` reduced-motion rules (the marquee and the door's words change at once) | `src/matinee/web/static/css/matinee.css:1137` | 2026-10-03 |
+| `src/matinee/web/static/css/matinee.css` `.wall`, `.wall-tiles`, `.tile` (`--tile`, the one strength; the dark cell) | `src/matinee/web/static/css/matinee.css:101` | 2026-10-03 |
+| `src/matinee/web/static/css/matinee.css` `.marquee` (its measures as properties, the top fade, the short windows' scaling) | `src/matinee/web/static/css/matinee.css:1168` | 2026-10-03 |
+| `src/matinee/web/static/css/matinee.css` `.marquee.lifted`, `.stage.leaving`, `.flying-name` (going in) | `src/matinee/web/static/css/matinee.css:1198` | 2026-10-03 |
+| `src/matinee/web/static/css/matinee.css` `.sign`, `.bulb`, `@keyframes chase` | `src/matinee/web/static/css/matinee.css:1383` | 2026-10-03 |
+| `src/matinee/web/static/css/matinee.css` `.door-wall`, `.door-talk`, `.door-foot` | `src/matinee/web/static/css/matinee.css:1738` | 2026-10-03 |
+| `src/matinee/web/static/css/matinee.css` `.picker` | `src/matinee/web/static/css/matinee.css:2064` | 2026-10-03 |
+| `src/matinee/web/static/css/matinee.css` phone door: `.marquee` sizes, `.marquee.compact` (the lit strip) | `src/matinee/web/static/css/matinee.css:2186` | 2026-10-03 |
+| `src/matinee/web/static/css/matinee.css` `.credits`, `.dtdd-credit`, `.tmdb-logo`, `.bottombar .credits`, `.inline-link` | `src/matinee/web/static/css/matinee.css:1529` | 2026-10-03 |
+| `src/matinee/web/static/css/matinee.css` `.stage.behind-about`, `.about`, `.about-wordmark`, `.about-panel` | `src/matinee/web/static/css/matinee.css:1575` | 2026-10-03 |
+| `src/matinee/web/static/css/matinee.css` `.pick-line` (size, four lines reserved), `.hushed` | `src/matinee/web/static/css/matinee.css:606` | 2026-10-03 |
+| `src/matinee/web/static/css/matinee.css` `.talk > .footnote` | `src/matinee/web/static/css/matinee.css:445` | 2026-10-03 |
+| `src/matinee/web/static/css/matinee.css` `a.wordmark` | `src/matinee/web/static/css/matinee.css:187` | 2026-10-03 |
+| `src/matinee/web/static/css/matinee.css` `.just-pick-row` (the count beside the button) | `src/matinee/web/static/css/matinee.css:457` | 2026-10-03 |
+| `src/matinee/web/static/css/matinee.css` `.mark`, `.seats`, `.seat` (the tiles; the short window's sizes) | `src/matinee/web/static/css/matinee.css:1830` | 2026-10-03 |
+| `src/matinee/web/static/css/matinee.css` `.avatar-choices` | `src/matinee/web/static/css/matinee.css:1973` | 2026-10-03 |
+| `src/matinee/web/static/css/matinee.css` `.viewer`, `.viewer-menu`, `.viewer-panel` (the phone's initials) | `src/matinee/web/static/css/matinee.css:2352` | 2026-10-03 |
+| `src/matinee/web/static/css/matinee.css` the locked door: `.locked`, `.subway`, `.door-frame`, `.locked-door`, `.slot`, `.peek`, `.line.locked-line` | `src/matinee/web/static/css/matinee.css:2608` | 2026-10-03 |
 | `src/matinee/web/static/blank.svg` (a tile with no picture) | `src/matinee/web/static/blank.svg:1` | 2026-09-28 |
 
 ### Deployment
