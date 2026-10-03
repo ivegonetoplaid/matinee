@@ -1223,8 +1223,9 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
   reads over any poster. Activating either, by click, tap or keyboard, opens a
   menu of "Edit my list", "Change avatar", "Switch profiles" (back to the front
   door's tiles, the marquee already in place and lit) and "Delete profile" in
-  red, in that order. Escape, a tap elsewhere, or choosing an item closes it;
-  the arrow keys walk its items. On a phone the bar is one row: a name of 10
+  red, in that order. Escape (wherever the focus is), a tap elsewhere, focus
+  leaving the viewer, or choosing an item closes it; the arrow keys walk its
+  items. The same closes either panel below. On a phone the bar is one row: a name of 10
   characters or fewer shows in full, and a longer one shows as initials (the
   first letter of each word, at most three) beside the avatar, or as the
   avatar's own initials when it has none.

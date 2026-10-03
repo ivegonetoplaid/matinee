@@ -51,6 +51,17 @@ export function viewerTag(viewer, avatars, actions) {
   const elsewhere = (e) => {
     if (!tag.contains(e.target)) close();
   };
+  // Escape closes from anywhere while the menu or a panel is open; focus leaving the viewer closes it too.
+  const escape = (e) => {
+    if (e.key === "Escape") close({ refocus: tag.contains(document.activeElement) });
+  };
+  tag.addEventListener("focusout", (e) => {
+    if (e.relatedTarget && !tag.contains(e.relatedTarget)) close();
+  });
+  const listen = () => {
+    document.addEventListener("pointerdown", elsewhere, true);
+    document.addEventListener("keydown", escape);
+  };
   let shown = null; // the open panel, if any
   function close({ refocus = false } = {}) {
     if (menu.hidden && !shown) return;
@@ -59,12 +70,13 @@ export function viewerTag(viewer, avatars, actions) {
     shown = null;
     button.setAttribute("aria-expanded", "false");
     document.removeEventListener("pointerdown", elsewhere, true);
+    document.removeEventListener("keydown", escape);
     if (refocus) button.focus();
   }
   function openPanel(built) {
     shown = built;
     tag.append(built);
-    document.addEventListener("pointerdown", elsewhere, true);
+    listen();
     (built.querySelector("[data-focus]") ?? built.querySelector("button"))?.focus({ preventScroll: true });
   }
   // The bar shows a new avatar, or the initials, at once.
@@ -119,13 +131,12 @@ export function viewerTag(viewer, avatars, actions) {
     shown = null;
     menu.hidden = false;
     button.setAttribute("aria-expanded", "true");
-    document.addEventListener("pointerdown", elsewhere, true);
+    listen();
     items()[0].focus();
   }
   button.addEventListener("click", () => (menu.hidden ? open() : close()));
-  // Escape closes; the arrow keys walk the items, round from the last to the first.
+  // The arrow keys walk the items, round from the last to the first.
   tag.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") return close({ refocus: true });
     if (menu.hidden || (e.key !== "ArrowDown" && e.key !== "ArrowUp")) return undefined;
     e.preventDefault();
     const all = items();

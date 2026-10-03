@@ -406,7 +406,13 @@ a.wordmark:focus-visible {
   align-self: flex-start;
 }
 
-/* Beside the button even on a narrow phone: the count wraps its own words rather than drop below. */
+/* Beside the button even on a narrow phone: the button stays whole, and the count wraps its own words
+   rather than drop below. */
+.just-pick-row .just-pick {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
 .just-pick-row .count {
   min-width: 0;
   line-height: 1.25;
@@ -2297,8 +2303,12 @@ a.wordmark:focus-visible {
   padding: 18px 20px 20px;
   border: 1px solid rgba(242, 179, 61, 0.35);
   border-radius: 16px;
-  background: rgba(14, 16, 26, 0.97);
+  background: #0e101a;
   box-shadow: 0 22px 60px rgba(0, 0, 0, 0.75);
+}
+
+.viewer-panel .note:empty {
+  display: none;
 }
 
 .line.viewer-line {
@@ -2309,13 +2319,14 @@ a.wordmark:focus-visible {
 
 .viewer-panel .avatar-choices {
   align-self: stretch;
-  grid-template-columns: repeat(auto-fill, 72px);
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   gap: 10px;
 }
 
 .viewer-panel .avatar-choice .mark.door {
-  width: 72px;
-  height: 72px;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1;
   border-radius: 12px;
 }
 
