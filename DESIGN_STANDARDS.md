@@ -239,8 +239,9 @@ Every piece of text set on the poster wall stands on a scrim: a feathered dark
 patch with no visible edge, the page base at no less than 72 per cent behind the
 text, fading to nothing at least 32 px beyond the text's block. That covers Matinee's lines,
 notes, counts, status lines and footnotes. Text inside a band, on a letterbox,
-on an action or in a panel needs none. The locked door's greeting shows the
-look, at 92 per cent, and keeps it.
+on an action or in a panel needs none. The darkness holds across the text's
+whole block, corners included. The locked door's greeting, on subway tile rather
+than the wall, shows the look.
 
 ### 6.2 Size and colour
 
@@ -253,8 +254,9 @@ Every screen over the poster wall has a dark band at the top and at the foot.
 Each is the page base at 92 per cent behind its bar, the top bar with the
 wordmark and the viewer, the foot with the credit line, and feathers to nothing
 into the wall over 96 px on a desktop and 48 px on a phone, with no visible
-edge. On the door, the dark fade behind the marquee is the top band. About keeps
-its own panel, with the bands beneath it.
+edge. On the door's screens, the dark fade behind the marquee is the top band,
+at its own depth. The locked door stands on subway tile and has no bands. About
+keeps its own panel, with the bands beneath it.
 
 ---
 
