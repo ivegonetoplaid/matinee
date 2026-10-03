@@ -188,7 +188,7 @@ Every action and its accent:
 
 | Action | Accent |
 |---|---|
-| "Find me something to watch" | gold |
+| "Find me something to watch" (centred, at the standard size) | gold |
 | "Continue" (the name step) | gold |
 | "Save and continue", "Save my list" | gold |
 | "Just pick one!" (the questions) | gold |
