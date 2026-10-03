@@ -2623,6 +2623,11 @@ a.wordmark:focus-visible {
   margin-top: 0.15em;
 }
 
+/* A line laid out unseen, to measure the height it will take once typed. */
+.line.locked-line.probe {
+  visibility: hidden;
+}
+
 .line.locked-line::before {
   content: "";
   position: absolute;
@@ -2636,7 +2641,7 @@ a.wordmark:focus-visible {
 @media (max-width: 1000px) {
   .locked {
     --line-top: calc(var(--marquee-bottom, 300px) + 12px);
-    --door-top: calc(var(--line-top) + 104px);
+    --door-top: calc(var(--line-top) + var(--line-h, 80px) + 28px);
     --door-h: max(220px, calc(100vh - var(--door-top) - 60px));
   }
 
@@ -2645,7 +2650,6 @@ a.wordmark:focus-visible {
     right: auto;
     left: 50%;
     width: min(560px, calc(100% - 32px));
-    min-height: 3.2em;
     font-size: clamp(24px, 4.6vw, 32px);
     text-align: center;
     transform: translateX(-50%);
@@ -2654,10 +2658,12 @@ a.wordmark:focus-visible {
 
 /* A phone: no tile, and the door takes the screen's width inside the page's side margins. */
 @media (max-width: 600px) {
+  /* The door keeps the art's shape, so the slot's place on it holds; on a short phone it runs past the
+     screen's foot rather than squash. */
   .locked {
     --door-w: calc(100vw - 2 * var(--pad) - 36px);
-    --door-top: calc(var(--line-top) + 112px);
-    --door-h: max(220px, calc(100vh - var(--door-top) - 40px));
+    --door-top: calc(var(--line-top) + var(--line-h, 80px) + 20px);
+    --door-h: calc(var(--door-w) * 3 / 2);
   }
 
   .subway {
@@ -2686,6 +2692,25 @@ a.wordmark:focus-visible {
     width: calc(100% - 2 * var(--pad));
     font-size: 24px;
     text-align: left;
+  }
+}
+
+/* A phone held sideways: the greeting stands beside the door, as on a desktop, and the door takes the
+   height left under the marquee. */
+@media (min-width: 601px) and (max-height: 500px) {
+  .locked {
+    --door-top: calc(var(--marquee-bottom, 160px) + 12px);
+    --door-h: max(150px, calc(100vh - var(--door-top) - 30px));
+  }
+
+  .line.locked-line {
+    top: var(--door-top);
+    right: calc(50% + var(--door-w) / 2 + 48px);
+    left: auto;
+    width: min(320px, calc(50% - var(--door-w) / 2 - 64px));
+    font-size: 22px;
+    text-align: left;
+    transform: none;
   }
 }
 

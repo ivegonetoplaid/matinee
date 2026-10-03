@@ -1113,14 +1113,22 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
     window's height (at most 600 px tall, two thirds as wide). Matinee types
     the greeting as it types the pick's line, first sentence gold, the rest
     cream: left of the door on a desktop, over a feathered dark scrim; between
-    the marquee and the door under 1000 px wide. On a phone the tile is not
-    shown and the door takes the screen's width inside the side margins. The
+    the marquee and the door under 1000 px wide, where the door hangs below the
+    taller of the greeting and the wrong-word reply as they will stand typed,
+    so it never moves while a line types and never covers its end. On a phone
+    the tile is not shown, the door takes the screen's width inside the side
+    margins and keeps the art's 2:3 shape, so the slot stays on the painted
+    opening, running past the screen's foot on a short phone rather than
+    squashing. A phone held sideways (under 500 px tall) puts the greeting
+    beside the door, as a desktop does. The
     door's painted slot holds the password field, covered by a sliding metal
     cover, with no text or placeholder. The field takes input once the
     greeting is typed; each character pushes the cover open in proportion,
     fully at ten, and the dots show from the slot's left edge. A small dim eye
-    button under the slot shows or hides what is typed. Enter gives the word.
-    A wrong word clears the field, shuts the cover (0.4 s) and types "That
+    button under the slot shows or hides what is typed; pressing it leaves the
+    focus, and the caret at the end, in the slot. Enter gives the word, and the
+    cover shuts (0.4 s) at once while the server weighs it. A wrong word
+    clears the field and types "That
     ain't it, pal." in gold and "Try again, or take a walk." in cream in the
     greeting's place, and the field takes input again. Under reduced motion
     the greeting appears whole and the cover moves at once. The marquee stays

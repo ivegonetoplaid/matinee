@@ -60,19 +60,40 @@ export class LockedDoor {
     this.stage.append(this.scene);
     this.place();
     new ResizeObserver(() => this.place()).observe(this.marquee);
+    document.fonts.ready.then(() => this.place());
     this.word.addEventListener("input", () => this.slide());
     this.slot.addEventListener("submit", (e) => {
       e.preventDefault();
       this.give();
     });
+    // A press on the eye leaves the focus in the slot, so typing carries on; a keyboard's toggle keeps it.
+    this.peek.addEventListener("pointerdown", (e) => e.preventDefault());
     this.peek.addEventListener("click", () => this.toggle());
     return this.greet(twoParts(this.greeting));
   }
 
-  // The scene hangs from the marquee's foot, wherever the marquee's own size leaves it.
+  // The scene hangs from the marquee's foot, wherever the marquee's own size leaves it; where the greeting
+  // stands above the door, the door hangs below the taller of its two lines as they will stand typed, so
+  // the door never moves while a line types and never covers its end.
   place() {
     const bottom = this.marquee.getBoundingClientRect().bottom;
     this.scene.style.setProperty("--marquee-bottom", `${Math.round(bottom)}px`);
+    const tallest = Math.max(this.measure(twoParts(this.greeting)), this.measure(WRONG));
+    this.scene.style.setProperty("--line-h", `${Math.ceil(tallest)}px`);
+  }
+
+  // The height a line will take once typed, laid out unseen beside the real one.
+  measure([ack, ask]) {
+    const probe = h(
+      "p",
+      { class: "line locked-line done probe", "aria-hidden": "true" },
+      h("span", { class: "ack" }, ack),
+      h("span", { class: "ask" }, ask, h("span", { class: "caret" })), // the caret can carry a word over
+    );
+    this.scene.append(probe);
+    const height = probe.getBoundingClientRect().height;
+    probe.remove();
+    return height;
   }
 
   // Matinee's line types, then the slot takes the word.
@@ -101,6 +122,11 @@ export class LockedDoor {
   toggle() {
     const showing = this.word.type === "text";
     this.word.type = showing ? "password" : "text";
+    // A changed type puts the caret back at the start once it takes effect; typing goes on at the end.
+    requestAnimationFrame(() => {
+      const end = this.word.value.length;
+      this.word.setSelectionRange(end, end);
+    });
     this.peek.setAttribute("aria-pressed", String(!showing));
     this.peek.setAttribute("aria-label", showing ? "Show the word" : "Hide the word");
   }
@@ -112,10 +138,10 @@ export class LockedDoor {
     if (!word.trim() || this.word.disabled) return undefined;
     this.word.disabled = true;
     this.peek.disabled = true;
-    const res = await post("/api/admission", { word });
+    // The cover shuts at once, so the word is seen to be taken while the server weighs it.
+    const [res] = await Promise.all([post("/api/admission", { word }), this.shut()]);
     if (res.ok) return this.onAdmitted(this);
     this.word.value = "";
-    await this.shut();
     return this.greet(res.data.error === "wrong_word" ? WRONG : twoParts(res.data.message));
   }
 }
