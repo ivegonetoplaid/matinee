@@ -696,8 +696,8 @@ picks nothing until it opens or makes a profile.
   any admitted device, which may then delete it; Matinee adds no further guard.
 - There is no PIN reset and no administrative surface on the web. Whoever runs
   the installation clears a forgotten PIN with the notes tool's
-  `clear-pin "<profile name>"` (section 10), which matches the name ignoring
-  case, clears the PIN and any lockout on it, and refuses a name no profile has.
+  `clear-pin "<profile name>"` (section 10), which matches the name as a
+  profile name is stored (case, and runs of spaces, ignored), clears the PIN and any lockout on it, and refuses a name no profile has.
 - A request naming a profile (the first question, a walk, a pick, saving
   exclusions, saving a note or deleting the profile) is refused with 403 unless this device
   holds a token for it. A walk or a pick naming no profile is refused with 403.
@@ -893,13 +893,18 @@ changes nothing any viewer is shown.
     year (from the film table), the door's label, the time, the profile's name
     or "a deleted profile", the answers in order (ending "Just pick one!" when
     that ended the questions), what was wrong in the panel's own words with
-    where the film belongs, and the comment.
+    where the film belongs, and the comment. A viewer's comment is printed on
+    one line, with every control or format character shown as U+FFFD, so it
+    can neither forge a note nor reach the terminal.
   - `accept <note> "<reason>" --ruling "<the label ruling that fixed it>"` and
-    `reject <note> "<reason>"` print the note's film, then record the ruling.
+    `reject <note> "<reason>"` print the whole note as `list` does, then record
+    the ruling.
     Where the note was already ruled, the tool prints the ruling it replaced.
   - `clear-pin "<profile name>"` clears one profile's PIN (section 7).
   - A note that does not exist, an empty or multi-line reason, or an accept
-    without its label ruling is refused, and nothing is written.
+    without its label ruling is refused, and nothing is written. A store the
+    code cannot bring to its shape is refused in words, as at the server's
+    start.
 
 ## 11. The web surface
 

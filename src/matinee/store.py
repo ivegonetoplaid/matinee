@@ -366,7 +366,7 @@ class Store:
     def clear_pin(self, name: str) -> Profile:
         """Clear the PIN and any lockout of the profile with this name, ignoring case; refuses an unknown name."""
         with closing(self._connect()) as db, db:
-            row = db.execute("SELECT id FROM profiles WHERE name_key = ?", (name_key(name),)).fetchone()
+            row = db.execute("SELECT id FROM profiles WHERE name_key = ?", (name_key(clean_name(name)),)).fetchone()
             if row is None:
                 raise StoreError("no_profile", f"no profile is named {name.strip()!r}")
             db.execute(

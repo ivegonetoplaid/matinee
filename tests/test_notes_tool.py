@@ -46,7 +46,8 @@ def test_list_shows_every_open_note_in_words(state: Path, capsys: pytest.Capture
 def test_accept_prints_the_film_then_records_the_ruling(state: Path, capsys: pytest.CaptureFixture[str]) -> None:
     assert run(state, "accept", "1", "fair", "--ruling", "thriller, settle 2026-10-03") == 0
     out = capsys.readouterr().out
-    assert out.index("Note #1: Film 5 (1975), under Horror.") < out.index("Recorded: accepted.")
+    assert out.index("comment: it is a thriller") < out.index("Recorded: accepted.")
+    assert "answers: Scary. > Slow. > Just pick one!" in out and "Replaced" not in out
     note = Store(state / "matinee.sqlite").filed(1)
     assert (note.status, note.reason, note.ruling) == ("accepted", "fair", "thriller, settle 2026-10-03")
     run(state, "list")
@@ -89,6 +90,8 @@ def test_clear_pin_clears_one_profiles_pin_and_lockout(tmp_path: Path, capsys: p
         store.open(locked.id, "1234", 1001.0)
     assert still.value.code == "locked"
     assert run(tmp_path, "clear-pin", "  pAT ") == 0
+    with sqlite3.connect(tmp_path / "matinee.sqlite") as db:
+        assert db.execute("SELECT failed, locked_until FROM profiles WHERE name = 'Pat'").fetchone() == (0, 0)
     assert "Cleared the PIN on Pat." in capsys.readouterr().out
     opened, _ = store.open(locked.id, None, 1002.0)  # no PIN asked, no lockout left
     assert not opened.has_pin
@@ -96,3 +99,44 @@ def test_clear_pin_clears_one_profiles_pin_and_lockout(tmp_path: Path, capsys: p
         store.open(other.id, None, 1002.0)  # Sam keeps a PIN
     assert run(tmp_path, "clear-pin", "Nobody") == 1
     assert "Refused: no profile is named 'Nobody'." in capsys.readouterr().err
+
+
+def test_the_note_is_shown_before_anything_is_written(
+    state: Path, capsys: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    def refuse(*_: object) -> None:
+        raise StoreError("bad_reason", "stopped before writing")
+
+    monkeypatch.setattr(Store, "rule", refuse)
+    assert run(state, "reject", "1", "x") == 1
+    assert "#1  Film 5 (1975), under Horror" in capsys.readouterr().out
+
+
+def test_a_viewers_comment_cannot_forge_a_note_or_reach_the_terminal(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    store = Store(tmp_path / "matinee.sqlite")
+    me, _ = store.create("Me", None, [], [])
+    store.note(
+        Note(me.id, 5, "horror", "kind", (), False, "a\n#9  Forged\x1b[2K\u202e and caf\u00e9 \u2014 na\u00efve")
+    )
+    assert run(tmp_path, "list") == 0
+    out = capsys.readouterr().out
+    assert not [line for line in out.splitlines() if line.startswith("#9")]
+    assert "\x1b" not in out and "\u202e" not in out
+    assert "comment: a #9 Forged\ufffd[2K\ufffd and caf\u00e9 \u2014 na\u00efve" in out
+
+
+def test_the_tool_refuses_odd_numbers_names_and_stores_in_words(
+    state: Path, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    with pytest.raises(SystemExit):
+        run(state, "reject", "99999999999999999999", "x")
+    store = Store(state / "matinee.sqlite")
+    store.create("Mary Ann", "1234", [], [])
+    assert run(state, "clear-pin", "mary   ANN") == 0
+    with sqlite3.connect(state / "matinee.sqlite") as db:
+        db.execute("PRAGMA user_version = 99")
+    capsys.readouterr()
+    assert run(state, "list") == 1
+    assert "Refused: the store file has shape 99" in capsys.readouterr().err

@@ -22,12 +22,16 @@ import json
 import os
 import sqlite3
 import sys
+import unicodedata
 from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
 from matinee.reference import DATA
 from matinee.store import FiledNote, Store, StoreError
+from matinee.upgrade import ShapeError
+
+MAX_NOTE_ID = 2**62
 
 
 @dataclass(frozen=True)
@@ -56,6 +60,12 @@ def load_names(state: Path, data: Path = DATA) -> Names:
     return Names(films, {o["tree"]: o["label"] for o in first["options"]})
 
 
+def printable(text: str) -> str:
+    """Viewer text made safe for the operator's terminal: one line, with no control or format character left."""
+    flat = " ".join(text.split())
+    return "".join("\ufffd" if unicodedata.category(c).startswith("C") else c for c in flat)
+
+
 def what_was_wrong(note: FiledNote, door: str) -> str:
     """The viewer's choice in the panel's own words, with where a "Not <genre> at all" film belongs."""
     if note.kind == "genre":
@@ -76,7 +86,7 @@ def describe(note: FiledNote, names: Names) -> list[str]:
         f"    wrong: {what_was_wrong(note, door)}",
     ]
     if note.comment:
-        lines.append(f"    comment: {note.comment}")
+        lines.append(f"    comment: {printable(note.comment)}")
     if note.status != "open":
         ruling = f" ({note.ruling})" if note.ruling else ""
         lines.append(f"    ruled {note.status}: {note.reason}{ruling}")
@@ -93,7 +103,7 @@ def list_open(store: Store, names: Names) -> int:
 
 def rule(store: Store, names: Names, args: argparse.Namespace) -> int:
     note = store.filed(args.note)
-    print(f"Note #{note.id}: {names.film(note.tmdb)}, under {names.door(note.tree)}.")
+    print("\n".join(describe(note, names)))
     if args.command == "accept":
         status, before = "accepted", store.rule(note.id, "accepted", args.reason, args.ruling)
     else:
@@ -111,17 +121,24 @@ def clear_pin(store: Store, args: argparse.Namespace) -> int:
     return 0
 
 
+def note_id(text: str) -> int:
+    number = int(text)
+    if not 0 < number < MAX_NOTE_ID:
+        raise argparse.ArgumentTypeError(f"no note is numbered {text}")
+    return number
+
+
 def parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument("--state", type=Path, default=os.environ.get("MATINEE_STATE"), help="Matinee's state directory")
     commands = p.add_subparsers(dest="command", required=True)
     commands.add_parser("list", help="the open notes, oldest first")
     accept = commands.add_parser("accept", help="accept a note, naming the label ruling that fixed it")
-    accept.add_argument("note", type=int)
+    accept.add_argument("note", type=note_id)
     accept.add_argument("reason")
     accept.add_argument("--ruling", required=True, help="the label ruling that fixed it")
     reject = commands.add_parser("reject", help="reject a note")
-    reject.add_argument("note", type=int)
+    reject.add_argument("note", type=note_id)
     reject.add_argument("reason")
     pin = commands.add_parser("clear-pin", help="clear one profile's PIN and any lockout on it")
     pin.add_argument("name")
@@ -133,14 +150,14 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.state is None or not (args.state / "matinee.sqlite").is_file():
         print(f"No Matinee store in {args.state}; pass --state or set MATINEE_STATE.", file=sys.stderr)
         return 2
-    store = Store(args.state / "matinee.sqlite")
     try:
+        store = Store(args.state / "matinee.sqlite")
         if args.command == "list":
             return list_open(store, load_names(args.state))
         if args.command == "clear-pin":
             return clear_pin(store, args)
         return rule(store, load_names(args.state), args)
-    except StoreError as exc:
+    except (StoreError, ShapeError) as exc:
         print(f"Refused: {exc}.", file=sys.stderr)
         return 1
 

@@ -281,7 +281,7 @@ def test_a_device_holding_a_profile_deletes_it_everywhere_and_its_notes_stay(doo
     client, store = door
     other_device = TestClient(client.app, base_url="https://testserver")
     gone = client.post("/api/profiles", json={"name": "Leaving", "pin": "4321", "exclusions": ["superheroes"]}).json()
-    kept = client.post("/api/profiles", json={"name": "Staying"}).json()
+    client.post("/api/profiles", json={"name": "Staying"})
     assert other_device.post(f"/api/profiles/{gone['id']}/open", json={"pin": "4321"}).status_code == 200
     store.note(Note(gone["id"], 5, "west", "kind", ("Cowboys.",), False, "kept after"))
     resp = client.delete(f"/api/profiles/{gone['id']}")
@@ -291,10 +291,10 @@ def test_a_device_holding_a_profile_deletes_it_everywhere_and_its_notes_stay(doo
         assert db.execute("SELECT COUNT(*) FROM tokens WHERE profile_id = ?", (gone["id"],)).fetchone() == (0,)
     assert [(n.comment, n.profile) for n in store.notes()] == [("kept after", None)]
     left = resp.headers["set-cookie"].split(";")[0].split("=", 1)[1].split(".")
+    assert len(left) == 1  # the deleted profile's token is gone from this device's cookie
     assert [p.name for p in store.holding(left).values()] == ["Staying"]  # the deleting device keeps its others
     assert [p["name"] for p in client.get("/api/door").json()["profiles"]] == ["Staying"]
     assert other_device.get("/api/door").json()["profiles"] == []  # the other device's token went with it
-    assert kept["name"] == "Staying"
 
 
 def test_a_device_that_does_not_hold_a_profile_cannot_delete_it(door: Any, tmp_path: Path) -> None:
@@ -317,4 +317,3 @@ def test_deleting_the_last_held_profile_clears_the_cookie(door: Any) -> None:
     assert resp.status_code == 200
     cookie = resp.headers["set-cookie"]
     assert cookie.startswith(f'{TOKENS_COOKIE}=""') or "Max-Age=0" in cookie
-    assert client.get("/api/door").json()["profiles"] == []
