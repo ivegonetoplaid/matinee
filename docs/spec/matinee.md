@@ -933,7 +933,11 @@ changes nothing any viewer is shown.
   offered the film; anything else is refused. Naming a tree changes nothing any
   viewer is shown.
 - Once the note is saved the panel says "Thanks. That's gone to whoever runs
-  Matinee." in gold and "If they agree, it moves for everyone." in cream.
+  Matinee." in gold and "If they agree, it moves for everyone." in cream. The
+  About page's paragraph on films in the wrong place says the same: a viewer
+  can say where a film fits best through "Something wrong with this pick?",
+  every note reaches whoever runs Matinee, and when they agree the film moves
+  for everyone.
 - A note outlives the profile that filed it. Deleting a profile leaves every
   note it filed in the store, naming no profile, and anything that lists the
   note shows it as from a deleted profile.
