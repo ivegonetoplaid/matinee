@@ -12,7 +12,7 @@ from fastapi.testclient import TestClient
 
 from matinee.dtdd import Dtdd
 from matinee.engine import load_catalog
-from matinee.store import AVATARS, LOCKOUT_S, MAX_PROFILES, Locked, Note, Store, StoreError, edits
+from matinee.store import AVATARS, LOCKOUT_S, MAX_PROFILES, Locked, Note, Store, StoreError
 from matinee.table import FilmTable
 from matinee.web.app import create_app
 from matinee.web.common import TOKENS_COOKIE
@@ -25,13 +25,6 @@ from test_web_library import SECRET_KEY, SECRET_URL, FakeLibrary, write_film_tab
 @pytest.fixture
 def store(tmp_path: Path) -> Store:
     return Store(tmp_path / "matinee.sqlite")
-
-
-def test_edit_distance() -> None:
-    assert edits("dave", "dave") == 0
-    assert edits("dave", "davy") == 1
-    assert edits("dave", "david") == 2
-    assert edits("kitten", "sitting") == 3
 
 
 def test_pin_and_token_are_never_stored_as_typed(store: Store, tmp_path: Path) -> None:

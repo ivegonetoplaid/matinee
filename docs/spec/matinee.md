@@ -774,7 +774,8 @@ usual headers. The protection is sized for a household film picker.
   differ by at most one insertion, deletion or substitution. In strict mode the
   typed word must equal the door word exactly. A typed word over 200 characters
   is wrong without being compared. The start is refused when a relaxed word is
-  under 8 letters and digits, a strict word under 12 characters, or
+  under 8 letters and digits, a strict word under 12 characters, any word over
+  200 characters (more than the door compares), or
   `MATINEE_DOOR_MATCH` names no mode; the message names the setting, never the
   word.
 - **A wrong word** is answered after 2 seconds, and words are checked one at a
@@ -1662,7 +1663,7 @@ symbol when one does not match.
 | `src/matinee/store.py::MAX_PROFILES` and the other limits | `src/matinee/store.py:32` | 2026-09-26 |
 | `src/matinee/store.py::Store.create` | `src/matinee/store.py:207` | 2026-09-26 |
 | `src/matinee/store.py::Store.holding` | `src/matinee/store.py:238` | 2026-09-26 |
-| `src/matinee/store.py::edits` | `src/matinee/store.py:157` | 2026-09-26 |
+| `src/matinee/web/admission.py::edits` | `src/matinee/store.py:157` | 2026-09-26 |
 | `src/matinee/store.py::clean_name` / `clean_pin` | `src/matinee/store.py:131` | 2026-09-26 |
 | `src/matinee/store.py::Store.open` / `_check_pin` (lockout) | `src/matinee/store.py:321` | 2026-09-26 |
 | `src/matinee/store.py::Store._issue` (token pruning) | `src/matinee/store.py:199` | 2026-09-26 |

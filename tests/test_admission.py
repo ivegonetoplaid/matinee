@@ -17,7 +17,7 @@ from fastapi.testclient import TestClient
 from matinee.engine import load_catalog
 from matinee.store import Store
 from matinee.table import FilmTable
-from matinee.web.admission import COOKIE, KEY_FILE, LIFE_S, Admission, AdmissionError, Mode
+from matinee.web.admission import COOKIE, KEY_FILE, LIFE_S, Admission, AdmissionError, Mode, edits
 from matinee.web.app import create_app
 from matinee.web.common import TOKENS_COOKIE
 from matinee.web.config import GREETINGS, Config, ConfigError, from_env
@@ -135,6 +135,32 @@ def test_a_cookie_survives_a_restart_and_ends_when_the_word_or_mode_changes(tmp_
         assert (later.get("/api/door").status_code == 200) is admitted
 
 
+def test_a_cookie_stamped_in_the_future_admits_nothing(tmp_path: Path) -> None:
+    clock = Clock()
+    client = client_of(make_app(tmp_path, clock=clock))
+    client.post("/api/admission", json={"word": WORD})
+    clock.now -= 301
+    assert client.get("/api/door").status_code == 401
+    clock.now += 2
+    assert client.get("/api/door").status_code == 200
+
+
+def test_edit_distance() -> None:
+    assert edits("dave", "dave") == 0
+    assert edits("dave", "davy") == 1
+    assert edits("dave", "david") == 2
+    assert edits("kitten", "sitting") == 3
+
+
+def test_a_door_word_too_long_to_type_stops_the_start_and_odd_text_is_just_wrong(tmp_path: Path) -> None:
+    env = {**ENV, "MATINEE_STATE": str(tmp_path), "MATINEE_DOOR_WORD": "sesame " * 30}
+    with pytest.raises(ConfigError, match="MATINEE_DOOR_WORD is longer than 200") as refused:
+        from_env(env)
+    assert "sesame" not in str(refused.value)
+    assert Admission(STRICT, "strict", b"k" * 32).matches("\udfff") is False
+    assert Admission(STRICT, "relaxed", b"k" * 32).matches("\udfff") is False
+
+
 def test_a_cookie_from_another_installation_admits_nothing(tmp_path: Path) -> None:
     here = client_of(make_app(tmp_path / "a"))
     here.post("/api/admission", json={"word": WORD})
@@ -209,7 +235,7 @@ def test_forty_waiting_guesses_go_one_at_a_time_and_delay_nothing_else(tmp_path:
     delay = 0.05
     app = make_app(tmp_path, delay=delay)
 
-    async def scene() -> tuple[float, float, list[int]]:
+    async def scene() -> tuple[float, float, int, list[int]]:
         transport = httpx.ASGITransport(app=app)
         async with httpx.AsyncClient(transport=transport, base_url="https://testserver") as client:
             started = time.monotonic()
@@ -217,21 +243,19 @@ def test_forty_waiting_guesses_go_one_at_a_time_and_delay_nothing_else(tmp_path:
                 asyncio.create_task(client.post("/api/admission", json={"word": f"guess {i}"})) for i in range(40)
             ]
             await asyncio.sleep(delay * 3)  # several guesses are waiting now
-            ordinary = time.monotonic()
             page = await client.get("/")
             api = await client.get("/api/admission")
-            ordinary = time.monotonic() - ordinary
+            answered = time.monotonic() - started  # timed from the guesses, so a frozen server shows here
+            waiting = sum(not g.done() for g in guesses)
             answers = await asyncio.gather(*guesses)
-            return (
-                ordinary,
-                time.monotonic() - started,
-                [page.status_code, api.status_code, *(a.status_code for a in answers)],
-            )
+            codes = [page.status_code, api.status_code, *(a.status_code for a in answers)]
+            return answered, time.monotonic() - started, waiting, codes
 
-    ordinary, total, codes = asyncio.run(scene())
+    answered, total, waiting, codes = asyncio.run(scene())
     assert codes[:2] == [200, 200] and set(codes[2:]) == {401}
     assert total >= 40 * delay  # one at a time, each after its delay
-    assert ordinary < 10 * delay  # the page and the status answered while the guesses waited
+    assert answered < 10 * delay  # the page and the status answered while the guesses waited
+    assert waiting >= 30  # and the queue was still long when they did
 
 
 def test_the_door_word_is_never_said_back(tmp_path: Path, caplog: pytest.LogCaptureFixture) -> None:

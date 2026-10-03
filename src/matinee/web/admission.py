@@ -24,8 +24,6 @@ import unicodedata
 from pathlib import Path
 from typing import Literal
 
-from matinee.store import edits
-
 Mode = Literal["relaxed", "strict"]
 COOKIE = "matinee_admit"
 LIFE_S = 400 * 24 * 3600
@@ -41,9 +39,24 @@ class AdmissionError(RuntimeError):
     """The installation secret cannot be made or read; Matinee does not start."""
 
 
+def edits(a: str, b: str) -> int:
+    """Levenshtein distance: single-character insertions, deletions and substitutions."""
+    row = list(range(len(b) + 1))
+    for i, ca in enumerate(a, 1):
+        prev, row[0] = row[0], i
+        for j, cb in enumerate(b, 1):
+            prev, row[j] = row[j], min(row[j] + 1, row[j - 1] + 1, prev + (ca != cb))
+    return row[-1]
+
+
 def relaxed_key(text: str) -> str:
     """The word as relaxed mode compares it: no letter case, no spaces, no punctuation."""
     return "".join(c for c in unicodedata.normalize("NFKC", text).casefold() if c.isalnum())
+
+
+def too_long(word: str) -> bool:
+    """Whether the door word is longer than any typed word Matinee compares, so that nobody could ever give it."""
+    return len(word) > MAX_TYPED
 
 
 def too_short(word: str, mode: Mode) -> bool:
@@ -112,6 +125,6 @@ class Admission:
         if len(typed) > MAX_TYPED:
             return False
         if self._mode == "strict":
-            return hmac.compare_digest(typed.encode(), word.encode())
+            return hmac.compare_digest(typed.encode("utf-8", "surrogatepass"), word.encode("utf-8", "surrogatepass"))
         a, b = relaxed_key(typed), relaxed_key(word)
         return abs(len(a) - len(b)) <= 1 and edits(a, b) <= 1

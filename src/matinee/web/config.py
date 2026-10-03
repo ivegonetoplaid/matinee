@@ -12,7 +12,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from matinee.web.admission import RELAXED_MIN, STRICT_MIN, Mode, too_short
+from matinee.web.admission import MAX_TYPED, RELAXED_MIN, STRICT_MIN, Mode, too_long, too_short
 
 GREETINGS = {
     "show": "State your business. Make it quick, the show's about to start.",
@@ -65,6 +65,8 @@ def _door(env: Mapping[str, str]) -> tuple[str | None, Mode, str]:
     greeting = env.get("MATINEE_DOOR_GREETING", "").strip() or "show"
     if not word.strip():
         return None, mode, GREETINGS.get(greeting, greeting)
+    if too_long(word):
+        raise ConfigError(f"MATINEE_DOOR_WORD is longer than {MAX_TYPED} characters, more than the door compares")
     if too_short(word, mode):
         floor = f"{RELAXED_MIN} letters and digits" if mode == "relaxed" else f"{STRICT_MIN} characters"
         raise ConfigError(f"MATINEE_DOOR_WORD is shorter than {floor}, the least {mode} mode allows")
