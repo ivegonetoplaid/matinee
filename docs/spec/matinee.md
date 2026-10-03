@@ -1098,11 +1098,23 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
   marquee stays on screen until the viewer goes in or opens
   About.
   - Every viewing runs under a profile. The door offers no way in without one.
-  - A device with no token opens on the trigger picker, which asks for a name
-    and an optional PIN and saves a profile with whatever is chosen.
-  - A device holding one token opens on "Welcome back, <name>. Your seats are
-    waiting.", with "Take me in" and "Not <name>?", which makes a new profile. A
-    device holding several asks "Who's watching?", with "Someone new".
+  - **The front door** types its line, then shows every profile as a tile,
+    sorted by name, with a "+ New" tile last. A tile is the profile's mark (its
+    avatar, or its initials in gold: the first letter of each word of its name,
+    at most three) in a rounded square, 128 px on a desktop and 96 px on a phone,
+    with the name in large display type beneath. No tile is marked as held or
+    last used. The tiles reflow to the screen's width, and the wall scrolls when
+    they do not fit. The "+ New" tile's square is dashed and holds a "+".
+  - A device holding a profile token sees "Welcome back." in gold and "Who's
+    watching?" in cream. A device holding none sees "Welcome." and "Pick your
+    seat, or introduce yourself and I'll find you something to watch." When no
+    profile exists the line is "Welcome." and "Nobody has a seat yet. Introduce
+    yourself. One profile the whole house shares works fine too.", over the
+    "+ New" tile alone.
+  - A tile opens its profile at once, and goes straight to the first question,
+    when this device holds it or it has no PIN. Otherwise the door asks "Hi,
+    <name>. What's your PIN?", with "That's not me" back to the tiles. Going in
+    keeps the name's flight to the wordmark.
 - **Going in.** Every answer at the door that leads into the theatre asks for
   the first question at the tap, and a door is entered once: a second tap or
   Enter changes nothing. The door's words and the corner credit line fade out

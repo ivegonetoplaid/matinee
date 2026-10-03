@@ -7,6 +7,7 @@ import { get, post, put } from "./api.js";
 import { credits } from "./credits.js";
 import { clear, h, isPhone, prefersLessMotion, sentenceCase, wait } from "./dom.js";
 import { FLIGHT_MS, copyAt, fly, nameAt, riseOf, wordmarkAt } from "./flight.js";
+import { mark } from "./mark.js";
 import { typeLine } from "./type.js";
 
 // Bulbs round the sign and the gap between them, as on the design boards. Two dark bulbs chase clockwise,
@@ -96,6 +97,34 @@ function strip(text, onclick) {
   return h("button", { class: "answer", type: "button", onclick }, text);
 }
 
+// A profile's tile: its mark, and its name in large type beneath.
+function tile(profile, onclick) {
+  return h(
+    "button",
+    { class: "seat", type: "button", onclick },
+    mark(profile, "door"),
+    h("span", { class: "seat-name" }, profile.name),
+  );
+}
+
+function newTile(onclick) {
+  return h(
+    "button",
+    { class: "seat new", type: "button", "aria-label": "+ New", onclick },
+    h("span", { class: "mark door", "aria-hidden": "true" }, h("span", { class: "mark-initials" }, "+")),
+    h("span", { class: "seat-name", "aria-hidden": "true" }, "New"),
+  );
+}
+
+// What the front door says over the tiles: a device holding a profile is welcomed back without a name.
+function doorLines(profiles) {
+  if (!profiles.length) {
+    return ["Welcome.", "Nobody has a seat yet. Introduce yourself. One profile the whole house shares works fine too."];
+  }
+  if (profiles.some((p) => p.held)) return ["Welcome back.", "Who's watching?"];
+  return ["Welcome.", "Pick your seat, or introduce yourself and I'll find you something to watch."];
+}
+
 function field(props) {
   return h("input", { class: "field", autocomplete: "off", spellcheck: "false", ...props });
 }
@@ -106,14 +135,17 @@ export class Door {
   constructor({ stage, onEnter }) {
     this.stage = stage;
     this.onEnter = onEnter;
+    this.profiles = [];
     this.held = [];
     this.picked = new Set();
     this.excluded = new Set();
     this.copy = null; // the name while it is away from the sign: flying, or landed at the wordmark's place
   }
 
-  // Build the door and open on the screen this device's tokens call for, or on `screen` when given.
-  async open({ door, screen = null, profileId = null }) {
+  // Build the door and open on the front door's tiles, or on `screen` when given: a new profile ("new"),
+  // or the viewer's list ("list"). `said` replaces the front door's line, as after a profile is deleted.
+  async open({ door, screen = null, profileId = null, said = null }) {
+    this.profiles = door.profiles;
     this.held = door.profiles.filter((p) => p.held);
     this.wall = h("div", { class: "door-wall" });
     this.marquee = h("div", { class: "marquee" }, h("div", { class: "marquee-glow", "aria-hidden": "true" }), crown(), sign(door.now_showing));
@@ -127,21 +159,34 @@ export class Door {
     const tile = this.held.find((p) => p.id === profileId);
     const profile = screen === "list" && tile ? await this.seatOf(tile) : null;
     if (profile) return this.picker({ editing: profile });
-    return this.greet();
+    return this.greet(said);
   }
 
-  greet() {
-    if (this.held.length === 1) return this.welcome(this.held[0]);
-    if (this.held.length > 1) return this.back();
-    return this.first();
+  // The front door: every profile's tile, sorted by name as the server sends them, then "+ New".
+  greet(said = null) {
+    const [ack, ask] = said ?? doorLines(this.profiles);
+    const tiles = h(
+      "div",
+      { class: "seats", role: "group", "aria-label": "Profiles" },
+      this.profiles.map((p) => tile(p, () => this.choose(p))),
+      newTile(() => this.first()),
+    );
+    return this.talk(ack, ask, [tiles], { tiles: true });
   }
 
-  // One question on the wall: the line types out, then its controls appear.
-  async talk(ack, ask, controls) {
+  // A tile opens its profile at once when this device holds it or it has no PIN; otherwise it asks the PIN.
+  choose(profile) {
+    if (profile.held || !profile.has_pin) return this.enterAs(profile);
+    return this.pin(profile);
+  }
+
+  // One question on the wall: the line types out, then its controls appear. `tiles` lets the profile tiles
+  // take the width the line keeps.
+  async talk(ack, ask, controls, { tiles = false } = {}) {
     this.marquee.classList.remove("compact");
     const line = h("p", { class: "line door-line", "aria-live": "polite" });
     const below = h("div", { class: "door-controls", hidden: true }, controls);
-    clear(this.wall).append(h("div", { class: "door-talk" }, line, below));
+    clear(this.wall).append(h("div", { class: tiles ? "door-talk at-seats" : "door-talk" }, line, below));
     await typeLine(line, ack, ask);
     below.hidden = false;
     const first = below.querySelector("input, button");
@@ -151,20 +196,6 @@ export class Door {
   // Every viewing runs under a profile: a viewer new to this device makes one on the picker.
   first() {
     return this.picker({});
-  }
-
-  welcome(profile) {
-    return this.talk(`Welcome back, ${profile.name}.`, "Your seats are waiting.", [
-      strip("Take me in", () => this.enterAs(profile)),
-      linkButton(`Not ${profile.name}?`, () => this.first()),
-    ]);
-  }
-
-  back() {
-    return this.talk("Welcome back.", "Who's watching?", [
-      this.held.map((p) => strip(p.name, () => this.enterAs(p))),
-      strip("Someone new", () => this.first()),
-    ]);
   }
 
   pin(suggestion) {
