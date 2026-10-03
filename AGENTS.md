@@ -6,7 +6,7 @@ conversational questions and is handed one film, tonight's showing, with a
 genome and TMDB, and writes to none of them.
 
 Follow the global agent rules first, then this addendum. `CODING_STANDARDS.md` is
-binding for every line of code here.
+binding for every line of code here, and `DESIGN_STANDARDS.md` for every surface.
 
 ## Where things live
 

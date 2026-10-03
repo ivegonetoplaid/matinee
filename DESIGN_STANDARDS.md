@@ -1,0 +1,315 @@
+---
+title: Matinee — Design Standards
+purpose: The visual and copy laws every Matinee surface holds to — colour, type, the two control families, the scrim and the bands, where Matinee speaks, and the copy.
+status: Binding for every surface under `src/matinee/web/static/`. Section 1 says what to do when the code disagrees with a rule here.
+updated: 2026-10-03
+---
+
+# Matinee — Design Standards
+
+Binding whenever you build or change a surface of Matinee, on the same footing
+as `CODING_STANDARDS.md`. A violation is a defect to fix, not a difference of
+taste.
+
+`CODING_STANDARDS.md` states the usability and accessibility floor: visible
+focus, keyboard reach, WCAG 2.1 AA contrast. This document does not repeat it.
+It states what is specific to Matinee.
+
+The rules here were settled in the workbench's design-standards decisions
+(`feats/matinee-design-standards/decisions.md`), which also amend parts of
+Matinee's own decisions (§55, §56, §69, §82). This file is their one
+transcription for the code, and the `:root` block of
+`src/matinee/web/static/css/matinee.css` is this file's one transcription for
+the browser. Where the decisions, this file and the stylesheet disagree, the
+decisions win.
+
+---
+
+## 1. These rules are law, and how to disagree with one
+
+When the code strongly disagrees with a rule here, that is information about
+the rule. Do not break it silently, do not contort a screen to satisfy it, and
+do not edit the rule to match what got built. Build the thing the way it wants
+to be built, then raise the conflict in the workbench's
+`discussions/matinee-design-standards-discussion-log.md`, naming the rule, what
+the code wanted, and why. If the code was right, amend the decisions and this
+file. If the rule was right, fix the code.
+
+---
+
+## 2. What Matinee looks like, and what it must not look like
+
+- **A theatre, not an app.** A marquee, a poster wall, letter-board placards,
+  and a voice that speaks in large condensed type. Nothing looks like a
+  software dashboard: no filled coloured pills, no cards with drop shadows, no
+  toggle switches.
+- **Dark only.** One theme on the page base `#07080d`. There is no light theme
+  and none is planned.
+- **One bright thing at a time.** The eye goes to Matinee's line, then to the
+  choices under it. Nothing else competes.
+- **The poster wall is the stage.** It is never blurred, never covered by a
+  panel except About, and never dimmed between answers. What stands on it
+  follows section 6.
+- **Two screens.** A phone is a viewport 600 px wide or less. Everything else
+  is a desktop. A TV layout is not designed yet.
+
+---
+
+## 3. Colour
+
+### 3.1 The tokens
+
+| Token | Value | Job |
+|---|---|---|
+| `--base` | `#07080d` | The page, the bands, the scrims |
+| `--text` | `#efe9dc` | Cream: Matinee's second sentence, body text, cream actions' words |
+| `--dim` | cream at 66 % | Quiet text inside a band only; disabled controls |
+| `--gold` | `#f2b33d` | Matinee's first sentence, the wordmark, gold actions' edge |
+| `--velvet` | `#e0566b` | Rose: rose actions' edge, "Delete profile" |
+| `--petrol` | `#3B7C8C` | Petrol actions' edge |
+| `--strip` | `#f4efe2` | A letterbox's face |
+| `--strip-ink` | `#121212` | A letterbox's words |
+| `--strip-edge` | `#2a2622` | A letterbox's edge |
+| `--action` | `#161926` | An action's body, opaque |
+
+Each action accent also has a words colour, a lighter tint of its edge
+(section 5.2). Add a colour only through a new token here and in the
+stylesheet's `:root`. A colour written straight into a rule is a defect.
+
+### 3.2 One job per colour
+
+Gold means two things only: the first sentence Matinee speaks, and carry on.
+Rose means turn something down or take it away. Petrol means leave Matinee.
+Cream is Matinee's voice after its first sentence, and a neutral utility.
+Grey is for quiet text inside a band and for disabled controls, never for a
+control a viewer is meant to use.
+
+### 3.3 Contrast
+
+Measured against the action body `#161926`, every action's words clear WCAG's
+4.5 : 1 for normal text (section 5.2 gives the figures). A letterbox's words
+measure 16.3 : 1 on its face. Text on the poster wall reaches its contrast only
+through a scrim (section 6.1); a contrast that holds only over a dark poster
+does not count.
+
+---
+
+## 4. Type
+
+### 4.1 Two faces
+
+| Face | Weight | Used for |
+|---|---|---|
+| Big Shoulders Display | 800 | Matinee's lines, the wordmark, the marquee, letterbox words, profile names on the tiles and in the top bar |
+| DM Sans | 400 to 600 | Everything else: body text, notes, counts, action words, fields, About |
+
+Both faces are self-hosted with their OFL licences. A third face is a defect.
+
+### 4.2 Sizes
+
+| What | Desktop | Phone |
+|---|---|---|
+| A letterbox's words | 24 px | 19 px |
+| An action's words | 18 px | 16 px |
+| Body text on the poster wall | 16 px at least | 16 px at least |
+| Quiet text inside a band | 13 px | 11 px |
+
+A letterbox has one size. No screen shrinks letterboxes to fit more of them;
+a long list scrolls instead. Matinee's lines keep the sizes the page spec
+gives each screen.
+
+### 4.3 Matinee's lines
+
+A line Matinee speaks has two parts. Gold carries the first sentence. Cream
+carries what follows: a question when Matinee asks, a second statement when it
+tells. A line types out; the choices appear once it finishes, except where the
+page spec says otherwise (the locked door's slot takes the word at once).
+
+### 4.4 Case
+
+All displayed text is in sentence case. Letterbox words show in capitals
+through the stylesheet (`text-transform`), never typed in capitals in the
+script. A cream part that carries on its gold part's sentence after a comma
+keeps its first letter as written.
+
+---
+
+## 5. Controls
+
+Matinee has two families of control. **A letterbox chooses something. An action
+does something.** They differ in shape as well as colour, so neither depends on
+colour alone.
+
+### 5.1 Letterboxes
+
+The cream letter-board placard: the `--strip` face with faint ruled lines, a
+3 px `--strip-edge` edge (2 px on a phone), 4 px corners, words in Big Shoulders
+Display capitals, and a soft cream glow at rest that brightens on hover.
+
+Letterboxes carry every choice: the answers to Matinee's questions, the doors
+and kinds, the profile-making answers, the trigger topics, and the answers to
+"Delete <name>?". "Yes, delete it" keeps its red marking.
+
+A letterbox that toggles, as a trigger topic does, shows a check mark before
+its words when chosen. Its face, glow and size do not change. A list of many
+letterboxes stands in aligned columns: in a row, each takes the height of the
+tallest.
+
+### 5.2 Actions
+
+A rounded rectangle: 10 px corners, the opaque `--action` body, a 1.5 px edge in
+its accent, and its words, and any icon, in its accent's words colour. The body
+is never filled with the accent. At least 44 px tall.
+
+| Accent | Means | Edge | Words | Words on the body |
+|---|---|---|---|---|
+| Gold | Carry on through Matinee | `#f2b33d` | `#f6ca77` | 11.4 : 1 |
+| Rose | Turn something down or take it away | `#e0566b` | `#e98997` | 7.1 : 1 |
+| Petrol | Leave Matinee | `#3B7C8C` | `#5FA3B3` | 6.1 : 1 |
+| Cream | A neutral utility | `#a39e93` | `#efe9dc` | 14.5 : 1 |
+
+On hover the edge takes the words' colour. Keyboard focus shows a 2 px outline
+in the words' colour, 2 px outside the edge. A disabled action stands at 45 per
+cent opacity. A petrol action's words always end with ↗.
+
+Every action and its accent:
+
+| Action | Accent |
+|---|---|
+| "Find me something to watch" | gold |
+| "Continue" (the name step) | gold |
+| "Save and continue", "Save my list" | gold |
+| "Just pick one!" (the questions) | gold |
+| "Roll again" | gold |
+| "Save" (a note) | gold |
+| "Not that one" | rose |
+| "More on Seerr ↗" | petrol |
+| "Read about these on DoesTheDogDie ↗" | petrol |
+| "Start over" | cream |
+| "Never mind", "Never mind, show me everything", "Never mind, keep my list", "That's not me" | cream |
+| "Try again" (a problem screen and the topic list) | cream |
+| "Something wrong with this pick?" | cream |
+| The turned-away pick's reveal button | cream |
+| "Back" (About) | cream |
+
+A new action takes the accent its meaning names. If none fits, raise it under
+section 1; do not invent a fifth.
+
+### 5.3 Links
+
+An action that goes to another address is an `<a>` styled as an action, never a
+`<button>`, so that open in a new tab, the keyboard and screen readers behave.
+Every link that leaves Matinee opens in a new tab with
+`rel="noopener noreferrer"`.
+
+A bare link stands only in credits, attribution and reference prose: the corner
+credit line, DoesTheDogDie's credit beside its data, and About's text. Anywhere
+else a link is an action.
+
+### 5.4 Everything else
+
+The profile menu's rows ("Edit my list", "Change avatar", "Switch profiles",
+"Delete profile") are plain menu rows; "Delete profile" is set in rose. Pictures
+that answer a question, the pails and the avatars, stay pictures. The locked
+door's eye is part of the door. The wordmark is a link styled as the wordmark.
+
+---
+
+## 6. Text on the poster wall
+
+### 6.1 The scrim
+
+Every piece of text set on the poster wall stands on a scrim: a feathered dark
+patch with no visible edge, the page base at 72 per cent behind the text, fading
+to nothing at least 32 px beyond the text's block. That covers Matinee's lines,
+notes, counts, status lines and footnotes. Text inside a band, on a letterbox,
+on an action or in a panel needs none. The locked door's greeting is the
+reference.
+
+### 6.2 Size and colour
+
+Text on the wall is at least 16 px and set in cream or gold. Dim text, and text
+from 11 to 15 px, stands only inside a band.
+
+### 6.3 The bands
+
+Every screen over the poster wall has a dark band at the top and at the foot.
+Each is the page base at 92 per cent behind its bar, the top bar with the
+wordmark and the viewer, the foot with the credit line, and feathers to nothing
+into the wall over 96 px on a desktop and 48 px on a phone, with no visible
+edge. On the door, the dark fade behind the marquee is the top band. About keeps
+its own panel, with the bands beneath it.
+
+---
+
+## 7. Where Matinee speaks
+
+Matinee speaks from one place on each screen, and its choices stand in one place
+beneath it. Nothing re-centres while a line types or the choices appear. The
+page spec (`docs/spec/matinee.md`, section 12) gives the measurements.
+
+| Screen | Desktop | Phone |
+|---|---|---|
+| The locked door | The greeting beside the door, to its left | Between the marquee and the door; a phone held sideways puts it beside the door |
+| The front door and making a profile | A centred column under the marquee, the line left-aligned at its top, tiles or letterboxes beneath | The line under the marquee; letterboxes at the foot of the screen |
+| The trigger picker | The left column's top, its explanation and actions beneath; the topics in the right column | Stacked under the marquee's lit strip: the line, the explanation, the topics, the actions |
+| The questions | The line hangs from the top, three lines reserved, letterboxes beneath it | The line hangs from the top; letterboxes at the foot of the screen |
+| The pick | The left column's top: the line, then the actions in one row, then the note | The foot of the screen: the line, the actions, the note, the trail, the credits |
+
+---
+
+## 8. Space and hit area
+
+Every control is at least 44 px tall. The page keeps its side gutter, 48 px on a
+desktop and 20 px on a phone, and never scrolls sideways. A dense list scrolls
+in its own box; the page around it stays put.
+
+---
+
+## 9. Motion
+
+Every motion honours reduced motion, as the page spec states for each one. The
+poster wall moves as one surface; posters are never animated one by one into
+place on a phone.
+
+---
+
+## 10. Copy
+
+- **First person.** Matinee says "I", never "we" or "us".
+- **Short big lines.** Matinee's lines stay short; detail goes in a body-type
+  line beneath, on the wall's rules (section 6).
+- **Gold, then cream** (section 4.3).
+- **Safety copy is gentle.** Copy about a viewer's trigger list names mild
+  examples, spiders and needles, never an upsetting one. Its question asks what
+  a viewer would rather not see happen on screen, so it reads as safety, not
+  taste.
+- **The credits are fixed wording.** TMDB's notice and logo, "Powered by
+  DoesTheDogDie.com" wherever its data shows, and the MovieLens credit on About
+  are set by the README and the page spec; do not reword them.
+
+---
+
+## 11. Enforcement
+
+**The tests check mechanically:**
+
+- every colour in the stylesheet comes from a `:root` token;
+- no control uses the pill shape (a 999 px radius) or a filled accent body;
+- every action is one of the four accents, and every petrol action's words end
+  with ↗;
+- no `<a>` outside the credit line, a DoesTheDogDie credit and About is styled
+  as a bare link;
+- every external `<a>` opens in a new tab with `rel="noopener noreferrer"`;
+- the letterbox and action sizes match section 4.2.
+
+**A visual review judges,** on a render at 390 px and at 1440 px wide, over a
+bright stretch of wall:
+
+- every piece of wall text stands on a scrim, reads clearly and is at least
+  16 px;
+- both bands frame the screen with no visible edge;
+- Matinee speaks from the place section 7 names;
+- one bright thing at a time.
+
+Render it and look at it before calling a surface done.
