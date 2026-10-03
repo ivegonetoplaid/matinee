@@ -2,8 +2,9 @@
 // it. Back to front: a wall of black subway tile, a wooden frame with a step, the painted door, and the
 // slot's sliding cover over the password field; the marquee stands above it all and does not move.
 // Matinee types its greeting beside the door (between the marquee and the door on a narrower screen), and
-// the slot takes the word once the greeting is typed. Each character typed pushes the slot's cover further
-// open, fully at ten. Nothing here asks the server for films, posters or the count.
+// the slot takes the word from the moment the door shows, a gold caret blinking on its cover while it is
+// empty. Each character typed pushes the slot's cover further open, fully at ten. Nothing here asks the
+// server for films, posters or the count.
 //
 // The right word opens it: Matinee's line goes, the cover is shut, and the door swings inward on its left
 // hinge onto a warm glow (0.9 s). Then the door's whole layer, tile included, is wiped away in ten vertical
@@ -70,7 +71,7 @@ export class LockedDoor {
       enterkeyhint: "go",
       disabled: true,
     });
-    this.cover = h("div", { class: "slot-cover", "aria-hidden": "true" });
+    this.cover = h("div", { class: "slot-cover", "aria-hidden": "true" }, h("span", { class: "caret" }));
     // The eye that shows the word stands at the slot's right end, over the cover, where a password field's
     // show control usually sits.
     this.peek = h(
@@ -131,19 +132,20 @@ export class LockedDoor {
     return height;
   }
 
-  // Matinee's line types, then the slot takes the word.
+  // The slot takes the word at once, and holds the focus unless the screen is a touch screen, while
+  // Matinee's line types.
   async greet([ack, ask]) {
-    this.word.disabled = true;
-    this.peek.disabled = true;
-    await typeLine(this.line, ack, ask);
     this.word.disabled = false;
     this.peek.disabled = false;
     if (!coarse()) this.word.focus();
+    await typeLine(this.line, ack, ask);
   }
 
   // The cover is pushed open by the typing: each character moves it further, until it is gone at ten.
   slide() {
-    const open = Math.min(1, [...this.word.value].length / FULL_AT);
+    const typed = [...this.word.value].length;
+    this.slot.classList.toggle("typed", typed > 0);
+    const open = Math.min(1, typed / FULL_AT);
     this.cover.style.transform = `translateX(${(open * 101).toFixed(1)}%)`;
   }
 
@@ -215,6 +217,7 @@ export class LockedDoor {
     const [res] = await Promise.all([post("/api/admission", { word }), this.shut()]);
     if (res.ok) return this.onAdmitted(this);
     this.word.value = "";
+    this.slot.classList.remove("typed");
     return this.greet(res.data.error === "wrong_word" ? WRONG : twoParts(res.data.message));
   }
 }

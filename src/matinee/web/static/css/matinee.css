@@ -2581,6 +2581,31 @@ a.wordmark:focus-visible {
   transition-duration: 0.4s;
 }
 
+/* The slot's invitation: the greeting's gold caret, blinking at the cover's left end while the slot is empty
+   and holds the focus; on a touch screen, where the slot waits for a tap, whenever it can take the word. */
+.slot-cover .caret {
+  position: absolute;
+  top: 50%;
+  left: 14px;
+  display: none;
+  width: auto;
+  height: 50%;
+  aspect-ratio: 0.52;
+  margin: 0;
+  translate: 0 -50%;
+  animation: blink 1.1s steps(1) infinite;
+}
+
+.slot:not(.typed) .slot-word:focus + .slot-cover .caret {
+  display: block;
+}
+
+@media (pointer: coarse) {
+  .slot:not(.typed) .slot-word:enabled + .slot-cover .caret {
+    display: block;
+  }
+}
+
 /* The control that shows what is typed: a small dim eye at the slot's right end, over its cover. */
 .peek {
   position: absolute;

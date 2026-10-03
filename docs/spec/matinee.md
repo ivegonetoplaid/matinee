@@ -1143,9 +1143,11 @@ as written. A phone is a viewport 600 px wide or less.
     squashing. A phone held sideways (under 500 px tall) puts the greeting
     beside the door, as a desktop does. The
     door's painted slot holds the password field, covered by a sliding metal
-    cover, with no text or placeholder. The field takes input once the
-    greeting is typed, and then holds the focus unless the screen is a touch
-    screen; each character pushes the cover open in proportion, fully at ten,
+    cover, with no text or placeholder. The field takes input from the moment
+    the door shows, while the greeting types, and holds the focus unless the
+    screen is a touch screen. While the field is empty, a gold caret like the
+    greeting's blinks at the cover's left end: when the field holds the focus,
+    or on a touch screen whenever it can take input. Each character pushes the cover open in proportion, fully at ten,
     and deleting one moves it back; the dots show from the slot's left edge. A small dim eye
     button at the slot's right end, over the cover, shows or hides what is
     typed; the typed text never runs under it, and pressing it leaves the
@@ -1153,7 +1155,7 @@ as written. A phone is a viewport 600 px wide or less.
     word (a blank one does nothing), and the cover shuts (0.4 s) at once while
     the server weighs it. A wrong word clears the field and types "That ain't
     it, pal." in gold and "Try again, or take a walk." in cream in the
-    greeting's place, and the field takes input again. Any other failure, such
+    greeting's place, and the field takes input again at once. Any other failure, such
     as the server out of reach, clears the field and types its message the same
     way, first sentence gold. Under reduced motion the greeting appears whole
     and the cover moves at once.
