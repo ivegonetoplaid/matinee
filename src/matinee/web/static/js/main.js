@@ -3,8 +3,8 @@
 import { del, get, post, put } from "./api.js";
 import { noteLink } from "./note.js";
 import { credits } from "./credits.js";
-import { Door, buildMarquee } from "./door.js";
-import { LockedDoor } from "./locked.js";
+import { Door, buildMarquee, showCount } from "./door.js";
+import { LockedDoor, WALL_FADE_MS } from "./locked.js";
 import { clear, h, isPhone, prefersLessMotion, sentenceCase, wait } from "./dom.js";
 import { showPick } from "./pick.js";
 import { Deck, dealBeneath, dealPair, setFor } from "./quips.js";
@@ -220,12 +220,17 @@ async function boot(opts = {}) {
   if (!gate.data.admitted) return lockedDoor(gate.data.greeting);
   loadQuips();
   const [door, first] = await Promise.all([get("/api/door"), post("/api/first", { viewer: {} })]);
+  if (first.ok) wall.show(first.data.pool);
+  return frontDoor(door, opts);
+}
+
+// The front door, its wall already shown. `opts.marquee` is the locked door's, kept in place.
+async function frontDoor(door, opts) {
   if (!door.ok) return problem(door.data, () => boot(opts));
   avatarsOffered = door.data.avatars;
   stage.classList.remove("revealed");
   stage.classList.add("at-door");
-  if (first.ok) wall.show(first.data.pool);
-  await new Door({ stage, onEnter: enter }).open({ door: door.data, ...opts });
+  return new Door({ stage, onEnter: enter }).open({ door: door.data, ...opts });
 }
 
 function lockedDoor(greeting) {
@@ -234,9 +239,21 @@ function lockedDoor(greeting) {
   stage.classList.add("at-door", "at-locked");
   const marquee = buildMarquee(null);
   clear(stage).append(h("h1", { class: "sr-only" }, "Matinee: a private screening"), marquee);
-  const onAdmitted = () => {
+  // The right word: the front door's films are asked for at once and the poster wall is laid behind the
+  // locked door while it swings, so the wipe opens onto a drawn wall.
+  const onAdmitted = async (locked) => {
+    loadQuips();
+    const ready = Promise.all([get("/api/door"), post("/api/first", { viewer: {} })]).then(async ([door, first]) => {
+      if (first.ok) {
+        wall.show(first.data.pool);
+        await wall.whenStill();
+        if (!prefersLessMotion()) await wait(WALL_FADE_MS);
+      }
+      return door;
+    });
+    const door = await locked.open(ready, (res) => res.ok && showCount(marquee, res.data.now_showing));
     stage.classList.remove("at-locked");
-    return boot({ marquee });
+    return frontDoor(door, { marquee });
   };
   return new LockedDoor({ stage, marquee, greeting, onAdmitted }).show();
 }

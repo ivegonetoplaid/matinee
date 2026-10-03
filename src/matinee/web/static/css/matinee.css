@@ -2521,6 +2521,15 @@ a.wordmark:focus-visible {
   transition: transform 0.9s cubic-bezier(0.5, 0, 0.25, 1);
 }
 
+/* The opening: the line goes, and the door swings inward on its left hinge onto the warm glow. */
+.locked.hushed .line.locked-line {
+  opacity: 0;
+}
+
+.locked.door-open .locked-door {
+  transform: rotateY(-80deg);
+}
+
 .door-step {
   width: calc(var(--door-w) + 88px);
   height: 16px;

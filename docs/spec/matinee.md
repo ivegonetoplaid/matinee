@@ -1131,8 +1131,19 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
     clears the field and types "That
     ain't it, pal." in gold and "Try again, or take a walk." in cream in the
     greeting's place, and the field takes input again. Under reduced motion
-    the greeting appears whole and the cover moves at once. The marquee stays
-    in place when the door opens, and the front door adopts it.
+    the greeting appears whole and the cover moves at once.
+  - **The opening.** The right word asks for the film count, every profile
+    and the first question's pool at once, and lays the poster wall behind
+    the locked door. Matinee's line fades (0.35 s) and the door swings inward
+    on its left hinge onto a warm glow (0.9 s, to 80 degrees). Once the swing
+    has had 0.75 s and the wall behind is drawn and faded in, the door's whole
+    layer, tile included, is wiped away in ten vertical bands, each narrowing to
+    nothing about its own centre over 0.38 s, the centre two first and the
+    outermost two 0.42 s later, the rest evenly between, repainted on every
+    frame. 0.25 s into the wipe the letter board turns from "Private screening"
+    to the film count. The marquee never moves; the front door adopts it and
+    ends with its tiles standing over the poster wall. Nothing passes through
+    black. Under reduced motion the change is instant.
   - Every viewing runs under a profile. The door offers no way in without one.
   - **The front door** types its line, then shows every profile as a tile,
     sorted by name, with a "+ New" tile last. A tile is the profile's mark (its
