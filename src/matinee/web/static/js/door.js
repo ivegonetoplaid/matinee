@@ -508,7 +508,11 @@ export class Door {
       ? [" · Best effort, from crowd votes · ", h("a", { href: dtdd.data.link, target: "_blank", rel: "noopener noreferrer" }, dtdd.data.credit)]
       : [];
     const trouble = dtdd.ok ? [] : [this.topicsTrouble(box, dtdd.data.message, editing)];
-    clear(box).append(search, ...trouble, list, h("p", { class: "note small" }, tally, credit));
+    // Under the topics, beside their count, a way to read about them on DoesTheDogDie: never beside saving.
+    const readMore = dtdd.ok
+      ? h("a", { class: "action petrol", href: dtdd.data.link, target: "_blank", rel: "noopener noreferrer" }, "Read about these on DoesTheDogDie ↗")
+      : null;
+    clear(box).append(search, ...trouble, list, h("div", { class: "topic-foot" }, h("p", { class: "note small" }, tally, credit), readMore));
     count();
   }
 

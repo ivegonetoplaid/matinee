@@ -2019,6 +2019,15 @@ a.wordmark:focus-visible {
   color: rgba(242, 179, 61, 0.75);
 }
 
+/* Under the topics: their count, and DoesTheDogDie's action beside it. */
+.topic-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+}
+
 .picker-actions {
   display: flex;
   align-items: center;

@@ -1122,7 +1122,10 @@ as written. A phone is a viewport 600 px wide or less.
   columns on a desktop, never narrower than 200 px (one column where two would
   be), and one on a phone; in a row of two both take the taller one's height,
   and a long topic wraps. A chosen topic shows a check mark in a gutter every
-  topic keeps before its words, so choosing one never moves or resizes it. The
+  topic keeps before its words, so choosing one never moves or resizes it.
+  Under the topics, beside the line counting the chosen ones and never beside
+  saving, a petrol "Read about these on DoesTheDogDie ↗" action opens
+  DoesTheDogDie's site in a new tab. The
   list scrolls in its own box under the search field, which filters it, and
   the field keeps its own dark fill. On a phone, while the picker is open,
   the crown fades and the sign shrinks to a lit strip of bulbs round the letter
