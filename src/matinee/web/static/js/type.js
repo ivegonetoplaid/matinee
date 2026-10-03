@@ -10,7 +10,8 @@ const TICK_MS = 24;
 // screen already and are not typed again: a gold line typed earlier stays while the rest types below it.
 export function typeLine(el, ack, ask, { shown = 0 } = {}) {
   const gold = sentenceCase(ack || "");
-  const white = sentenceCase(ask || "");
+  // A cream part that carries on the gold part's sentence, after a comma, keeps its first letter as written.
+  const white = /,\s*$/.test(gold) ? ask || "" : sentenceCase(ask || "");
   const ackEl = h("span", { class: "ack" });
   const askEl = h("span", { class: "ask" });
   const caret = h("span", { class: "caret", "aria-hidden": "true" });

@@ -7,6 +7,7 @@ import { get, post, put } from "./api.js";
 import { credits } from "./credits.js";
 import { clear, h, isPhone, prefersLessMotion, sentenceCase, wait } from "./dom.js";
 import { FLIGHT_MS, copyAt, fly, nameAt, riseOf, wordmarkAt } from "./flight.js";
+import { doorLines, findTaken, opensAtOnce, twoParts } from "./door-rules.js";
 import { avatarChoices, mark } from "./mark.js";
 import { typeLine } from "./type.js";
 
@@ -115,20 +116,6 @@ function newTile(onclick) {
   );
 }
 
-// What the front door says over the tiles: a device holding a profile is welcomed back without a name.
-function doorLines(profiles) {
-  if (!profiles.length) {
-    return ["Welcome.", "Nobody has a seat yet. Introduce yourself. One profile the whole house shares works fine too."];
-  }
-  if (profiles.some((p) => p.held)) return ["Welcome back.", "Who's watching?"];
-  return ["Welcome.", "Pick your seat, or introduce yourself and I'll find you something to watch."];
-}
-
-// A name as the store compares it: case and runs of spaces ignored.
-function nameKey(name) {
-  return name.normalize("NFKC").trim().replace(/\s+/g, " ").toLocaleLowerCase();
-}
-
 function field(props) {
   return h("input", { class: "field", autocomplete: "off", spellcheck: "false", ...props });
 }
@@ -162,7 +149,7 @@ export class Door {
     );
     if (screen === "new") return this.first();
     const tile = this.held.find((p) => p.id === profileId);
-    const profile = screen === "list" && tile ? await this.seatOf(tile) : null;
+    const profile = screen === "list" && tile ? (await this.seatOf(tile)).seat : null;
     if (profile) return this.picker({ editing: profile });
     return this.greet(said);
   }
@@ -181,8 +168,27 @@ export class Door {
 
   // A tile opens its profile at once when this device holds it or it has no PIN; otherwise it asks the PIN.
   choose(profile) {
-    if (profile.held || !profile.has_pin) return this.enterAs(profile);
+    if (opensAtOnce(profile)) return this.enterAs(profile);
     return this.pin(profile);
+  }
+
+  // The first action on a door screen wins: its buttons and fields are disabled at once.
+  lock() {
+    for (const b of this.wall.querySelectorAll("button, input")) b.disabled = true;
+  }
+
+  // The door's list of profiles as the server holds it now; kept as it was when the server cannot be read.
+  async refresh() {
+    const res = await get("/api/door");
+    if (!res.ok) return;
+    this.profiles = res.data.profiles;
+    this.held = this.profiles.filter((p) => p.held);
+  }
+
+  // A profile that could not be opened: the door says why, over its tiles as they stand now.
+  async refused(message) {
+    await this.refresh();
+    return this.greet(twoParts(message));
   }
 
   // One question on the wall: the line types out, then its controls appear. `tiles` lets the profile tiles
@@ -210,12 +216,15 @@ export class Door {
     const go = () => {
       const typed = name.value.trim().replace(/\s+/g, " ");
       if (!typed) return name.focus();
-      const taken = this.profiles.find((p) => nameKey(p.name) === nameKey(typed));
+      const taken = findTaken(this.profiles, typed);
       if (taken) return this.taken(taken);
       return this.askAvatar({ name: typed });
     };
+    // Enter is spent here, so it never also presses the next screen's first button; an IME's Enter is its own.
     name.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") go();
+      if (e.key !== "Enter" || e.isComposing) return;
+      e.preventDefault();
+      go();
     });
     const form = h("div", { class: "door-form" }, name, status, h("button", { class: "pill solid", type: "button", onclick: go }, "Continue"));
     return this.talk(ack, ask, [form, linkButton("Never mind", () => this.greet())]);
@@ -236,8 +245,9 @@ export class Door {
     ]);
   }
 
-  // "Set a PIN" opens the PIN's field in place; four digits make the profile.
-  askPin(draft) {
+  // "Set a PIN" opens the PIN's field in place, "No PIN" staying beside it; four digits make the profile.
+  // `said` is why an earlier attempt to make it failed.
+  askPin(draft, said = "") {
     const entry = field({
       type: "password",
       inputmode: "numeric",
@@ -248,14 +258,12 @@ export class Door {
       class: "field pin",
     });
     const form = h("div", { class: "door-form narrow", hidden: true }, entry);
-    const choices = [
-      strip("Set a PIN", () => {
-        for (const b of choices) b.hidden = true;
-        form.hidden = false;
-        entry.focus();
-      }),
-      strip("No PIN", () => this.create({ ...draft, pin: null })),
-    ];
+    const set = strip("Set a PIN", () => {
+      set.hidden = true;
+      form.hidden = false;
+      entry.focus();
+    });
+    const status = h("p", { class: "note", role: "status" }, said);
     entry.addEventListener("input", () => {
       entry.value = entry.value.replace(/\D/g, "").slice(0, PIN_LENGTH);
       if (entry.value.length === PIN_LENGTH) {
@@ -263,14 +271,23 @@ export class Door {
         this.create({ ...draft, pin: entry.value });
       }
     });
-    return this.talk("Want a PIN?", "Four digits keeps your list private.", [choices, form]);
+    const none = strip("No PIN", () => this.create({ ...draft, pin: null }));
+    return this.talk("Want a PIN?", "Four digits keeps your list private.", [set, none, form, status]);
   }
 
+  // Makes the profile. A name taken meanwhile asks "Is that you?" of the profile now holding it; a full
+  // theatre goes back to the tiles with why; any other failure keeps the draft and says why.
   async create(draft) {
-    for (const b of this.stage.querySelectorAll(".door-controls button")) b.disabled = true;
+    this.lock();
     const res = await post("/api/profiles", draft);
-    if (!res.ok) return this.askName("Pull up a chair.", "What should I call you?", res.data.message);
-    return this.askList(res.data);
+    if (res.ok) return this.askList(res.data);
+    const { code, message } = res.data;
+    if (code === "full") return this.refused(message);
+    if (code === "bad_name") return this.askName("Pull up a chair.", "What should I call you?", message);
+    if (code !== "name_taken") return this.askPin(draft, message);
+    await this.refresh();
+    const holder = findTaken(this.profiles, draft.name);
+    return holder ? this.taken(holder) : this.askName("Pull up a chair.", "What should I call you?", message);
   }
 
   askList(seat) {
@@ -302,6 +319,7 @@ export class Door {
       entry.disabled = true;
       const res = await post(`/api/profiles/${suggestion.id}/open`, { pin: entry.value });
       if (res.ok) return this.enterAs(res.data);
+      if (res.data.code === "no_profile") return this.refused(res.data.message);
       status.textContent = res.data.message;
       entry.value = "";
       entry.disabled = false;
@@ -313,16 +331,18 @@ export class Door {
     ]);
   }
 
-  // A profile as the door's list names it carries no exclusions: a held one opens without its PIN to fetch them.
+  // A profile as the door's list names it carries no exclusions: a held or PIN-less one opens without a PIN
+  // to fetch them. `seat` is null when it could not be opened, and `message` says why.
   async seatOf(tile) {
-    if (tile.topics) return tile;
+    if (tile.topics) return { seat: tile, message: "" };
     const res = await post(`/api/profiles/${tile.id}/open`, { pin: null });
-    return res.ok ? res.data : null;
+    return res.ok ? { seat: res.data, message: "" } : { seat: null, message: res.data.message };
   }
 
   async enterAs(profile) {
-    const seat = await this.seatOf(profile);
-    if (!seat) return this.greet();
+    this.lock();
+    const { seat, message } = await this.seatOf(profile);
+    if (!seat) return this.refused(message);
     return this.enter({ viewer: { profile_id: seat.id }, name: seat.name, profileTopics: seat.topics.length > 0 });
   }
 
@@ -475,7 +495,6 @@ export class Door {
       h(
         "div",
         { class: "picker-actions" },
-        this.neverMind(editing, strip),
         linkButton("Try again", () => this.fillTopics(box, editing)),
       ),
     );

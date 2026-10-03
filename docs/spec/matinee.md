@@ -1102,9 +1102,12 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
     sorted by name, with a "+ New" tile last. A tile is the profile's mark (its
     avatar, or its initials in gold: the first letter of each word of its name,
     at most three) in a rounded square, 128 px on a desktop and 96 px on a phone,
-    with the name in large display type beneath. No tile is marked as held or
-    last used. The tiles reflow to the screen's width, and the wall scrolls when
-    they do not fit. The "+ New" tile's square is dashed and holds a "+".
+    with the name in large display type beneath, wrapping to at most two lines
+    and breaking inside a long word. No tile is marked as held or last used.
+    The tiles reflow to the screen's width, and the wall scrolls when they do
+    not fit; the credit line is the door's last row, below the wall, so tiles
+    never pass under it. A desktop window under 760 px tall shows 100 px marks
+    and a 40 px line. The "+ New" tile's square is dashed and holds a "+".
   - A device holding a profile token sees "Welcome back." in gold and "Who's
     watching?" in cream. A device holding none sees "Welcome." and "Pick your
     seat, or introduce yourself and I'll find you something to watch." When no
@@ -1114,7 +1117,9 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
   - A tile opens its profile at once, and goes straight to the first question,
     when this device holds it or it has no PIN. Otherwise the door asks "Hi,
     <name>. What's your PIN?", with "That's not me" back to the tiles. Going in
-    keeps the name's flight to the wordmark.
+    keeps the name's flight to the wordmark. A tile whose profile can no longer
+    be opened (deleted on another device, or the server out of reach) returns to
+    the tiles, refreshed from the server, with the reason as the door's line.
   - **Making a profile.** "+ New" runs these steps on the wall, each typed as
     gold then cream: "Pull up a chair. What should I call you?", a name field
     and "Continue" (with "Never mind" back to the tiles). A name that is already
@@ -1125,9 +1130,13 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
     Would you like to set an avatar?" with the fifteen avatars at 88 px (five
     across on a phone) and "Just my initials". Then "Want a PIN? Four digits
     keeps your list private." with "Set a PIN", which opens a four-digit field
-    in place, and "No PIN". The profile is made once the name, the avatar or
-    initials and the PIN choice are known, whether or not anything is chosen to
-    steer around; a refusal returns to the name step with its reason. Then
+    in place beside "No PIN", and "No PIN". The profile is made once the name,
+    the avatar or initials and the PIN choice are known, whether or not
+    anything is chosen to steer around. A name taken on another device
+    meanwhile asks "Is that you?" of that profile; a full theatre returns to the
+    tiles with why; an unacceptable name returns to the name step; any other
+    failure stays on the PIN step with why, keeping the name and avatar. Enter
+    in the name field never also presses the next screen's first button. Then
     "Anything you never want to see?" with "Nope, show me everything." and "Yes,
     there are a few things.", which opens the trigger picker for the new profile
     ("No problem. What should I steer around?", "Save and continue", "Never
