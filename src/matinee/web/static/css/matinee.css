@@ -176,6 +176,7 @@ a.wordmark:focus-visible {
 .count {
   font-size: 15px;
   color: var(--dim);
+  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.9);
 }
 
 /* Matinee's speech and the viewer's answers keep apart. The speech hangs from the
@@ -396,12 +397,36 @@ a.wordmark:focus-visible {
   display: none;
 }
 
-/* "Just pick one!" stands last, beneath the answers: under the strips on the left, under the pails in the middle. */
-.talk > .just-pick {
+/* "Just pick one!" stands last, beneath the answers, with the count of films left beside it: under the
+   strips on the left, under the pails in the middle. */
+.talk > .just-pick-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
   align-self: flex-start;
 }
 
-.talk:has(.answers.pails) > .just-pick {
+/* Beside the button even on a narrow phone: the count wraps its own words rather than drop below. */
+.just-pick-row .count {
+  min-width: 0;
+  line-height: 1.25;
+}
+
+@media (max-width: 600px) {
+  .talk > .just-pick-row {
+    gap: 12px;
+  }
+
+  .just-pick-row .count {
+    font-size: 14px;
+  }
+}
+
+.talk > .just-pick-row[hidden] {
+  display: none;
+}
+
+.talk:has(.answers.pails) > .just-pick-row {
   align-self: center;
 }
 

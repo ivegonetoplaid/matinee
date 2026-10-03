@@ -33,9 +33,9 @@ const visit = {
 
 const CHECKING = "One moment. Let me check this one against your list.";
 
-function countText(n, first) {
-  const films = `${n.toLocaleString("en")} ${n === 1 ? "film" : "films"}`;
-  return first ? `${films} in the running` : `${films} still in the running`;
+// The films still in the running, beside "Just pick one!", with thousands separators.
+function countText(n) {
+  return `${n.toLocaleString("en")} ${n === 1 ? "film" : "films"} to choose from`;
 }
 
 // The pick's lines, fetched once per page; null until they arrive, or when they could not be read.
@@ -132,7 +132,8 @@ function lastCrumb(onPick) {
   return onPick && visit.rushed ? null : visit.says.length + 1;
 }
 
-// A question screen. "Just pick one!" stands last, beneath the answers and any footnote, and shows with them.
+// A question screen. "Just pick one!" stands last, beneath the answers and any footnote, with the count of
+// films still in the running beside it, and shows with them.
 function frame({ count, footnote }) {
   const line = h("h1", { class: "line", "aria-live": "polite" });
   const answers = h("div", { class: "answers", role: "group", "aria-label": "Your answers", hidden: true });
@@ -142,7 +143,6 @@ function frame({ count, footnote }) {
     {
       class: "pill gold just-pick",
       type: "button",
-      hidden: true,
       onclick: () => {
         lockStage();
         visit.rushed = true;
@@ -151,12 +151,13 @@ function frame({ count, footnote }) {
     },
     "Just pick one!",
   );
+  const row = h("div", { class: "just-pick-row", hidden: true }, pick, h("span", { class: "count" }, count));
   clear(stage).append(
-    topbar(nameTag(), h("div", { class: "count" }, count)),
-    h("section", { class: "talk" }, line, answers, note, pick),
+    topbar(nameTag()),
+    h("section", { class: "talk" }, line, answers, note, row),
     h("div", { class: "bottombar" }, trail(lastCrumb(false)), h("span"), credits()),
   );
-  return { line, answers, note, pick };
+  return { line, answers, note, pick: row };
 }
 
 // A picture question (the gore pails) shows each answer as its image, with the answer's words beneath it.
@@ -245,7 +246,7 @@ async function start({ request = null, keep = false } = {}) {
   const name = res.data.name;
   const ack = name ? greeting.replace(/\.$/, `, ${name}.`) : greeting;
   const options = res.data.options.map((o) => ({ say: o.say, go: () => chooseTree(o) }));
-  await ask({ ack, question, options, count: countText(visit.pool.length, true), many: true });
+  await ask({ ack, question, options, count: countText(visit.pool.length), many: true });
 }
 
 function chooseTree(option) {
@@ -281,7 +282,7 @@ async function step() {
       step();
     },
   }));
-  const count = countText(visit.pool.length, false);
+  const count = countText(visit.pool.length);
   await ask({ ack: res.data.line, question: q.ask, options, count, picture, footnote: q.footnote });
 }
 

@@ -1207,7 +1207,12 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
   desktop and on a phone the answers are letter-board strips, smaller on a phone.
   A question's footnote appears with the answers, in small dim type beneath
   them and above "Just pick one!". The first action on a screen
-  disables every button on it.
+  disables every button on it. The count of films still in the running stands
+  beside "Just pick one!" on every question screen, reading "<N> films to
+  choose from" or "1 film to choose from", the exact number with thousands
+  separators; on a narrow phone it wraps its own words rather than drop below
+  the button. The top bar shows no count, the pick screen shows none, and the
+  marquee's letter board keeps the library's total.
 - **The viewer.** Inside the theatre the top bar holds the wordmark at the left
   and the viewer at the right: the profile's mark in a 40 px rounded square and
   its name in the wordmark's face, smaller, in cream, on a dark backing so it
