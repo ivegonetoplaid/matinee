@@ -34,10 +34,12 @@
   --display: "Big Shoulders Display", "Arial Narrow", sans-serif;
   --body: "DM Sans", system-ui, sans-serif;
   --pad: 48px;
+  --band-fade: 96px;
 }
 
 @media (max-width: 600px) {
   :root {
+    --band-fade: 48px;
     --pad: 20px;
   }
 }
@@ -146,11 +148,23 @@ button {
   overflow-y: auto;
 }
 
+/* The bands: the page base at 92 per cent behind the top bar and behind the foot's bar, feathering to nothing
+   into the wall over --band-fade (96 px, 48 px on a phone). The top band lies behind everything on the screen. */
 .topbar {
+  position: relative;
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 16px;
+}
+
+.topbar::before {
+  content: "";
+  position: absolute;
+  inset: calc(-1 * var(--pad)) calc(-1 * var(--pad)) calc(-1 * var(--band-fade));
+  z-index: -1;
+  background: linear-gradient(var(--shade) calc(100% - var(--band-fade)), transparent);
+  pointer-events: none;
 }
 
 .wordmark {
@@ -978,11 +992,17 @@ a.wordmark:focus-visible {
     display: none;
   }
 
+  /* Nothing scrolls under the phone pick's foot, so its band lies behind Matinee's words, rising from the bar. */
   .stage:has(> .showing) > .bottombar {
-    position: static;
+    position: relative;
+    z-index: auto;
+    bottom: auto;
     padding-top: 0;
     row-gap: 2px;
-    background: none;
+  }
+
+  .stage:has(> .showing) > .bottombar::before {
+    top: calc(-1 * var(--band-fade));
   }
 
   /* One line of crumbs, each shortened, so the foot keeps its height on every pick. */
@@ -995,14 +1015,14 @@ a.wordmark:focus-visible {
   }
 }
 
-/* Pinned to the foot of the screen; what scrolls beneath it fades under a dark band instead of showing through. */
+/* Pinned to the foot of the screen, its band's fade part of it, so nothing rests under the fade and what
+   scrolls beneath it fades under the band instead of showing through. */
 .bottombar {
   position: sticky;
   z-index: 2;
   bottom: calc(-1 * var(--pad));
   margin: 0 calc(-1 * var(--pad)) calc(-1 * var(--pad));
-  padding: 28px var(--pad) var(--pad);
-  background: linear-gradient(to top, rgba(7, 8, 13, 0.95) calc(100% - 28px), rgba(7, 8, 13, 0));
+  padding: var(--band-fade) var(--pad) var(--pad);
   display: flex;
   justify-content: space-between;
   align-items: flex-end;
@@ -1095,7 +1115,7 @@ a.wordmark:focus-visible {
   .marquee,
   .sign-name,
   .door-wall,
-  .door-foot {
+  .door-foot > * {
     transition-property: none !important;
   }
 }
@@ -1153,13 +1173,24 @@ a.wordmark:focus-visible {
   visibility: hidden;
 }
 
+/* The bar's band, behind its words; its own pseudo-element, so About can keep it showing beneath its panel. */
+.bottombar::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(to top, var(--shade) calc(100% - var(--band-fade)), transparent);
+  pointer-events: none;
+}
+
+/* Going in, the door's words and its credit line fade; the foot's band stays. */
 .door-wall,
-.door-foot {
+.door-foot > * {
   transition: opacity 0.3s ease;
 }
 
 .stage.leaving .door-wall,
-.stage.leaving .door-foot {
+.stage.leaving .door-foot > * {
   opacity: 0;
   pointer-events: none;
 }
@@ -1508,6 +1539,24 @@ a.wordmark:focus-visible {
   visibility: hidden;
 }
 
+/* The bands stay beneath About's panel. Opened from the door, whose top band (the marquee's fade) leaves with
+   the marquee, About gets the theatre's top band: its top bar's height (a 48 px bar) and fade. */
+.stage.behind-about :is(.topbar, .bottombar, .door-foot)::before {
+  visibility: visible;
+}
+
+.stage.at-door.behind-about::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: calc(var(--pad) + 48px + var(--band-fade));
+  background: linear-gradient(var(--shade) calc(100% - var(--band-fade)), transparent);
+  visibility: visible;
+  pointer-events: none;
+}
+
 /* Over the wall and the hidden screen; it scrolls when the panel is taller than the screen. */
 .about {
   position: fixed;
@@ -1651,6 +1700,7 @@ a.wordmark:focus-visible {
    list of names on a short window. */
 .door-wall {
   --top: 44px;
+  --foot: 24px;
   position: relative;
   flex: 1 1 auto;
   min-height: 0;
@@ -1658,8 +1708,10 @@ a.wordmark:focus-visible {
   flex-direction: column;
   /* 40 px of room above the first line, under the marquee, so the line's scrim is never cut. */
   margin-top: -40px;
-  padding: calc(var(--top) + 40px) var(--pad) 24px;
+  padding: calc(var(--top) + 40px) var(--pad) var(--foot);
   overflow-y: auto;
+  /* What scrolls past the foot padding fades under the foot band rather than ending square. */
+  mask-image: linear-gradient(#000 calc(100% - var(--foot)), transparent);
   scrollbar-color: rgba(242, 179, 61, 0.45) transparent;
 }
 
@@ -1674,9 +1726,20 @@ a.wordmark:focus-visible {
 
 /* The credit line on the door: the last row of the door's column, below the wall, so a long list of
    tiles scrolls above it and never under it. The bottom right on a desktop. */
+/* The door's foot band lies behind the wall's last row, so the door's controls never move for it. */
 .door-foot {
+  position: relative;
   flex: 0 0 auto;
   padding: 10px var(--pad) 24px;
+}
+
+.door-foot::before {
+  content: "";
+  position: absolute;
+  inset: calc(-1 * var(--band-fade)) 0 0;
+  z-index: -1;
+  background: linear-gradient(transparent, var(--shade) var(--band-fade));
+  pointer-events: none;
 }
 
 .door-foot .credits {
@@ -2109,7 +2172,7 @@ a.wordmark:focus-visible {
   /* On a phone the line hangs under the marquee and the answers sit at the foot, under the thumb. */
   .door-wall {
     --top: 26px;
-    padding-bottom: 12px;
+    --foot: 12px;
   }
 
   .door-talk {
@@ -2437,7 +2500,7 @@ a.wordmark:focus-visible {
   }
 
   .door-wall {
-    padding-bottom: 12px;
+    --foot: 12px;
   }
 
   .picker {
@@ -2482,7 +2545,7 @@ a.wordmark:focus-visible {
 @media (max-height: 820px) and (min-width: 601px) {
   .door-wall {
     --top: 28px;
-    padding-bottom: 16px;
+    --foot: 16px;
   }
 
   .picker .door-line {

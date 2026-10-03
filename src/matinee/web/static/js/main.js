@@ -208,6 +208,7 @@ function problem(data, again, keep = false) {
       line,
       h("button", { class: "action cream", type: "button", onclick: again }, "Try again"),
     ),
+    h("footer", { class: "bottombar" }, h("span"), credits()),
   );
 }
 

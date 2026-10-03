@@ -1272,6 +1272,20 @@ as written. A phone is a viewport 600 px wide or less.
   the phone pick's foot fades its top and its foot over 20 px, so a scrim at
   either end fades with its text. The locked door's greeting keeps its own scrim
   on subway tile.
+- **Bands.** Every screen over the poster wall has a dark band at the top and
+  at the foot: the page base at 92 per cent behind its bar (the top bar with
+  the wordmark and the viewer; the foot with the trail and the credit line),
+  feathering to nothing into the wall over 96 px on a desktop and 48 px on a
+  phone. The top band lies behind everything on the screen and scrolls away
+  with the top bar. The pinned foot bar is as tall as its fade, so nothing
+  rests under the fade and what scrolls beneath fades under the band. On the
+  door's screens the marquee's fade is the top band, and the foot band lies
+  behind the wall's last row, and what scrolls in the door's wall fades out
+  over its foot padding; going in, the credit line fades and the band stays.
+  A problem screen carries the credit line at its foot. The locked door has
+  no bands. About's panel stands over the bands, which stay showing beneath
+  it; opened from the door, whose marquee leaves with its fade, About has the
+  theatre's top band.
 - **The poster wall.** A flat grid of the posters of the films still in the
   pool, each its own image element, sharp and upright, held at 35 per cent
   strength. The wall holds that one
@@ -1418,7 +1432,8 @@ as written. A phone is a viewport 600 px wide or less.
   32 px more for its fades) and holds,
   from its top, the line, `Not that one` and "More on Seerr ↗", the note
   action, then the trail on one line, each crumb cut to 16 characters, and the
-  credits. The foot has no backing of its own; the wall shows through it.
+  credits. The foot band stands behind the trail and the credits and rises
+  48 px behind Matinee's words.
   `Start over` is not shown there: the trail's `Start` beneath does the same.
   Anything taller than the foot, such as the open note panel, scrolls
   inside it. The foot's top never moves from the first word of a pick to the
