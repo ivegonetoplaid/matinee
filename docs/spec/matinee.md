@@ -1219,6 +1219,11 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
   characters or fewer shows in full, and a longer one shows as initials (the
   first letter of each word, at most three) beside the avatar, or as the
   avatar's own initials when it has none.
+- **Change avatar** opens a panel beneath the viewer (across the screen's width
+  on a phone): "Which one's yours?" typed in gold, the fifteen avatars at 72 px
+  with the current one marked, and "Just my initials". A tap saves the choice,
+  closes the panel, and the bar shows the new mark at once; a refusal stays on
+  the panel and says why. Escape or a tap elsewhere closes it unsaved.
 - **The pails.** The gore question shows four pail pictures, spotless to
   overflowing, each with its answer's words beneath it as text.
 - **The pick, as a hunt.** From a question screen the question's words fade

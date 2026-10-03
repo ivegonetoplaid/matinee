@@ -1,6 +1,6 @@
 // Matinee's page: the box office, then the questions on the poster wall, then the pick.
 
-import { get, post } from "./api.js";
+import { get, post, put } from "./api.js";
 import { noteLink } from "./note.js";
 import { credits } from "./credits.js";
 import { Door } from "./door.js";
@@ -45,6 +45,9 @@ get("/api/quips").then((res) => {
   if (res.ok) quips = res.data;
   else console.warn("the pick's lines could not be read; picks show no line", res.data);
 });
+
+// The avatars the server offers, as the door's reply names them.
+let avatarsOffered = [];
 
 // The door whose name flew in on going in; its name stands at the wordmark's place until the theatre's own
 // wordmark takes over.
@@ -91,15 +94,17 @@ function topbar(...rest) {
 function nameTag() {
   if (!visit.name) return null;
   const leave = (opts) => leaveTo(() => boot(opts));
-  return viewerTag(
-    { name: visit.name, avatar: visit.avatar },
-    {
-      editList: () => leave({ screen: "list", profileId: visit.viewer.profile_id }),
-      changeAvatar: () => {},
-      switchProfiles: () => leave({}),
-      deleteProfile: () => {},
+  const id = visit.viewer.profile_id;
+  return viewerTag({ name: visit.name, avatar: visit.avatar }, avatarsOffered, {
+    editList: () => leave({ screen: "list", profileId: id }),
+    switchProfiles: () => leave({}),
+    deleteProfile: () => {},
+    saveAvatar: async (avatar) => {
+      const res = await put(`/api/profiles/${id}/avatar`, { avatar });
+      if (res.ok) visit.avatar = res.data.avatar;
+      return res;
     },
-  );
+  });
 }
 
 // The way here, at the foot of the screen: "Start", the door, then each answer so far. A crumb takes the
@@ -198,6 +203,7 @@ function problem(data, again, keep = false) {
 async function boot(opts = {}) {
   const [door, first] = await Promise.all([get("/api/door"), post("/api/first", { viewer: {} })]);
   if (!door.ok) return problem(door.data, () => boot(opts));
+  avatarsOffered = door.data.avatars;
   stage.classList.remove("revealed");
   stage.classList.add("at-door");
   if (first.ok) wall.show(first.data.pool);
