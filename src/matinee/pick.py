@@ -28,7 +28,7 @@ import time
 from collections import deque
 from collections.abc import Callable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
-from typing import Any, Literal
+from typing import Any, Literal, TypeGuard
 
 from matinee.dtdd import Dtdd, DtddCeiling, DtddError, DtddGone
 
@@ -75,6 +75,11 @@ class Unreadable(ValueError):
     """A vote row for one of the viewer's topics is not in the shape the check reads."""
 
 
+def _count(value: object) -> TypeGuard[int]:
+    """A number read from DoesTheDogDie: a plain non-negative integer, never a boolean (which Python counts as 1)."""
+    return type(value) is int and value >= 0
+
+
 def failing(stats: Sequence[Any], topics: frozenset[int]) -> tuple[Hit, ...]:
     """The viewer's topics a film fails: at least MIN_VOTES votes and more yes than no.
 
@@ -87,11 +92,11 @@ def failing(stats: Sequence[Any], topics: frozenset[int]) -> tuple[Hit, ...]:
         if not isinstance(row, dict):
             raise Unreadable("a vote row is not an object")
         topic, yes, no = row.get("topicId"), row.get("yesSum"), row.get("noSum")
-        if not isinstance(topic, int):
+        if not _count(topic):
             raise Unreadable("a vote row has no topic id")
         if topic not in topics:
             continue
-        if not (isinstance(yes, int) and isinstance(no, int)):
+        if not (_count(yes) and _count(no)):
             raise Unreadable(f"the votes for topic {topic} are not counts")
         if yes + no >= MIN_VOTES and yes > no:
             hits.append(Hit(topic, str(row.get("topicName") or topic)))
@@ -103,15 +108,25 @@ def _the_film(found: Any, tmdb: int) -> int | None:
 
     TMDB numbers films and TV shows apart, and DoesTheDogDie's search returns both, so only a Movie
     is ever taken: a TV show sharing the number is another title, and its votes and page are not
-    this film's. Raises DtddError when the search answer is not a list, so an unreadable answer
-    is never taken, or remembered, as "no record".
+    this film's. Raises DtddError when the search answer is not a list, or the one Movie's id is not a
+    positive integer, so an unreadable answer is never taken, or remembered, as "no record" or as an item.
     """
     if not isinstance(found, list):
         raise DtddError("DoesTheDogDie's search answer is not a list")
-    items = [i for i in found if isinstance(i, dict) and i.get("tmdbId") == tmdb and i.get("itemTypeName") == "Movie"]
-    if len(items) != 1 or not isinstance(items[0].get("id"), int):
+    items = [
+        i
+        for i in found
+        if isinstance(i, dict)
+        and type(i.get("tmdbId")) is int
+        and i["tmdbId"] == tmdb
+        and i.get("itemTypeName") == "Movie"
+    ]
+    if len(items) != 1:
         return None
-    return int(items[0]["id"])
+    item = items[0].get("id")
+    if not (_count(item) and item > 0):
+        raise DtddError("DoesTheDogDie's item id for the film is not a positive integer")
+    return int(item)
 
 
 @dataclass

@@ -80,6 +80,36 @@ def test_a_search_matching_twice_takes_the_movie_or_goes_unchecked() -> None:
     assert ids.get(8) == (True, None)
 
 
+@pytest.mark.parametrize("bad", [True, False, 0, -7, 1.0, "1001", None])
+def test_a_malformed_item_id_is_never_used_or_held(bad: Any) -> None:
+    class Odd(ScriptedDtdd):
+        def get(self, path: str, timeout: float, wait: float) -> Any:
+            self.paths.append(path)
+            return [{"id": bad, "tmdbId": 8, "itemTypeName": "Movie"}]
+
+    ids = ItemIds()
+    dtdd = Odd({})
+    assert look_up(dtdd, 8, frozenset({153}), ids).unchecked == "slow"
+    assert dtdd.paths == ["/items?tmdb=8"] and ids.get(8) == (False, None)
+
+
+@pytest.mark.parametrize("row", [stat(True, 0, 9), stat(153, True, False), stat(153, -9, 0), stat(153, 9, -1)])
+def test_a_boolean_or_negative_vote_number_is_unreadable(row: Any) -> None:
+    with pytest.raises(Unreadable):
+        failing([row], frozenset({1, 153}))
+
+
+def test_a_true_tmdb_id_never_matches_film_one() -> None:
+    class Odd(ScriptedDtdd):
+        def get(self, path: str, timeout: float, wait: float) -> Any:
+            self.paths.append(path)
+            return [{"id": 1001, "tmdbId": True, "itemTypeName": "Movie"}]
+
+    ids = ItemIds()
+    assert look_up(Odd({}), 1, frozenset({153}), ids).unchecked == "no_record"
+    assert ids.get(1) == (True, None)
+
+
 def test_an_answer_older_than_thirty_days_is_no_longer_held_in_memory() -> None:
     now = [0.0]
     ids = ItemIds(clock=lambda: now[0])

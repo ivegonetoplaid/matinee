@@ -842,7 +842,9 @@ never kept. No tree, scale or score is built from DoesTheDogDie data.
   `/api/v3/items/{itemId}`. Only a Movie item whose TMDB id is the film's is
   taken: TMDB numbers films and TV shows apart, and a TV show sharing the
   number is another title. Where that does not leave exactly one item, the film
-  counts as having no record.
+  counts as having no record. A Movie whose item id is not a positive whole
+  number, or a vote count that is negative or not a whole number (a JSON true
+  included), is unreadable: the film goes unchecked and nothing is held.
 - **The item id is remembered.** The search's answer (the film's item id, or
   that it has none) is kept in memory for **30 days**, so a later lookup of the
   same film skips the search, and is dropped from memory once 30 days old. A
