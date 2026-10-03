@@ -20,12 +20,17 @@
   --text: #efe9dc;
   --dim: rgba(239, 233, 220, 0.66);
   --gold: #f2b33d;
-  --gold-hover: #ffd27a;
   --velvet: #e0566b;
+  --petrol: #3b7c8c;
   --chip: rgba(14, 16, 26, 0.8);
   --strip: #f4efe2;
   --strip-ink: #121212;
   --strip-edge: #2a2622;
+  --action: #161926;
+  --gold-words: #f6ca77;
+  --rose-words: #e98997;
+  --petrol-words: #5fa3b3;
+  --cream-edge: #a39e93;
   --display: "Big Shoulders Display", "Arial Narrow", sans-serif;
   --body: "DM Sans", system-ui, sans-serif;
   --pad: 48px;
@@ -60,7 +65,7 @@ a {
 }
 
 a:hover {
-  color: var(--gold-hover);
+  color: var(--gold-words);
 }
 
 :focus-visible {
@@ -162,14 +167,14 @@ a.wordmark {
 }
 
 a.wordmark:focus-visible {
-  outline: 2px solid var(--gold-hover);
+  outline: 2px solid var(--gold-words);
   outline-offset: 4px;
   border-radius: 4px;
 }
 
 @media (hover: hover) {
   a.wordmark:hover {
-    color: var(--gold-hover);
+    color: var(--gold-words);
   }
 }
 
@@ -263,7 +268,7 @@ a.wordmark:focus-visible {
 
 @media (hover: hover) {
   button.crumb:hover {
-    color: var(--gold-hover);
+    color: var(--gold-words);
     text-decoration-color: currentColor;
   }
 }
@@ -1008,6 +1013,68 @@ a.wordmark:focus-visible {
   flex-wrap: wrap;
 }
 
+/* An action does something: a charcoal rounded rectangle, its edge and words in one accent, `gold`, `rose`,
+   `petrol` or `cream`. The body is never filled with the accent. */
+.action {
+  --edge: var(--gold);
+  --words: var(--gold-words);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 10px 18px;
+  border: 1.5px solid var(--edge);
+  border-radius: 10px;
+  background: var(--action);
+  color: var(--words);
+  font: 600 18px/1.2 var(--body);
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.action.rose {
+  --edge: var(--velvet);
+  --words: var(--rose-words);
+}
+
+.action.petrol {
+  --edge: var(--petrol);
+  --words: var(--petrol-words);
+}
+
+.action.cream {
+  --edge: var(--cream-edge);
+  --words: var(--text);
+}
+
+/* An action that is a link keeps its accent's words on hover, over the page's link colours. */
+.action:hover {
+  color: var(--words);
+}
+
+@media (hover: hover) {
+  .action:hover:not(:disabled) {
+    border-color: var(--words);
+  }
+}
+
+.action:focus-visible {
+  outline: 2px solid var(--words);
+  outline-offset: 2px;
+}
+
+.action:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+@media (max-width: 600px) {
+  .action {
+    font-size: 16px;
+  }
+}
+
 .pill {
   font-family: var(--body);
   font-size: 18px;
@@ -1454,7 +1521,7 @@ a.wordmark:focus-visible {
 }
 
 .inline-link:hover {
-  color: var(--gold-hover);
+  color: var(--gold-words);
 }
 
 /* ---------- the About page ---------- */
@@ -1766,7 +1833,7 @@ a.wordmark:focus-visible {
   }
 
   .seat:hover .seat-name {
-    color: var(--gold-hover);
+    color: var(--gold-words);
   }
 }
 
@@ -1775,7 +1842,7 @@ a.wordmark:focus-visible {
 }
 
 .seat:focus-visible .mark {
-  outline: 2px solid var(--gold-hover);
+  outline: 2px solid var(--gold-words);
   outline-offset: 3px;
 }
 
@@ -1865,7 +1932,7 @@ a.wordmark:focus-visible {
 }
 
 .avatar-choice:focus-visible .mark {
-  outline: 2px solid var(--gold-hover);
+  outline: 2px solid var(--gold-words);
   outline-offset: 3px;
 }
 
@@ -2245,7 +2312,7 @@ a.wordmark:focus-visible {
 }
 
 .viewer-button:focus-visible {
-  outline: 2px solid var(--gold-hover);
+  outline: 2px solid var(--gold-words);
   outline-offset: 2px;
 }
 
@@ -2635,7 +2702,7 @@ a.wordmark:focus-visible {
 }
 
 .peek:focus-visible {
-  outline: 2px solid var(--gold-hover);
+  outline: 2px solid var(--gold-words);
   outline-offset: -2px;
 }
 
