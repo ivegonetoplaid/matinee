@@ -10,6 +10,7 @@ import { Deck, dealBeneath, dealPair, setFor } from "./quips.js";
 import { lightFuse } from "./fuse.js";
 import { typeLine } from "./type.js";
 import { Wall } from "./wall.js";
+import { viewerTag } from "./viewer.js";
 
 const stage = document.getElementById("stage");
 const wall = new Wall(document.getElementById("wall"));
@@ -18,6 +19,7 @@ const wall = new Wall(document.getElementById("wall"));
 const visit = {
   viewer: {},
   name: null,
+  avatar: null,
   profileTopics: false,
   tree: null,
   answers: [],
@@ -85,24 +87,18 @@ function topbar(...rest) {
   return bar;
 }
 
-// The profile's name at the top of the wall, with "Edit my list" and "Not <name>?", which makes a new one.
+// The viewer at the right of the top bar: their mark and name, which open the profile menu.
 function nameTag() {
   if (!visit.name) return null;
   const leave = (opts) => leaveTo(() => boot(opts));
-  return h(
-    "div",
-    { class: "nametag" },
-    h("span", { class: "nametag-name" }, visit.name),
-    h("button", { class: "link-button", type: "button", onclick: () => leave({ screen: "list", profileId: visit.viewer.profile_id }) }, "Edit my list"),
-    h(
-      "button",
-      {
-        class: "link-button",
-        type: "button",
-        onclick: () => leave({ screen: "new" }),
-      },
-      `Not ${visit.name}?`,
-    ),
+  return viewerTag(
+    { name: visit.name, avatar: visit.avatar },
+    {
+      editList: () => leave({ screen: "list", profileId: visit.viewer.profile_id }),
+      changeAvatar: () => {},
+      switchProfiles: () => leave({}),
+      deleteProfile: () => {},
+    },
   );
 }
 
@@ -210,8 +206,8 @@ async function boot(opts = {}) {
 
 // Going in: the start is asked for at once, while the door's name flies to the wordmark's place, and the
 // first question types once it has landed.
-async function enter({ viewer, name, profileTopics, door }) {
-  Object.assign(visit, { viewer, name, profileTopics });
+async function enter({ viewer, name, avatar, profileTopics, door }) {
+  Object.assign(visit, { viewer, name, avatar, profileTopics });
   const request = post("/api/first", { viewer });
   landing = door;
   await door.leave([nameTag()].filter(Boolean));

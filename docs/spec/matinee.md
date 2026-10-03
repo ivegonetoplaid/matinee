@@ -1207,8 +1207,18 @@ OFL licences. All displayed text is in sentence case. A phone is a viewport
   desktop and on a phone the answers are letter-board strips, smaller on a phone.
   A question's footnote appears with the answers, in small dim type beneath
   them and above "Just pick one!". The first action on a screen
-  disables every button on it. The profile's name tag, with "Edit my list" and
-  "Not <name>?", sits at the top of the wall and the pick screen.
+  disables every button on it.
+- **The viewer.** Inside the theatre the top bar holds the wordmark at the left
+  and the viewer at the right: the profile's mark in a 40 px rounded square and
+  its name in the wordmark's face, smaller, in cream, on a dark backing so it
+  reads over any poster. Activating either, by click, tap or keyboard, opens a
+  menu of "Edit my list", "Change avatar", "Switch profiles" (back to the front
+  door's tiles, the marquee already in place and lit) and "Delete profile" in
+  red, in that order. Escape, a tap elsewhere, or choosing an item closes it;
+  the arrow keys walk its items. On a phone the bar is one row: a name of 10
+  characters or fewer shows in full, and a longer one shows as initials (the
+  first letter of each word, at most three) beside the avatar, or as the
+  avatar's own initials when it has none.
 - **The pails.** The gore question shows four pail pictures, spotless to
   overflowing, each with its answer's words beneath it as text.
 - **The pick, as a hunt.** From a question screen the question's words fade

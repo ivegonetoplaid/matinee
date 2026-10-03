@@ -343,15 +343,16 @@ export class Door {
     this.lock();
     const { seat, message } = await this.seatOf(profile);
     if (!seat) return this.refused(message);
-    return this.enter({ viewer: { profile_id: seat.id }, name: seat.name, profileTopics: seat.topics.length > 0 });
+    const profileTopics = seat.topics.length > 0;
+    return this.enter({ viewer: { profile_id: seat.id }, name: seat.name, avatar: seat.avatar, profileTopics });
   }
 
   // A door is entered once: a second tap or Enter before its buttons are disabled changes nothing.
-  enter({ viewer = {}, name = null, profileTopics = false }) {
+  enter({ viewer = {}, name = null, avatar = null, profileTopics = false }) {
     if (this.entered) return;
     this.entered = true;
     for (const b of this.stage.querySelectorAll("button, input")) b.disabled = true;
-    this.onEnter({ viewer, name, profileTopics, door: this });
+    this.onEnter({ viewer, name, avatar, profileTopics, door: this });
   }
 
   // The marquee leaves: the door's words fade, the rest of the marquee lifts and fades, and the name flies
