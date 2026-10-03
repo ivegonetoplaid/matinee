@@ -692,6 +692,13 @@ picks nothing until it opens or makes a profile.
   it may set or clear it at any time. Every reply describing a profile to the
   page says which avatar it carries. An avatar Matinee does not offer is
   refused when set (`bad_avatar`) and reads as none when found in the store.
+- **Avatar images.** Each avatar ships as two finished WebP files under
+  `static/avatars/`: `<avatar>-256.webp` for the front door's tile and
+  `<avatar>-80.webp` for the top bar, each twice its displayed size, square, with
+  the art cropped to its visible edges, its longest side 84 per cent of the
+  square, centred on transparency. No tile-size image is larger than the largest
+  pail, and the thirty together stay under 1 MB. The source art is never in the
+  repository, and the page never loads it.
 - **Deleting a profile.** A device holding a profile may delete it, with no
   PIN asked, as it opens it with none. The profile, its exclusions and every
   device token issued for it go, on every device; its notes stay (section 10).
@@ -926,7 +933,7 @@ would hand one device's profiles to another.
 | Method | Path | Does |
 |---|---|---|
 | GET | `/` | the page (`Cache-Control: no-cache`) |
-| GET | `/static/…` | scripts, styles, self-hosted fonts, icons, pails, manifest (`Cache-Control: no-cache`, so a deploy is never seen half-applied) |
+| GET | `/static/…` | scripts, styles, self-hosted fonts, icons, pails, avatars, manifest (`Cache-Control: no-cache`, so a deploy is never seen half-applied) |
 | GET | `/img/{kind}/{tmdb}/{size}` | a poster or backdrop, read from the media server |
 | GET | `/api/film/{tmdb}` | title, year, runtime, synopsis and the Seerr link for one film |
 | GET | `/api/door` | the film count and the profiles this device holds |
