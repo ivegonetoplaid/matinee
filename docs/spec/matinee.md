@@ -679,15 +679,16 @@ picks nothing until it opens or makes a profile.
 | Device token | 32 random bytes, URL-safe; stored only as a SHA-256 digest, so a copy of the store cannot be replayed as a cookie |
 | Token cookie | `matinee_tokens`: `HttpOnly`, `Secure`, `SameSite=Lax`, path `/`, 400 days; holds at most **8** tokens and never a name or PIN |
 | Token pruning | tokens older than 400 days are deleted whenever a new token is issued |
-| Name suggestions | none until **3** characters are typed; at most **3**; a match is one name, ignoring case, starting with the other, or the two within **2** single-character edits; prefix matches first, then fewer edits, then the name |
 
 - **A device holding a valid token for a profile is never asked its PIN** and
   keeps its token when it opens the profile again.
 - A profile with a PIN opens on another device only after its PIN.
-- "Who's watching?" lists only profiles this device holds a token for. Any other
-  profile appears only as a name suggestion.
-- A name suggestion carries the profile's id, name and whether it has a PIN.
-  It never carries the profile's exclusions.
+- **The front door lists every profile** to an admitted device (section 7.2),
+  sorted by name ignoring case: its id, name, avatar, whether it has a PIN, and
+  whether this device holds it. It never carries a profile's topics or
+  exclusions, which can say what frightens a person; only a device holding the
+  profile, or one that has given its PIN, receives them. There is no typed name
+  lookup. A device that is not admitted gets no profiles.
 - A token for a deleted profile is ignored. The door's reply clears it from the
   cookie.
 - **Avatars.** A profile is made with an avatar or none, and a device holding
@@ -970,7 +971,7 @@ changes nothing any viewer is shown.
 The routes serve Matinee's own page. They are not a public API. The interactive
 documentation, ReDoc and the OpenAPI schema are all disabled.
 
-Every `/api/` reply carries `Cache-Control: no-store`. The door's reply lists the
+Every `/api/` reply carries `Cache-Control: no-store`. The door's reply marks the
 profiles the asking device holds, so a copy kept by a browser or an edge cache
 would hand one device's profiles to another.
 
@@ -982,8 +983,7 @@ would hand one device's profiles to another.
 | GET | `/static/…` | scripts, styles, self-hosted fonts, icons, pails, avatars, manifest (`Cache-Control: no-cache`, so a deploy is never seen half-applied) |
 | GET | `/img/{kind}/{tmdb}/{size}` | a poster or backdrop, read from the media server |
 | GET | `/api/film/{tmdb}` | title, year, runtime, synopsis and the Seerr link for one film |
-| GET | `/api/door` | the film count and the profiles this device holds |
-| POST | `/api/names` | name suggestions |
+| GET | `/api/door` | the film count, every profile (marking those this device holds) and the avatars offered |
 | POST | `/api/profiles` | create a profile and issue this device a token |
 | POST | `/api/profiles/{id}/open` | open a profile by PIN, or at once when held or PIN-less |
 | PUT | `/api/profiles/{id}/exclusions` | replace a held profile's exclusions |
@@ -1010,7 +1010,7 @@ would hand one device's profiles to another.
   with `Cache-Control: public, max-age=2592000` (30 days), so a return visit
   draws the wall from the browser's cache.
 - **An answer** as a question id and an option index, never as a filter.
-- **Request sizes** are capped: a typed name 80 characters; a profile name 80
+- **Request sizes** are capped: a profile name 80
   and a PIN 8; topics 400; exclusions 20; answers 12; tree names 40; option
   indexes 0 to 50; films already seen 200; trees a note says a film belongs in 32. A pick
   with no tree may carry no answers.
@@ -1662,8 +1662,7 @@ symbol when one does not match.
 | `src/matinee/store.py::MAX_PROFILES` and the other limits | `src/matinee/store.py:32` | 2026-09-26 |
 | `src/matinee/store.py::Store.create` | `src/matinee/store.py:207` | 2026-09-26 |
 | `src/matinee/store.py::Store.holding` | `src/matinee/store.py:238` | 2026-09-26 |
-| `src/matinee/store.py::Store.suggest` | `src/matinee/store.py:251` | 2026-09-26 |
-| `src/matinee/store.py::names_match` / `edits` | `src/matinee/store.py:157` | 2026-09-26 |
+| `src/matinee/store.py::edits` | `src/matinee/store.py:157` | 2026-09-26 |
 | `src/matinee/store.py::clean_name` / `clean_pin` | `src/matinee/store.py:131` | 2026-09-26 |
 | `src/matinee/store.py::Store.open` / `_check_pin` (lockout) | `src/matinee/store.py:321` | 2026-09-26 |
 | `src/matinee/store.py::Store._issue` (token pruning) | `src/matinee/store.py:199` | 2026-09-26 |
@@ -1671,7 +1670,6 @@ symbol when one does not match.
 | `src/matinee/store.py::Store.notes` / `filed` / `rule` / `FiledNote` / `one_line` | `src/matinee/store.py` | 2026-10-02 |
 | `src/matinee/upgrade.py::prepare` / `TABLES` / `FROM_SHAPE_0` / `BELONGS_FROM_CORRECTIONS` | `src/matinee/upgrade.py` | 2026-10-02 |
 | `src/matinee/web/common.py::set_tokens` / `TOKENS_COOKIE` / `MAX_TOKENS` | `src/matinee/web/common.py:81` | 2026-09-26 |
-| `src/matinee/web/common.py::Suggestion` | `src/matinee/web/common.py:38` | 2026-09-26 |
 | `src/matinee/web/viewing.py::held_profile` | `src/matinee/web/viewing.py:183` | 2026-09-30 |
 | `src/matinee/web/viewing.py::resolve` | `src/matinee/web/viewing.py:197` | 2026-09-30 |
 | `src/matinee/web/viewing.py::add_note_routes` / `answer_says` | `src/matinee/web/viewing.py:373` | 2026-09-30 |

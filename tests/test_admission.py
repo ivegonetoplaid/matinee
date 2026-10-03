@@ -152,7 +152,7 @@ def test_a_profile_token_does_not_admit_a_device(tmp_path: Path) -> None:
     locked.cookies.set(TOKENS_COOKIE, tokens, domain="testserver.local")
     assert locked.get("/api/door").status_code == 401
     assert locked.post("/api/admission", json={"word": WORD}).status_code == 200
-    assert [p["name"] for p in locked.get("/api/door").json()["profiles"]] == ["Before the lock"]
+    assert [(p["name"], p["held"]) for p in locked.get("/api/door").json()["profiles"]] == [("Before the lock", True)]
 
 
 @pytest.mark.parametrize(

@@ -114,7 +114,7 @@ export class Door {
 
   // Build the door and open on the screen this device's tokens call for, or on `screen` when given.
   async open({ door, screen = null, profileId = null }) {
-    this.held = door.profiles;
+    this.held = door.profiles.filter((p) => p.held);
     this.wall = h("div", { class: "door-wall" });
     this.marquee = h("div", { class: "marquee" }, h("div", { class: "marquee-glow", "aria-hidden": "true" }), crown(), sign(door.now_showing));
     clear(this.stage).append(
@@ -124,8 +124,9 @@ export class Door {
       h("footer", { class: "door-foot" }, credits({ around: this })),
     );
     if (screen === "new") return this.first();
-    const profile = this.held.find((p) => p.id === profileId);
-    if (screen === "list" && profile) return this.picker({ editing: profile });
+    const tile = this.held.find((p) => p.id === profileId);
+    const profile = screen === "list" && tile ? await this.seatOf(tile) : null;
+    if (profile) return this.picker({ editing: profile });
     return this.greet();
   }
 
@@ -194,8 +195,17 @@ export class Door {
     ]);
   }
 
-  enterAs(profile) {
-    this.enter({ viewer: { profile_id: profile.id }, name: profile.name, profileTopics: profile.topics.length > 0 });
+  // A profile as the door's list names it carries no exclusions: a held one opens without its PIN to fetch them.
+  async seatOf(tile) {
+    if (tile.topics) return tile;
+    const res = await post(`/api/profiles/${tile.id}/open`, { pin: null });
+    return res.ok ? res.data : null;
+  }
+
+  async enterAs(profile) {
+    const seat = await this.seatOf(profile);
+    if (!seat) return this.greet();
+    return this.enter({ viewer: { profile_id: seat.id }, name: seat.name, profileTopics: seat.topics.length > 0 });
   }
 
   // A door is entered once: a second tap or Enter before its buttons are disabled changes nothing.

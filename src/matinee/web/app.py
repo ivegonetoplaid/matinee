@@ -26,7 +26,7 @@ from matinee.engine import EngineError
 from matinee.library import ImageKind, LibraryError
 from matinee.pick import DeviceCap, Picker
 from matinee.quips import Quips, load_quips
-from matinee.store import Locked, Store, StoreError
+from matinee.store import AVATARS, Locked, Store, StoreError
 from matinee.table import TableError
 from matinee.web.admission import COOKIE as ADMISSION_COOKIE
 from matinee.web.admission import LIFE_S as ADMISSION_LIFE_S
@@ -36,11 +36,10 @@ from matinee.web.common import (
     AvatarChoice,
     Deleted,
     Door,
-    NameQuery,
     NewProfile,
     PinEntry,
     Seat,
-    Suggestion,
+    Tile,
     device_tokens,
     optional_int,
     problem,
@@ -164,17 +163,20 @@ def add_film_routes(app: FastAPI, theatre: Theatre, seerr: str) -> None:
 def add_door_routes(app: FastAPI, theatre: Theatre, store: Store, clock: Callable[[], float]) -> None:
     @app.get("/api/door")
     def door(request: Request, response: Response) -> Door:
-        """What the box office shows this device: the film count and the profiles it holds a token for."""
+        """What the front door shows an admitted device: the film count, every profile by name, and the avatars.
+
+        Each profile says whether this device holds it; none carries its exclusions. A token for a profile that
+        is gone is cleared from the cookie.
+        """
         tokens = device_tokens(request)
         held_by_device = store.holding(tokens)
         if len(held_by_device) != len(tokens):
             set_tokens(response, [t for t in tokens if t in held_by_device])
-        seats = {p.id: seat(p) for p in held_by_device.values()}
-        return Door(now_showing=theatre.showing().now_showing, profiles=list(seats.values()))
-
-    @app.post("/api/names")
-    def names(query: NameQuery) -> list[Suggestion]:
-        return [Suggestion(id=p.id, name=p.name, has_pin=p.has_pin) for p in store.suggest(query.typed)]
+        held = {p.id for p in held_by_device.values()}
+        tiles = [
+            Tile(id=p.id, name=p.name, avatar=p.avatar, has_pin=p.has_pin, held=p.id in held) for p in store.everyone()
+        ]
+        return Door(now_showing=theatre.showing().now_showing, profiles=tiles, avatars=list(AVATARS))
 
     @app.post("/api/profiles")
     def create_profile(body: NewProfile, request: Request, response: Response) -> Seat:

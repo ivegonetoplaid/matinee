@@ -12,7 +12,7 @@ from fastapi.testclient import TestClient
 
 from matinee.dtdd import Dtdd
 from matinee.engine import load_catalog
-from matinee.store import LOCKOUT_S, MAX_PROFILES, Locked, Note, Store, StoreError, edits, names_match
+from matinee.store import AVATARS, LOCKOUT_S, MAX_PROFILES, Locked, Note, Store, StoreError, edits
 from matinee.table import FilmTable
 from matinee.web.app import create_app
 from matinee.web.common import TOKENS_COOKIE
@@ -32,32 +32,6 @@ def test_edit_distance() -> None:
     assert edits("dave", "davy") == 1
     assert edits("dave", "david") == 2
     assert edits("kitten", "sitting") == 3
-
-
-@pytest.mark.parametrize(
-    "typed,name,match",
-    [
-        ("dav", "David", True),  # typed is a prefix of the name
-        ("DAVIDSON", "david", True),  # the name is a prefix of what was typed
-        ("brit", "Brittany", True),
-        ("brtny", "Brittany", False),  # three edits
-        ("britany", "Brittany", True),  # one edit
-        ("xyz", "David", False),
-        ("ette", "Annette", False),  # a substring is not a prefix
-    ],
-)
-def test_name_match_rule(typed: str, name: str, match: bool) -> None:
-    assert names_match(typed, name) is match
-
-
-def test_suggestions_need_three_characters_and_show_at_most_three(store: Store) -> None:
-    for name in ("Anna", "Annabel", "Annie", "Annette", "Bob"):
-        store.create(name, None, [], [])
-    assert store.suggest("an") == []
-    assert store.suggest("  an ") == []
-    found = store.suggest("ann")
-    assert len(found) == 3 and all(p.name.lower().startswith("ann") for p in found)
-    assert [p.name for p in store.suggest("bob")] == ["Bob"]
 
 
 def test_pin_and_token_are_never_stored_as_typed(store: Store, tmp_path: Path) -> None:
@@ -129,14 +103,6 @@ def test_a_lock_clears_the_count_when_it_ends(store: Store) -> None:
     assert err.value.code == "wrong_pin"  # one miss after the lock is one miss, not another lock
 
 
-def test_suggestions_rank_the_closest_first(store: Store) -> None:
-    for name in ("Ava", "Dan", "Dana", "David"):
-        store.create(name, None, [], [])
-    found = store.suggest("dav")
-    assert found[0].name == "David" and len(found) <= 3
-    assert all(names_match("dav", p.name) for p in found)
-
-
 def test_a_right_pin_resets_the_count(store: Store) -> None:
     profile, _ = store.create("Ray", "2468", [], [])
     for _ in range(4):
@@ -183,10 +149,17 @@ def door(tmp_path: Path) -> tuple[TestClient, Store]:
     ), store
 
 
+def held_names(client: TestClient) -> list[str]:
+    """The names on the front door this device holds a token for."""
+    return [p["name"] for p in client.get("/api/door").json()["profiles"] if p["held"]]
+
+
 def test_a_new_device_holds_nothing(door: Any) -> None:
     client, store = door
     store.create("Somebody", None, [188], [])
-    assert client.get("/api/door").json() == {"now_showing": 40, "profiles": []}
+    door = client.get("/api/door").json()
+    assert door["now_showing"] == 40 and door["avatars"] == list(AVATARS)
+    assert [(p["name"], p["held"]) for p in door["profiles"]] == [("Somebody", False)]
 
 
 def test_saving_a_profile_sets_a_token_cookie_without_name_or_pin(door: Any) -> None:
@@ -199,17 +172,23 @@ def test_saving_a_profile_sets_a_token_cookie_without_name_or_pin(door: Any) -> 
     assert "HttpOnly" in cookie and "Secure" in cookie and "SameSite=lax" in cookie and "Max-Age=" in cookie
     value = cookie.split(";")[0].split("=", 1)[1]
     assert "Robin" not in value and "robin" not in value and "9876" not in value
-    assert [p["name"] for p in client.get("/api/door").json()["profiles"]] == ["Robin"]
+    assert held_names(client) == ["Robin"]
 
 
-def test_a_device_lists_only_profiles_it_holds(door: Any) -> None:
+def test_the_front_door_lists_every_profile_by_name_and_never_an_exclusion(door: Any) -> None:
     client, store = door
-    store.create("Elsewhere", None, [], [])
-    client.post("/api/profiles", json={"name": "Here"})
-    assert [p["name"] for p in client.get("/api/door").json()["profiles"]] == ["Here"]
-    names = client.post("/api/names", json={"typed": "else"}).json()
-    assert names == [{"id": names[0]["id"], "name": "Elsewhere", "has_pin": False}]  # a name, never a list
-    assert client.post("/api/names", json={"typed": "el"}).json() == []
+    store.create("zed", "1111", [153], ["superheroes"], "vhs")
+    store.create("Elsewhere", None, [188], ["heroes"])
+    here = client.post("/api/profiles", json={"name": "Here", "topics": [153], "exclusions": ["superheroes"]}).json()
+    reply = client.get("/api/door")
+    assert reply.json()["profiles"] == [
+        {"id": 2, "name": "Elsewhere", "avatar": None, "has_pin": False, "held": False},
+        {"id": here["id"], "name": "Here", "avatar": None, "has_pin": False, "held": True},
+        {"id": 1, "name": "zed", "avatar": "vhs", "has_pin": True, "held": False},
+    ]
+    for leak in ("superheroes", "heroes", "153", "188", "topics", "exclusions"):
+        assert leak not in reply.text
+    assert client.post("/api/names", json={"typed": "else"}).status_code in (404, 405)
 
 
 def test_a_device_may_hold_several_and_opens_by_pin(door: Any) -> None:
@@ -220,7 +199,7 @@ def test_a_device_may_hold_several_and_opens_by_pin(door: Any) -> None:
     assert wrong.status_code == 401 and wrong.json()["code"] == "wrong_pin"
     opened = client.post(f"/api/profiles/{other.id}/open", json={"pin": "1357"})
     assert opened.status_code == 200
-    assert sorted(p["name"] for p in client.get("/api/door").json()["profiles"]) == ["First", "Quinn"]
+    assert sorted(held_names(client)) == ["First", "Quinn"]
 
 
 def test_locked_profile_says_how_long(door: Any) -> None:
@@ -255,7 +234,7 @@ def test_the_ninth_profile_pushes_out_the_oldest(door: Any) -> None:
     client, _ = door
     for i in range(9):
         client.post("/api/profiles", json={"name": f"Seat {i}"})
-    names = [p["name"] for p in client.get("/api/door").json()["profiles"]]
+    names = held_names(client)
     assert "Seat 8" in names and "Seat 0" not in names and len(names) == 8
 
 
@@ -266,13 +245,12 @@ def test_reopening_a_held_profile_keeps_its_token_and_skips_the_pin(door: Any) -
         client.post("/api/profiles", json={"name": f"Other {i}"})
     for _ in range(10):
         assert client.post(f"/api/profiles/{mine['id']}/open", json={}).status_code == 200
-    names = [p["name"] for p in client.get("/api/door").json()["profiles"]]
+    names = held_names(client)
     assert len(names) == 8 and "Mine" in names and "Other 0" in names
 
 
 def test_request_fields_are_bounded(door: Any) -> None:
     client, _ = door
-    assert client.post("/api/names", json={"typed": "x" * 81}).status_code == 422
     assert client.post("/api/profiles", json={"name": "x" * 81}).status_code == 422
     assert client.post("/api/profiles", json={"name": "ok", "topics": list(range(401))}).status_code == 422
 
@@ -293,8 +271,8 @@ def test_a_device_holding_a_profile_deletes_it_everywhere_and_its_notes_stay(doo
     left = resp.headers["set-cookie"].split(";")[0].split("=", 1)[1].split(".")
     assert len(left) == 1  # the deleted profile's token is gone from this device's cookie
     assert [p.name for p in store.holding(left).values()] == ["Staying"]  # the deleting device keeps its others
-    assert [p["name"] for p in client.get("/api/door").json()["profiles"]] == ["Staying"]
-    assert other_device.get("/api/door").json()["profiles"] == []  # the other device's token went with it
+    assert held_names(client) == ["Staying"]
+    assert held_names(other_device) == []  # the other device's token went with it
 
 
 def test_a_device_that_does_not_hold_a_profile_cannot_delete_it(door: Any, tmp_path: Path) -> None:

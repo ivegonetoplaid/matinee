@@ -41,9 +41,6 @@ MAX_PROFILES = 50
 MAX_NAME = 40
 PIN_TRIES = 5
 LOCKOUT_S = 15 * 60
-SUGGEST_AFTER = 3
-SUGGEST_AT_MOST = 3
-MAX_EDITS = 2
 SCRYPT = {"n": 2**14, "r": 8, "p": 1, "dklen": 32}
 TOKEN_LIFE_S = 400 * 24 * 3600  # the cookie's own lifetime
 MAX_REASON = 300
@@ -199,12 +196,6 @@ def edits(a: str, b: str) -> int:
     return row[-1]
 
 
-def names_match(typed: str, name: str) -> bool:
-    """One name, ignoring case, starts with the other, or the two differ by at most MAX_EDITS edits."""
-    a, b = name_key(typed), name_key(name)
-    return a.startswith(b) or b.startswith(a) or edits(a, b) <= MAX_EDITS
-
-
 def _digest(token: str) -> str:
     return hashlib.sha256(token.encode()).hexdigest()
 
@@ -294,23 +285,11 @@ class Store:
                     found[token] = self._profile(row)
         return found
 
-    def suggest(self, typed: str) -> list[Profile]:
-        """At most three profiles matching a typed name, closest first, and none until three characters are typed.
-
-        Prefix matches rank before edit-distance matches, then fewer edits, then the name.
-        """
-        key = name_key(typed)
-        if len(key) < SUGGEST_AFTER:
-            return []
+    def everyone(self) -> list[Profile]:
+        """Every profile, sorted by name ignoring case."""
         with closing(self._connect()) as db:
-            rows = db.execute("SELECT * FROM profiles").fetchall()
-        found = [self._profile(r) for r in rows if names_match(typed, str(r["name"]))]
-
-        def rank(p: Profile) -> tuple[bool, int, str]:
-            other = name_key(p.name)
-            return (not (other.startswith(key) or key.startswith(other)), edits(key, other), other)
-
-        return sorted(found, key=rank)[:SUGGEST_AT_MOST]
+            rows = db.execute("SELECT * FROM profiles ORDER BY name_key, id").fetchall()
+        return [self._profile(r) for r in rows]
 
     def set_exclusions(self, profile_id: int, topics: Iterable[int], exclusions: Iterable[str]) -> Profile:
         """Replace a profile's saved exclusions."""

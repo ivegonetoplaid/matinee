@@ -198,12 +198,12 @@ def test_a_profiles_topics_skip_the_gore_question(site: Any) -> None:
 
 def test_only_the_device_holding_a_profile_may_use_or_change_it(site: Any) -> None:
     client, store, _ = site
-    other, _ = store.create("Owner", None, [153], ["superheroes"])
+    other, owner_token = store.create("Owner", None, [153], ["superheroes"])
     walk = client.post("/api/walk", json={"tree": "west", "viewer": {"profile_id": other.id}})
     assert walk.status_code == 403 and "superheroes" not in walk.text
     change = client.put(f"/api/profiles/{other.id}/exclusions", json={"topics": [], "exclusions": []})
     assert change.status_code == 403
-    assert store.holding([]) == {} and store.suggest("owner")[0].exclusions == frozenset({"superheroes"})
+    assert store.holding([owner_token])[owner_token].exclusions == frozenset({"superheroes"})
 
 
 def test_unknown_exclusions_and_misfit_answers_are_refused(site: Any) -> None:
@@ -294,11 +294,11 @@ def test_dropped_connections_are_one_error(answer: Exception) -> None:
 
 def test_saving_one_profile_leaves_the_others(site: Any) -> None:
     client, store, _ = site
-    other, _ = store.create("Other", None, [153], ["superheroes"])
+    other, token = store.create("Other", None, [153], ["superheroes"])
     me = client.post("/api/profiles", json={"name": "Me"}).json()
     client.put(f"/api/profiles/{me['id']}/exclusions", json={"topics": [188], "exclusions": []})
-    assert store.suggest("other")[0].topics == frozenset({153})
-    assert store.suggest("other")[0].exclusions == frozenset({"superheroes"})
+    assert store.holding([token])[token].topics == frozenset({153})
+    assert store.holding([token])[token].exclusions == frozenset({"superheroes"})
 
 
 def test_unknown_exclusion_names_are_never_saved(site: Any) -> None:

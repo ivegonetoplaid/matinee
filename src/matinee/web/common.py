@@ -46,12 +46,14 @@ class Seat(BaseModel):
     avatar: str | None
 
 
-class Suggestion(BaseModel):
-    """A name suggestion: never the profile's exclusions, which only its device or its PIN may see."""
+class Tile(BaseModel):
+    """A profile on the front door: never its exclusions, which say what frightens a person and only its holder sees."""
 
     id: int
     name: str
+    avatar: str | None
     has_pin: bool
+    held: bool  # this device holds a token for it, so it opens without its PIN
 
 
 class Deleted(BaseModel):
@@ -62,11 +64,8 @@ class Deleted(BaseModel):
 
 class Door(BaseModel):
     now_showing: int
-    profiles: list[Seat]
-
-
-class NameQuery(BaseModel):
-    typed: str = Field(max_length=80)
+    profiles: list[Tile]
+    avatars: list[str]
 
 
 class NewProfile(BaseModel):
