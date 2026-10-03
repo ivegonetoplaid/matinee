@@ -1108,8 +1108,8 @@ as written. A phone is a viewport 600 px wide or less.
   for the full marquee scales it down: to 0.8 under 820 px tall and 0.45 under
   700 px tall on a desktop, and to 0.75 under 640 px tall on a phone.
 
-  Every question at the door is typed onto the wall below the marquee, with
-  nothing behind Matinee's words. On a desktop the words are a centred column
+  Every question at the door is typed onto the wall below the marquee. On a
+  desktop the words are a centred column
   680 px wide, 44 px under the sign, with the line at 52 px and its answers as
   letterboxes. On a phone the line hangs 26 px under the marquee
   at 34 px, and the answers sit at the foot of the screen. Every letterbox on
@@ -1261,9 +1261,20 @@ as written. A phone is a viewport 600 px wide or less.
   back to the first question as the same viewer. On a problem screen reached
   before going in, where there is no viewer yet, it goes back to the door. On
   the front door the marquee stands in its place, so there it does nothing.
+- **Scrims.** Every piece of text standing on the poster wall stands on a
+  scrim: a feathered dark patch, the page base at 92 per cent across the text's
+  whole block, corners included, fading to nothing about 40 px beyond it with
+  no edge. That covers Matinee's lines (each of its two parts), the countdown,
+  notes, status lines, counts, footnotes, the tile names, the film's title,
+  year and synopsis, and the open "Something wrong with this pick?" panel.
+  Every scrim paints behind all of a screen's text and controls. No scroll box
+  cuts a scrim: the door's wall keeps 40 px of room above its first line, and
+  the phone pick's foot fades its top and its foot over 20 px, so a scrim at
+  either end fades with its text. The locked door's greeting keeps its own scrim
+  on subway tile.
 - **The poster wall.** A flat grid of the posters of the films still in the
   pool, each its own image element, sharp and upright, held at 35 per cent
-  strength, with no backing behind Matinee's words. The wall holds that one
+  strength. The wall holds that one
   strength across the site's navigation and pages: the door, the questions,
   going in and About never dim it. The pick's reveal is the one special case:
   the rest of the wall dims to 12 per cent as the picked poster lands and stays
@@ -1403,7 +1414,8 @@ as written. A phone is a viewport 600 px wide or less.
   470 px but never past 38 per cent of it.
 
   On a phone Matinee's words keep the foot of the pick screen, which is about a
-  third of the screen (36 per cent of its height, never under 270 px) and holds,
+  third of the screen (36 per cent of its height, never under 270 px, and
+  32 px more for its fades) and holds,
   from its top, the line, `Not that one` and "More on Seerr ↗", the note
   action, then the trail on one line, each crumb cut to 16 characters, and the
   credits. The foot has no backing of its own; the wall shows through it.

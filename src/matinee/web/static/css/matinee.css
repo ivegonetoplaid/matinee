@@ -30,6 +30,7 @@
   --rose-words: #e98997;
   --petrol-words: #5fa3b3;
   --cream-edge: #a39e93;
+  --shade: color-mix(in srgb, var(--base) 92%, transparent);
   --display: "Big Shoulders Display", "Arial Narrow", sans-serif;
   --body: "DM Sans", system-ui, sans-serif;
   --pad: 48px;
@@ -180,7 +181,6 @@ a.wordmark:focus-visible {
 .count {
   font-size: 15px;
   color: var(--dim);
-  text-shadow: 0 1px 6px rgba(0, 0, 0, 0.9);
 }
 
 /* Matinee's speech and the viewer's answers keep apart. The speech hangs from the
@@ -315,6 +315,39 @@ a.wordmark:focus-visible {
   50% {
     opacity: 0;
   }
+}
+
+/* A scrim: a feathered dark patch behind a piece of wall text, the page base at 92 per cent across the
+   text's whole block (its corners included), fading to nothing about 40 px beyond it, with no edge. Its
+   holder makes no stacking context of its own, so every scrim paints behind all of the screen's text and
+   controls, never over a neighbour's words. A box that scrolls clips what
+   it holds, so a box holding wall text near its edge keeps 40 px of room there. */
+.line:not(.locked-line, .viewer-line) > :is(.ack, .ask):not(:empty),
+.countdown,
+.note:not(:empty, .viewer-panel .note, .correct-panel .note),
+.footnote,
+.count,
+.seat-label,
+.feature-text,
+.correct-panel {
+  position: relative;
+}
+
+.line:not(.locked-line, .viewer-line) > :is(.ack, .ask):not(:empty)::before,
+.countdown::before,
+.note:not(:empty, .viewer-panel .note, .correct-panel .note)::before,
+.footnote::before,
+.count::before,
+.seat-label::before,
+.feature-text::before,
+.correct-panel::before {
+  content: "";
+  position: absolute;
+  inset: -16px;
+  z-index: -1;
+  background: var(--shade);
+  filter: blur(10px);
+  pointer-events: none;
 }
 
 .answers {
@@ -737,7 +770,6 @@ a.wordmark:focus-visible {
   font-weight: 800;
   font-size: 44px;
   line-height: 1;
-  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.9);
 }
 
 .film-year {
@@ -881,7 +913,7 @@ a.wordmark:focus-visible {
    nothing passes behind the words: the poster fills it first, and the details follow beneath. */
 @media (max-width: 600px) {
   .stage:has(> .showing) {
-    --pick-talk: calc(max(270px, 36svh) - 64px);
+    --pick-talk: calc(max(270px, 36svh) - 32px); /* with room for the foot's fades (.aside) */
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto minmax(0, 1fr) var(--pick-talk) auto;
@@ -933,10 +965,15 @@ a.wordmark:focus-visible {
     font-size: 16px;
   }
 
+  /* The foot scrolls on its own: it reaches the screen's sides, and fades its top and its foot over
+     20 px, so a scrim at either end fades with its text rather than being cut. */
   .aside {
     max-width: none;
     min-height: 0;
+    margin: 0 calc(-1 * var(--pad));
+    padding: 20px var(--pad);
     overflow-y: auto;
+    mask-image: linear-gradient(transparent, #000 20px, #000 calc(100% - 20px), transparent);
     gap: 8px;
   }
 
@@ -1070,7 +1107,7 @@ a.wordmark:focus-visible {
 /* ---------- the front door ---------- */
 
 /* The door is a column: the marquee at the top centre, then the wall below it where
-   Matinee's words are typed, with nothing behind them, then the credit line. */
+   Matinee's words are typed, each on its scrim, then the credit line. */
 .stage.at-door {
   padding: 0;
   gap: 0;
@@ -1617,12 +1654,15 @@ a.wordmark:focus-visible {
    marquee leaves and scrolls only when a screen's content cannot fit, such as a long
    list of names on a short window. */
 .door-wall {
+  --top: 44px;
   position: relative;
   flex: 1 1 auto;
   min-height: 0;
   display: flex;
   flex-direction: column;
-  padding: 44px var(--pad) 24px;
+  /* 40 px of room above the first line, under the marquee, so the line's scrim is never cut. */
+  margin-top: -40px;
+  padding: calc(var(--top) + 40px) var(--pad) 24px;
   overflow-y: auto;
   scrollbar-color: rgba(242, 179, 61, 0.45) transparent;
 }
@@ -1748,6 +1788,12 @@ a.wordmark:focus-visible {
   cursor: pointer;
 }
 
+/* The name's scrim stands on this wrapper: the name's own line clamp hides its overflow, which would cut it. */
+.seat-label {
+  display: block;
+  max-width: 100%;
+}
+
 /* A long name wraps to two lines and breaks inside a long word, so two names never read alike. */
 .seat-name {
   display: -webkit-box;
@@ -1762,7 +1808,6 @@ a.wordmark:focus-visible {
   letter-spacing: 0.02em;
   text-align: center;
   overflow-wrap: anywhere;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.85);
 }
 
 .seat.new .mark {
@@ -1798,7 +1843,7 @@ a.wordmark:focus-visible {
 /* A short desktop window (a 720 px laptop) keeps two rows of tiles, or three of avatars, in view. */
 @media (min-width: 601px) and (max-height: 760px) {
   .door-wall {
-    padding-top: 24px;
+    --top: 24px;
   }
 
   .seats {
@@ -1988,10 +2033,6 @@ a.wordmark:focus-visible {
   scrollbar-color: rgba(242, 179, 61, 0.45) transparent;
 }
 
-.topic-list > .note {
-  grid-column: 1 / -1;
-}
-
 /* A chosen topic shows a check mark in a gutter before its words, which every topic keeps, so choosing
    one never moves its words or changes its size. */
 .topic {
@@ -2081,7 +2122,8 @@ a.wordmark:focus-visible {
 
   /* On a phone the line hangs under the marquee and the answers sit at the foot, under the thumb. */
   .door-wall {
-    padding: 26px var(--pad) 12px;
+    --top: 26px;
+    padding-bottom: 12px;
   }
 
   .door-talk {
@@ -2203,7 +2245,7 @@ a.wordmark:focus-visible {
   }
 
   .marquee.compact + .door-wall {
-    padding-top: 12px;
+    --top: 12px;
   }
 }
 
@@ -2453,7 +2495,7 @@ a.wordmark:focus-visible {
 /* A short desktop: the picker's heading tightens so the picker fits without scrolling. */
 @media (max-height: 820px) and (min-width: 601px) {
   .door-wall {
-    padding-top: 28px;
+    --top: 28px;
     padding-bottom: 16px;
   }
 

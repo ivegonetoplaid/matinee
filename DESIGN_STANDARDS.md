@@ -74,6 +74,7 @@ file. If the rule was right, fix the code.
 | `--rose-words` | `#e98997` | A rose action's words |
 | `--petrol-words` | `#5FA3B3` | A petrol action's words |
 | `--cream-edge` | `#a39e93` | A cream action's edge |
+| `--shade` | `--base` at 92 % | Scrims and bands |
 
 `--chip`, the pills' see-through body, goes with the pills. Add a colour for a
 control, a scrim, a band or text only through a new token here and in the

@@ -1,7 +1,7 @@
 // The front door: the marquee, a stepped crown over a lit sign, stands at the top
 // centre over the poster wall, and Matinee greets a viewer on the wall below it.
-// Every question at the door types straight onto the wall, with nothing behind
-// Matinee's words; the marquee stays until the viewer goes in.
+// Every question at the door types onto the wall, each piece of text on its own scrim;
+// the marquee stays until the viewer goes in.
 
 import { get, post, put } from "./api.js";
 import { credits } from "./credits.js";
@@ -108,7 +108,7 @@ function tile(profile, onclick) {
     "button",
     { class: "seat", type: "button", onclick },
     mark(profile, "door"),
-    h("span", { class: "seat-name" }, profile.name),
+    h("span", { class: "seat-label" }, h("span", { class: "seat-name" }, profile.name)),
   );
 }
 
@@ -117,7 +117,7 @@ function newTile(onclick) {
     "button",
     { class: "seat new", type: "button", "aria-label": "+ New", onclick },
     h("span", { class: "mark door", "aria-hidden": "true" }, h("span", { class: "mark-initials" }, "+")),
-    h("span", { class: "seat-name", "aria-hidden": "true" }, "New"),
+    h("span", { class: "seat-label", "aria-hidden": "true" }, h("span", { class: "seat-name" }, "New")),
   );
 }
 
@@ -501,7 +501,7 @@ export class Door {
     };
     const mine = own.ok ? own.data.map((x) => this.topic(sentenceCase(x.say), x.say, this.excluded, x.id, count)) : [];
     const theirs = dtdd.ok ? dtdd.data.topics.map((t) => this.topic(sentenceCase(t.short), `${t.name} ${t.keywords}`, this.picked, t.id, count)) : [];
-    list.append(...mine, ...theirs, nothing);
+    list.append(...mine, ...theirs);
     search.addEventListener("input", () => {
       const needle = search.value.trim().toLowerCase();
       let shown = 0;
@@ -520,7 +520,7 @@ export class Door {
     const readMore = dtdd.ok
       ? h("a", { class: "action petrol", href: dtdd.data.link, target: "_blank", rel: "noopener noreferrer" }, "Read about these on DoesTheDogDie ↗")
       : null;
-    clear(box).append(search, ...trouble, list, h("div", { class: "topic-foot" }, h("p", { class: "note small" }, tally, credit), readMore));
+    clear(box).append(search, ...trouble, nothing, list, h("div", { class: "topic-foot" }, h("p", { class: "note small" }, tally, credit), readMore));
     count();
   }
 
