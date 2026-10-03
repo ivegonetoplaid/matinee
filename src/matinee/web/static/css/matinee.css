@@ -1430,10 +1430,6 @@ a.wordmark:focus-visible {
   }
 }
 
-.topic-pills {
-  scrollbar-color: rgba(242, 179, 61, 0.45) transparent;
-}
-
 .credits {
   margin: 0;
   font-size: 13px;
@@ -1969,37 +1965,40 @@ a.wordmark:focus-visible {
   gap: 14px;
 }
 
-.topic-pills {
+/* The topics: letterboxes in at most two aligned columns, never narrower than 200 px, each row as tall as
+   its taller topic, in a box that scrolls on its own. Its side padding holds the letterboxes' 22 px glow;
+   its foot keeps clear of the tally line. */
+.topic-list {
   flex: 1 1 0;
   min-height: 140px;
   overflow-y: auto;
-  display: flex;
-  flex-wrap: wrap;
-  align-content: flex-start;
-  gap: 9px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(max(200px, calc(50% - 5px)), 1fr));
+  /* Rows take their content's height even when the list overflows its box; auto rows would shrink to
+     a letterbox's 44 px floor and hide a wrapped topic's second line. */
+  grid-auto-rows: max-content;
+  align-content: start;
+  gap: 10px;
+  margin: -12px -24px 0;
+  padding: 12px 24px;
+  scrollbar-color: rgba(242, 179, 61, 0.45) transparent;
 }
 
+.topic-list > .note {
+  grid-column: 1 / -1;
+}
+
+/* A chosen topic shows a check mark in a gutter before its words, which every topic keeps, so choosing
+   one never moves its words or changes its size. */
 .topic {
-  min-height: 38px;
-  padding: 8px 15px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 999px;
-  background: rgba(22, 25, 38, 0.9);
-  color: var(--text);
-  font-size: 15px;
-  font-weight: 500;
-  cursor: pointer;
-}
-
-.topic[aria-pressed="true"] {
-  background: var(--gold);
-  border-color: var(--gold);
-  color: var(--strip-ink);
-  font-weight: 600;
+  position: relative;
+  padding-left: 42px;
 }
 
 .topic[aria-pressed="true"]::before {
-  content: "✓ ";
+  content: "✓";
+  position: absolute;
+  left: 16px;
 }
 
 .topic[hidden] {
@@ -2141,9 +2140,18 @@ a.wordmark:focus-visible {
     gap: 10px;
   }
 
+  .topic-list {
+    gap: 8px;
+    margin: -12px -12px 0;
+    padding: 12px;
+  }
+
   .topic {
-    font-size: 14px;
-    padding: 7px 12px;
+    padding-left: 36px;
+  }
+
+  .topic[aria-pressed="true"]::before {
+    left: 13px;
   }
 
   /* While the picker is open the crown fades and the sign shrinks to a lit strip. */
@@ -2408,12 +2416,24 @@ a.wordmark:focus-visible {
     padding: 8px 14px;
   }
 
-  .topic-pills {
+  .topic-list {
     min-height: 40px;
   }
 
   .line.door-line {
     font-size: 26px;
+  }
+}
+
+/* A narrow desktop: the picker stacks as on a phone, so the topics keep a readable width. */
+@media (min-width: 601px) and (max-width: 760px) {
+  .picker {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .picker > .picker-topics {
+    grid-column: 1;
+    grid-row: 3;
   }
 }
 

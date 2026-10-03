@@ -484,16 +484,16 @@ export class Door {
   async fillTopics(box, editing) {
     const [own, dtdd] = await Promise.all([get("/api/exclusions"), get("/api/topics")]);
     const search = field({ type: "text", placeholder: "Search, like spiders or needles", "aria-label": "Search topics" });
-    const pills = h("div", { class: "topic-pills" });
+    const list = h("div", { class: "topic-list" });
     const tally = h("span", {});
     const nothing = h("p", { class: "note", hidden: true }, "Nothing by that name. Try another word.");
     const count = () => {
       const n = this.picked.size + this.excluded.size;
       tally.textContent = n ? `${n} chosen` : "Nothing chosen yet";
     };
-    const mine = own.ok ? own.data.map((x) => this.pill(sentenceCase(x.say), x.say, this.excluded, x.id, count)) : [];
-    const theirs = dtdd.ok ? dtdd.data.topics.map((t) => this.pill(sentenceCase(t.short), `${t.name} ${t.keywords}`, this.picked, t.id, count)) : [];
-    pills.append(...mine, ...theirs, nothing);
+    const mine = own.ok ? own.data.map((x) => this.topic(sentenceCase(x.say), x.say, this.excluded, x.id, count)) : [];
+    const theirs = dtdd.ok ? dtdd.data.topics.map((t) => this.topic(sentenceCase(t.short), `${t.name} ${t.keywords}`, this.picked, t.id, count)) : [];
+    list.append(...mine, ...theirs, nothing);
     search.addEventListener("input", () => {
       const needle = search.value.trim().toLowerCase();
       let shown = 0;
@@ -508,7 +508,7 @@ export class Door {
       ? [" · Best effort, from crowd votes · ", h("a", { href: dtdd.data.link, target: "_blank", rel: "noopener noreferrer" }, dtdd.data.credit)]
       : [];
     const trouble = dtdd.ok ? [] : [this.topicsTrouble(box, dtdd.data.message, editing)];
-    clear(box).append(search, ...trouble, pills, h("p", { class: "note small" }, tally, credit));
+    clear(box).append(search, ...trouble, list, h("p", { class: "note small" }, tally, credit));
     count();
   }
 
@@ -526,9 +526,10 @@ export class Door {
     );
   }
 
-  pill(label, find, chosen, id, count) {
+  // A topic is a letterbox that toggles: chosen, it shows a check mark before its words.
+  topic(label, find, chosen, id, count) {
     const on = chosen.has(id);
-    const b = h("button", { class: "topic", type: "button", "aria-pressed": String(on) }, label);
+    const b = h("button", { class: "letterbox topic", type: "button", "aria-pressed": String(on) }, label);
     b.dataset.find = `${label} ${find}`.toLowerCase();
     b.addEventListener("click", () => {
       if (chosen.has(id)) chosen.delete(id);

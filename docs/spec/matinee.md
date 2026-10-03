@@ -1117,8 +1117,14 @@ as written. A phone is a viewport 600 px wide or less.
   short window closes the words up: under 820 px tall on a desktop they start
   28 px under the sign, and under 640 px tall on a phone the line is 26 px. The
   trigger picker sits on the wall too: on a desktop 1000 px wide, the question
-  and saving in a 360 px left column and the topics beside it. Its topic pills
-  and fields keep their own dark fill. On a phone, while the picker is open,
+  and saving in a 360 px left column and the topics beside it; under 760 px
+  wide it stacks as on a phone. Its topics are letterboxes in two aligned
+  columns on a desktop, never narrower than 200 px (one column where two would
+  be), and one on a phone; in a row of two both take the taller one's height,
+  and a long topic wraps. A chosen topic shows a check mark in a gutter every
+  topic keeps before its words, so choosing one never moves or resizes it. The
+  list scrolls in its own box under the search field, which filters it, and
+  the field keeps its own dark fill. On a phone, while the picker is open,
   the crown fades and the sign shrinks to a lit strip of bulbs round the letter
   board, with no name; it returns to full size when the picker closes. The
   marquee stays on screen until the viewer goes in or opens
