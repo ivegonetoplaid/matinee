@@ -216,14 +216,16 @@ export class Door {
     return this.greet(twoParts(message));
   }
 
-  // One question on the wall: the line types out, then its controls appear. `tiles` lets the profile tiles
-  // take the width the line keeps.
-  async talk(ack, ask, controls, { tiles = false } = {}) {
+  // One question on the wall: the line types out, then its controls appear, with `detail`, a body-type line
+  // beneath Matinee's, when there is one. `tiles` lets the profile tiles take the width the line keeps.
+  async talk(ack, ask, controls, { tiles = false, detail = null } = {}) {
     this.marquee.classList.remove("compact");
     const line = h("p", { class: "line door-line", "aria-live": "polite" });
+    const more = detail ? h("p", { class: "note door-detail", hidden: true }, detail) : null;
     const below = h("div", { class: "door-controls", hidden: true }, controls);
-    clear(this.wall).append(h("div", { class: tiles ? "door-talk at-seats" : "door-talk" }, line, below));
+    clear(this.wall).append(h("div", { class: tiles ? "door-talk at-seats" : "door-talk" }, line, more, below));
     await typeLine(line, ack, ask);
+    if (more) more.hidden = false;
     below.hidden = false;
     const first = below.querySelector("input, button");
     first?.focus({ preventScroll: true, focusVisible: first.tagName === "INPUT" });
@@ -316,10 +318,16 @@ export class Door {
   }
 
   askList(seat) {
-    return this.talk("", "Anything you never want to see?", [
-      strip("Nope, show me everything.", () => this.done(seat)),
-      strip("Yes, there are a few things.", () => this.picker({ editing: seat, fresh: true })),
-    ]);
+    const detail = "Things like spiders or needles. Pick them and I'll skip any film that has them.";
+    return this.talk(
+      "One more question.",
+      "Is there anything you'd rather not see happen on screen?",
+      [
+        strip("Yes, let me pick from a list", () => this.picker({ editing: seat, fresh: true })),
+        strip("No, show me everything", () => this.done(seat)),
+      ],
+      { detail },
+    );
   }
 
   done(seat) {

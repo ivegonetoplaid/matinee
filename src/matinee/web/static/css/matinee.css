@@ -1653,9 +1653,13 @@ a.wordmark:focus-visible {
   overflow-wrap: anywhere;
 }
 
-/* A line with no gold part, such as the list question, holds one line open, not two. */
-.line.door-line:has(> .ack:empty) {
-  min-height: 1em;
+/* A body-type line beneath Matinee's, close under it. */
+.door-detail {
+  margin-top: -12px;
+}
+
+.door-detail[hidden] {
+  display: none;
 }
 
 .door-controls {

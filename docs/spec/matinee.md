@@ -1227,10 +1227,13 @@ as written. A phone is a viewport 600 px wide or less.
     tiles with why; an unacceptable name returns to the name step; any other
     failure stays on the PIN step with why, keeping the name and avatar. Enter
     in the name field never also presses the next screen's first button. Then
-    "Anything you never want to see?" with "Nope, show me everything." and "Yes,
-    there are a few things.", which opens the trigger picker for the new profile
-    ("No problem. What should I steer around?", "Save and continue", "Never
-    mind, show me everything", each leading on to the last step). Last, "You're all set, <name>." over a centred
+    "One more question." in gold and "Is there anything you'd rather not see
+    happen on screen?" in cream, with a body-type line beneath it, "Things like
+    spiders or needles. Pick them and I'll skip any film that has them.", over
+    "Yes, let me pick from a list", which opens the trigger picker for the new
+    profile ("No problem. What should I steer around?", "Save and continue",
+    "Never mind, show me everything", each leading on to the last step), and
+    "No, show me everything", which goes to the last step with no list. Last, "You're all set, <name>." over a centred
     gold "Find me something to watch" action at the standard size, which goes in
     to the first question.
 - **Going in.** Every answer at the door that leads into the theatre asks for
