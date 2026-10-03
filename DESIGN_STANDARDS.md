@@ -75,7 +75,17 @@ file. If the rule was right, fix the code.
 | `--petrol-words` | `#5FA3B3` | A petrol action's words |
 | `--cream-edge` | `#a39e93` | A cream action's edge |
 | `--shade` | `--base` at 92 % | Scrims and bands |
+| `--black` | `#000` | Drop shadows and a letterbox's ruled lines |
+| `--white` | `#fff` | A letterbox's inner light; a field's edge |
+| `--glow` | `#ffecbe` | A letterbox's glow |
+| `--warm` | `#ffd68c` | The resting poster's ring |
+| `--mark` | `#151827` | A profile's mark |
+| `--menu` | `#12141f` | The profile menu |
+| `--panel` | `#0e101a` | The profile panels |
+| `--about-panel` | `#090a10` | About's panel |
 
+A shade of a colour is its token mixed toward transparent
+(`color-mix(in srgb, var(--gold) 45%, transparent)`), never a value written again.
 `--chip`, the pills' see-through body, goes with the pills. Add a colour for a
 control, a scrim, a band or text only through a new token here and in the
 stylesheet's `:root`; such a colour written straight into a rule is a defect.
