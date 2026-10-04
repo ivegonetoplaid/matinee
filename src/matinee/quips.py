@@ -1,6 +1,7 @@
 """Matinee's lines for a pick, read from data/quips.json, and the rules every line keeps.
 
-Each category (universal, or a tree or mode by its file name) may hold reveal lines and nope lines.
+Each category (universal, or a tree or mode by its file name) may hold reveal lines, nope lines and rush
+lines.
 The caps are character counts: no single line may exceed
 `line`, and a nope line and a reveal line shown together may not exceed `pair`.
 """
@@ -31,6 +32,7 @@ class QuipSet(BaseModel):
 
     reveal: tuple[str, ...] = ()
     nope: tuple[str, ...] = ()
+    rush: tuple[str, ...] = ()
 
 
 class Caps(BaseModel):
@@ -49,11 +51,11 @@ class Quips(BaseModel):
 
     @model_validator(mode="after")
     def _universal_holds_both_sets(self) -> Quips:
-        """Every set falls back on universal's, so universal must hold reveal lines and nope lines."""
+        """Every set falls back on universal's, so universal must hold lines of every kind."""
         universal = self.categories.get(UNIVERSAL)
-        if universal is None or not universal.reveal or not universal.nope:
+        if universal is None or not universal.reveal or not universal.nope or not universal.rush:
             raise ValueError(
-                f"the {UNIVERSAL!r} category must hold reveal lines and nope lines, which every set falls back on"
+                f"the {UNIVERSAL!r} category must hold reveal, nope and rush lines, which every set falls back on"
             )
         return self
 
@@ -93,6 +95,6 @@ def quip_problems(quips: Quips, categories: set[str]) -> list[str]:
     known = categories | {UNIVERSAL}
     problems = [f"category {name!r} is not a tree or mode" for name in quips.categories if name not in known]
     for sets in quips.categories.values():
-        for line in (*sets.reveal, *sets.nope):
+        for line in (*sets.reveal, *sets.nope, *sets.rush):
             problems.extend(line_problems(line, quips.caps.line))
     return problems

@@ -154,7 +154,7 @@ function frame({ count, footnote }) {
       onclick: () => {
         lockStage();
         visit.rushed = true;
-        pickNow();
+        pickNow(rushLine());
       },
     },
     "Just pick one!",
@@ -411,10 +411,16 @@ function pickLines(again, held = "") {
   return { ...pair, gold: pair.nope || held || null, beneath };
 }
 
+// The gold line for "Just pick one!": a rush line from the set of the category the first answer led to,
+// standing where a reply would; "" when the lines could not be read.
+function rushLine() {
+  return quips ? deck.deal(setFor(quips, visit.tree, "rush")) : "";
+}
+
 // What the screen gives up as a pick begins: a question's words fade out, or, on "Not that one", the
 // resting poster goes back to its cell on the wall.
-async function clearForPick(again) {
-  if (again) wall.putBack(stage.querySelector(".slot-poster"));
+async function clearForPick(posterBack) {
+  if (posterBack) wall.putBack(stage.querySelector(".slot-poster"));
   else await fadeTalk();
 }
 
@@ -450,24 +456,25 @@ function fuseOn(frame, reply, destruct, round) {
 }
 
 // Whether the check's line types: on a pick that is not "Not that one", with no fuse lit.
-function checksAloud(again, fuse) {
-  return hasTopics() && !again && !fuse;
+function checksAloud(posterBack, fuse) {
+  return hasTopics() && !posterBack && !fuse;
 }
 
-// `again` is "Not that one": the resting poster goes back to the wall while the next film is fetched,
-// and the check's line does not type. `destruct` (seconds) lights a fuse on the reply: it counts down and
-// burns away on its own clock, and the check's line does not type over it.
-async function pickNow(opening = "", again = false, destruct = null) {
+// `again` is "Not that one" or "Roll again": a nope line types in gold. `posterBack` is "Not that one":
+// the resting poster goes back to the wall while the next film is fetched, and the check's line does not type.
+// `destruct` (seconds) lights a fuse on the reply: it counts down and burns away on its own clock, and the
+// check's line does not type over it.
+async function pickNow(opening = "", again = false, destruct = null, posterBack = again) {
   const round = wall.round;
   // The pick is asked for first, so the check and the fetch run while the words fade and the line types.
   const request = requestPick();
   // A reply that self-destructs owns the line; any other reply stays through the hunt.
   const lines = pickLines(again, destruct ? "" : opening);
-  await clearForPick(again);
+  await clearForPick(posterBack);
   const { frame, readUntil } = await openPick(opening, lines.nope);
   const fuse = fuseOn(frame, opening, destruct, round);
   // The check's line types only on a checked pick that is not "Not that one", and never over a fuse.
-  const res = await checkedPick(request, frame, lines, checksAloud(again, fuse));
+  const res = await checkedPick(request, frame, lines, checksAloud(posterBack, fuse));
   // The viewer took a way back out while the pick was fetched.
   if (!frame.showing.isConnected || wall.round !== round) return undefined;
   if (!res.ok) return problem(res.data, start);
@@ -493,7 +500,7 @@ function pickActions() {
     },
     rollAgain: () => {
       lockStage();
-      pickNow();
+      pickNow("", true, null, false);
     },
     showPicked: (held) => {
       lockStage();

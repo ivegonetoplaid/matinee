@@ -1,5 +1,5 @@
 {
-  "note": "Matinee's line for a pick. A pick draws its reveal line, and after 'Not that one' its nope line, from the category the viewer's first answer led to; a category with no lines of its own for a set draws that set from universal. The caps are character counts set by rendering every line as the pick line (28 px in 320 px on a 360 px phone, 40 px in 400 px on the widest desktop): 'line' is the longest line that fits in three lines at both, 'pair' is one less than the shortest same-category nope and reveal pair that overflows four lines at either.",
+  "note": "Matinee's line for a pick. A pick draws its reveal line, after 'Not that one' or 'Roll again' its nope line, and after 'Just pick one!' its rush line, from the category the viewer's first answer led to; a category with no lines of its own for a set draws that set from universal. The caps are character counts set by rendering every line as the pick line (28 px in 320 px on a 360 px phone, 40 px in 400 px on the widest desktop): 'line' is the longest line that fits in three lines at both, 'pair' is one less than the shortest same-category nope and reveal pair that overflows four lines at either.",
   "caps": {
     "line": 64,
     "pair": 76
@@ -47,6 +47,16 @@
         "Fine by me. Let's reshuffle.",
         "Sent to the cutting room floor.",
         "Understood. I've got more."
+      ],
+      "rush": [
+        "No questions asked, then.",
+        "Straight to the feature.",
+        "Skipping the trailers.",
+        "Leave it to me.",
+        "Feeling lucky, are we?",
+        "Roll the film.",
+        "Trust the projectionist.",
+        "Fine. My pick, then."
       ]
     },
     "horror": {

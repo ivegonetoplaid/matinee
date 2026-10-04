@@ -395,8 +395,9 @@ page reads it through `GET /api/quips`, which returns the file as loaded
 ```
 
 - A category is `universal`, or a tree or mode by its file name. It may hold
-  `reveal` lines, said as a film arrives, and `nope` lines, said after
-  `Not that one`. The shipped file holds universal (16 reveal, 22 nope),
+  `reveal` lines, said as a film arrives, `nope` lines, said after
+  `Not that one` and "Roll again", and `rush` lines, said after "Just pick
+  one!". The shipped file holds universal (16 reveal, 22 nope, 8 rush),
   horror (18, 19), comedy (22, 29) and action (16, 19). A tree or mode with no category of its
   own, such as thriller or crime, draws universal's lines. No category draws
   another tree's lines.
@@ -408,7 +409,7 @@ page reads it through `GET /api/quips`, which returns the file as loaded
   lines at either. A test pins them at 64 and 76, so a cap cannot be raised to
   admit a long line without that test failing.
 - Loading is strict. An unknown key is refused. A file whose universal
-  category lacks reveal lines or nope lines is refused, because every set
+  category lacks reveal, nope or rush lines is refused, because every set
   falls back on universal's. The server reads the file once at start-up;
   replacing it takes a restart.
 - The checker (section 2.5), and a test in `./check.sh`, refuse by name a line
@@ -649,7 +650,7 @@ The server refuses to start, and logs why, when any of these holds:
 - the labels file is absent, malformed, or names a tree no file defines or a
   kind its tree does not label;
 - the pick's lines (`data/quips.json`) are missing or malformed, or universal
-  lacks reveal lines or nope lines (section 2.7);
+  lacks reveal, nope or rush lines (section 2.7);
 - the door word is shorter than its mode allows or longer than 200 characters,
   the door mode names no mode, or the door's secret cannot be read or is not
   32 bytes (section 7.2);
@@ -1534,7 +1535,7 @@ as written. A phone is a viewport 600 px wide or less.
   The pick's line is a quip from `data/quips.json` (section 2.7), served by
   `GET /api/quips` and read once per page load. When the lines cannot be
   read, the page logs a warning and its picks show no line. A pick draws from
-  the category the first answer led to: its own lines, each set (reveal, nope)
+  the category the first answer led to: its own lines, each set (reveal, nope, rush)
   falling back separately to universal's; "Just pick one!" before a category draws universal. The
   film's own genres play no part. Each set deals like a shuffled deck, one
   deck per page load, and is reshuffled only when every line has been dealt.
@@ -1545,8 +1546,8 @@ as written. A phone is a viewport 600 px wide or less.
   hunt; the reveal line, dealt to fit beneath it within the combined cap, types
   beneath it in the text colour as the poster grows. While the check runs, its
   line types beneath the reply, and goes once the check is done. A reply that
-  self-destructs is the exception: its fuse owns the line. A pick with no reply
-  before it (`Just pick one!`, "Roll again") shows no line during the hunt. On `Not that one` a nope line
+  self-destructs is the exception: its fuse owns the line. "Just pick one!"
+  deals a rush line, which stands in the reply's place by every rule above. On `Not that one` and "Roll again" a nope line
   and a reveal line are dealt together within the combined cap: when a pair
   is over it, the longer line goes back unshown and its set deals the next
   that fits beside the other, then, if the pair is still over, the other is
@@ -1571,7 +1572,8 @@ as written. A phone is a viewport 600 px wide or less.
   next film is known; the check's line does not type, and the nope line holds
   the screen. The next hunt starts
   from where the wall stands, by every rule above. "Roll again", after three
-  films in a row were turned away, is a new pick: its check line types.
+  films in a row were turned away, is a new pick: its nope line types in gold
+  at the tap, as on `Not that one`, and its check line types beneath it.
   "Just show me what you picked" asks for no new pick, so no check line types.
 
   A trail answer, the wordmark, a profile menu item that leaves the theatre

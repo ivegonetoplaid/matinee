@@ -3,7 +3,7 @@
 
 export const UNIVERSAL = "universal";
 
-// The set of `kind` ("reveal" or "nope") that a pick after `category` (the tree or mode the first
+// The set of `kind` ("reveal", "nope" or "rush") that a pick after `category` (the tree or mode the first
 // answer led to, or null before one) draws from: the category's own lines, or, when it has none of
 // this kind, universal's. Returns { key, lines }.
 export function setFor(quips, category, kind) {
