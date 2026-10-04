@@ -23,7 +23,7 @@ from matinee.reference import ReferenceError
 from matinee.store import Store
 from matinee.table import FilmTable, write_table
 from matinee.web.app import STATIC, create_app
-from matinee.web.config import Config, ConfigError, from_env
+from matinee.web.config import Config, ConfigError, ImageSource, from_env
 from matinee.web.theatre import LIVE_TTL, RETRY_AFTER, Theatre
 from test_engine import make_table, reference, write_data
 
@@ -81,10 +81,17 @@ class FakeLibrary:
         return Image(b"\xff\xd8jpeg", "image/jpeg")
 
 
-def write_film_table(path: Path) -> None:
+def film_table() -> FilmTable:
+    """The engine's films with their media-server items; film 5 alone has TMDB pictures."""
     table = make_table()
     table.films["item_id"] = [item(int(t)) for t in table.films.index]
-    write_table(table, path)
+    table.films["poster_path"] = ["/p5.jpg" if t == 5 else None for t in table.films.index]
+    table.films["backdrop_path"] = ["/b5.jpg" if t == 5 else None for t in table.films.index]
+    return table
+
+
+def write_film_table(path: Path) -> None:
+    write_table(film_table(), path)
 
 
 @dataclass
@@ -97,6 +104,10 @@ class Clock:
 
 @pytest.fixture
 def world(tmp_path: Path) -> tuple[TestClient, FakeLibrary, Clock, Theatre]:
+    return make_world(tmp_path)
+
+
+def make_world(tmp_path: Path, images: ImageSource = "jellyfin") -> tuple[TestClient, FakeLibrary, Clock, Theatre]:
     data = write_data(tmp_path / "data")
     write_film_table(tmp_path / "films.sqlite")
     library, clock = FakeLibrary(), Clock()
@@ -105,7 +116,7 @@ def world(tmp_path: Path) -> tuple[TestClient, FakeLibrary, Clock, Theatre]:
         return load_catalog(table, data, reference())
 
     theatre = Theatre(library, tmp_path / "films.sqlite", clock=clock, catalog_of=catalog_of)
-    config = Config(SECRET_URL, SECRET_KEY, tmp_path, "https://seerr.invalid", "d" * 16)
+    config = Config(SECRET_URL, SECRET_KEY, tmp_path, "https://seerr.invalid", "d" * 16, images=images)
     return TestClient(create_app(config, theatre, Store(tmp_path / "store.sqlite"), Dtdd("k"))), library, clock, theatre
 
 
@@ -114,7 +125,7 @@ def test_image_is_served_by_tmdb_id_at_a_fixed_size(world: Any) -> None:
     resp = client.get("/img/poster/5/m")
     assert resp.status_code == 200 and resp.content == b"\xff\xd8jpeg"
     assert resp.headers["content-type"] == "image/jpeg"
-    assert resp.headers["cache-control"] == "public, max-age=2592000"
+    assert resp.headers["cache-control"] == "private, max-age=2592000"  # never kept by a shared cache
     assert ("image", ("f" * 32, "poster", 320)) in library.calls  # the live item id, not the table's
     assert client.get("/img/backdrop/6/l").status_code == 200
     assert ("image", (item(6), "backdrop", 1600)) in library.calls
@@ -139,6 +150,7 @@ def test_film_card_reads_the_synopsis_live(world: Any) -> None:
         "runtime_min": 85,
         "synopsis": "A stranger rides into town.",
         "seerr": "https://seerr.invalid/movie/5",
+        "backdrop_path": None,  # the media server is the image source
     }
     assert ("synopsis", "f" * 32) in library.calls
     assert client.get("/api/film/40").status_code == 404  # gone from the library: never offered
@@ -183,8 +195,7 @@ def test_the_film_list_is_reread_only_after_its_time(world: Any) -> None:
 def test_a_replaced_film_table_is_reloaded(world: Any, tmp_path: Path) -> None:
     client, _, _, _ = world
     assert client.get("/api/film/6").json()["title"] == "Film 6"
-    table = make_table()
-    table.films["item_id"] = [item(int(t)) for t in table.films.index]
+    table = film_table()
     table.films.loc[6, "name"] = "Renamed"
     write_table(table, tmp_path / "films.sqlite")
     stat = (tmp_path / "films.sqlite").stat()
@@ -250,6 +261,41 @@ def test_config_refuses_missing_settings_and_a_missing_state_dir(tmp_path: Path)
         from_env({**env, "JELLYFIN_API_KEY": " "})
     with pytest.raises(ConfigError, match="does not exist"):
         from_env({**env, "MATINEE_STATE": str(tmp_path / "nope")})
+
+
+def test_the_image_source_is_the_media_server_unless_tmdb_is_named(tmp_path: Path) -> None:
+    env = {
+        "MATINEE_STATE": str(tmp_path),
+        "MATINEE_JELLYFIN_URL": SECRET_URL,
+        "JELLYFIN_API_KEY": SECRET_KEY,
+        "MATINEE_SEERR_URL": "https://seerr.invalid/",
+        "DTDD_API_KEY": "d",
+    }
+    assert from_env(env).images == "jellyfin"
+    assert from_env({**env, "MATINEE_IMAGES": " "}).images == "jellyfin"
+    assert from_env({**env, "MATINEE_IMAGES": "tmdb"}).images == "tmdb"
+    with pytest.raises(ConfigError, match="MATINEE_IMAGES"):
+        from_env({**env, "MATINEE_IMAGES": "TMDB"})
+
+
+def test_the_media_server_as_source_gives_no_tmdb_paths(world: Any) -> None:
+    client, _, _, _ = world
+    assert client.get("/api/pictures").json() == {"source": "jellyfin", "posters": {}}
+    assert client.get("/api/film/5").json()["backdrop_path"] is None
+    assert "img-src 'self';" in client.get("/").headers["content-security-policy"]
+
+
+def test_tmdb_as_source_gives_each_live_film_its_tmdb_paths(tmp_path: Path) -> None:
+    client, library, clock, _ = make_world(tmp_path, "tmdb")
+    assert client.get("/api/pictures").json() == {"source": "tmdb", "posters": {"5": "/p5.jpg"}}
+    assert client.get("/api/film/5").json()["backdrop_path"] == "/b5.jpg"
+    assert client.get("/api/film/6").json()["backdrop_path"] is None  # it keeps Matinee's image route
+    assert client.get("/img/poster/6/m").status_code == 200
+    library.held = [t for t in library.held if t != 5]
+    clock.now += LIVE_TTL + 1
+    assert client.get("/api/pictures").json()["posters"] == {}  # a film gone from the library is never named
+    policy = client.get("/").headers["content-security-policy"]
+    assert "img-src 'self' https://image.tmdb.org;" in policy and "default-src 'self';" in policy
 
 
 def test_media_server_errors_never_reach_the_browser(world: Any) -> None:

@@ -6,6 +6,7 @@
 
 import { isPhone } from "./dom.js";
 import { GOLD, posterGlow } from "./glow.js";
+import { corsImage, fromTmdb, posterUrl } from "./pictures.js";
 import { SETTLE_EASE, SETTLE_S, bezier, centreOf, hopCell, hopCount, placeLanding, planHunt, settledCamera } from "./hunt-plan.js";
 import {
   ACROSS,
@@ -89,6 +90,8 @@ export class Wall {
     root.append(this.layer);
     this.tiles = [];
     this.pictures = new Map(); // picture url -> { ready, settled }
+    this.paths = new Map(); // film id -> its TMDB poster path, when TMDB is the image source
+    this.fromTmdb = false; // TMDB is the image source
     this.ranks = new Map(); // film id -> its place in this page's order, drawn at random once
     this.order = [];
     this.resting = false;
@@ -108,7 +111,7 @@ export class Wall {
     this.look = null; // how the landed poster is shown: { lit, scale }, strength and size
     // The landed poster's sharper picture, on its own element over the landed cell, shown only once it
     // has decoded; until then the tile beneath keeps drawing the wall's picture.
-    this.front = document.createElement("img");
+    this.front = corsImage(document.createElement("img"));
     this.front.className = "tile front";
     this.front.alt = "";
     this.front.hidden = true;
@@ -117,6 +120,18 @@ export class Wall {
     this.last = performance.now();
     window.addEventListener("resize", () => this.relayout(null, null));
     requestAnimationFrame((t) => this.frame(t));
+  }
+
+  // Takes the image source and the TMDB poster paths the wall's pictures load from, before the first pool
+  // is shown.
+  usePictures(paths, tmdb) {
+    this.paths = paths;
+    this.fromTmdb = tmdb;
+  }
+
+  // The address of film `id`'s poster at `size`.
+  posterUrl(id, size) {
+    return posterUrl(this.paths, id, size);
   }
 
   // Show a pool. `resting` sets the posters to the size they keep through the pick, whatever the
@@ -157,7 +172,7 @@ export class Wall {
   async fadeIn() {
     if (!this.layout.films) return;
     this.layer.classList.add("waiting");
-    const urls = this.tiles.filter((tile) => tile.id !== null).map((tile) => `/img/poster/${tile.id}/${this.size}`);
+    const urls = this.tiles.filter((tile) => tile.id !== null).map((tile) => this.posterUrl(tile.id, this.size));
     await within(FIRST_MS, urls.map((url) => this.pictures.get(url)?.settled));
     this.layer.classList.remove("waiting");
   }
@@ -235,7 +250,7 @@ export class Wall {
     const plan = this.planClearOf(id, from, rand);
     this.placed = new Map([...this.placed, ...placeLanding(plan, id)]);
     this.dirty = true;
-    this.request(`/img/poster/${id}/${this.size}`);
+    this.request(this.posterUrl(id, this.size));
     if (lessMotion.matches) return this.jump(plan, round);
     return this.hop(plan, from);
   }
@@ -342,7 +357,7 @@ export class Wall {
     if (this.frontCell) return true;
     const tile = this.landedTile();
     const img = tile?.img;
-    const own = tile && `/img/poster/${tile.id}/${this.size}`;
+    const own = tile && this.posterUrl(tile.id, this.size);
     return Boolean(img && img.getAttribute("src") === own && img.complete && img.naturalWidth > 1);
   }
 
@@ -355,7 +370,7 @@ export class Wall {
     try {
       await this.front.decode();
     } catch {
-      return; // the picture failed; the wall's own picture stays, and the server has logged why
+      return; // the picture failed; the wall's own picture stays, and request() or picture() has logged why
     }
     if (!this.landed || `${this.landed.i},${this.landed.j}` !== cell) return;
     this.frontCell = cell;
@@ -555,7 +570,7 @@ export class Wall {
     const across = layout.screenCols + 2;
     const down = layout.screenRows + 2;
     return Array.from({ length: across * down }, (_, n) => {
-      const img = document.createElement("img");
+      const img = corsImage(document.createElement("img"));
       img.className = "tile";
       img.alt = "";
       img.src = BLANK;
@@ -575,7 +590,7 @@ export class Wall {
     const start = performance.now();
     this.layTiles(tiles, cam, view);
     const onScreenTiles = tiles.filter((tile) => shown.has(`${tile.i},${tile.j}`));
-    const urls = onScreenTiles.map((tile) => `/img/poster/${tile.id}/${view.size}`);
+    const urls = onScreenTiles.map((tile) => this.posterUrl(tile.id, view.size));
     urls.forEach((url) => this.request(url));
     await within(PRELOAD_MS, urls.map((url) => this.pictures.get(url).settled));
     this.layTiles(tiles, cam, view);
@@ -631,9 +646,9 @@ export class Wall {
   // film already loaded at another size stands in; with none, or after it failed, null, and the tile
   // stays a dark cell.
   picture(id, size) {
-    const url = `/img/poster/${id}/${size}`;
+    const url = this.posterUrl(id, size);
     if (this.request(url)) return url;
-    return SIZES.map((other) => `/img/poster/${id}/${other}`).find((other) => this.pictures.get(other)?.ready) || null;
+    return SIZES.map((other) => this.posterUrl(id, other)).find((other) => this.pictures.get(other)?.ready) || null;
   }
 
   // Whether the picture at `url` has loaded; asks for it the first time. The entry's `settled`
@@ -642,14 +657,18 @@ export class Wall {
     const known = this.pictures.get(url);
     if (known) return known.ready;
     const entry = { ready: false };
-    const img = new Image();
+    const img = corsImage();
     entry.settled = new Promise((done) => {
       img.onload = () => {
         entry.ready = true;
         this.dirty = true;
         done();
       };
-      img.onerror = () => done(); // the cell stays dark; the server has logged why
+      // The cell stays dark. The server logs an image route failure; a TMDB one is logged here.
+      img.onerror = () => {
+        if (fromTmdb(url)) console.warn("a poster from TMDB's image server failed to load", url);
+        done();
+      };
     });
     this.pictures.set(url, entry);
     img.src = url;

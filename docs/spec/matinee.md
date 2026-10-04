@@ -576,8 +576,8 @@ once and then every day at that local time. The time is validated before the
 first rebuild. A failed nightly rebuild leaves the previous table in place.
 
 1. It reads the media server's film list, by GET only.
-2. It refreshes TMDB facts (collection, keywords, original language) for every
-   library film with a TMDB id. That is one GET per film, 0.15 seconds apart.
+2. It refreshes TMDB facts (collection, keywords, original language, and the
+   poster and backdrop paths) for every library film with a TMDB id. That is one GET per film, 0.15 seconds apart.
    It honours `Retry-After` on a 429 and stops after 5 network failures in a
    row.
 3. It loads the local MovieLens genome.
@@ -591,12 +591,19 @@ first rebuild. A failed nightly rebuild leaves the previous table in place.
 ### 5.2 TMDB facts and the six-month limit
 
 - The TMDB cache holds the newest record per film. A record is refetched once
-  it is **150 days** old, or when it predates the original-language field.
+  it is **150 days** old, or when it predates the original-language field or
+  the picture paths.
+- A picture path is kept only when it has TMDB's shape: a slash, letters and
+  digits, then `.jpg` or `.png`. Any other value is logged and kept as no
+  picture, so nothing else is ever joined into a picture's address. A film TMDB
+  gives no picture for is recorded as having none.
 - After each refresh the cache is rewritten to hold only records younger than
   **183 days**. A film TMDB does not know (404) is never cached. A damaged cache
   line is skipped, logged, and its film fetched again.
 - A film whose TMDB record is missing or 183 days old or more carries no TMDB
-  facts. Its keywords are unknown, never empty.
+  facts. Its keywords are unknown, never empty, and it has no picture paths.
+- A table written before the picture paths were kept still loads. Its films
+  have no picture paths until the next rebuild replaces it.
 - **The table is refused once its oldest TMDB fact is 183 days old.** The server
   will not start on such a table. A running server checks the age on every
   request and answers 503 `not_ready` once it passes.
@@ -1032,7 +1039,8 @@ would hand one device's profiles to another.
 | POST | `/api/admission` | give the door word; the right one sets the admission cookie |
 | GET | `/static/…` | scripts, styles, self-hosted fonts, icons, pails, avatars, the locked door's art, manifest (`Cache-Control: no-cache`, so a deploy is never seen half-applied) |
 | GET | `/img/{kind}/{tmdb}/{size}` | a poster or backdrop, read from the media server |
-| GET | `/api/film/{tmdb}` | title, year, runtime, synopsis and the Seerr link for one film |
+| GET | `/api/pictures` | the image source, and under `tmdb` the TMDB poster path of every live film that has one (section 11.5) |
+| GET | `/api/film/{tmdb}` | title, year, runtime, synopsis and the Seerr link for one film, and under `tmdb` its TMDB backdrop path |
 | GET | `/api/door` | the film count, every profile (marking those this device holds) and the avatars offered |
 | POST | `/api/profiles` | create a profile and issue this device a token |
 | POST | `/api/profiles/{id}/open` | open a profile by PIN, or at once when held or PIN-less |
@@ -1057,8 +1065,10 @@ would hand one device's profiles to another.
   is joined into a request. An image answer must be `image/*` and at most
   8 MiB. An image 160 px wide or narrower, a wall tile shown dimmed, is asked
   of the media server at quality 60; any other at quality 80. Images are served
-  with `Cache-Control: public, max-age=2592000` (30 days), so a return visit
-  draws the wall from the browser's cache.
+  with `Cache-Control: private, max-age=2592000` (30 days), so a return visit
+  draws the wall from the browser's cache. `private` keeps every shared cache,
+  such as a CDN in front of the site, from keeping a copy and handing it to a
+  device the door word has not admitted.
 - **An answer** as a question id and an option index, never as a filter.
 - **Request sizes** are capped: a profile name 80
   and a PIN 8; an avatar 40; topics 400; exclusions 20; answers 12; tree names
@@ -1072,9 +1082,11 @@ would hand one device's profiles to another.
 
 No response carries the media server's address or key, a file path, a disk
 location or an exception's text. The media server's key travels only in the
-header of Matinee's own requests to it and is never logged. Posters, backdrops
-and synopses reach the browser through Matinee's server. The media server is
-never exposed to the browser.
+header of Matinee's own requests to it and is never logged. Synopses always
+reach the browser through Matinee's server, and so do posters and backdrops
+under the default image source. Under `tmdb`, a picture with a TMDB path is
+loaded by the browser from TMDB's image server (section 11.5). The media server
+is never exposed to the browser.
 
 Every error leaves as `{"error": <code>, "message": <sentence>}`:
 
@@ -1098,7 +1110,9 @@ nothing from the server.
 
 Every response, including static files and errors, carries:
 
-- `Content-Security-Policy: default-src 'self'; img-src 'self'; style-src 'self'; font-src 'self'; script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'`
+- `Content-Security-Policy: default-src 'self'; img-src 'self'; style-src 'self'; font-src 'self'; script-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'`.
+  Under the `tmdb` image source, `img-src` reads `'self' https://image.tmdb.org`
+  and every other directive is the same.
 - `X-Content-Type-Options: nosniff`
 - `Referrer-Policy: same-origin`
 - `Permissions-Policy: camera=(), microphone=(), geolocation=()`
@@ -1108,6 +1122,43 @@ Every response, including static files and errors, carries:
 
 The page builds all text as text nodes, never as markup, so a name or title from
 the server can never become part of the page's HTML.
+
+### 11.5 The image source
+
+`MATINEE_IMAGES` says where the page's pictures come from: the wall's posters,
+the picked poster and the pick's backdrop.
+
+- **`jellyfin`**, the default, or unset or empty. Every picture comes from the
+  image route, read from the media server. The page asks for exactly the
+  addresses it asked for before the setting existed.
+- **`tmdb`.** The browser loads a picture with a TMDB path from
+  `https://image.tmdb.org/t/p/<width><path>`. A picture with no TMDB path (TMDB
+  has none, the film's record is missing or too old, or the film joined the
+  library after the last rebuild) comes from the image route. Matinee's sizes
+  map to TMDB widths as follows.
+
+  | Picture | `xs` | `s` | `m` | `l` |
+  |---|---|---|---|---|
+  | poster | `w92` | `w154` | `w342` | `w780` |
+  | backdrop | | | `w780` | `w1280` |
+
+- Any other value stops the start with a message that names the setting.
+- An admitted page asks for `/api/pictures` once per visit, beside `/api/door`
+  and `/api/first`, before it lays the first wall. A failed reply leaves every
+  picture on the image route, logs a warning, and is asked again at the next
+  boot. Under `tmdb` the pick reads the backdrop path from the film's card
+  before it fetches the backdrop; under `jellyfin` it fetches the backdrop at
+  once.
+- The pick gives up on its sharp poster or its backdrop after **10 seconds**,
+  the same limit the server sets on the media server's images. A picture given
+  up on is stopped, logged as a warning and never shown; the pick goes on
+  without it.
+- Every picture the page shows is asked for with CORS (`crossOrigin =
+  "anonymous"`). TMDB's image server allows it, so the glow reads a TMDB
+  poster's colour as it reads one from the image route.
+- A TMDB picture that fails to load leaves its cell dark, as a failed image
+  route picture does, and the page logs a warning naming it. Nothing falls back
+  to the image route after a failure.
 
 ## 12. The page
 
@@ -1640,6 +1691,7 @@ as written. A phone is a viewport 600 px wide or less.
 | `MATINEE_DOOR_WORD` | server, optional | the door word (section 7.2); unset or empty means no lock |
 | `MATINEE_DOOR_MATCH` | server, optional | `relaxed` (the default) or `strict` |
 | `MATINEE_DOOR_GREETING` | server, optional | `show` (the default), `gin`, or the operator's own greeting |
+| `MATINEE_IMAGES` | server, optional | `jellyfin` (the default) or `tmdb`: where the page's pictures come from (section 11.5) |
 
 ## 14. Third-party terms
 
@@ -1650,6 +1702,9 @@ The terms of each source are part of the design.
   About page. The TMDB logo appears there and in the corner credit line of the
   door, the question screens, the pick screen and a problem screen, less prominent than
   Matinee's own mark. TMDB data is non-commercial under the default licence.
+  Under the `tmdb` image source, a viewer's browser loads pictures from TMDB's
+  image server, so TMDB sees that browser's requests. The page sends them with
+  no referrer (`Referrer-Policy: same-origin`).
 - **MovieLens tag genome.** Credited on the About page to F. Maxwell Harper and
   Joseph A. Konstan (2015), *The MovieLens Datasets: History and Context*, and
   Jesse Vig, Shilad Sen and John Riedl (2012), *The Tag Genome: Encoding
@@ -1917,11 +1972,12 @@ symbol when one does not match.
 | `src/matinee/tmdb.py::REFETCH_AFTER` / `MAX_AGE` | `src/matinee/tmdb.py:28` | 2026-09-26 |
 | `src/matinee/tmdb.py::compact` | `src/matinee/tmdb.py:82` | 2026-09-26 |
 | `src/matinee/tmdb.py::load_cache` | `src/matinee/tmdb.py:64` | 2026-09-26 |
+| `src/matinee/tmdb.py::needs_fetch` / `picture_path` / `PICTURE_PATH` | `src/matinee/tmdb.py:97` | 2026-10-03 |
 | `src/matinee/genome.py::load_genome` (links.csv join, stamped cache) | `src/matinee/genome.py:98` | 2026-09-26 |
 | `src/matinee/table.py::build_table` / `BuildReport` | `src/matinee/table.py:164` | 2026-09-26 |
 | `src/matinee/table.py::_genome_rows` (first MovieLens film wins) | `src/matinee/table.py:111` | 2026-09-26 |
 | `src/matinee/table.py::write_table` | `src/matinee/table.py:253` | 2026-09-26 |
-| `src/matinee/table.py::load_table` | `src/matinee/table.py:305` | 2026-09-26 |
+| `src/matinee/table.py::load_table` (a column the table predates reads as missing) | `src/matinee/table.py:317` | 2026-10-03 |
 | `src/matinee/table.py::check_age` | `src/matinee/table.py:292` | 2026-09-26 |
 | `src/matinee/table.py::with_live` | `src/matinee/table.py:198` | 2026-09-26 |
 | `src/matinee/web/theatre.py::Theatre.showing` (`LIVE_TTL`, `RETRY_AFTER`) | `src/matinee/web/theatre.py:69` | 2026-09-26 |
@@ -2044,11 +2100,12 @@ symbol when one does not match.
 | `src/matinee/web/main.py::build` (reads the quips) | `src/matinee/web/main.py:27` | 2026-09-28 |
 | `src/matinee/web/config.py::from_env` | `src/matinee/web/config.py:76` | 2026-10-02 |
 | `src/matinee/web/app.py::create_app` (docs disabled) | `src/matinee/web/app.py:334` | 2026-10-02 |
-| `src/matinee/web/app.py::SECURITY_HEADERS` | `src/matinee/web/app.py:288` | 2026-10-02 |
-| `src/matinee/web/app.py::add_page` | `src/matinee/web/app.py:302` | 2026-10-02 |
+| `src/matinee/web/app.py::security_headers` / `CONTENT_SECURITY_POLICY` | `src/matinee/web/app.py:335` | 2026-10-03 |
+| `src/matinee/web/app.py::add_page` | `src/matinee/web/app.py:341` | 2026-10-03 |
+| `src/matinee/web/config.py::_images` (`MATINEE_IMAGES`) | `src/matinee/web/config.py:82` | 2026-10-03 |
 | `src/matinee/web/app.py::add_quip_routes` (`GET /api/quips`) | `src/matinee/web/app.py:327` | 2026-10-02 |
-| `src/matinee/web/app.py::add_film_routes` / `IMAGE_WIDTHS` | `src/matinee/web/app.py:131` | 2026-10-02 |
-| `src/matinee/web/app.py::held` | `src/matinee/web/app.py:90` | 2026-10-02 |
+| `src/matinee/web/app.py::add_film_routes` / `IMAGE_WIDTHS` / `IMAGE_CACHE` (`GET /api/pictures`) | `src/matinee/web/app.py:155` | 2026-10-03 |
+| `src/matinee/web/app.py::held` / `stored_path` | `src/matinee/web/app.py:103` | 2026-10-03 |
 | `src/matinee/web/app.py::add_door_routes` | `src/matinee/web/app.py:164` | 2026-10-02 |
 | `src/matinee/web/app.py::add_error_handlers` | `src/matinee/web/app.py:99` | 2026-10-02 |
 | `src/matinee/web/common.py::Problem` | `src/matinee/web/common.py:127` | 2026-10-02 |
@@ -2123,7 +2180,11 @@ symbol when one does not match.
 | `src/matinee/web/static/js/wall.js::Wall.useSharp` (the front element) | `src/matinee/web/static/js/wall.js:351` | 2026-09-28 |
 | `src/matinee/web/static/js/wall.js::Wall.bringForward` | `src/matinee/web/static/js/wall.js:370` | 2026-09-28 |
 | `src/matinee/web/static/js/wall.js::Wall.dress` / `glowShadow` / `glowAt` | `src/matinee/web/static/js/wall.js:392` | 2026-09-29 |
-| `src/matinee/web/static/js/wall.js::glowOf` | `src/matinee/web/static/js/wall.js:55` | 2026-09-28 |
+| `src/matinee/web/static/js/wall.js::glowOf` | `src/matinee/web/static/js/wall.js:56` | 2026-10-03 |
+| `src/matinee/web/static/js/wall.js::Wall.usePictures` / `posterUrl` / `fromTmdb` | `src/matinee/web/static/js/wall.js:127` | 2026-10-03 |
+| `src/matinee/web/static/js/pictures.js::posterUrl` / `backdropUrl` / `posterPaths` / `corsImage` (`TMDB_WIDTHS`) | `src/matinee/web/static/js/pictures.js:1` | 2026-10-03 |
+| `src/matinee/web/static/js/main.js::askPictures` (once per visit) | `src/matinee/web/static/js/main.js:220` | 2026-10-03 |
+| `src/matinee/web/static/js/pick.js::fetchFilm` (the backdrop waits for the card under `tmdb`) / `picture` (`PICTURE_WAIT_MS`) | `src/matinee/web/static/js/pick.js:301` | 2026-10-03 |
 | `src/matinee/web/static/js/wall.js::Wall.putBack` / `returnPoster` / `liftDim` / `settleBack` | `src/matinee/web/static/js/wall.js:439` | 2026-09-28 |
 | `src/matinee/web/static/js/wall.js::Wall.relayout` / `makeTiles` | `src/matinee/web/static/js/wall.js:539` | 2026-09-28 |
 | `src/matinee/web/static/js/wall.js::Wall.prepare` (the re-sort's wait) | `src/matinee/web/static/js/wall.js:572` | 2026-10-01 |

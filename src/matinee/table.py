@@ -8,6 +8,8 @@ A film the genome does not cover carries no genome scores (NaN), never zeros.
 A film whose TMDB record is missing or older than six months carries no TMDB
 facts (`tmdb_known` is False, keywords None rather than empty). The table refuses to be served once its oldest
 TMDB fact is older than six months, because TMDB's terms cap caching there.
+
+A table written before the picture paths were kept reads as one whose films have none.
 """
 
 from __future__ import annotations
@@ -40,7 +42,10 @@ COLUMNS = (
     "language",
     "collection_id",
     "keywords",
+    "poster_path",
+    "backdrop_path",
 )
+LATER_COLUMNS = frozenset({"poster_path", "backdrop_path"})  # a table written before these were kept lacks them
 
 
 class TableError(RuntimeError):
@@ -120,12 +125,21 @@ def _genome_rows(genome: Genome) -> dict[int, int]:
 
 def _tmdb_fields(rec: TmdbFilm | None, usable: bool) -> dict[str, object]:
     if rec is None or not usable:
-        return {"tmdb_known": False, "language": None, "collection_id": None, "keywords": None}
+        return {
+            "tmdb_known": False,
+            "language": None,
+            "collection_id": None,
+            "keywords": None,
+            "poster_path": None,
+            "backdrop_path": None,
+        }
     return {
         "tmdb_known": True,
         "language": rec.original_language or None,
         "collection_id": rec.collection_id,
         "keywords": frozenset(rec.keywords),
+        "poster_path": rec.poster_path or None,
+        "backdrop_path": rec.backdrop_path or None,
     }
 
 
@@ -185,14 +199,11 @@ CREATE TABLE meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
 CREATE TABLE films (
     tmdb INTEGER PRIMARY KEY, item_id TEXT NOT NULL, name TEXT NOT NULL, year INTEGER,
     genres TEXT NOT NULL, certificate TEXT NOT NULL, runtime_min REAL, rating REAL,
-    tmdb_known INTEGER NOT NULL, language TEXT, collection_id INTEGER, keywords TEXT
+    tmdb_known INTEGER NOT NULL, language TEXT, collection_id INTEGER, keywords TEXT,
+    poster_path TEXT, backdrop_path TEXT
 );
 CREATE TABLE genome (tmdb INTEGER PRIMARY KEY REFERENCES films(tmdb), relevance BLOB NOT NULL);
 """
-SELECT_FILMS = (
-    "SELECT tmdb, item_id, name, year, genres, certificate, runtime_min, rating,"
-    " tmdb_known, language, collection_id, keywords FROM films ORDER BY tmdb"
-)
 
 
 def with_live(table: FilmTable, films: Sequence[LibraryFilm]) -> tuple[FilmTable, list[str]]:
@@ -267,7 +278,7 @@ def write_table(table: FilmTable, path: Path) -> None:
         db.executemany("INSERT INTO meta VALUES (?, ?)", meta.items())
         for i, (tmdb, f) in enumerate(table.films.iterrows()):
             db.execute(
-                "INSERT INTO films VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO films VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     int(str(tmdb)),
                     f.item_id,
@@ -281,6 +292,8 @@ def write_table(table: FilmTable, path: Path) -> None:
                     _optional(f.language),
                     _optional(f.collection_id),
                     None if f.keywords is None else json.dumps(sorted(f.keywords)),
+                    _optional(f.poster_path),
+                    _optional(f.backdrop_path),
                 ),
             )
             if not np.isnan(table.genome[i]).any():
@@ -308,15 +321,21 @@ def load_table(path: Path, now: datetime | None = None) -> FilmTable:
         raise TableError(f"no film table at {path}; run tools/rebuild_table.py")
     with sqlite3.connect(f"file:{path}?mode=ro", uri=True) as db:
         meta = dict(db.execute("SELECT key, value FROM meta").fetchall())
-        rows = db.execute(SELECT_FILMS).fetchall()
+        films = db.execute("SELECT * FROM films ORDER BY tmdb")
+        names = [column[0] for column in films.description]
+        rows = films.fetchall()
         blobs = dict(db.execute("SELECT tmdb, relevance FROM genome").fetchall())
     db.close()
     if meta.get("format") != str(FORMAT):
         raise TableError(f"the film table at {path} is format {meta.get('format')}; this Matinee reads {FORMAT}")
+    lacking = set(COLUMNS) - set(names) - LATER_COLUMNS
+    if lacking:
+        raise TableError(f"the film table at {path} has no {', '.join(sorted(lacking))} column")
     oldest = datetime.fromisoformat(meta["oldest_tmdb"]) if meta["oldest_tmdb"] else None
     _check_age(oldest, now or datetime.now(UTC), path)
     tags = tuple(json.loads(meta["tags"]))
-    frame = pd.DataFrame(rows, columns=["tmdb", *COLUMNS]).set_index("tmdb")
+    # Columns by name: a LATER_COLUMNS column the table predates reads as missing.
+    frame = pd.DataFrame(rows, columns=names).set_index("tmdb").reindex(columns=list(COLUMNS))
     frame["genres"] = frame.genres.map(lambda g: frozenset(json.loads(g)))
     frame["keywords"] = frame.keywords.map(lambda k: frozenset(json.loads(k)) if isinstance(k, str) else None)
     frame["tmdb_known"] = frame.tmdb_known.astype(bool)

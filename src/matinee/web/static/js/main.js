@@ -7,6 +7,7 @@ import { Door, buildMarquee, showCount } from "./door.js";
 import { LockedDoor, WALL_FADE_MS } from "./locked.js";
 import { clear, h, isPhone, prefersLessMotion, sentenceCase, wait } from "./dom.js";
 import { showPick } from "./pick.js";
+import { posterPaths } from "./pictures.js";
 import { Deck, dealBeneath, dealPair, setFor } from "./quips.js";
 import { lightFuse } from "./fuse.js";
 import { typeLine } from "./type.js";
@@ -212,6 +213,21 @@ function problem(data, again, keep = false) {
   );
 }
 
+// The wall's picture source, asked for beside the door and the first pool, so the first wall is laid from
+// it. It is asked for once per visit; a failed answer leaves every picture on Matinee's own image route
+// and is asked again at the next boot.
+let picturesKnown = false;
+async function askPictures() {
+  if (picturesKnown) return;
+  const res = await get("/api/pictures");
+  if (!res.ok) {
+    console.warn("the image source could not be read; every picture comes from Matinee's server", res.data);
+    return;
+  }
+  wall.usePictures(posterPaths(res.data), res.data.source === "tmdb");
+  picturesKnown = true;
+}
+
 // The box office. `opts.screen` opens it on a new profile ("new") or the viewer's list ("list").
 // When a door word is set and this device has not given it, the locked door stands in its place, and
 // nothing about the films is asked for until the word is right.
@@ -220,7 +236,7 @@ async function boot(opts = {}) {
   if (!gate.ok) return problem(gate.data, () => boot(opts));
   if (!gate.data.admitted) return lockedDoor(gate.data.greeting);
   loadQuips();
-  const [door, first] = await Promise.all([get("/api/door"), post("/api/first", { viewer: {} })]);
+  const [door, first] = await Promise.all([get("/api/door"), post("/api/first", { viewer: {} }), askPictures()]);
   if (first.ok) wall.show(first.data.pool);
   return frontDoor(door, opts);
 }
@@ -244,7 +260,7 @@ function lockedDoor(greeting) {
   // locked door while it swings, so the wipe opens onto a drawn wall.
   const onAdmitted = async (locked) => {
     loadQuips();
-    const ready = Promise.all([get("/api/door"), post("/api/first", { viewer: {} })]).then(async ([door, first]) => {
+    const ready = Promise.all([get("/api/door"), post("/api/first", { viewer: {} }), askPictures()]).then(async ([door, first]) => {
       if (first.ok) {
         wall.show(first.data.pool);
         await wall.whenStill();

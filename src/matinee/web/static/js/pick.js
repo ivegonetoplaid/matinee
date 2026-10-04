@@ -10,6 +10,7 @@
 import { get } from "./api.js";
 import { twoParts } from "./door-rules.js";
 import { h, isPhone, prefersLessMotion, sentenceCase, wait } from "./dom.js";
+import { backdropUrl, corsImage } from "./pictures.js";
 import { typeLine } from "./type.js";
 
 const BEAT_MS = 500; // the grown poster holds for one beat before it moves to rest
@@ -18,17 +19,25 @@ const SETTLE_MS = 1300;
 const PHONE_HOLD_MS = 2200;
 const POSTER_RATIO = 1.5; // height over width
 const POSTER_MIN_H = 160; // below this the page scrolls rather than shrink the poster further
+const PICTURE_WAIT_MS = 10000; // a picture not drawable by then is given up, as the server gives up on the media server
 
 // A picture fetched ahead of its moment. Resolves to the image once it can be drawn, or to null when it
-// fails: the server answers 404 for a picture it cannot fetch, and bounds how long it tries.
+// fails or has not arrived within PICTURE_WAIT_MS. A picture given up on is stopped and never shown.
 function picture(src, alt) {
-  const img = new Image();
+  const img = corsImage();
   img.alt = alt;
   img.src = src;
-  return img.decode().then(
+  const drawn = img.decode().then(
     () => img,
     () => null,
   );
+  const late = wait(PICTURE_WAIT_MS).then(() => null);
+  return Promise.race([drawn, late]).then((got) => {
+    if (got) return got;
+    img.removeAttribute("src");
+    console.warn("a picture failed or took too long; the pick goes on without it", src);
+    return null;
+  });
 }
 
 // The poster's resting box: as tall as the slot allows at 2:3, never wider than the slot.
@@ -180,7 +189,7 @@ async function restingPoster(sharp, wall, film) {
   if (sharp) return sharp;
   const tile = wall.landedTile()?.img;
   if (!tile?.currentSrc || tile.currentSrc.endsWith("/blank.svg") || !(tile.naturalWidth > 1)) return null;
-  const copy = new Image();
+  const copy = corsImage();
   copy.alt = `${film.title} poster`;
   copy.src = tile.currentSrc;
   return copy.decode().then(
@@ -262,7 +271,7 @@ export async function showPick({ stage, wall, result, frame, readUntil = 0, line
   const left = () => !frame.showing.isConnected || wall.round !== round;
   const gold = await goldLine(frame, result, lines, fuse);
   if (left()) return undefined;
-  const { cardRequest, posterReady, backdropReady } = fetchFilm(film);
+  const { cardRequest, posterReady, backdropReady } = fetchFilm(film, wall);
   // The words fade as the drift stops; a gold line (a nope line, or why a film was turned away) stays.
   const onStop = () => {
     if (!gold && !fuse?.lit()) frame.line.classList.add("hushed");
@@ -287,11 +296,16 @@ async function toRest({ stage, wall, frame, film, result, actions, left, out, ca
 }
 
 // What the pick fetches as soon as it knows the film: its details, its sharp poster and, on a desktop,
-// its backdrop. A phone's resting page shows no backdrop, so a phone fetches none.
-function fetchFilm(film) {
-  return {
-    cardRequest: get(`/api/film/${film.tmdb}`),
-    posterReady: picture(`/img/poster/${film.tmdb}/l`, `${film.title} poster`),
-    backdropReady: isPhone() ? null : picture(`/img/backdrop/${film.tmdb}/l`, `${film.title}, a still from the film`),
-  };
+// its backdrop. With TMDB as the image source the backdrop waits for the details, which carry its TMDB
+// path; otherwise it is fetched at once. A phone's resting page shows no backdrop, so a phone fetches none.
+function fetchFilm(film, wall) {
+  const cardRequest = get(`/api/film/${film.tmdb}`);
+  const still = `${film.title}, a still from the film`;
+  let backdropReady = null;
+  if (!isPhone() && wall.fromTmdb) {
+    backdropReady = cardRequest.then((card) => picture(backdropUrl(film.tmdb, "l", card.ok ? card.data.backdrop_path : null), still));
+  } else if (!isPhone()) {
+    backdropReady = picture(backdropUrl(film.tmdb, "l", null), still);
+  }
+  return { cardRequest, posterReady: picture(wall.posterUrl(film.tmdb, "l"), `${film.title} poster`), backdropReady };
 }

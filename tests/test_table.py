@@ -37,9 +37,12 @@ def genome() -> Genome:
     )
 
 
-def tmdb(tmdb_id: int, age_days: int, keywords: list[str], language: str | None = "en") -> TmdbFilm:
+def tmdb(
+    tmdb_id: int, age_days: int, keywords: list[str], language: str | None = "en", poster: str | None = ""
+) -> TmdbFilm:
     fetched = (NOW - timedelta(days=age_days)).isoformat()
-    return TmdbFilm(tmdb_id, fetched, 900 if tmdb_id == 11 else None, None, keywords, language)
+    backdrop = poster and poster.replace("/p", "/b")
+    return TmdbFilm(tmdb_id, fetched, 900 if tmdb_id == 11 else None, None, keywords, language, poster, backdrop)
 
 
 LIBRARY = [
@@ -49,7 +52,11 @@ LIBRARY = [
     film("c", 33, "Unscored film"),
     film("d", None, "No id film"),
 ]
-CACHE = {11: tmdb(11, 10, ["gore"]), 22: tmdb(22, 200, ["blood"]), 33: tmdb(33, 20, [], language="")}
+CACHE = {
+    11: tmdb(11, 10, ["gore"], poster="/p11.jpg"),
+    22: tmdb(22, 200, ["blood"], poster="/p22.jpg"),
+    33: tmdb(33, 20, [], language=""),
+}
 
 
 def test_build_keeps_missing_scores_missing_and_reports() -> None:
@@ -170,10 +177,12 @@ def test_needs_fetch() -> None:
     assert needs_fetch(tmdb(1, 151, []), NOW)
     assert needs_fetch(tmdb(1, 150, []), NOW)
     assert not needs_fetch(
-        TmdbFilm(1, (NOW - timedelta(days=150) + timedelta(seconds=1)).isoformat(), None, None, [], "en"), NOW
+        TmdbFilm(1, (NOW - timedelta(days=150) + timedelta(seconds=1)).isoformat(), None, None, [], "en", "", ""), NOW
     )
     assert needs_fetch(tmdb(1, 10, [], language=None), NOW)
     assert not needs_fetch(tmdb(1, 10, [], language=""), NOW)
+    assert needs_fetch(tmdb(1, 10, [], poster=None), NOW)  # written before picture paths were kept
+    assert not needs_fetch(tmdb(1, 10, [], poster="/p1.jpg"), NOW)
 
 
 def test_refresh_appends_newest_and_stops_on_an_outage(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -185,7 +194,7 @@ def test_refresh_appends_newest_and_stops_on_an_outage(tmp_path: Path, monkeypat
 
     def ok(t: int, _: str) -> TmdbFilm:
         calls.append(t)
-        return TmdbFilm(t, NOW.isoformat(), None, None, ["k"], "en")
+        return TmdbFilm(t, NOW.isoformat(), None, None, ["k"], "en", "", "")
 
     assert refresh([1, 2], cache, "tok", fetch=ok) == (2, 0)
     assert calls == [1, 2]
@@ -287,7 +296,52 @@ def test_fetch_film_maps_404_to_none_and_reads_fields(monkeypatch: pytest.Monkey
     monkeypatch.setattr("matinee.tmdb.get_json", lambda url, token: {"keywords": {"keywords": []}})
     bare = fetch_film(6, "tok")
     assert bare is not None and bare.original_language == ""
+    assert (bare.poster_path, bare.backdrop_path) == ("", "")
     assert not needs_fetch(bare, datetime.now(UTC))
+
+
+def test_fetch_film_keeps_picture_paths_shaped_like_tmdb_paths(monkeypatch: pytest.MonkeyPatch) -> None:
+    body: dict[str, object] = {
+        "keywords": {"keywords": []},
+        "poster_path": "/pB8BM7pdSp6B6Ih7QZ4DrQ3PmJK.jpg",
+        "backdrop_path": None,
+    }
+    monkeypatch.setattr("matinee.tmdb.get_json", lambda url, token: body)
+    got = fetch_film(5, "tok")
+    assert got is not None and (got.poster_path, got.backdrop_path) == ("/pB8BM7pdSp6B6Ih7QZ4DrQ3PmJK.jpg", "")
+    for odd in ("//evil.example/x.jpg", "/a/../b.jpg", "/x.svg", 7, "https://image.tmdb.org/t/p/w92/x.jpg", "/x.jpg\n"):
+        monkeypatch.setattr("matinee.tmdb.get_json", lambda url, token, odd=odd: {**body, "poster_path": odd})
+        got = fetch_film(5, "tok")
+        assert got is not None and got.poster_path == ""
+
+
+def test_picture_paths_follow_the_six_month_rule_through_the_table(tmp_path: Path) -> None:
+    table, _ = build_table(LIBRARY, genome(), CACHE, NOW)
+    assert table.films.loc[11, "poster_path"] == "/p11.jpg" and table.films.loc[11, "backdrop_path"] == "/b11.jpg"
+    assert pd.isna(table.films.loc[22, "poster_path"])  # its record is too old to serve
+    assert pd.isna(table.films.loc[33, "poster_path"])  # TMDB has no picture for it
+    write_table(table, tmp_path / "films.sqlite")
+    back = load_table(tmp_path / "films.sqlite", NOW)
+    assert back.films.loc[11, "poster_path"] == "/p11.jpg" and back.films.loc[11, "backdrop_path"] == "/b11.jpg"
+    assert pd.isna(back.films.loc[22, "poster_path"]) and pd.isna(back.films.loc[33, "backdrop_path"])
+
+
+def test_a_table_written_before_picture_paths_loads_without_them(tmp_path: Path) -> None:
+    table, _ = build_table(LIBRARY, genome(), CACHE, NOW)
+    path = tmp_path / "films.sqlite"
+    write_table(table, path)
+    with sqlite3.connect(path) as db:
+        db.execute("ALTER TABLE films DROP COLUMN poster_path")
+        db.execute("ALTER TABLE films DROP COLUMN backdrop_path")
+    db.close()
+    back = load_table(path, NOW)
+    assert list(back.films.index) == [11, 22, 33]
+    assert back.films.poster_path.isna().all() and back.films.backdrop_path.isna().all()
+    with sqlite3.connect(path) as db:
+        db.execute("ALTER TABLE films DROP COLUMN language")
+    db.close()
+    with pytest.raises(TableError, match="no language column"):
+        load_table(path, NOW)
 
 
 def test_daily_time_is_checked() -> None:

@@ -2,7 +2,9 @@
 
 Server addresses and keys arrive only here, as configuration; none is ever
 committed, logged or sent to a browser. The door word is optional: unset or
-empty means no lock. It is never written to a log, a reply or an error.
+empty means no lock. It is never written to a log, a reply or an error. The image
+source says where the page's pictures come from: the media server (the default)
+or TMDB's image server.
 """
 
 from __future__ import annotations
@@ -11,6 +13,7 @@ import os
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Literal
 
 from matinee.web.admission import MAX_TYPED, RELAXED_MIN, STRICT_MIN, Mode, too_long, too_short
 
@@ -18,6 +21,8 @@ GREETINGS = {
     "show": "State your business. Make it quick, the show's about to start.",
     "gin": "State your business. And it better be sweeter than bathtub gin, or I'll feed you to the copper pipes.",
 }
+
+ImageSource = Literal["jellyfin", "tmdb"]
 
 
 class ConfigError(ValueError):
@@ -34,6 +39,7 @@ class Config:
     door_word: str | None = field(default=None, repr=False)
     door_match: Mode = "relaxed"
     door_greeting: str = GREETINGS["show"]
+    images: ImageSource = "jellyfin"
 
     @property
     def table_path(self) -> Path:
@@ -73,6 +79,16 @@ def _door(env: Mapping[str, str]) -> tuple[str | None, Mode, str]:
     return word, mode, GREETINGS.get(greeting, greeting)
 
 
+def _images(env: Mapping[str, str]) -> ImageSource:
+    """Where the page's pictures come from; unset or empty is the media server."""
+    raw = env.get("MATINEE_IMAGES", "").strip() or "jellyfin"
+    if raw == "jellyfin":
+        return "jellyfin"
+    if raw == "tmdb":
+        return "tmdb"
+    raise ConfigError("MATINEE_IMAGES names no image source; it is jellyfin or tmdb")
+
+
 def from_env(env: Mapping[str, str] = os.environ) -> Config:
     """Read the settings; raises ConfigError naming the first missing one, or a state directory that does not exist."""
     state = Path(_required(env, "MATINEE_STATE"))
@@ -88,4 +104,5 @@ def from_env(env: Mapping[str, str] = os.environ) -> Config:
         door_word=word,
         door_match=mode,
         door_greeting=greeting,
+        images=_images(env),
     )

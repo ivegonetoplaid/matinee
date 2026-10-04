@@ -3,7 +3,8 @@
 The browser names a film only by a TMDB id that is in the current film list, and
 an image only by one of a fixed set of kinds and sizes. Anything else is refused
 before any request leaves for the media server. No response carries the media
-server's address or key, a file path or a disk location.
+server's address or key, a file path or a disk location. With TMDB as the image
+source, the page loads a picture TMDB has straight from TMDB's image server.
 """
 
 from __future__ import annotations
@@ -14,6 +15,7 @@ import time
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.responses import FileResponse, JSONResponse
@@ -47,7 +49,7 @@ from matinee.web.common import (
     set_tokens,
     with_token,
 )
-from matinee.web.config import Config
+from matinee.web.config import Config, ImageSource
 from matinee.web.theatre import LibraryUnavailable, Theatre
 from matinee.web.viewing import (
     add_note_routes,
@@ -61,8 +63,10 @@ IMAGE_WIDTHS: dict[ImageKind, dict[str, int]] = {
     "poster": {"xs": 100, "s": 160, "m": 320, "l": 640},
     "backdrop": {"m": 960, "l": 1600},
 }
-# A film's poster seldom changes; a month spares every return visit the wall's downloads.
-IMAGE_MAX_AGE_S = 30 * 24 * 3600
+# A film's poster seldom changes; a month spares every return visit the wall's downloads. Only the viewer's
+# own browser may keep one: a shared cache would hand it to a device the locked door has not admitted.
+IMAGE_CACHE = f"private, max-age={30 * 24 * 3600}"
+TMDB_IMAGES = "https://image.tmdb.org"
 UNREACHABLE = "I can't reach the film library right now."
 NOT_READY = "Matinee isn't ready: its film data needs rebuilding."
 NOT_FOUND = "I don't have that one."
@@ -75,6 +79,14 @@ class FilmCard(BaseModel):
     runtime_min: int | None
     synopsis: str | None
     seerr: str
+    backdrop_path: str | None  # TMDB's path for the backdrop, given only when TMDB is the image source
+
+
+class Pictures(BaseModel):
+    """Where the page's pictures come from, and each live film's TMDB poster path when that is TMDB."""
+
+    source: ImageSource
+    posters: dict[int, str]
 
 
 @dataclass(frozen=True)
@@ -85,6 +97,7 @@ class Held:
     title: str
     year: int | None
     runtime_min: int | None
+    backdrop_path: str | None
 
 
 def held(theatre: Theatre, tmdb: int) -> Held:
@@ -93,7 +106,18 @@ def held(theatre: Theatre, tmdb: int) -> Held:
     if tmdb not in films.index:
         raise HTTPException(status_code=404, detail="not_found")
     row = films.loc[tmdb]
-    return Held(str(row.item_id), str(row["name"]), optional_int(row.year), optional_int(row.runtime_min))
+    return Held(
+        str(row.item_id),
+        str(row["name"]),
+        optional_int(row.year),
+        optional_int(row.runtime_min),
+        stored_path(row.backdrop_path),
+    )
+
+
+def stored_path(value: Any) -> str | None:
+    """A TMDB picture path as the table holds it, or None for a film that has none (None or NaN)."""
+    return value if isinstance(value, str) and value else None
 
 
 def add_error_handlers(app: FastAPI, clock: Callable[[], float]) -> None:
@@ -128,7 +152,7 @@ def add_error_handlers(app: FastAPI, clock: Callable[[], float]) -> None:
         return JSONResponse(status_code=status, content=body)
 
 
-def add_film_routes(app: FastAPI, theatre: Theatre, seerr: str) -> None:
+def add_film_routes(app: FastAPI, theatre: Theatre, seerr: str, images: ImageSource) -> None:
     @app.get("/img/{kind}/{tmdb}/{size}")
     def image(kind: str, tmdb: int, size: str) -> Response:
         image_kind: ImageKind = "backdrop" if kind == "backdrop" else "poster"
@@ -140,8 +164,16 @@ def add_film_routes(app: FastAPI, theatre: Theatre, seerr: str) -> None:
         except LibraryError as exc:
             log.warning("image %s for tmdb %s: %s", kind, tmdb, exc)
             raise HTTPException(status_code=404, detail="not_found") from exc
-        cache = {"Cache-Control": f"public, max-age={IMAGE_MAX_AGE_S}"}
-        return Response(img.body, media_type=img.content_type, headers=cache)
+        return Response(img.body, media_type=img.content_type, headers={"Cache-Control": IMAGE_CACHE})
+
+    @app.get("/api/pictures")
+    def pictures() -> Pictures:
+        """The image source and, when it is TMDB, the TMDB poster path of every live film that has one."""
+        if images == "jellyfin":
+            return Pictures(source=images, posters={})
+        films = theatre.showing().catalog.table.films
+        paths = {int(str(tmdb)): stored_path(path) for tmdb, path in films.poster_path.items()}
+        return Pictures(source=images, posters={tmdb: path for tmdb, path in paths.items() if path})
 
     @app.get("/api/film/{tmdb}")
     def film(tmdb: int) -> FilmCard:
@@ -158,6 +190,7 @@ def add_film_routes(app: FastAPI, theatre: Theatre, seerr: str) -> None:
             runtime_min=film.runtime_min,
             synopsis=synopsis,
             seerr=f"{seerr}/movie/{tmdb}",
+            backdrop_path=film.backdrop_path if images == "tmdb" else None,
         )
 
 
@@ -285,12 +318,12 @@ def add_admission(app: FastAPI, admission: Admission, greeting: str, clock: Call
 
 
 STATIC = Path(__file__).resolve().parent / "static"
+CONTENT_SECURITY_POLICY = (
+    "default-src 'self'; img-src {img}; style-src 'self'; font-src 'self'; script-src 'self'; "
+    "connect-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; "
+    "frame-ancestors 'none'; form-action 'self'"
+)
 SECURITY_HEADERS = {
-    "Content-Security-Policy": (
-        "default-src 'self'; img-src 'self'; style-src 'self'; font-src 'self'; script-src 'self'; "
-        "connect-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; "
-        "frame-ancestors 'none'; form-action 'self'"
-    ),
     "X-Content-Type-Options": "nosniff",
     "Referrer-Policy": "same-origin",
     "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
@@ -299,7 +332,13 @@ SECURITY_HEADERS = {
 }
 
 
-def add_page(app: FastAPI) -> None:
+def security_headers(images: ImageSource) -> dict[str, str]:
+    """The headers every response carries. Images may come from TMDB's image server only when it is the source."""
+    img = "'self'" if images == "jellyfin" else f"'self' {TMDB_IMAGES}"
+    return {"Content-Security-Policy": CONTENT_SECURITY_POLICY.format(img=img), **SECURITY_HEADERS}
+
+
+def add_page(app: FastAPI, images: ImageSource) -> None:
     """The page, its scripts, styles, fonts and images; every response carries the security headers.
 
     The page and its static files are served `no-cache`: a browser or an edge cache may keep a copy but must
@@ -307,6 +346,7 @@ def add_page(app: FastAPI) -> None:
     Every `/api/` reply is served `no-store`: several read the device's cookie, so no cache may keep any copy.
     """
     app.mount("/static", StaticFiles(directory=STATIC), name="static")
+    every = security_headers(images)
 
     @app.get("/", include_in_schema=False)
     def index() -> FileResponse:
@@ -315,7 +355,7 @@ def add_page(app: FastAPI) -> None:
     @app.middleware("http")
     async def headers(request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
         response = await call_next(request)
-        for name, value in SECURITY_HEADERS.items():
+        for name, value in every.items():
             response.headers.setdefault(name, value)
         if request.url.path.startswith("/static/"):
             response.headers.setdefault("Cache-Control", "no-cache")
@@ -352,8 +392,8 @@ def create_app(
     add_error_handlers(app, clock)
     # Registered before the page's headers, so the headers wrap the locked door's refusals too.
     add_admission(app, admission, config.door_greeting, clock, wrong_word_delay_s)
-    add_film_routes(app, theatre, config.seerr_url)
-    add_page(app)
+    add_film_routes(app, theatre, config.seerr_url, config.images)
+    add_page(app, config.images)
     add_door_routes(app, theatre, store, clock)
     add_delete_route(app, store)
     add_avatar_route(app, store)
