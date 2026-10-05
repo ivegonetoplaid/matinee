@@ -117,7 +117,12 @@ def load_cache(path: Path) -> dict[int, TmdbFilm]:
     for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
         rec = _record(line)
         if rec is None:
-            log.warning("TMDB cache %s line %d does not parse; skipped", path, number)
+            log.warning(
+                "TMDB cache %s line %d does not parse. Meanwhile it is skipped, and its film is fetched again by the"
+                " next rebuild.",
+                path,
+                number,
+            )
             continue
         latest[rec.tmdb] = rec
     return latest
@@ -336,7 +341,12 @@ def most_voted(
             order.extend(found)
             on_page()
     except (*NETWORK_FAILURES, TmdbRefused, ValueError) as exc:
-        log.warning("TMDB's list of films by vote count was read only to %d films: %s", len(order), exc)
+        log.warning(
+            "TMDB's list of films by vote count was read only to %d films: %s. Meanwhile the rest are fetched last,"
+            " by id; nothing to do unless TMDB is not answering.",
+            len(order),
+            exc,
+        )
     finally:
         pool.shutdown(cancel_futures=True)
     return order
@@ -355,7 +365,10 @@ def fetch_order(ids: Iterable[int], have: Mapping[int, TmdbFilm], voted: Callabl
         for i, t in enumerate(voted()):
             rank.setdefault(t, i)
         if not rank:
-            log.warning("TMDB's order by votes could not be read, so the rebuild fetches its films by id")
+            log.warning(
+                "TMDB's order by votes could not be read. Meanwhile the rebuild fetches its films by id, so the"
+                " first picks may be less well known; the next first start reads it again."
+            )
     return sorted(ids, key=lambda t: (t not in rank, rank.get(t, 0), t))
 
 
@@ -455,7 +468,13 @@ class _Tally:
         except NETWORK_FAILURES as exc:
             self.failed += 1
             self.streak += 1
-            log.warning("TMDB %s failed: %r", tmdb, exc)
+            log.warning(
+                "TMDB's record for film %s could not be fetched: %r. Meanwhile the rebuild goes on and fetches it"
+                " again next time; %d failures in a row stop it, so check the network if this repeats.",
+                tmdb,
+                exc,
+                MAX_CONSECUTIVE_ERRORS,
+            )
             if self.streak >= MAX_CONSECUTIVE_ERRORS:
                 self.stopped = NOT_ANSWERING
             return

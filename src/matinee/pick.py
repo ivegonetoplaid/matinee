@@ -183,14 +183,29 @@ def look_up(dtdd: Dtdd, tmdb: int, topics: frozenset[int], ids: ItemIds) -> Verd
             return Verdict(unchecked="no_record")
         body = dtdd.get(f"/items/{item}", LOOKUP_S, LOOKUP_S)
     except DtddCeiling as exc:
-        log.warning("DoesTheDogDie lookup for tmdb %s: %s", tmdb, exc)
+        log.warning(
+            "the DoesTheDogDie check for tmdb %s did not run: %s. Meanwhile the pick is shown unchecked, saying so;"
+            " checks resume as the hourly allowance refills.",
+            tmdb,
+            exc,
+        )
         return Verdict(unchecked="house")
     except DtddGone as exc:
-        log.warning("DoesTheDogDie lookup for tmdb %s: %s", tmdb, exc)
+        log.warning(
+            "DoesTheDogDie no longer has the record Matinee held for tmdb %s: %s. Meanwhile the pick is shown"
+            " unchecked; the film is looked up afresh next time.",
+            tmdb,
+            exc,
+        )
         ids.forget(tmdb)
         return Verdict(unchecked="no_record")
     except DtddError as exc:
-        log.warning("DoesTheDogDie lookup for tmdb %s: %s", tmdb, exc)
+        log.warning(
+            "the DoesTheDogDie check for tmdb %s failed: %s. Meanwhile the pick is shown unchecked, saying so; check"
+            " DTDD_API_KEY and that DoesTheDogDie answers if this repeats.",
+            tmdb,
+            exc,
+        )
         return Verdict(unchecked="slow")
     stats = body.get("topicItemStats") if isinstance(body, dict) else None
     if not isinstance(stats, list):
@@ -198,7 +213,12 @@ def look_up(dtdd: Dtdd, tmdb: int, topics: frozenset[int], ids: ItemIds) -> Verd
     try:
         return Verdict(hits=failing(stats, topics))
     except Unreadable as exc:
-        log.warning("DoesTheDogDie votes for tmdb %s could not be read: %s", tmdb, exc)
+        log.warning(
+            "DoesTheDogDie's votes for tmdb %s could not be read: %s. Meanwhile the pick is shown unchecked; if this"
+            " repeats, DoesTheDogDie's answer may have changed, so report it as an issue.",
+            tmdb,
+            exc,
+        )
         return Verdict(unchecked="no_record")
 
 

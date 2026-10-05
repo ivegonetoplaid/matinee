@@ -440,7 +440,7 @@ file restores the shipped placements. A file Matinee cannot use (not valid JSON,
 another format, a tree no file defines or a kind its tree does not label, bands
 under any tree but kids, or a kids film with its kinds and no band or its band
 and no kinds) is a
-setup fault (section 5.5): the note names the problem, and the shipped
+setup fault (section 5.6): the note names the problem, and the shipped
 placements apply alone. A household shares its file in a "Sorting suggestion"
 issue, and whoever edits the shipped labels may merge its entries in by hand.
 
@@ -770,7 +770,21 @@ finished.
 - The sign's "Now showing N films" counts every film Matinee offers: the
   library's and the films the labels name.
 
-### 5.5 Refusing to start, and the setup note
+### 5.5 What the logs say
+
+At start, and whenever its state changes (looked at, on a request, at most every
+15 seconds), the server logs one line naming its whole state: the media server it
+reads and whether it answers, whether Seerr and DoesTheDogDie are set and Seerr
+answers, the film table's size and the age of its TMDB facts, how many films are
+offered, and the rebuild's last report with its progress. The rebuild logs the
+same way: a line as it starts (the library, the films the labels name, the records
+held and to fetch, the pace) and its progress at every save. Every warning and
+error either one logs says what failed, what Matinee does meanwhile, and a step
+to recover. A warning one bad answer per picture would repeat is logged at most
+once a minute, with a count of those held back. No log line carries a key, token
+or door word.
+
+### 5.6 Refusing to start, and the setup note
 
 The server refuses to start, and logs why, in exactly these cases:
 
@@ -1206,7 +1220,7 @@ would hand one device's profiles to another.
 |---|---|---|
 | GET | `/` | the page (`Cache-Control: no-cache`) |
 | GET | `/api/admission` | whether the site is locked, whether this device is admitted, and the locked door's greeting |
-| GET | `/api/setup` | the setup note: its heading, its lines (none when all is well), the films Matinee can offer, and whether it offers a way in (section 5.5) |
+| GET | `/api/setup` | the setup note: its heading, its lines (none when all is well), the films Matinee can offer, and whether it offers a way in (section 5.6) |
 | POST | `/api/admission` | give the door word; the right one sets the admission cookie |
 | GET | `/static/…` | scripts, styles, self-hosted fonts, icons, pails, avatars, the locked door's art, manifest (`Cache-Control: no-cache`, so a deploy is never seen half-applied) |
 | GET | `/img/{kind}/{tmdb}/{size}` | a poster or backdrop: from the media server for a film the library holds, else from TMDB's image server through Matinee |

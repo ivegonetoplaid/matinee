@@ -52,6 +52,7 @@ from matinee.web.common import (
     with_token,
 )
 from matinee.web.config import Config, ImageSource
+from matinee.web.logbook import SERVER_NAMES, Quiet, StateLog
 from matinee.web.seerr import SeerrCheck
 from matinee.web.setup import BROKEN, SEERR_AWAY, SetupNote, note, rebuild_lines, unreachable
 from matinee.web.theatre import NothingToShow, Theatre
@@ -138,12 +139,20 @@ def add_error_handlers(app: FastAPI, clock: Callable[[], float]) -> None:
 
     @app.exception_handler(NothingToShow)
     def nothing(_request: Request, exc: NothingToShow) -> JSONResponse:
-        log.error("refusing to serve: Matinee's own data cannot be used: %s", exc)
+        log.error(
+            "Matinee's own data cannot be used: %s. Meanwhile every film route answers 503 and the setup note says"
+            " why; update or reinstall Matinee.",
+            exc,
+        )
         return problem(503, "not_ready", NOT_READY)
 
     @app.exception_handler(TableError)
     def not_ready(_request: Request, exc: TableError) -> JSONResponse:
-        log.error("refusing to serve: %s", exc)
+        log.error(
+            "the film table cannot be used: %s. Meanwhile every film route answers 503; run the rebuild"
+            " (tools/rebuild_table.py).",
+            exc,
+        )
         return problem(503, "not_ready", NOT_READY)
 
     @app.exception_handler(EngineError)
@@ -181,7 +190,14 @@ def film_image(theatre: Theatre, film: Held, tmdb: int, kind: ImageKind, width: 
         try:
             return theatre.library.image(film.item_id, kind, width), IMAGE_CACHE
         except LibraryError as exc:
-            log.warning("the media server gave no %s for tmdb %s, so it comes from TMDB: %s", kind, tmdb, exc)
+            QUIET.warn(
+                "server-picture",
+                "the media server gave no %s for tmdb %s: %s. Meanwhile it comes from TMDB; if every picture does"
+                " this, check that the media server answers.",
+                kind,
+                tmdb,
+                exc,
+            )
     return tmdb_image(film, tmdb, kind, width), TMDB_IMAGE_CACHE
 
 
@@ -193,7 +209,14 @@ def tmdb_image(film: Held, tmdb: int, kind: ImageKind, width: int) -> Image:
     try:
         body, content_type = fetch_picture(path, kind, width)
     except TmdbImageError as exc:
-        log.warning("image %s for tmdb %s from TMDB: %s", kind, tmdb, exc)
+        QUIET.warn(
+            "tmdb-picture",
+            "TMDB's image server gave no %s for tmdb %s: %s. Meanwhile the page shows no picture for it; if every"
+            " picture does this, check that image.tmdb.org answers.",
+            kind,
+            tmdb,
+            exc,
+        )
         raise HTTPException(status_code=404, detail="not_found") from exc
     return Image(body, content_type)
 
@@ -423,7 +446,7 @@ def add_quip_routes(app: FastAPI, quips: Quips | None) -> None:
         return quips
 
 
-SERVER_NAMES = {"jellyfin": "Jellyfin", "plex": "Plex"}
+QUIET = Quiet()  # one bad answer per picture would repeat on every wall
 
 
 def setup_faults(theatre: Theatre, config: Config, seerr: SeerrCheck, faults: Sequence[str]) -> tuple[list[str], int]:
@@ -448,6 +471,17 @@ def add_setup_route(app: FastAPI, theatre: Theatre, config: Config, seerr: Seerr
         return note(found, films, theatre.stale)
 
 
+def add_state_log(app: FastAPI, logbook: StateLog) -> None:
+    """Logs the state now, and again whenever a request finds it changed."""
+    logbook.check()
+
+    @app.middleware("http")
+    async def watch(request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
+        response = await call_next(request)
+        await asyncio.to_thread(logbook.check)
+        return response
+
+
 def create_app(
     config: Config,
     theatre: Theatre,
@@ -459,6 +493,7 @@ def create_app(
     wrong_word_delay_s: float = WRONG_WORD_DELAY_S,
     seerr: SeerrCheck | None = None,
     faults: Sequence[str] = (),
+    state: Callable[[SeerrCheck], StateLog] | None = None,
 ) -> FastAPI:
     """The app. `quips` defaults to data/quips.json, read now. `faults` are setup faults found before the app,
     in words for the setup note.
@@ -482,6 +517,8 @@ def create_app(
     # Registered before the page's headers, so the headers wrap the locked door's refusals too.
     add_admission(app, admission, config.door_greeting, clock, wrong_word_delay_s)
     seerr = seerr or SeerrCheck(config.seerr_url)
+    if state is not None:
+        add_state_log(app, state(seerr))
     add_film_routes(app, theatre, seerr, config.images)
     add_setup_route(app, theatre, config, seerr, faults)
     add_page(app, config.images)

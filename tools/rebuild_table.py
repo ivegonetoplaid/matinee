@@ -89,6 +89,14 @@ def _rebuild(
     ids = listed | {f.tmdb for f in films if f.tmdb is not None}
     have = load_cache(cache)
     todo = [t for t in ids if needs_fetch(have.get(t), datetime.now(UTC))]
+    log.info(
+        "the rebuild starts: library: %s; %d films the labels name; %d TMDB records held, %d to fetch at %g a second",
+        "no media server set" if server is None else f"{server.kind}, {len(films):,} films",
+        len(listed),
+        len(have),
+        len(todo),
+        rate,
+    )
     run = _Run(state, started, films, load_scores(), listed)
     run.tick(Refreshed(0, 0), len(todo), have)  # the library and the films already held, before any fetch
     pacer = Pacer(rate)
@@ -128,6 +136,8 @@ class _Run:
         done = so_far.fetched + so_far.failed
         write_status(self.state, RebuildStatus("running", self.started, _now(), done, total))
         if save and (self.saved_at is None or so_far.fetched - self.saved_at >= SAVE_EVERY):
+            if total:
+                log.info("rebuild progress: %d of %d films fetched or failed (%d%%)", done, total, 100 * done // total)
             self.save(records)
             self.saved_at = so_far.fetched
 
@@ -138,7 +148,11 @@ def household_films(state: Path) -> frozenset[int]:
     try:
         theirs = load_overrides(state)
     except LabelsError as exc:
-        log.warning("the override file cannot be read, so the rebuild fetches only the shipped films: %s", exc)
+        log.warning(
+            "the override file cannot be read: %s. Meanwhile the rebuild fetches only the films Matinee ships"
+            " labels for; fix the file (the server's setup note names the problem) and rebuild.",
+            exc,
+        )
         return frozenset()
     return frozenset() if theirs is None else theirs.named()
 
@@ -159,7 +173,10 @@ def tmdb_rate(text: str) -> float:
     if rate > 0 and math.isfinite(rate):
         return rate
     log.warning(
-        "TMDB_RATE is %r, which is no positive number of requests a second, so the rebuild uses %g", text, DEFAULT_RATE
+        "TMDB_RATE is %r, which is no positive number of requests a second. Meanwhile the rebuild uses %g; set"
+        " TMDB_RATE to a positive number, or remove it.",
+        text,
+        DEFAULT_RATE,
     )
     return DEFAULT_RATE
 
@@ -206,7 +223,12 @@ def main() -> int:
         try:
             rebuild(server, args.state, token, rate)
         except Exception as exc:  # any failure waits for the next night, never a restart loop
-            log.warning("rebuild failed; the previous table stays in place: %s", exc, exc_info=True)
+            log.warning(
+                "the rebuild failed: %s. Meanwhile the previous table stays in place and the rebuild tries again at"
+                " the next scheduled time; the traceback below says where it broke.",
+                exc,
+                exc_info=True,
+            )
         time.sleep(seconds_until(args.daily, datetime.now()))
 
 

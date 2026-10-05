@@ -316,7 +316,11 @@ def add_topic_routes(app: FastAPI, store: Store, dtdd: Dtdd) -> None:
         try:
             found = dtdd.topics()
         except DtddError as exc:
-            log.warning("topic list: %s", exc)
+            log.warning(
+                "DoesTheDogDie's topic list could not be fetched: %s. Meanwhile the list cannot be edited and picks"
+                " are still checked against saved topics; check DTDD_API_KEY and that DoesTheDogDie answers.",
+                exc,
+            )
             return problem(503, "topics_unavailable", TOPICS_UNAVAILABLE)
         return TopicsOut(
             topics=[

@@ -25,6 +25,7 @@ import threading
 import time
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Literal
 
@@ -180,6 +181,11 @@ class Theatre:
                 f"{self._table.oldest_tmdb:%Y-%m-%d}",
             )
         self._stale_said = stale
+
+    @property
+    def oldest_tmdb(self) -> datetime | None:
+        """When the film table's oldest TMDB fact was fetched; None when it holds none."""
+        return self._table.oldest_tmdb
 
     @property
     def table_films(self) -> int:

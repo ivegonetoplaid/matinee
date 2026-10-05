@@ -104,6 +104,11 @@ def _tree(name: str, raw: object) -> TreeLabels:
     return TreeLabels(kinds=parsed_kinds, bands=bands)
 
 
+def _mend(path: Path) -> str:
+    """How a broken labels file is mended: the shipped one by updating Matinee, any other by its owner."""
+    return "update or reinstall Matinee" if path == LABELS else f"fix {path}, which is your own file"
+
+
 def load_labels(path: Path = LABELS) -> Labels:
     """Read the labels file; raises LabelsError naming the path when it is absent or malformed."""
     if not path.exists():
@@ -111,14 +116,14 @@ def load_labels(path: Path = LABELS) -> Labels:
     try:
         doc = json.loads(path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
-        raise LabelsError(f"the labels file at {path} is not valid JSON: {exc}") from exc
+        raise LabelsError(f"the labels file at {path} is not valid JSON: {exc}; {_mend(path)}") from exc
     if not isinstance(doc, dict) or doc.get("format") != FORMAT:
         found = doc.get("format") if isinstance(doc, dict) else None
         raise LabelsError(
-            f"the labels file at {path} is format {found!r}; this Matinee reads only format {FORMAT}."
+            f"the labels file at {path} is format {found!r}; this Matinee reads only format {FORMAT}; {_mend(path)}"
             " Write it again with the labelling pass's settle step."
         )
     trees = doc.get("trees", {})
     if not isinstance(trees, dict):
-        raise LabelsError(f"the labels file at {path} has no 'trees' mapping")
+        raise LabelsError(f"the labels file at {path} has no 'trees' mapping; {_mend(path)}")
     return Labels({name: _tree(name, raw) for name, raw in trees.items()})

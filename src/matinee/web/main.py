@@ -25,6 +25,7 @@ from matinee.store import Store
 from matinee.trees import load_trees
 from matinee.web.app import create_app
 from matinee.web.config import from_env
+from matinee.web.logbook import state_log
 from matinee.web.theatre import BROKEN_DATA, Theatre
 
 log = logging.getLogger("matinee.web")
@@ -127,4 +128,5 @@ def build() -> FastAPI:
         listed=labels.films(),
         tags=tags,
     )
-    return create_app(config, theatre, store, dtdd, faults=faults)
+    state = partial(state_log, theatre, config, dtdd_on=dtdd is not None)
+    return create_app(config, theatre, store, dtdd, faults=faults, state=state)

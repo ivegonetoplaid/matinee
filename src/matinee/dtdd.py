@@ -189,7 +189,12 @@ class Dtdd:
             fresh = self._fetch_topics()
         except DtddError as exc:
             if held and age < TOPICS_KEEP_S:
-                log.warning("topic list refresh failed, serving the kept copy: %s", exc)
+                log.warning(
+                    "DoesTheDogDie's topic list could not be refreshed: %s. Meanwhile the copy fetched earlier is"
+                    " offered, and it is fetched again on the next request; check DTDD_API_KEY and that"
+                    " DoesTheDogDie answers.",
+                    exc,
+                )
                 return list(held[0])
             raise
         self._topics = (fresh, self._clock())

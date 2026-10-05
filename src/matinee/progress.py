@@ -47,9 +47,17 @@ def read_status(data_dir: Path) -> RebuildStatus | None:
         raw = json.loads(path.read_text(encoding="utf-8"))
         status = RebuildStatus(**raw)
     except (OSError, json.JSONDecodeError, TypeError) as exc:
-        log.warning("the rebuild's report %s cannot be read, so it counts as absent: %s", path, exc)
+        log.warning(
+            "the rebuild's report %s cannot be read: %s. Meanwhile it counts as absent; the next rebuild rewrites it.",
+            path,
+            exc,
+        )
         return None
     if status.state not in ("running", "finished", "stopped"):
-        log.warning("the rebuild's report %s names no known state, so it counts as absent", path)
+        log.warning(
+            "the rebuild's report %s names no known state. Meanwhile it counts as absent; the next rebuild"
+            " rewrites it.",
+            path,
+        )
         return None
     return status
