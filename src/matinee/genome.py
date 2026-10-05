@@ -1,8 +1,11 @@
-"""The MovieLens ml-latest tag genome as a dense film-by-tag matrix.
+"""The MovieLens ml-latest tag genome as a dense film-by-tag matrix, and the scores Matinee keeps from it.
 
-The genome is read from a local copy of the ml-latest release and is never
-committed or shipped. A film here is a MovieLens movie; `tmdb_by_movie` joins it
-to TMDB through the release's own links.csv, never by title.
+The full genome is read from a local copy of the ml-latest release by the
+maintainer's tools and is never committed or shipped. A film there is a MovieLens
+movie; `tmdb_by_movie` joins it to TMDB through the release's own links.csv,
+never by title. `Scores` is the slice of it Matinee reads at run time: the tags
+any reader names, for every genome film with a TMDB id, keyed by that id
+(`matinee.genome_file` ships it as `data/genome.json`).
 """
 
 from __future__ import annotations
@@ -51,10 +54,31 @@ class Genome:
             raise GenomeError("a score needs at least one tag")
         return self.relevance[:, self.columns(tags)].mean(axis=1)
 
+    def scores(self, tags: Sequence[str]) -> Scores:
+        """The relevance of `tags` for every genome film with a TMDB id; where two films share one, the first wins."""
+        rows: dict[int, int] = {}
+        for row, movie in enumerate(self.movie_ids):
+            tmdb = self.tmdb_by_movie.get(int(movie))
+            if tmdb is not None:
+                rows.setdefault(tmdb, row)
+        kept = list(rows.values())
+        relevance = self.relevance[np.ix_(kept, self.columns(tags))]
+        return Scores(self.release, tuple(tags), {t: i for i, t in enumerate(rows)}, relevance)
+
     def with_genres(self, names: Iterable[str]) -> Mask:
         """True for films carrying any of the MovieLens genres `names`."""
         wanted = frozenset(names)
         return np.array([bool(wanted & self.genres_by_movie.get(int(m), frozenset())) for m in self.movie_ids])
+
+
+@dataclass(frozen=True)
+class Scores:
+    """Genome relevance of a fixed set of tags, one row per TMDB id: what the film table joins on."""
+
+    release: str
+    tags: tuple[str, ...]
+    rows: Mapping[int, int]  # TMDB id -> row of `relevance`
+    relevance: Matrix
 
 
 def release_of(ml: Path) -> str:

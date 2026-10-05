@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from matinee.genome import Genome
+from matinee.genome import Genome, Scores
 from matinee.library import LibraryError, LibraryFilm
 from matinee.library.jellyfin import parse_film
 from matinee.table import TableError, build_table, load_table, write_table
@@ -25,9 +25,9 @@ def film(item: str, tmdb: int | None, name: str, path_tmdb: int | None = None, g
     return LibraryFilm(item, tmdb, name, 2000, frozenset(genres.split("|")), "R", 95.0, 6.5, path_tmdb)
 
 
-def genome() -> Genome:
+def genome() -> Scores:
     """Two genome films: movie 1 is TMDB 11, movie 2 is TMDB 22. Movie 3 shares TMDB 11 and is ignored."""
-    return Genome(
+    full = Genome(
         release="test release",
         movie_ids=np.array([1, 2, 3]),
         tags=("gore", "scary"),
@@ -35,6 +35,7 @@ def genome() -> Genome:
         tmdb_by_movie={1: 11, 2: 22, 3: 11},
         genres_by_movie={},
     )
+    return full.scores(full.tags)
 
 
 def tmdb(

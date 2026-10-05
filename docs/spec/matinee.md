@@ -583,7 +583,7 @@ first rebuild. A failed nightly rebuild leaves the previous table in place.
    poster and backdrop paths) for every library film with a TMDB id. That is one GET per film, 0.15 seconds apart.
    It honours `Retry-After` on a 429 and stops after 5 network failures in a
    row.
-3. It loads the local MovieLens genome.
+3. It reads the shipped genome scores (section 5.3).
 4. It builds and writes the table, replacing the previous one only once the new
    one is complete.
 5. It logs a report. The report counts films with and without genome scores and
@@ -613,17 +613,25 @@ first rebuild. A failed nightly rebuild leaves the previous table in place.
 
 ### 5.3 The genome join
 
-- The genome is read from a local copy of the MovieLens ml-latest release. The
-  raw dataset is never committed or shipped.
-- Films join the genome on TMDB id through the release's own `links.csv`, never
-  by title. Where two MovieLens films share a TMDB id, the first one wins.
+- The rebuild reads the genome scores Matinee ships, `data/genome.json`, and no
+  installation downloads MovieLens. The file holds the relevance of every tag a
+  reader names (the fall-asleep scores, every tree's and mode's `scores`, and
+  the answer key's list tags; `src/matinee/genome_file.py::tags_read`) for
+  every genome film with a TMDB id: 35 tags and 16,353 films from the shipped
+  release. Values are kept to five decimal places, the genome's own precision,
+  so each reads back as exactly the value the full genome holds. A test in
+  `./check.sh` fails when a reader names a tag the file lacks.
+- `tools/build_genome.py` writes the file from a local ml-latest release, for
+  the maintainer. Films join the genome on TMDB id through the release's own
+  `links.csv`, never by title. Where two MovieLens films share a TMDB id, the
+  first one wins. The raw dataset is never committed or shipped.
 - **A film the genome does not cover carries no genome scores (NaN), never
   zeros.**
 - The table stores one row per distinct TMDB id. Library items with no TMDB id
   are left out and reported.
-- The parsed genome matrix may be cached beside the dataset. The cache is
-  reused only when made from a genome file of the same size and modification
-  time.
+- The maintainer's tools may cache the parsed genome matrix beside the
+  dataset. The cache is reused only when made from a genome file of the same
+  size and modification time.
 
 ### 5.4 The live library
 
@@ -1664,9 +1672,7 @@ as written. A phone is a viewport 600 px wide or less.
 - **State** is one directory mounted at `/state` (`MATINEE_STATE`). It holds
   the film table (`films.sqlite`), Matinee's store (`matinee.sqlite`), the
   door's secret (`door.key`, made at the first start with a door word), the
-  TMDB cache (`tmdb/films.jsonl`) and
-  the MovieLens genome (`ml-latest/`, or `MATINEE_ML`). None of it is in the
-  image.
+  TMDB cache (`tmdb/films.jsonl`). None of it is in the image.
 - **Settings and keys arrive as environment**, never committed, logged or sent
   to a browser. `.dockerignore` keeps `.env` files out of the image.
 
@@ -1678,7 +1684,6 @@ as written. A phone is a viewport 600 px wide or less.
 | `MATINEE_SEERR_URL` | server | the base of the "More on Seerr ↗" action's address |
 | `DTDD_API_KEY` | server | the DoesTheDogDie key |
 | `TMDB_READ_TOKEN` | rebuild | the TMDB read token |
-| `MATINEE_ML` | rebuild | the genome directory, if not under the state directory |
 | `MATINEE_DOOR_WORD` | server, optional | the door word (section 7.2); unset or empty means no lock |
 | `MATINEE_DOOR_MATCH` | server, optional | `relaxed` (the default) or `strict` |
 | `MATINEE_DOOR_GREETING` | server, optional | `show` (the default), `gin`, or the operator's own greeting |
@@ -1700,8 +1705,9 @@ The terms of each source are part of the design.
   Joseph A. Konstan (2015), *The MovieLens Datasets: History and Context*, and
   Jesse Vig, Shilad Sen and John Riedl (2012), *The Tag Genome: Encoding
   Community Knowledge to Support Novel Interaction*. The raw dataset is never
-  committed. A derived table Matinee ships carries the dataset's own conditions:
-  `data/reference.json` states them in its `licence` field (research and
+  committed. Each derived table Matinee ships carries the dataset's own
+  conditions: `data/reference.json` and `data/genome.json` state them in their
+  `licence` field (research and
   non-commercial use, no implied endorsement, redistribution only under the
   same conditions).
 - **DoesTheDogDie.** Queried one film at a time, at the moment of a pick. Never

@@ -1,7 +1,7 @@
 """The offline film table: for every library film, the facts and scores the trees filter on.
 
-Built nightly from the media server's film list, the MovieLens genome and the
-TMDB cache, and written as one SQLite file in Matinee's own storage, never in
+Built nightly from the media server's film list, the shipped genome scores
+(`data/genome.json`) and the TMDB cache, and written as one SQLite file in Matinee's own storage, never in
 the repository. The app reads it and never queries the genome or TMDB.
 
 A film the genome does not cover carries no genome scores (NaN), never zeros.
@@ -25,7 +25,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from matinee.genome import Genome, Matrix
+from matinee.genome import Matrix, Scores
 from matinee.library import LibraryFilm
 from matinee.tmdb import MAX_AGE, TmdbFilm
 
@@ -113,16 +113,6 @@ def _label(f: LibraryFilm) -> str:
     return f"{f.name} ({f.year})"
 
 
-def _genome_rows(genome: Genome) -> dict[int, int]:
-    """TMDB id -> genome row, first MovieLens movie wins where two share a TMDB id."""
-    rows: dict[int, int] = {}
-    for row, movie in enumerate(genome.movie_ids):
-        tmdb = genome.tmdb_by_movie.get(int(movie))
-        if tmdb is not None:
-            rows.setdefault(tmdb, row)
-    return rows
-
-
 def _tmdb_fields(rec: TmdbFilm | None, usable: bool) -> dict[str, object]:
     if rec is None or not usable:
         return {
@@ -176,16 +166,15 @@ def _rows(
 
 
 def build_table(
-    films: Sequence[LibraryFilm], genome: Genome, tmdb: Mapping[int, TmdbFilm], now: datetime
+    films: Sequence[LibraryFilm], genome: Scores, tmdb: Mapping[int, TmdbFilm], now: datetime
 ) -> tuple[FilmTable, BuildReport]:
     """The table for `films`, and what the pass saw. Films with no TMDB id are left out and reported."""
     report = BuildReport(library_items=len(films))
-    rows_of = _genome_rows(genome)
     frame = pd.DataFrame.from_dict(_rows(films, tmdb, now, report), orient="index", columns=list(COLUMNS))
     frame.index.name = "tmdb"
     matrix = np.full((len(frame), len(genome.tags)), np.nan, dtype=np.float32)
     for i, t in enumerate(frame.index):
-        row = rows_of.get(int(t))
+        row = genome.rows.get(int(t))
         if row is not None:
             matrix[i] = genome.relevance[row]
     report.with_genome = int((~np.isnan(matrix).any(axis=1)).sum())

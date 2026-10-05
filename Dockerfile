@@ -1,7 +1,7 @@
 # Matinee's server image. One uvicorn worker: the DoesTheDogDie pacing and the
 # per-device lookup cap live in the process, so a second worker would double both.
-# The state directory (the film table, the profile store, the TMDB cache and the
-# MovieLens genome) is mounted at /state; settings and keys arrive as environment.
+# The state directory (the film table, the profile store and the TMDB cache) is
+# mounted at /state; settings and keys arrive as environment.
 FROM python:3.13-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 MATINEE_STATE=/state
