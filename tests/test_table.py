@@ -764,3 +764,20 @@ def test_tmdb_pictures_pass_one_gate_with_a_ceiling_and_a_hold() -> None:
         capped.admit()
     time_.now += 3600
     capped.admit()  # a new hour
+
+
+def test_the_sweep_drops_every_shelved_picture_past_its_keep(tmp_path: Path) -> None:
+    import os
+    import time
+
+    from matinee.tmdb import PICTURE_KEEP, read_shelf, shelf_file, shelve, sweep_shelf
+
+    fresh, stale = shelf_file(tmp_path, "/a.jpg", "poster", 160), shelf_file(tmp_path, "/b.png", "backdrop", 1600)
+    shelve(fresh, b"a")
+    shelve(stale, b"b")
+    now = time.time()
+    old = now - PICTURE_KEEP.total_seconds()
+    os.utime(stale, (old, old))
+    assert read_shelf(stale, now) is None and read_shelf(fresh, now) == b"a"
+    assert sweep_shelf(tmp_path, now) == 1 and fresh.exists() and not stale.exists()
+    assert PICTURE_KEEP.days < 183  # TMDB's terms cap any cache at six months

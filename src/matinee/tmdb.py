@@ -221,6 +221,7 @@ IMAGE_PER_HOUR = 20_000  # Matinee's own ceiling on picture requests to TMDB in 
 IMAGE_BACKOFF_S = 10.0  # the first hold after a 429 or 503 that names no Retry-After; it doubles
 IMAGE_BACKOFF_MAX_S = 600.0
 MAX_IMAGE_BYTES = 8 * 1024 * 1024
+PICTURE_KEEP = REFETCH_AFTER  # a TMDB picture on the data directory's shelf is served, and kept, this long at most
 # Matinee's picture widths as TMDB's sizes: the nearest TMDB width, as the page maps them under `tmdb`.
 IMAGE_SIZES: dict[str, dict[int, str]] = {
     "poster": {100: "w92", 160: "w154", 320: "w342", 640: "w780"},
@@ -318,6 +319,45 @@ def fetch_picture(
     if not content_type.startswith("image/") or len(body) > MAX_IMAGE_BYTES:
         raise TmdbImageError(f"TMDB's image server answered a {kind} with {content_type or 'no type'}")
     return body, content_type
+
+
+def shelf_file(shelf: Path, path: str, kind: str, width: int) -> Path:
+    """Where the shelf keeps one TMDB picture: one file per TMDB size and picture path. `path` must already have
+    passed `PICTURE_PATH`, as every path in the film table has."""
+    return shelf / IMAGE_SIZES[kind][width] / path.lstrip("/")
+
+
+def picture_type(path: str) -> str:
+    """The content type a shelved picture is served with, by its path's extension."""
+    return "image/png" if path.endswith(".png") else "image/jpeg"
+
+
+def read_shelf(file: Path, now: float) -> bytes | None:
+    """The shelved picture, or None when the shelf lacks it or holds it longer than `PICTURE_KEEP`."""
+    try:
+        if now - file.stat().st_mtime >= PICTURE_KEEP.total_seconds():
+            return None
+        return file.read_bytes()
+    except FileNotFoundError:
+        return None
+
+
+def shelve(file: Path, body: bytes) -> None:
+    """Keep a picture on the shelf, replacing any older copy whole; raises OSError when it cannot be written."""
+    file.parent.mkdir(parents=True, exist_ok=True)
+    part = file.with_name(f"{file.name}.{os.getpid()}.{threading.get_ident()}.part")
+    part.write_bytes(body)
+    os.replace(part, file)
+
+
+def sweep_shelf(shelf: Path, now: float) -> int:
+    """Remove every file on the shelf older than `PICTURE_KEEP`, an unfinished write's included; returns how many."""
+    removed = 0
+    for file in shelf.glob("*/*"):
+        if now - file.stat().st_mtime >= PICTURE_KEEP.total_seconds():
+            file.unlink(missing_ok=True)
+            removed += 1
+    return removed
 
 
 def picture_path(tmdb: int, field: str, value: object) -> str:

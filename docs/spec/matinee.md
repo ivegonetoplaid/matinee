@@ -696,7 +696,7 @@ what it saved.
 
 1. Without a TMDB key (`TMDB_TOKEN`) it fetches nothing, writes no table, and
    reports the reason (below). It still drops cached records past six months
-   (section 5.2).
+   and shelved pictures past 150 days (section 5.2).
 2. It reads the media server's film list, by GET only, when a media server is
    set. With none, or with settings that name both servers or cannot be used
    (logged), it runs on the labels alone.
@@ -762,6 +762,12 @@ finished.
 - After each refresh the cache is rewritten to hold only records younger than
   **183 days**. A film TMDB does not know (404) is never cached. A damaged cache
   line is skipped, logged, and its film fetched again.
+- The server keeps every TMDB picture it fetches on a shelf in the data
+  directory (`tmdb/pictures/<TMDB size>/<file>`), so each picture is fetched
+  once for every viewer. A shelved picture is served for **150 days** and then
+  fetched again; every rebuild, with or without a key, removes each one 150
+  days old or more. A shelf that cannot be read or written is logged and the
+  picture is fetched and served without it.
 - A film whose TMDB record is missing or 183 days old or more carries no TMDB
   facts. Its keywords are unknown, never empty, and it has no picture paths.
 - A table in another format, or missing a column its format holds, cannot be
@@ -1311,8 +1317,9 @@ would hand one device's profiles to another.
   8 MiB. An image 160 px wide or narrower, a wall tile shown dimmed, is asked
   of the media server at quality 60; any other at quality 80. The media
   server's images are served
-  with `Cache-Control: private, max-age=2592000` (30 days; a TMDB picture is
-  kept one day, section 11.5), so a return visit
+  with `Cache-Control: private, max-age=2592000` (30 days, as is a TMDB picture
+  of a film the library does not hold; a TMDB picture standing in for the
+  library's own is kept one day, section 11.5), so a return visit
   draws the wall from the browser's cache. `private` keeps every shared cache,
   such as a CDN in front of the site, from keeping a copy and handing it to a
   device the door word has not admitted.
@@ -1389,7 +1396,10 @@ the picked poster and the pick's backdrop.
   a request the gate will not admit gets no picture at once), at the TMDB size the table
   below gives, for a film it does not hold, while the library cannot be used,
   and when the media server gives none, so a viewer's browser talks only to
-  Matinee. A TMDB picture served this way is kept by the browser one day
+  Matinee. The server keeps each one on its shelf (section 5.2) and asks TMDB
+  only for a picture the shelf lacks. A TMDB picture of a film the library does
+  not hold is kept by the browser 30 days, as the library's own are; one
+  standing in for a film the library holds is kept one day
   (`Cache-Control: private, max-age=86400`), so the library's own art returns
   soon after the library does. A film with no TMDB picture path
   has no picture (404). The server checks a path's shape before joining it into
@@ -1998,7 +2008,8 @@ as written. A phone is a viewport 600 px wide or less.
   the film table (`films.sqlite`, and `films.sqlite.kept` while a rebuild
   runs), Matinee's store (`matinee.sqlite`), the door's secret (`door.key`,
   made at the first start with a door word), the TMDB cache
-  (`tmdb/films.jsonl`), the rebuild's report (`rebuild.json`) and, where the
+  (`tmdb/films.jsonl`) and its shelf of pictures (`tmdb/pictures/`), the
+  rebuild's report (`rebuild.json`) and, where the
   household keeps one, its override file (`overrides.json`). None of it is in
   the image. The labels ship in the image with the code (`data/labels.json`).
 - **Settings and keys arrive as environment**, never committed, logged or sent
@@ -2375,7 +2386,8 @@ symbol when one does not match.
 | `tools/rebuild_table.py::daily_time` / `daily_arg` / `seconds_until` (`--daily HH:MM`, validated before the first rebuild) | `tools/rebuild_table.py:225` | 2026-10-05 |
 | `tools/rebuild_table.py::rebuild_time` / `DEFAULT_DAILY` (`REBUILD_TIME` for `--daily` alone; 04:30 when unset or not a time, logged) | `tools/rebuild_table.py:241` | 2026-10-05 |
 | `tools/rebuild_table.py::rebuild` (no key: compact and stop; an unexpected failure puts the kept table back) | `tools/rebuild_table.py:73` | 2026-10-05 |
-| `tools/rebuild_table.py::_keep` / `_compact_without_key` (`films.sqlite.kept`) | `tools/rebuild_table.py:111` | 2026-10-05 |
+| `tools/rebuild_table.py::_keep` / `_compact_without_key` (`films.sqlite.kept`) | `tools/rebuild_table.py:131` | 2026-10-05 |
+| `tools/rebuild_table.py::_sweep_pictures` (every rebuild sweeps the picture shelf) | `tools/rebuild_table.py:113` | 2026-10-05 |
 | `tools/rebuild_table.py::_rebuild` (the start line; save before any fetch; most-voted order) | `tools/rebuild_table.py:125` | 2026-10-05 |
 | `tools/rebuild_table.py::_Run` / `save` / `tick` (a save every `SAVE_EVERY` records) | `tools/rebuild_table.py:158` | 2026-10-05 |
 | `tools/rebuild_table.py::SAVE_EVERY` / `FAILED` | `tools/rebuild_table.py:64` | 2026-10-05 |
@@ -2570,7 +2582,9 @@ symbol when one does not match.
 | `src/matinee/web/app.py::add_film_routes` / `IMAGE_WIDTHS` / `IMAGE_CACHE` (`GET /api/pictures`) | `src/matinee/web/app.py:235` | 2026-10-05 |
 | `src/matinee/web/app.py::film_link` / `FilmCard` (Seerr, else TMDB) | `src/matinee/web/app.py:178` | 2026-10-05 |
 | `src/matinee/web/app.py::Held` / `held` / `stored_path` | `src/matinee/web/app.py:102` | 2026-10-05 |
-| `src/matinee/web/app.py::film_image` / `tmdb_image` / `TMDB_IMAGE_CACHE` (the media server's, else TMDB's) | `src/matinee/web/app.py:185` | 2026-10-05 |
+| `src/matinee/web/app.py::film_image` / `tmdb_image` / `TMDB_IMAGE_CACHE` (the media server's, else TMDB's; 30 days for a film the library does not hold) | `src/matinee/web/app.py:185` | 2026-10-05 |
+| `src/matinee/web/app.py::Shelf` / `from_shelf` (each TMDB picture fetched once for every viewer) | `src/matinee/web/app.py:209` | 2026-10-05 |
+| `src/matinee/tmdb.py::shelf_file` / `read_shelf` / `shelve` / `sweep_shelf` / `PICTURE_KEEP` (150 days) | `src/matinee/tmdb.py:324` | 2026-10-05 |
 | `src/matinee/web/app.py::film_synopsis` (the media server's, else TMDB's) | `src/matinee/web/app.py:224` | 2026-10-05 |
 | `src/matinee/tmdb.py::fetch_picture` / `IMAGES` / `IMAGE_SIZES` / `TmdbImageError` | `src/matinee/tmdb.py:286` | 2026-10-05 |
 | `src/matinee/tmdb.py::ImageGate` / `IMAGE_GATE` / `IMAGE_RATE` (50 a second, 20,000 an hour, a hold after a 429 or 503) | `src/matinee/tmdb.py:240` | 2026-10-05 |

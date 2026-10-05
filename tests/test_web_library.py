@@ -494,13 +494,44 @@ def test_a_film_the_library_does_not_hold_shows_tmdb_pictures_through_matinee(
     library.held = [t for t in library.held if t != 5]  # sold since the rebuild; the labels still name it
     poster = client.get("/img/poster/5/m")
     assert poster.status_code == 200 and poster.content == b"tmdb-jpeg"
-    assert poster.headers["cache-control"] == TMDB_IMAGE_CACHE and fetched == [("/p5.jpg", "poster", 320)]
-    assert TMDB_IMAGE_CACHE.startswith("private, max-age=") and TMDB_IMAGE_CACHE != IMAGE_CACHE
+    assert poster.headers["cache-control"] == IMAGE_CACHE and fetched == [("/p5.jpg", "poster", 320)]
     assert client.get("/img/backdrop/5/l").status_code == 200 and fetched[-1] == ("/b5.jpg", "backdrop", 1600)
     assert not [c for c in library.calls if c[0] == "image"]
     card = client.get("/api/film/5").json()
     assert card["synopsis"] == "TMDB says 5." and card["title"] == "TMDB 5"
     assert client.get("/img/poster/6/m").status_code == 200 and ("image", (item(6), "poster", 320)) in library.calls
+
+
+def test_a_tmdb_picture_is_fetched_once_for_every_viewer_and_again_past_its_keep(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from matinee.tmdb import PICTURE_KEEP
+
+    fetched: list[str] = []
+
+    def tmdb_picture(path: str, kind: str, width: int) -> tuple[bytes, str]:
+        fetched.append(path)
+        return f"tmdb-{len(fetched)}".encode(), "image/jpeg"
+
+    monkeypatch.setattr("matinee.web.app.fetch_picture", tmdb_picture)
+    client, library, _, _ = make_world(tmp_path, listed=frozenset({5}))
+    library.held = [t for t in library.held if t != 5]
+    first = client.get("/img/poster/5/m")
+    again = client.get("/img/poster/5/m")
+    assert first.content == again.content == b"tmdb-1" and fetched == ["/p5.jpg"]
+    assert again.headers["content-type"] == "image/jpeg" and again.headers["cache-control"] == IMAGE_CACHE
+    kept = tmp_path / "tmdb" / "pictures" / "w342" / "p5.jpg"
+    old = time.time() - PICTURE_KEEP.total_seconds()
+    os.utime(kept, (old, old))
+    assert client.get("/img/poster/5/m").content == b"tmdb-2" and kept.read_bytes() == b"tmdb-2"
+
+
+def test_a_picture_the_shelf_cannot_keep_is_still_served(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr("matinee.web.app.fetch_picture", lambda path, kind, width: (b"tmdb-jpeg", "image/jpeg"))
+    client, library, _, _ = make_world(tmp_path, listed=frozenset({5}))
+    library.held = [t for t in library.held if t != 5]
+    (tmp_path / "tmdb").write_text("not a folder")  # the shelf cannot be made
+    assert client.get("/img/poster/5/m").content == b"tmdb-jpeg"
 
 
 def test_while_the_library_cannot_be_used_every_picture_and_synopsis_comes_from_tmdb(
@@ -580,6 +611,7 @@ def test_a_picture_or_synopsis_the_media_server_cannot_give_comes_from_tmdb(
     library.broken = True
     stand_in = client.get("/img/poster/5/m")
     assert stand_in.content == b"tmdb-jpeg" and stand_in.headers["cache-control"] == TMDB_IMAGE_CACHE
+    assert TMDB_IMAGE_CACHE.startswith("private, max-age=") and TMDB_IMAGE_CACHE != IMAGE_CACHE
     assert client.get("/img/poster/6/m").status_code == 404  # no TMDB path either
     library.broken = False
     library.no_synopsis = True
@@ -590,7 +622,7 @@ def test_a_picture_or_synopsis_the_media_server_cannot_give_comes_from_tmdb(
 
     monkeypatch.setattr("matinee.web.app.fetch_picture", tmdb_down)
     library.broken = True
-    assert client.get("/img/poster/5/m").status_code == 404
+    assert client.get("/img/poster/5/s").status_code == 404  # a size the shelf does not hold yet
 
 
 @pytest.mark.parametrize(

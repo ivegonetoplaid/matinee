@@ -31,7 +31,7 @@ from matinee.progress import read_status
 from matinee.quips import Quips, QuipsError, load_quips
 from matinee.store import AVATARS, Locked, Store, StoreError
 from matinee.table import TableError
-from matinee.tmdb import TmdbImageError, fetch_picture
+from matinee.tmdb import TmdbImageError, fetch_picture, picture_type, read_shelf, shelf_file, shelve
 from matinee.web.admission import COOKIE as ADMISSION_COOKIE
 from matinee.web.admission import LIFE_S as ADMISSION_LIFE_S
 from matinee.web.admission import Admission, load_secret
@@ -71,8 +71,8 @@ IMAGE_WIDTHS: dict[ImageKind, dict[str, int]] = {
 # A film's poster seldom changes; a month spares every return visit the wall's downloads. Only the viewer's
 # own browser may keep one: a shared cache would hand it to a device the locked door has not admitted.
 IMAGE_CACHE = f"private, max-age={30 * 24 * 3600}"
-# A TMDB picture may stand in for the library's while it cannot answer; kept one day, the library's art returns soon
-# after the library does.
+# A TMDB picture standing in for the library's own, while the library cannot answer, is kept one day, so the
+# library's art returns soon after the library does. A film the library does not hold keeps IMAGE_CACHE.
 TMDB_IMAGE_CACHE = f"private, max-age={24 * 3600}"
 TMDB_IMAGES = "https://image.tmdb.org"
 TMDB_FILM = "https://www.themoviedb.org/movie"
@@ -182,11 +182,13 @@ def film_link(seerr: str | None, tmdb: int) -> tuple[str, Literal["seerr", "tmdb
     return f"{TMDB_FILM}/{tmdb}", "tmdb"
 
 
-def film_image(theatre: Theatre, film: Held, tmdb: int, kind: ImageKind, width: int) -> tuple[Image, str]:
+def film_image(theatre: Theatre, film: Held, tmdb: int, kind: ImageKind, width: int, shelf: Shelf) -> tuple[Image, str]:
     """The film's picture and how long a browser keeps it: from the media server for a film it holds; from TMDB's
-    image server, through Matinee, for any other film, while the library cannot be used, and when the media server
-    gives none. 404 when neither gives one."""
-    if film.item_id is not None and theatre.library is not None:
+    image server, through Matinee's shelf, for any other film, while the library cannot be used, and when the media
+    server gives none. 404 when neither gives one."""
+    if film.item_id is None:
+        return tmdb_image(film, tmdb, kind, width, shelf), IMAGE_CACHE
+    if theatre.library is not None:
         try:
             return theatre.library.image(film.item_id, kind, width), IMAGE_CACHE
         except LibraryError as exc:
@@ -198,14 +200,42 @@ def film_image(theatre: Theatre, film: Held, tmdb: int, kind: ImageKind, width: 
                 tmdb,
                 exc,
             )
-    return tmdb_image(film, tmdb, kind, width), TMDB_IMAGE_CACHE
+    return tmdb_image(film, tmdb, kind, width, shelf), TMDB_IMAGE_CACHE
 
 
-def tmdb_image(film: Held, tmdb: int, kind: ImageKind, width: int) -> Image:
-    """The film's TMDB picture, fetched by the server so the viewer's browser talks only to Matinee."""
+@dataclass(frozen=True)
+class Shelf:
+    """Where TMDB pictures are kept in the data directory, and the clock that ages them."""
+
+    root: Path
+    clock: Callable[[], float]
+
+
+def from_shelf(file: Path, shelf: Shelf) -> bytes | None:
+    """The shelved picture, or None when the shelf lacks it, holds it past its keep, or cannot be read."""
+    try:
+        return read_shelf(file, shelf.clock())
+    except OSError as exc:
+        QUIET.warn(
+            "picture-shelf",
+            "the TMDB picture shelf %s could not be read: %s. Meanwhile each picture is fetched from TMDB; check the"
+            " data directory's permissions.",
+            shelf.root,
+            exc,
+        )
+        return None
+
+
+def tmdb_image(film: Held, tmdb: int, kind: ImageKind, width: int, shelf: Shelf) -> Image:
+    """The film's TMDB picture: from the shelf, else fetched by the server and shelved, so the viewer's browser
+    talks only to Matinee and each picture is fetched once for every viewer."""
     path = film.poster_path if kind == "poster" else film.backdrop_path
     if path is None:
         raise HTTPException(status_code=404, detail="not_found")
+    file = shelf_file(shelf.root, path, kind, width)
+    kept = from_shelf(file, shelf)
+    if kept is not None:
+        return Image(kept, picture_type(path))
     try:
         body, content_type = fetch_picture(path, kind, width)
     except TmdbImageError as exc:
@@ -218,6 +248,16 @@ def tmdb_image(film: Held, tmdb: int, kind: ImageKind, width: int) -> Image:
             exc,
         )
         raise HTTPException(status_code=404, detail="not_found") from exc
+    try:
+        shelve(file, body)
+    except OSError as exc:
+        QUIET.warn(
+            "picture-shelf",
+            "a TMDB picture could not be kept in %s: %s. Meanwhile it is served without being kept, so each viewer"
+            " waits for it; check the data directory's permissions and free space.",
+            shelf.root,
+            exc,
+        )
     return Image(body, content_type)
 
 
@@ -232,13 +272,13 @@ def film_synopsis(theatre: Theatre, film: Held, tmdb: int) -> str | None:
         return film.synopsis
 
 
-def add_film_routes(app: FastAPI, theatre: Theatre, seerr: SeerrCheck, images: ImageSource) -> None:
+def add_film_routes(app: FastAPI, theatre: Theatre, seerr: SeerrCheck, images: ImageSource, shelf: Shelf) -> None:
     @app.get("/img/{kind}/{tmdb}/{size}")
     def image(kind: str, tmdb: int, size: str) -> Response:
         image_kind: ImageKind = "backdrop" if kind == "backdrop" else "poster"
         if kind != image_kind or size not in IMAGE_WIDTHS[image_kind]:
             raise HTTPException(status_code=404, detail="not_found")
-        img, kept = film_image(theatre, held(theatre, tmdb), tmdb, image_kind, IMAGE_WIDTHS[image_kind][size])
+        img, kept = film_image(theatre, held(theatre, tmdb), tmdb, image_kind, IMAGE_WIDTHS[image_kind][size], shelf)
         return Response(img.body, media_type=img.content_type, headers={"Cache-Control": kept})
 
     @app.get("/api/pictures")
@@ -521,7 +561,7 @@ def create_app(
     seerr = seerr or SeerrCheck(config.seerr_url)
     if state is not None:
         add_state_log(app, state(seerr))
-    add_film_routes(app, theatre, seerr, config.images)
+    add_film_routes(app, theatre, seerr, config.images, Shelf(config.picture_shelf, clock))
     add_setup_route(app, theatre, config, seerr, faults)
     add_page(app, config.images)
     add_door_routes(app, theatre, store, clock, dtdd is not None, config.images)

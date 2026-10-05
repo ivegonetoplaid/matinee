@@ -55,6 +55,7 @@ from matinee.tmdb import (
     most_voted,
     needs_fetch,
     refresh,
+    sweep_shelf,
     workers_for,
 )
 
@@ -74,6 +75,7 @@ def rebuild(server: MediaServer | None, state: Path, token: str, rate: float = D
     """One rebuild; returns, and leaves in `rebuild.json`, how it ended."""
     started = _now()
     cache = state / "tmdb" / "films.jsonl"
+    _sweep_pictures(state / "tmdb" / "pictures")
     if not token:
         _compact_without_key(cache)
         log.error("no TMDB key is set, so no film table can be built. Set TMDB_TOKEN and run the rebuild again.")
@@ -106,6 +108,24 @@ def _compact_without_key(cache: Path) -> None:
             cache,
             exc,
         )
+
+
+def _sweep_pictures(shelf: Path) -> None:
+    """The server's shelf of TMDB pictures loses every one past its keep, with or without a key; a shelf that
+    cannot be swept is logged."""
+    if not shelf.is_dir():
+        return
+    try:
+        removed = sweep_shelf(shelf, time.time())
+    except OSError as exc:
+        log.error(
+            "the TMDB picture shelf %s could not be swept of pictures past their keep: %s. Meanwhile they stay;"
+            " check the data directory's permissions.",
+            shelf,
+            exc,
+        )
+        return
+    log.info("swept %d TMDB pictures past their keep from the shelf", removed)
 
 
 def _keep(table: Path) -> Path | None:

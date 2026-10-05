@@ -57,6 +57,10 @@ class Config:
     def store_path(self) -> Path:
         return self.state / "matinee.sqlite"
 
+    @property
+    def picture_shelf(self) -> Path:
+        return self.state / "tmdb" / "pictures"
+
 
 def _required(env: Mapping[str, str], name: str) -> str:
     value = env.get(name, "").strip()
