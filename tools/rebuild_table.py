@@ -2,14 +2,15 @@
 the table.
 
 Reads the media server when one is set (GET only), the shipped labels, the shipped
-genome scores and the TMDB cache,
-and writes `<state>/films.sqlite`, replacing the previous table only once the new
-one is complete. Prints what it saw, including every file whose `{tmdb-N}` folder
+genome scores and the TMDB cache, and writes `<state>/films.sqlite`: once before
+any fetch, every SAVE_EVERY new records while it fetches, most-voted first, and at
+the end. Each write replaces the previous table whole. Prints what it saw, including every file whose `{tmdb-N}` folder
 tag differs from the server's TMDB id; it uses the server's id and changes
 nothing. With `--daily HH:MM` it rebuilds now and then every day at that local
 time, which is how the deployed stack runs it every night. It reports itself in
-`rebuild.json` (`matinee.progress`): running, finished, or stopped with the reason,
-such as no TMDB key, a refused key, or TMDB not answering. Without a key it
+`rebuild.json` (`matinee.progress`): running, with its progress at least every few
+seconds while it fetches, finished, or stopped with the reason, such as no TMDB
+key, a refused key, or TMDB not answering. Without a key it
 fetches nothing and writes no table.
 
 Settings come from the environment: DATA_DIR (or `--state`), the media server
@@ -26,19 +27,38 @@ import math
 import os
 import sys
 import time
+from collections.abc import Mapping, Sequence
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
+from functools import partial
 from pathlib import Path
 
+from matinee.genome import Scores
 from matinee.genome_file import load_scores
 from matinee.labels import LabelsError, load_labels, load_overrides
+from matinee.library import LibraryFilm
 from matinee.library.choice import MediaServer, ServerChoiceError, configured_server, open_reader
 from matinee.progress import RebuildStatus, write_status
-from matinee.table import build_table, write_table
-from matinee.tmdb import DEFAULT_RATE, NO_KEY, compact, load_cache, refresh
+from matinee.table import BuildReport, build_table, write_table
+from matinee.tmdb import (
+    DEFAULT_RATE,
+    NO_KEY,
+    Pacer,
+    Refreshed,
+    TmdbFilm,
+    compact,
+    fetch_order,
+    load_cache,
+    most_voted,
+    needs_fetch,
+    refresh,
+    workers_for,
+)
 
 log = logging.getLogger("rebuild_table")
 DEFAULT_STATE = Path.home() / ".local/share/matinee"
 FAILED = "the rebuild failed; its log says why"
+SAVE_EVERY = 500  # new records between saves of the film table while the rebuild fetches
 
 
 def _now() -> str:
@@ -66,18 +86,50 @@ def _rebuild(
 ) -> RebuildStatus:
     films = open_reader(server).films() if server is not None else []
     listed = load_labels().films() | household_films(state)
-    ids = sorted(listed | {f.tmdb for f in films if f.tmdb is not None})
-    write_status(state, RebuildStatus("running", started, _now(), total=len(ids)))
-    result = refresh(ids, cache, token, rate=rate)
+    ids = listed | {f.tmdb for f in films if f.tmdb is not None}
+    have = load_cache(cache)
+    todo = [t for t in ids if needs_fetch(have.get(t), datetime.now(UTC))]
+    run = _Run(state, started, films, load_scores(), listed)
+    run.tick(Refreshed(0, 0), len(todo), have)  # the library and the films already held, before any fetch
+    pacer = Pacer(rate)
+    still = partial(run.tick, Refreshed(0, 0), len(todo), have, save=False)  # a slow order read is not a stall
+    order = fetch_order(todo, have, lambda: most_voted(token, pacer, workers_for(rate), on_page=still))
+    result = refresh(order, cache, token, rate=rate, pacer=pacer, tick=run.tick)
     log.info("TMDB: fetched %d, failed %d", result.fetched, result.failed)
-    table, report = build_table(films, load_scores(), load_cache(cache), datetime.now(UTC), listed)
-    write_table(table, state / "films.sqlite")
+    report = run.save(load_cache(cache))
     for line in report.lines():
         log.info("%s", line)
-    log.info("wrote %d films to %s", len(table.films), state / "films.sqlite")
+    done = result.fetched + result.failed
     if result.stopped is not None:
-        return _report(state, RebuildStatus("stopped", started, _now(), result.fetched, len(ids), result.stopped))
-    return _report(state, RebuildStatus("finished", started, _now(), len(ids), len(ids)))
+        return _report(state, RebuildStatus("stopped", started, _now(), done, len(todo), result.stopped))
+    return _report(state, RebuildStatus("finished", started, _now(), len(todo), len(todo)))
+
+
+@dataclass
+class _Run:
+    """One rebuild's film table and report while it fetches: the table is saved every SAVE_EVERY new records."""
+
+    state: Path
+    started: str
+    films: Sequence[LibraryFilm]
+    scores: Scores
+    listed: frozenset[int]
+    saved_at: int | None = None  # records fetched at the last save; None before the first
+
+    def save(self, records: Mapping[int, TmdbFilm]) -> BuildReport:
+        """Build the table from `records` and replace the one on disk whole."""
+        table, report = build_table(self.films, self.scores, records, datetime.now(UTC), self.listed)
+        write_table(table, self.state / "films.sqlite")
+        log.info("wrote %d films to %s", len(table.films), self.state / "films.sqlite")
+        return report
+
+    def tick(self, so_far: Refreshed, total: int, records: Mapping[int, TmdbFilm], save: bool = True) -> None:
+        """Report progress, and save the table when SAVE_EVERY records have come since the last save."""
+        done = so_far.fetched + so_far.failed
+        write_status(self.state, RebuildStatus("running", self.started, _now(), done, total))
+        if save and (self.saved_at is None or so_far.fetched - self.saved_at >= SAVE_EVERY):
+            self.save(records)
+            self.saved_at = so_far.fetched
 
 
 def household_films(state: Path) -> frozenset[int]:

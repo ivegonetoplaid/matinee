@@ -629,8 +629,14 @@ first rebuild. A failed nightly rebuild leaves the previous table in place.
    reports the reason (below).
 2. It reads the media server's film list, by GET only, when a media server is
    set. With none it runs on the labels alone.
-3. It refreshes the TMDB record of every film the shipped labels name and every
-   library film with a TMDB id: one GET per film, at `TMDB_RATE` requests a
+3. It writes the table from the library and the records already held, before
+   any fetch, so the library can be picked at once on a first start.
+4. It refreshes the TMDB record of every film the shipped labels name and every
+   library film with a TMDB id, most-voted first. With no record held (a first
+   start) the order is TMDB's list of films by vote count (its 500 pages, read
+   then and never stored); otherwise it is the vote counts in the records held.
+   Films outside the order come last; when the order cannot be read the rebuild
+   fetches by TMDB id and logs why. One GET per film, at `TMDB_RATE` requests a
    second (30 by default), with up to that many requests in flight at once (32
    at most). The pace takes any positive number and carries no ceiling (TMDB's
    own limit is about 40 a second); anything else is the default, logged. A
@@ -640,18 +646,24 @@ first rebuild. A failed nightly rebuild leaves the previous table in place.
    is the film's US theatrical certification, else its first other non-empty US
    certification, else none. A 429 holds every request for its `Retry-After`,
    those already waiting for a turn included. It stops after 5 network failures
-   in a row, and at once when TMDB refuses the key (401).
-4. It reads the shipped genome scores (section 5.3).
-5. It builds and writes the table, replacing the previous one only once the new
-   one is complete.
-6. It logs a report. The report counts films with and without genome scores and
+   in a row, and at once when TMDB refuses the key (401). While it fetches it
+   writes the table again every 500 new records, so the films it can offer grow
+   as it learns.
+5. It reads the shipped genome scores (section 5.3) for every write.
+6. It writes the table a last time when the fetch ends. Every write replaces the
+   previous table whole, so the server never reads half of one.
+7. It logs a report. The report counts films with and without genome scores and
    items with no TMDB id. It names every file whose `{tmdb-N}` folder tag differs
    from the TMDB id the media server gives, and every film missing a usable TMDB
    record. It uses the media server's id and changes nothing on the server.
 
 The rebuild reports itself in `rebuild.json` in the data directory, replaced
-whole each time: `running` as it starts, `finished`, or `stopped` with the
-reason: no TMDB key, TMDB refused the key, or TMDB is not answering. A report
+whole each time: `running` as it starts and at least every 5 seconds while it
+fetches, with the films this run has fetched or failed out of those it needs
+(`done`, `total`), `finished`, or `stopped` with the reason: no TMDB key, TMDB
+refused the key, or TMDB is not answering. A `running` report that has not
+changed for 120 seconds means the rebuild died, and the setup note says the
+last rebuild failed. A report
 that cannot be read counts as absent. A one-shot rebuild exits 0 only when it
 finished.
 
@@ -746,6 +758,7 @@ show." and says, one paragraph each, what Matinee sees:
 - Matinee's own shipped files that cannot be used (the labels, the pick's lines,
   or data the engine cannot prepare: stale reference statistics, a malformed
   tree), with "update or reinstall Matinee";
+- a rebuild whose report stood still for 120 seconds, as a failed rebuild;
 - when there is no film to recommend, why: the rebuild is still fetching, or no
   film details exist and nothing is fetching them.
 
@@ -925,8 +938,8 @@ asked for topics, "Edit my list" is not offered, `GET /api/topics` and
 no DoesTheDogDie credit shows anywhere, the About page's section on steering
 included. A profile's stored topics stay in the store unchanged and have no
 effect on any walk or pick: no question is skipped for them. While any profile
-holds topics and no key is set, the server logs a warning at start and each
-time it loads a rebuilt film table. It says a DoesTheDogDie key was set before
+holds topics and no key is set, the server logs a warning at start and, at most
+once every 12 hours, when it loads a rebuilt film table. It says a DoesTheDogDie key was set before
 and is now missing, how many profiles still hold topics, and that the household
 either sets `DTDD_API_KEY` again or clears the topics with the notes tool's
 `clear-topics`, which ends the warning. `GET /api/door` says whether the key is

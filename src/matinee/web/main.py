@@ -9,6 +9,8 @@ replacing either takes a restart.
 from __future__ import annotations
 
 import logging
+import math
+import time
 from functools import partial
 from pathlib import Path
 
@@ -42,6 +44,7 @@ def warn_kept_topics(store: Store) -> None:
         log.warning(TOPICS_KEPT, held, "profile" if held == 1 else "profiles")
 
 
+WARN_EVERY = 12 * 3600.0  # seconds at least between the kept-topics warnings a reloaded table raises
 OVERRIDES_BROKEN = (
     "Your override file ({path}) can't be used: {problem}. Until it's fixed, films sit where Matinee ships them."
 )
@@ -89,9 +92,13 @@ def build() -> FastAPI:
     store = Store(config.store_path)
     dtdd = Dtdd(config.dtdd_key) if config.dtdd_key else None
 
+    warned_at = -math.inf
+
     def on_reload() -> None:
-        if dtdd is None:
+        nonlocal warned_at
+        if dtdd is None and time.monotonic() - warned_at >= WARN_EVERY:  # the rebuild saves many times a run
             warn_kept_topics(store)
+            warned_at = time.monotonic()
 
     on_reload()
     faults: list[str] = []

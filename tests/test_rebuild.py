@@ -19,6 +19,12 @@ from matinee.tmdb import KEY_REFUSED, NO_KEY, Refreshed, load_cache
 SETTINGS = ("DATA_DIR", "JELLYFIN_URL", "JELLYFIN_API_KEY", "PLEX_URL", "PLEX_TOKEN", "TMDB_TOKEN", "TMDB_RATE")
 
 
+@pytest.fixture(autouse=True)
+def no_vote_list(monkeypatch: pytest.MonkeyPatch) -> None:
+    """No test reads TMDB's real list of films by vote count."""
+    monkeypatch.setattr(rebuild_table, "most_voted", lambda *a, **k: [])
+
+
 def run(monkeypatch: pytest.MonkeyPatch, env: dict[str, str]) -> list[Any]:
     for name in SETTINGS:
         monkeypatch.delenv(name, raising=False)
@@ -72,7 +78,7 @@ def test_without_a_library_it_fetches_every_film_the_labels_name(
 ) -> None:
     asked: list[list[int]] = []
 
-    def refresh(ids: Any, cache: Path, token: str, rate: float = 30.0) -> Refreshed:
+    def refresh(ids: Any, cache: Path, token: str, **_: Any) -> Refreshed:
         asked.append(list(ids))
         assert read_status(tmp_path) is not None and read_status(tmp_path).state == "running"  # type: ignore[union-attr]
         return Refreshed(5, 0)
@@ -84,7 +90,7 @@ def test_without_a_library_it_fetches_every_film_the_labels_name(
     assert (status.state, status.done, status.total) == ("finished", len(asked[0]), len(asked[0]))
     assert (tmp_path / "films.sqlite").exists()
 
-    monkeypatch.setattr(rebuild_table, "refresh", lambda ids, cache, token, rate=30.0: Refreshed(1, 0, KEY_REFUSED))
+    monkeypatch.setattr(rebuild_table, "refresh", lambda ids, cache, token, **_: Refreshed(1, 0, KEY_REFUSED))
     stopped = rebuild_table.rebuild(None, tmp_path, "bad")
     assert (stopped.state, stopped.reason, stopped.done) == ("stopped", KEY_REFUSED, 1)
     assert read_status(tmp_path) == stopped
@@ -101,7 +107,7 @@ def test_a_report_that_cannot_be_read_counts_as_absent(tmp_path: Path) -> None:
 def test_an_unexpected_failure_still_ends_the_report_and_is_raised(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr(rebuild_table, "refresh", lambda ids, cache, token, rate=30.0: Refreshed(0, 0))
+    monkeypatch.setattr(rebuild_table, "refresh", lambda ids, cache, token, **_: Refreshed(0, 0))
 
     def broken(*args: Any) -> Any:
         raise ValueError("a code fault")
@@ -144,7 +150,7 @@ def test_the_rebuild_fetches_the_labels_and_the_library_once_each(
     asked: list[list[int]] = []
     monkeypatch.setattr(rebuild_table, "open_reader", lambda server: Reader())
 
-    def refresh(ids: Any, cache: Path, token: str, rate: float = 30.0) -> Refreshed:
+    def refresh(ids: Any, cache: Path, token: str, **_: Any) -> Refreshed:
         asked.append(list(ids))
         return Refreshed(0, 0)
 
@@ -180,7 +186,7 @@ def test_the_rebuild_writes_labelled_films_the_library_lacks_beside_the_library(
             return [LibraryFilm("c" * 32, owned, "Owned", 2003, frozenset({"Drama"}), "PG", 90.0, 7.0, None)]
 
     monkeypatch.setattr(rebuild_table, "open_reader", lambda server: Reader())
-    monkeypatch.setattr(rebuild_table, "refresh", lambda ids, cache_path, token, rate=30.0: Refreshed(0, 0))
+    monkeypatch.setattr(rebuild_table, "refresh", lambda ids, cache_path, token, **_: Refreshed(0, 0))
     monkeypatch.setattr(rebuild_table, "load_cache", lambda path: cache)
     rebuild_table.rebuild(MediaServer("jellyfin", "http://jf.invalid", "k"), tmp_path, "t")
     films = load_table(tmp_path / "films.sqlite").films
@@ -192,3 +198,78 @@ def test_the_rebuild_writes_labelled_films_the_library_lacks_beside_the_library(
 def test_tmdb_rate_reaches_the_rebuild(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     [call] = run(monkeypatch, {"DATA_DIR": str(tmp_path), "TMDB_TOKEN": "t", "TMDB_RATE": "45"})
     assert call[3] == 45.0
+
+
+def test_the_table_is_saved_before_any_fetch_and_as_records_come(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from matinee.table import load_table
+    from matinee.tmdb import TmdbFilm
+
+    owned = 999_999_999
+    labelled = sorted(load_labels().films())[:4]
+
+    class Reader:
+        def films(self) -> list[LibraryFilm]:
+            return [LibraryFilm("c" * 32, owned, "Owned", 2003, frozenset({"Drama"}), "PG", 90.0, 7.0, None)]
+
+    def rec(t: int) -> TmdbFilm:
+        return TmdbFilm(t, datetime.now(UTC).isoformat(), None, None, [], "en", "", "", title=f"Film {t}")
+
+    sizes: list[int] = []
+    reports: list[RebuildStatus] = []
+
+    def refresh(ids: Any, cache: Path, token: str, tick: Any = None, **_: Any) -> Refreshed:
+        sizes.append(len(load_table(tmp_path / "films.sqlite").films))  # the library, before any fetch
+        held: dict[int, TmdbFilm] = {}
+        for n, t in enumerate(labelled, 1):
+            held[t] = rec(t)
+            tick(Refreshed(n, 0), len(ids), held)
+            reports.append(read_status(tmp_path))  # type: ignore[arg-type]
+            sizes.append(len(load_table(tmp_path / "films.sqlite").films))
+        return Refreshed(len(labelled), 0)
+
+    monkeypatch.setattr(rebuild_table, "SAVE_EVERY", 2)
+    monkeypatch.setattr(rebuild_table, "open_reader", lambda server: Reader())
+    monkeypatch.setattr(rebuild_table, "refresh", refresh)
+    monkeypatch.setattr(rebuild_table, "load_cache", lambda path: {t: rec(t) for t in labelled} if reports else {})
+    rebuild_table.rebuild(MediaServer("jellyfin", "http://jf.invalid", "k"), tmp_path, "t")
+    assert sizes == [1, 1, 3, 3, 5]  # saved every second record
+    assert [(r.state, r.done) for r in reports] == [("running", n) for n in (1, 2, 3, 4)]
+    assert {r.total for r in reports} == {len(load_labels().films()) + 1}
+    assert len(load_table(tmp_path / "films.sqlite").films) == 5
+    assert read_status(tmp_path).state == "finished"  # type: ignore[union-attr]
+
+
+def test_a_first_start_fetches_in_tmdbs_vote_order_which_is_never_stored(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    films = sorted(load_labels().films())
+    voted = [films[5], films[2], 123_456_789, films[0]]
+    beats: list[str] = []
+
+    pacers: list[Any] = []
+
+    def read_votes(token: str, pacer: Any, *a: Any, on_page: Any, **k: Any) -> list[int]:
+        pacers.append(pacer)
+        (tmp_path / "rebuild.json").unlink()
+        on_page()  # each page read leaves a fresh running report, so a slow read is never a stall
+        beats.append(read_status(tmp_path).state)  # type: ignore[union-attr]
+        return voted
+
+    monkeypatch.setattr(rebuild_table, "most_voted", read_votes)
+    asked: list[list[int]] = []
+
+    def refresh(ids: Any, cache: Path, token: str, pacer: Any = None, **_: Any) -> Refreshed:
+        asked.append(list(ids))
+        pacers.append(pacer)
+        return Refreshed(0, 0)
+
+    monkeypatch.setattr(rebuild_table, "refresh", refresh)
+    rebuild_table.rebuild(None, tmp_path, "t")
+    assert len(pacers) == 2 and pacers[0] is pacers[1]  # a hold the order read meets carries into the fetch
+    assert asked[0][:3] == [films[5], films[2], films[0]] and asked[0][3:] == sorted(asked[0][3:])
+    assert beats == ["running"]
+    written = {p.relative_to(tmp_path).as_posix() for p in tmp_path.rglob("*") if p.is_file()}
+    assert written <= {"films.sqlite", "rebuild.json", "tmdb/films.jsonl"}
+    assert all(str(123_456_789) not in (tmp_path / w).read_bytes().decode("latin-1") for w in written)

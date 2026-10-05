@@ -66,15 +66,22 @@ def test_no_word_about_a_labels_file_the_state_directory_does_not_hold(
     assert not caplog.records
 
 
-def test_without_a_key_kept_topics_are_warned_of_at_start_and_on_every_reload(
+def test_without_a_key_kept_topics_are_warned_of_at_start_and_at_most_twice_a_day_on_reloads(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
 ) -> None:
+    from matinee.web.main import WARN_EVERY
+
+    now = [1000.0]
+    monkeypatch.setattr("matinee.web.main.time.monotonic", lambda: now[0])
     Store(tmp_path / "matinee.sqlite").create("Ada", None, [188])
     with caplog.at_level(logging.WARNING, logger="matinee.web"):
         seen = run_build(monkeypatch, tmp_path, dtdd_key="")
-    assert ["now missing" in r.getMessage() for r in caplog.records] == [True]
-    caplog.clear()
-    with caplog.at_level(logging.WARNING, logger="matinee.web"):
+        assert ["now missing" in r.getMessage() for r in caplog.records] == [True]
+        caplog.clear()
+        now[0] += 60
+        seen.on_reload()  # the rebuild saves many times a run: no second warning so soon
+        assert caplog.records == []
+        now[0] += WARN_EVERY
         seen.on_reload()
     assert ["now missing" in r.getMessage() for r in caplog.records] == [True]
 

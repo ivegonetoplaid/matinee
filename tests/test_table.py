@@ -5,8 +5,8 @@ from __future__ import annotations
 import json
 import sqlite3
 import urllib.error
-from collections.abc import Callable
-from dataclasses import replace
+from collections.abc import Callable, Mapping
+from dataclasses import asdict, replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -579,3 +579,113 @@ def test_refresh_paces_every_thread_with_one_pacer_at_the_rate(tmp_path: Path, m
     monkeypatch.setattr("matinee.tmdb.fetch_film", recorded)
     refresh(range(20), tmp_path / "t.jsonl", "tok", rate=45)
     assert len(seen) == 20 and len({id(p) for p in seen}) == 1 and seen[0]._gap == pytest.approx(1 / 45)
+
+
+@pytest.mark.parametrize("rate", [30, 1e6])
+def test_an_outage_and_a_refused_key_stop_with_the_same_counts_at_many_workers(tmp_path: Path, rate: float) -> None:
+    def down(t: int, _: str) -> TmdbFilm:
+        raise urllib.error.URLError("down")
+
+    def refused(t: int, _: str) -> TmdbFilm:
+        raise TmdbRefused(KEY_REFUSED)
+
+    for _ in range(10):
+        assert refresh(range(200), tmp_path / "a.jsonl", "tok", fetch=down, rate=rate) == Refreshed(0, 5, NOT_ANSWERING)
+        assert refresh(range(200), tmp_path / "b.jsonl", "tok", fetch=refused, rate=rate) == Refreshed(
+            0, 0, KEY_REFUSED
+        )
+
+
+def voted_record(t: int, votes: int) -> TmdbFilm:
+    return TmdbFilm(t, NOW.isoformat(), None, None, [], "en", "", "", title=f"Film {t}", vote_count=votes)
+
+
+def test_a_first_start_fetches_in_tmdbs_order_by_votes_and_films_outside_it_last(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    from matinee.tmdb import fetch_order
+
+    assert fetch_order([5, 1, 2, 9], {}, lambda: [2, 7, 1, 2]) == [2, 1, 5, 9]
+    with caplog.at_level("WARNING", logger="matinee.tmdb"):
+        assert fetch_order([5, 1, 9], {}, lambda: []) == [1, 5, 9]
+    assert "could not be read" in caplog.text
+
+    def never() -> list[int]:
+        raise AssertionError("a later rebuild orders by the records it holds")
+
+    held = {1: voted_record(1, 10), 2: voted_record(2, 50), 4: voted_record(4, 0)}
+    assert fetch_order([3, 1, 2, 4], held, never) == [2, 1, 4, 3]
+    assert fetch_order([], {}, never) == []
+
+
+def test_the_vote_list_reads_its_pages_in_order_and_keeps_those_before_one_that_fails(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from matinee.tmdb import most_voted
+
+    urls: list[str] = []
+
+    def answer(url: str, token: str, pacer: Pacer) -> dict[str, object] | None:
+        urls.append(url)
+        n = int(url.rsplit("=", 1)[1])
+        if n == 4:
+            raise urllib.error.URLError("down")
+        return {"results": [{"id": n * 10}, {"id": n * 10 + 1}, {"title": "no id"}]}
+
+    monkeypatch.setattr("matinee.tmdb.get_json", answer)
+    pages: list[int] = []
+    assert most_voted("tok", FAST, 4, pages=6, on_page=lambda: pages.append(1)) == [10, 11, 20, 21, 30, 31]
+    assert len(pages) == 3  # progress after each page read
+    assert all("/discover/movie?sort_by=vote_count.desc&page=" in u for u in urls)
+    monkeypatch.setattr("matinee.tmdb.get_json", lambda url, token, pacer: {"results": [{"id": 1}]})
+    assert most_voted("tok", FAST, 4, pages=3) == [1, 1, 1]
+
+    def refused(url: str, token: str, pacer: Pacer) -> None:
+        raise TmdbRefused(KEY_REFUSED)
+
+    monkeypatch.setattr("matinee.tmdb.get_json", refused)
+    assert most_voted("tok", FAST, 4) == []
+
+
+def test_refresh_reports_its_progress_with_every_record_it_holds(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    cache = tmp_path / "t.jsonl"
+    cache.write_text(json.dumps(asdict(voted_record(99, 5))) + "\n")
+    monkeypatch.setattr("matinee.tmdb.TICK_EVERY", 0.0)
+    seen: list[tuple[Refreshed, int, set[int]]] = []
+
+    def tick(so_far: Refreshed, total: int, records: Mapping[int, TmdbFilm]) -> None:
+        seen.append((so_far, total, set(records)))
+
+    refresh(range(1, 5), cache, "tok", fetch=lambda t, _: voted_record(t, t), rate=1, tick=tick)
+    assert [f for f in dict.fromkeys(s.fetched for s, _, _ in seen) if f] == [1, 2, 3, 4]
+    assert {total for _, total, _ in seen} == {4}
+    assert seen[-1][2] == {99, 1, 2, 3, 4}  # the records held before, and each new one as it comes
+
+
+def test_progress_is_reported_while_a_request_waits(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    import threading
+
+    monkeypatch.setattr("matinee.tmdb.TICK_EVERY", 0.02)
+    ticks: list[int] = []
+
+    def slow(t: int, _: str) -> TmdbFilm:
+        threading.Event().wait(0.3)  # a 429's hold, or a slow answer
+        return voted_record(t, 1)
+
+    refresh([1], tmp_path / "t.jsonl", "tok", fetch=slow, rate=1, tick=lambda s, n, r: ticks.append(s.fetched))
+    assert ticks.count(0) >= 3
+
+
+def test_refresh_paces_with_the_pacer_it_is_given(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    given = Pacer(7.0)
+    seen: list[Pacer] = []
+
+    def recorded(tmdb: int, token: str, pacer: Pacer) -> TmdbFilm:
+        seen.append(pacer)
+        return voted_record(tmdb, 1)
+
+    monkeypatch.setattr("matinee.tmdb.fetch_film", recorded)
+    refresh(range(5), tmp_path / "t.jsonl", "tok", rate=30, pacer=given)
+    assert len(seen) == 5 and all(p is given for p in seen)

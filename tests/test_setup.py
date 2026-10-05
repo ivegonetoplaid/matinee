@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import urllib.error
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -19,14 +20,24 @@ from matinee.trees import TreeError
 from matinee.web.app import create_app
 from matinee.web.config import Config, ConfigError, from_env
 from matinee.web.seerr import CHECK_EVERY, SeerrCheck
-from matinee.web.setup import FAILED, FETCHING, MEANWHILE, NEVER_BUILT, SEERR_AWAY, STOPPED, rebuild_lines
+from matinee.web.setup import (
+    FAILED,
+    FETCHING,
+    MEANWHILE,
+    NEVER_BUILT,
+    SEERR_AWAY,
+    STALLED_AFTER,
+    STOPPED,
+    rebuild_lines,
+)
 from matinee.web.theatre import Theatre
 from test_engine import TAGS, reference, write_data
 from test_web_library import SERVER, FakeLibrary, answers, write_film_table
 
 
-def status(state: str, reason: str | None = None) -> RebuildStatus:
-    return RebuildStatus(state, "", "", reason=reason)  # type: ignore[arg-type]
+def status(state: str, reason: str | None = None, age: float = 0) -> RebuildStatus:
+    updated = (datetime.now(UTC) - timedelta(seconds=age)).isoformat()
+    return RebuildStatus(state, "", updated, reason=reason)  # type: ignore[arg-type]
 
 
 @pytest.mark.parametrize(
@@ -41,6 +52,10 @@ def status(state: str, reason: str | None = None) -> RebuildStatus:
         (status("stopped", KEY_REFUSED), 5, [STOPPED[KEY_REFUSED]]),
         (status("stopped", NOT_ANSWERING), 5, [STOPPED[NOT_ANSWERING]]),
         (status("stopped", "the rebuild failed; its log says why"), 5, [FAILED]),
+        (status("running", age=STALLED_AFTER.total_seconds() - 10), 0, [FETCHING]),
+        (status("running", age=STALLED_AFTER.total_seconds() + 10), 0, [FAILED]),  # a rebuild that died
+        (status("running", age=STALLED_AFTER.total_seconds() + 10), 5, [FAILED]),
+        (RebuildStatus("running", "", "not a time"), 5, [FAILED]),
     ],
 )
 def test_the_rebuild_report_says_why_it_stopped_and_why_there_is_no_film(
@@ -187,3 +202,9 @@ def test_labels_that_cannot_be_read_start_matinee_with_the_note(
 ) -> None:
     client = build_real(monkeypatch, tmp_path, load_labels=LabelsError("data/labels.json is not valid JSON"))
     assert any(line.startswith("My labels file can't be read") for line in client.get("/api/setup").json()["lines"])
+
+
+def test_the_stall_limit_stands_far_above_how_often_a_running_rebuild_reports() -> None:
+    from matinee.tmdb import TICK_EVERY
+
+    assert STALLED_AFTER.total_seconds() > 4 * TICK_EVERY

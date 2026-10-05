@@ -10,12 +10,15 @@ film to recommend.
 
 from __future__ import annotations
 
+from datetime import UTC, datetime, timedelta
+
 from pydantic import BaseModel
 
 from matinee.progress import RebuildStatus
 from matinee.tmdb import KEY_REFUSED, NO_KEY, NOT_ANSWERING
 
 HEADING = "A word before the show."
+STALLED_AFTER = timedelta(seconds=120)  # many times tmdb.TICK_EVERY, how often a running rebuild reports
 MEANWHILE = "Until then, I'm picking from TMDB's most popular films instead of your library."
 STOPPED = {
     NO_KEY: (
@@ -50,9 +53,21 @@ def unreachable(server: str) -> str:
     return f"I can't reach your {server} right now. {MEANWHILE}"
 
 
-def rebuild_lines(status: RebuildStatus | None, films: int) -> list[str]:
-    """What the rebuild's report says: a stop's reason, and why there is no film when there is none."""
+def stalled(status: RebuildStatus, now: datetime) -> bool:
+    """Whether a running report has stood still past STALLED_AFTER (or names no time), so the rebuild has died."""
+    try:
+        return now - datetime.fromisoformat(status.updated_at) > STALLED_AFTER
+    except (ValueError, TypeError):
+        return True
+
+
+def rebuild_lines(status: RebuildStatus | None, films: int, now: datetime | None = None) -> list[str]:
+    """What the rebuild's report says: a stop's reason, and why there is no film when there is none. A running
+    report that stood still too long reads as a failed rebuild."""
     lines: list[str] = []
+    if status is not None and status.state == "running" and stalled(status, now or datetime.now(UTC)):
+        lines.append(FAILED)
+        return lines
     if status is not None and status.state == "stopped":
         lines.append(STOPPED.get(status.reason or "", FAILED))
     if films > 0:
