@@ -456,7 +456,7 @@ def check_hidden(cat: Catalog, key: dict[str, Any], report: Report) -> None:
     silent. Checked on the full library only, since a sample hides more.
     """
     hidden: set[tuple[str, str]] = set()
-    for tree_id, question, option in sorted(cat.small):
+    for tree_id, question, option in sorted(cat.small["all"]):
         q = next(q for q in cat.trees[tree_id].questions if q.id == question)
         kind = str(q.options[option].filter.flavour)
         hidden.add((tree_id, kind))

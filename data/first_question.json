@@ -1,5 +1,25 @@
 {
-  "note": "Decisions 57 and 86: the first question on the poster wall offers each door by its plain name, in decision 86's order, one per door whose tree or mode exists. Each answer leads to the tree or mode named by its file; an answer whose tree or mode holds no film for the viewer is not shown. Each answer's label is the door's short name where one is needed, such as the correction link.",
+  "note": "Decisions 57 and 86: the first question on the poster wall offers each door by its plain name, in decision 86's order, one per door whose tree or mode exists. Each answer leads to the tree or mode named by its file; an answer whose tree or mode holds no film for the viewer is not shown. Each answer's label is the door's short name where one is needed, such as the correction link. The source question comes before it while the library can be used: its answers, in this order, bound the walk to the library's films, the films the labels name that the library does not hold, or both.",
+  "source": {
+    "ask": "what are we choosing from tonight?",
+    "options": [
+      {
+        "say": "only what we can watch right now.",
+        "source": "held",
+        "reply": "home turf. good, the popcorn's already made."
+      },
+      {
+        "say": "something we don't have yet. something new!",
+        "source": "new",
+        "reply": "ooh, something new. let's go window shopping."
+      },
+      {
+        "say": "anything at all. ours or not.",
+        "source": "all",
+        "reply": "no borders tonight. I like it."
+      }
+    ]
+  },
   "lines": [
     "Right this way.",
     "So, what are we in the mood for?"

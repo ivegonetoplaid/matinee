@@ -573,4 +573,4 @@ def test_a_pick_that_asks_to_skip_the_check_is_still_checked(tmp_path: Path) -> 
     assert body["film"] is not None and body["unchecked"] is None
     assert dtdd.looked_up() == [body["film"]["tmdb"]]
     # Whatever it is called, nothing a pick request carries can turn the check off.
-    assert set(PickIn.model_fields) == {"tree", "answers", "viewer", "seen"}
+    assert set(PickIn.model_fields) == {"tree", "answers", "viewer", "seen", "source"}  # the source bounds the pool

@@ -148,6 +148,14 @@ def write_data(root: Path, tree: dict[str, Any] | None = None) -> Path:
         json.dumps(
             {
                 "lines": ["Right this way."],
+                "source": {
+                    "ask": "from where?",
+                    "options": [
+                        {"say": "ours.", "source": "held", "reply": "home."},
+                        {"say": "new.", "source": "new", "reply": "shop."},
+                        {"say": "any.", "source": "all", "reply": "all."},
+                    ],
+                },
                 "options": [
                     {"say": "Cowboys.", "tree": "west", "label": "Western"},
                     {"say": "No.", "tree": "none", "label": "None"},

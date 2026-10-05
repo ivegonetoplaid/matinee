@@ -29,6 +29,9 @@ const visit = {
   says: [], // what the viewer answered, one per entry in answers
   rushed: false, // "Just pick one!" ended the questions early
   firstSay: null,
+  source: null, // the source question's answer, asked at the start of every walk; "all" when it is not asked
+  sourceSay: null,
+  sourceReply: "", // Matinee's gold line on the doors within the source
   seen: [],
   pool: [],
   trees: [],
@@ -120,25 +123,32 @@ function nameTag() {
   });
 }
 
-// The way here, at the foot of the screen: "Start", the door, then each answer so far. A crumb takes the
-// viewer to the screen it led to; the crumb for the screen they are on, `here`, is plain text.
+// The way here: "Start", the source answer when the source question was asked, the door, then each answer.
+function crumbs() {
+  return ["Start", visit.sourceSay, visit.firstSay, ...visit.says].filter((say) => say !== null);
+}
+
+// The way here, at the foot of the screen. A crumb takes the viewer to the screen it led to; the crumb for
+// the screen they are on, `here`, is plain text. "Start" and the door keep their full words where the trail
+// must fit one line; the source answer and the answers shorten first.
 function trail(here) {
-  if (!visit.tree) return null;
-  const crumbs = ["Start", visit.firstSay, ...visit.says].map((say, i) => {
+  if (!visit.tree && !visit.sourceSay) return null;
+  const door = visit.sourceSay === null ? 1 : 2;
+  const items = crumbs().map((say, i) => {
     const words = sentenceCase(say);
     const crumb =
       i === here
         ? h("span", { class: "crumb here", "aria-current": "page", title: words }, words)
         : h("button", { class: "crumb", type: "button", title: words, onclick: () => leaveTo(() => goTo(i)) }, words);
-    return h("li", {}, crumb);
+    return h("li", i === 0 || i === door ? { class: "keep" } : {}, crumb);
   });
-  return h("nav", { class: "trail", "aria-label": "The way here" }, h("ol", {}, crumbs));
+  return h("nav", { class: "trail", "aria-label": "The way here" }, h("ol", {}, items));
 }
 
 // The trail's last crumb, which led to the screen showing now; on a pick "Just pick one!" ended early,
 // the last crumb led to a question, so none.
 function lastCrumb(onPick) {
-  return onPick && visit.rushed ? null : visit.says.length + 1;
+  return onPick && visit.rushed ? null : crumbs().length - 1;
 }
 
 // A question screen. "Just pick one!" stands last, beneath the answers and any footnote, with the count of
@@ -327,8 +337,9 @@ async function enter({ viewer, name, avatar, profileTopics, door }) {
   await start({ request, keep: true });
 }
 
-// The first question. `request` is the start already asked for, if any; `keep` keeps the wall's posters
-// behind a problem screen (a start after going in, and its retries).
+// A walk's first screen: the source question while it is asked, else the doors. No answer carries over from
+// the last walk. `request` is the start already asked for, if any; `keep` keeps the wall's posters behind a
+// problem screen (a start after going in, and its retries).
 async function start({ request = null, keep = false } = {}) {
   const res = await (request ?? post("/api/first", { viewer: visit.viewer }));
   if (!res.ok) return problem(res.data, () => start({ keep }), keep);
@@ -338,18 +349,42 @@ async function start({ request = null, keep = false } = {}) {
     says: [],
     rushed: false,
     firstSay: null,
+    source: res.data.source ? null : "all",
+    sourceSay: null,
+    sourceReply: "",
     seen: [],
-    pool: res.data.pool,
-    trees: res.data.options,
     profileTopics: res.data.checked, // the server's word on whether picks are checked, read afresh every start
   });
-  stage.classList.remove("revealed");
-  wall.show(visit.pool);
-  const [greeting, question] = res.data.lines;
+  const [greeting] = res.data.lines;
   const name = res.data.name;
   const ack = name ? greeting.replace(/\.$/, `, ${name}.`) : greeting;
-  const options = res.data.options.map((o) => ({ say: o.say, go: () => chooseTree(o) }));
-  await ask({ ack, question, options, count: countText(visit.pool.length), many: true });
+  if (!res.data.source) return doors(res, ack);
+  showFirst(res);
+  const options = res.data.source.options.map((o) => ({ say: o.say, go: () => chooseSource(o) }));
+  await ask({ ack, question: res.data.source.ask, options, count: countText(visit.pool.length) });
+}
+
+// The wall and the doors' films behind a walk's first screens.
+function showFirst(res) {
+  Object.assign(visit, { pool: res.data.pool, trees: res.data.options });
+  stage.classList.remove("revealed");
+  wall.show(visit.pool);
+}
+
+function chooseSource(option) {
+  Object.assign(visit, { source: option.source, sourceSay: option.say, sourceReply: option.reply });
+  doors();
+}
+
+// The doors, within the source answer and with its reply. `res` is the first screen already fetched, when the
+// source question was not asked; `ack` its greeting.
+async function doors(res = null, ack = visit.sourceReply) {
+  Object.assign(visit, { tree: null, answers: [], says: [], rushed: false, firstSay: null, seen: [] });
+  const got = res ?? (await post("/api/first", { viewer: visit.viewer, source: visit.source }));
+  if (!got.ok) return problem(got.data, start);
+  showFirst(got);
+  const options = got.data.options.map((o) => ({ say: o.say, go: () => chooseTree(o) }));
+  await ask({ ack, question: got.data.lines[1], options, count: countText(visit.pool.length), many: true });
 }
 
 function chooseTree(option) {
@@ -357,18 +392,21 @@ function chooseTree(option) {
   step();
 }
 
-// Crumb 0 ("Start") is the first question; crumb 1, the door, is its first question; crumb i above that
-// is the screen answers[i - 2] led to.
+// Crumb 0 ("Start") is the walk's first screen; the source answer's crumb, when there is one, is the doors;
+// the door's crumb is its first question; each crumb above that is the screen its answer led to.
 function goTo(i) {
   if (i === 0) return start();
-  visit.answers = visit.answers.slice(0, i - 1);
-  visit.says = visit.says.slice(0, i - 1);
+  const off = visit.sourceSay === null ? 0 : 1;
+  if (i === off) return doors();
+  visit.answers = visit.answers.slice(0, i - 1 - off);
+  visit.says = visit.says.slice(0, i - 1 - off);
   visit.rushed = false;
   return step();
 }
 
 async function step() {
-  const res = await post("/api/walk", { tree: visit.tree, answers: visit.answers, viewer: visit.viewer });
+  const body = { tree: visit.tree, answers: visit.answers, viewer: visit.viewer, source: visit.source };
+  const res = await post("/api/walk", body);
   if (!res.ok) return problem(res.data, start);
   visit.pool = res.data.pool;
   const q = res.data.question;
@@ -470,7 +508,7 @@ async function clearForPick(posterBack) {
 // Asks the server for a pick from the answers so far, leaving out films already seen.
 function requestPick() {
   const seen = visit.seen.slice(-SEEN_MAX); // the server takes at most SEEN_MAX; the oldest may come round again
-  return post("/api/pick", { tree: visit.tree, answers: visit.answers, viewer: visit.viewer, seen });
+  return post("/api/pick", { tree: visit.tree, answers: visit.answers, viewer: visit.viewer, seen, source: visit.source });
 }
 
 // Opens the pick screen and types a line in gold: after "Not that one" the nope line, which stays

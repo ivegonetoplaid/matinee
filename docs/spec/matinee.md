@@ -65,11 +65,46 @@ contract is listed under [Known gaps](#known-gaps).
 
 ## 2. The conversation
 
+### 2.0 The source question
+
+While the library can be used (a media server is set, its settings can be used,
+and it answers), it holds a film, and a film it lacks is offered, every walk
+starts with the source question, before the doors. With either pool empty every
+answer would draw from the same films or from none, so it is not asked. Matinee types "Right this way, <name>." and "what are we
+choosing from tonight?". Its answers, in this order, bound the walk:
+
+| Answer | The walk draws from | Matinee's reply on the doors |
+|---|---|---|
+| only what we can watch right now. | the films the library holds now (`held`) | home turf. good, the popcorn's already made. |
+| something we don't have yet. something new! | the films the labels name that the library does not hold (`new`) | ooh, something new. let's go window shopping. |
+| anything at all. ours or not. | both, a film in both once (`all`) | no borders tonight. I like it. |
+
+- The chosen source bounds every later question, count and pick of the walk,
+  `Just pick one!` included: which doors are shown, which answers are shown or
+  hidden (the 30-film bar for a labelled kind counts the source's films), and
+  when the questions stop.
+- The answer is never carried into the next walk: every start asks again. It is
+  sent with each request of the walk (`source` on `/api/first`, `/api/walk` and
+  `/api/pick`) and never stored.
+- On a phone pick, where the trail keeps one line, "Start" and the door keep
+  their words and the source answer and the answers shorten to fit the screen.
+- Before it is answered, the wall behind the front door and behind the source
+  question shows the library's films, and `Just pick one!` there picks from
+  them. The wall re-sorts to the answer's films.
+- While the library cannot be used, or none is set, the source question is not
+  asked and a sent `source` is ignored: the walk starts at the doors and draws
+  from every film offered (the films the labels name, while the library cannot
+  be used).
+- The wording is data in `data/first_question.json` (`source`). A file whose
+  answer names no source is refused.
+
 ### 2.1 The first question
 
 The poster wall opens by typing "Right this way." and "So, what are we in the
 mood for?". Every viewing runs under a profile, so the first line carries its
-name: "Right this way, <name>.". Each answer is a door, offered by its plain name.
+name: "Right this way, <name>.". After the source question the doors type the
+source answer's reply in gold, then "So, what are we in the mood for?"; a return
+to the doors through the trail types the same reply. Each answer is a door, offered by its plain name.
 The answers, their order and the tree or mode each leads to are data in
 `data/first_question.json`:
 
@@ -92,7 +127,7 @@ The answers, their order and the tree or mode each leads to are data in
 | Something to fall asleep to | `fall-asleep` (a mode) |
 
 - An answer is shown only when its tree or mode holds at least one film for this
-  viewer.
+  viewer in the chosen source.
 - Every answer must carry a `label`. The engine refuses to load a first question
   whose answer lacks one. The label names the door where a short name is needed,
   such as the note panel. Each door's label is its name.
@@ -294,11 +329,13 @@ offered after "the little ones. nothing scary.".
   the pool as it stands. Pressed at the first question, it picks from each
   door's pool for this viewer before any answer, less the flavour that door's
   tree holds apart.
-- **The trail.** On each question after the first, and on the pick screen, the
-  page shows the way here in gold at the bottom centre: `Start`, the door, then
-  each answer so far. Choosing a crumb goes to the screen it led to and forgets
-  every answer after it: `Start` returns to the first question, the door asks
-  the door's first question, and an answer asks the question that followed it.
+- **The trail.** On each question after the first screen, and on the pick
+  screen, the page shows the way here in gold at the bottom centre: `Start`, the
+  source answer when the source question was asked, the door, then each answer
+  so far. Choosing a crumb goes to the screen it led to and forgets every answer
+  after it: `Start` returns to the walk's first screen (the source question
+  asks again), the source answer shows the doors within it, the door asks the
+  door's first question, and an answer asks the question that followed it.
   The crumb for the screen showing now is plain text, not a link; on a pick
   that `Just pick one!` ended early, every crumb is a link.
 
@@ -784,7 +821,8 @@ genres (section 3.1).
 For each tree, the viewer's starting pool is built in this order:
 
 1. The tree's pool, with house pins already applied.
-2. Every question the viewer's DoesTheDogDie topics skip applies its `treat_as`
+2. Only the films of the chosen source (section 2.0).
+3. Every question the viewer's DoesTheDogDie topics skip applies its `treat_as`
    answer.
 
 A viewer's notes (section 10) never change a pool.
@@ -1176,7 +1214,7 @@ would hand one device's profiles to another.
 | DELETE | `/api/profiles/{id}` | delete a held profile, its topics and its tokens; answers its name |
 | GET | `/api/topics` | DoesTheDogDie's topic list, with its credit; only with a DoesTheDogDie key |
 | GET | `/api/quips` | the pick's lines and their caps (section 2.7) |
-| POST | `/api/first` | the first question for this viewer, the pool behind it, and whether this viewer's picks are checked against DoesTheDogDie (`checked`) |
+| POST | `/api/first` | the source question while it is asked and no `source` is sent (`source`), the first question for this viewer within the source, the pool behind it, and whether this viewer's picks are checked against DoesTheDogDie (`checked`) |
 | POST | `/api/walk` | the next question and the pool, given a tree and answers |
 | POST | `/api/pick` | one checked film from the pool the answers leave |
 | POST | `/api/notes` | keep one note on a pick for a held profile |
@@ -1195,7 +1233,8 @@ would hand one device's profiles to another.
   draws the wall from the browser's cache. `private` keeps every shared cache,
   such as a CDN in front of the site, from keeping a copy and handing it to a
   device the door word has not admitted.
-- **An answer** as a question id and an option index, never as a filter.
+- **An answer** as a question id and an option index, never as a filter; the
+  source answer as `held`, `new` or `all`.
 - **Request sizes** are capped: a profile name 80
   and a PIN 8; an avatar 40; topics 400; answers 12; tree names
   40; option indexes 0 to 50; films already seen 200; a note's comment 500;

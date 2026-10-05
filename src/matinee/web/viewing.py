@@ -19,12 +19,12 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from matinee.dtdd import Dtdd, DtddError
-from matinee.engine import Answer, Catalog, Viewer, first_question, gentlest, opening_pool, walk
+from matinee.engine import Answer, Catalog, Source, Viewer, first_question, gentlest, opening_pool, walk
 from matinee.pick import Pick, Picker, candidates
 from matinee.store import Note, Profile, Store
 from matinee.trees import Tree
 from matinee.web.common import COOKIE_AGE_S, Seat, device_tokens, optional_int, problem, seat
-from matinee.web.theatre import Theatre
+from matinee.web.theatre import Showing, Theatre
 
 log = logging.getLogger("matinee.web")
 DTDD_CREDIT = "Powered by DoesTheDogDie.com"
@@ -45,6 +45,7 @@ class WalkIn(BaseModel):
     tree: str = Field(max_length=40)
     answers: list[AnswerIn] = Field(default=[], max_length=12)
     viewer: ViewerIn = ViewerIn()
+    source: Source | None = None  # the source question's answer; None before one
 
 
 class PickIn(BaseModel):
@@ -52,10 +53,12 @@ class PickIn(BaseModel):
     answers: list[AnswerIn] = Field(default=[], max_length=12)
     viewer: ViewerIn = ViewerIn()
     seen: list[int] = Field(default=[], max_length=200)
+    source: Source | None = None
 
 
 class FirstIn(BaseModel):
     viewer: ViewerIn = ViewerIn()
+    source: Source | None = None
 
 
 class TopicsIn(BaseModel):
@@ -91,12 +94,24 @@ class FirstOptionOut(BaseModel):
     label: str
 
 
+class SourceOptionOut(BaseModel):
+    say: str
+    source: Source
+    reply: str
+
+
+class SourceQuestionOut(BaseModel):
+    ask: str
+    options: list[SourceOptionOut]
+
+
 class FirstOut(BaseModel):
     lines: list[str]
     name: str | None
     options: list[FirstOptionOut]
     pool: list[int]
     checked: bool  # this viewer's picks are checked against DoesTheDogDie: a key is set and they hold topics
+    source: SourceQuestionOut | None = None  # asked first, before the doors; None when it is not asked
 
 
 class TopicOut(BaseModel):
@@ -183,20 +198,37 @@ def held_profile(request: Request, store: Store, profile_id: int) -> Profile:
     raise HTTPException(status_code=403, detail="refused")
 
 
-def resolve(request: Request, store: Store, v: ViewerIn, topics_on: bool) -> tuple[Viewer, Profile | None]:
-    """The engine's viewer: a held profile's saved topics, or none when no profile is named.
+def asks_source(showing: Showing) -> bool:
+    """The source question is asked while the library can be used, it holds a film, and a film it lacks is offered:
+    with either pool empty, every answer would draw from the same films or from none."""
+    sources = showing.catalog.sources
+    return showing.library == "usable" and bool(sources["held"].any()) and bool(sources["new"].any())
+
+
+def source_for(answer: Source | None, showing: Showing) -> Source:
+    """The films a walk draws from. While the source question is asked: its answer, or before one the library's
+    films (the wall behind the front door and the source question). Otherwise every film offered."""
+    if not asks_source(showing):
+        return "all"
+    return answer or "held"
+
+
+def resolve(
+    request: Request, store: Store, v: ViewerIn, topics_on: bool, source: Source = "all"
+) -> tuple[Viewer, Profile | None]:
+    """The engine's viewer within `source`: a held profile's saved topics, or none when no profile is named.
 
     Without a DoesTheDogDie key (`topics_on` false) a profile's stored topics stay in the store and have no effect.
     """
     if v.profile_id is None:
-        return Viewer(), None
+        return Viewer(source=source), None
     profile = held_profile(request, store, v.profile_id)
-    return Viewer(topics=profile.topics if topics_on else frozenset()), profile
+    return Viewer(topics=profile.topics if topics_on else frozenset(), source=source), profile
 
 
-def resolve_held(request: Request, store: Store, v: ViewerIn, topics_on: bool) -> Viewer:
+def resolve_held(request: Request, store: Store, v: ViewerIn, topics_on: bool, source: Source = "all") -> Viewer:
     """The engine's viewer for a walk or a pick, which runs only under a profile this device holds; 403 otherwise."""
-    viewer, profile = resolve(request, store, v, topics_on)
+    viewer, profile = resolve(request, store, v, topics_on, source)
     if profile is None:
         raise HTTPException(status_code=403, detail="refused")
     return viewer
@@ -303,21 +335,32 @@ def add_topic_routes(app: FastAPI, store: Store, dtdd: Dtdd) -> None:
 def add_viewing_routes(app: FastAPI, theatre: Theatre, store: Store, topics_on: bool) -> None:
     @app.post("/api/first")
     def first(body: FirstIn, request: Request) -> FirstOut:
-        cat = theatre.showing().catalog
-        viewer, profile = resolve(request, store, body.viewer, topics_on)
+        """The first screen of a walk: the source question until it is answered (while it is asked), then the doors
+        within its answer, and the films the wall shows behind them."""
+        showing = theatre.showing()
+        cat = showing.catalog
+        viewer, profile = resolve(request, store, body.viewer, topics_on, source_for(body.source, showing))
         options = [FirstOptionOut(say=o.say, tree=o.tree, label=o.label) for o in first_question(cat, viewer)]
+        question = None
+        if body.source is None and asks_source(showing):
+            question = SourceQuestionOut(
+                ask=cat.source_ask,
+                options=[SourceOptionOut(say=o.say, source=o.source, reply=o.reply) for o in cat.source_options],
+            )
         return FirstOut(
             lines=list(cat.first_lines),
             name=profile.name if profile else None,
             options=options,
             pool=everything(cat, viewer),
             checked=bool(viewer.topics),
+            source=question,
         )
 
     @app.post("/api/walk")
     def walk_tree(body: WalkIn, request: Request) -> StepOut:
-        cat = theatre.showing().catalog
-        viewer = resolve_held(request, store, body.viewer, topics_on)
+        showing = theatre.showing()
+        cat = showing.catalog
+        viewer = resolve_held(request, store, body.viewer, topics_on, source_for(body.source, showing))
         step = walk(cat, body.tree, viewer, [Answer(a.question, a.option) for a in body.answers])
         question = None
         if step.question is not None:
@@ -390,8 +433,9 @@ def add_pick_routes(app: FastAPI, theatre: Theatre, store: Store, picker: Picker
     @app.post("/api/pick")
     def pick(body: PickIn, request: Request, response: Response) -> PickOut:
         """One film from the pool the answers leave, checked against the viewer's topics before it is shown."""
-        cat = theatre.showing().catalog
-        viewer = resolve_held(request, store, body.viewer, topics_on)
+        showing = theatre.showing()
+        cat = showing.catalog
+        viewer = resolve_held(request, store, body.viewer, topics_on, source_for(body.source, showing))
         left, prefer = pick_pool(cat, viewer, body)
         films = cat.table.films
         ratings = dict(zip(films.index.tolist(), films.rating.fillna(0.0).tolist(), strict=True))

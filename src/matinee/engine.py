@@ -40,6 +40,7 @@ import math
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Literal
 
 import numpy as np
 import numpy.typing as npt
@@ -55,6 +56,8 @@ from matinee.trees import Filter, Option, Question, Tree, TreeError, load_trees
 STOP_UNDER = 12
 KIND_MIN_FILMS = 30  # a labelled kind holding fewer films in the loaded library is not offered
 Mask = npt.NDArray[np.bool_]
+Source = Literal["held", "new", "all"]  # the source question's pools: the library's films, the others, or both
+SOURCES: tuple[Source, ...] = ("held", "new", "all")
 
 
 class EngineError(ValueError):
@@ -64,6 +67,7 @@ class EngineError(ValueError):
 @dataclass(frozen=True)
 class Viewer:
     topics: frozenset[int] = frozenset()
+    source: Source = "all"  # every pool, count and pick of the walk is bounded by it
 
 
 @dataclass(frozen=True)
@@ -107,6 +111,13 @@ class FirstOption:
     label: str
 
 
+@dataclass(frozen=True)
+class SourceOption:
+    say: str
+    source: Source
+    reply: str  # Matinee's gold line on the doors that follow
+
+
 @dataclass
 class Catalog:
     """Everything the engine needs, prepared once per film table."""
@@ -117,11 +128,16 @@ class Catalog:
     house: House
     first_lines: tuple[str, ...]
     first_options: tuple[FirstOption, ...]
+    source_ask: str = ""
+    source_options: tuple[SourceOption, ...] = ()
     labels: Labels = field(default_factory=Labels)
     pools: dict[str, Mask] = field(default_factory=dict)
     masks: dict[tuple[str, str, int], Mask] = field(default_factory=dict)
     apart: dict[str, Mask] = field(default_factory=dict)  # per tree id, the films its apart flavour holds
-    small: set[tuple[str, str, int]] = field(default_factory=set)  # answers whose labelled kind is under the bar
+    sources: dict[Source, Mask] = field(default_factory=dict)  # per source, the films it holds
+    small: dict[Source, set[tuple[str, str, int]]] = field(  # per source, answers whose labelled kind is under the bar
+        default_factory=lambda: {source: set() for source in SOURCES}
+    )
 
     @property
     def ids(self) -> npt.NDArray[np.int64]:
@@ -278,6 +294,12 @@ def _first_option(o: dict[str, str]) -> FirstOption:
     return FirstOption(o["say"], o["tree"], o["label"])
 
 
+def _source_option(o: dict[str, str]) -> SourceOption:
+    if o["source"] not in SOURCES:
+        raise EngineError(f"the source question's answer {o['say']!r} names no source ({o['source']!r})")
+    return SourceOption(o["say"], o["source"], o["reply"])
+
+
 def label_problems(labels: Labels, trees: Mapping[str, Tree]) -> list[str]:
     """What in `labels` the trees cannot hold: a tree no file defines, or a kind its tree does not label."""
     found = []
@@ -327,8 +349,9 @@ def _opens(tree: Tree, option: Option) -> bool:
     return tree.apart is not None and option.filter.flavour == tree.apart
 
 
-def _too_small(cat: Catalog, tree: Tree, q: Question, option: Option) -> bool:
-    """True where the answer offers a labelled kind holding under KIND_MIN_FILMS of the tree's pool films.
+def _too_small(cat: Catalog, tree: Tree, q: Question, option: Option, source: Source) -> bool:
+    """True where the answer offers a labelled kind holding under KIND_MIN_FILMS of the tree's pool films in
+    `source`.
 
     A kind marked `always_shown` is exempt, and so is a kind another answer of the question leaves out
     (horror's "anything scary" leaves comedy out): hiding it would leave its films no answer at all.
@@ -339,17 +362,18 @@ def _too_small(cat: Catalog, tree: Tree, q: Question, option: Option) -> bool:
         return False
     if any(o.filter.flavour_none == name for o in q.options):
         return False
-    held = house_flavour(cat, tree, name) & cat.pools[tree.pool]
+    held = house_flavour(cat, tree, name) & cat.pools[tree.pool] & cat.sources[source]
     return int(held.sum()) < KIND_MIN_FILMS
 
 
 def _answer_masks(cat: Catalog, tree: Tree) -> None:
-    """Every answer's films, and which answers offer a kind too small to show."""
+    """Every answer's films, and in each source which answers offer a kind too small to show."""
     for q in tree.questions:
         for i, option in enumerate(q.options):
             cat.masks[(tree.id, q.id, i)] = option_mask(cat, tree, option)
-            if _too_small(cat, tree, q, option):
-                cat.small.add((tree.id, q.id, i))
+            for source in SOURCES:
+                if _too_small(cat, tree, q, option, source):
+                    cat.small[source].add((tree.id, q.id, i))
 
 
 def load_catalog(
@@ -368,6 +392,8 @@ def load_catalog(
         house=load_house(data / "house_overrides.json").without((labels or Labels()).overridden),
         first_lines=tuple(first["lines"]),
         first_options=tuple(_first_option(o) for o in first["options"]),
+        source_ask=first["source"]["ask"],
+        source_options=tuple(_source_option(o) for o in first["source"]["options"]),
         labels=labels or Labels(),
     )
     for tree_id, flavour in cat.house.flavour_pins:
@@ -376,6 +402,7 @@ def load_catalog(
     _check_labels(cat)
     by_pool = Labels({cat.trees[t].pool: labels for t, labels in cat.labels.trees.items()})
     cat.pools = {name: np.array(pool, dtype=bool) for name, pool in build_pools(table, cat.house, by_pool).items()}
+    cat.sources = source_masks(table)
     _hold_apart(cat)
     for tree in cat.trees.values():
         if tree.pool not in cat.pools:
@@ -384,8 +411,16 @@ def load_catalog(
     return cat
 
 
+def source_masks(table: FilmTable) -> dict[Source, Mask]:
+    """Each source's films: those the library holds now (the `held` column; none without one), the others, and
+    both."""
+    films = table.films
+    held = films["held"].fillna(False).to_numpy(dtype=bool) if "held" in films else np.zeros(len(films), dtype=bool)
+    return {"held": held, "new": ~held, "all": np.ones(len(films), dtype=bool)}
+
+
 def base_pool(cat: Catalog, tree_id: str, viewer: Viewer) -> Mask:
-    """The tree's pool for this viewer before any answer.
+    """The tree's pool for this viewer before any answer, within the viewer's source.
 
     A question the viewer's DoesTheDogDie topics skip applies its `treat_as` answer here, to the whole starting pool,
     so every answer shown and every stop count already sees it.
@@ -393,7 +428,7 @@ def base_pool(cat: Catalog, tree_id: str, viewer: Viewer) -> Mask:
     tree = cat.trees.get(tree_id)
     if tree is None:
         raise EngineError(f"no tree '{tree_id}'")
-    pool = cat.pools[tree.pool].copy()
+    pool = cat.pools[tree.pool] & cat.sources[viewer.source]
     for q in tree.questions:
         if q.treat_as is not None and q.skip_if_topics & viewer.topics:
             pool &= cat.masks[(tree.id, q.id, q.treat_as)]
@@ -419,12 +454,12 @@ def _visible(option: Option, history: Mapping[str, int]) -> bool:
     return not any(history.get(q) in picked for q, picked in option.not_after.items())
 
 
-def _shown(cat: Catalog, tree: Tree, q: Question, pool: Mask, history: Mapping[str, int]) -> list[int]:
+def _shown(cat: Catalog, tree: Tree, q: Question, pool: Mask, history: Mapping[str, int], source: Source) -> list[int]:
     return [
         i
         for i, o in enumerate(q.options)
         if _visible(o, history)
-        and (tree.id, q.id, i) not in cat.small
+        and (tree.id, q.id, i) not in cat.small[source]
         and bool((pool & cat.masks[(tree.id, q.id, i)]).any())
     ]
 
@@ -450,7 +485,7 @@ def _gate(
         return pool, []
     if q.treat_as is not None and q.skip_if_topics & viewer.topics:
         return pool, []
-    return pool, _shown(cat, tree, q, pool, history)
+    return pool, _shown(cat, tree, q, pool, history, viewer.source)
 
 
 def _answer(cat: Catalog, tree: Tree, q: Question, shown: Sequence[int], answer: Answer, pool: Mask) -> Mask:

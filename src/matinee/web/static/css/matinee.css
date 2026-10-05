@@ -252,6 +252,7 @@ a.wordmark:focus-visible {
 /* A row of its own across the pinned bottom bar, above the credits. */
 .bottombar > .trail {
   flex-basis: 100%;
+  min-width: 0;
 }
 
 .trail li {
@@ -260,9 +261,15 @@ a.wordmark:focus-visible {
   min-width: 0;
 }
 
-.trail li + li::before {
+/* The separator stays with the crumb before it, so a wrapped row starts with a crumb. */
+.trail li:not(:last-child)::after {
   content: "›";
   margin: 0 10px;
+}
+
+/* "Start" and the door keep their words; the source answer and the answers shorten first. */
+.trail li.keep {
+  flex-shrink: 0;
 }
 
 .crumb {
