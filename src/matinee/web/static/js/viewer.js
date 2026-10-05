@@ -1,10 +1,12 @@
 // The viewer at the right of the theatre's top bar: their mark and name, which open the profile menu.
 // The menu holds "Edit my list" (only where the installation offers DoesTheDogDie's topics), "Change avatar",
-// "Switch profiles" and "Delete profile", in that order.
+// "Switch profiles", "Delete profile" and "About Matinee", in that order. About gives the focus back to the
+// viewer's button when it closes.
 // It opens on click, tap or keyboard, and closes on Escape, on a tap elsewhere, or when an item is chosen.
 // "Change avatar" opens a panel beneath it; a tap saves the choice and the bar shows it at once. "Delete
 // profile" asks in a panel, never a browser dialog; "No, keep it" changes nothing.
 
+import { openAbout } from "./about.js";
 import { h } from "./dom.js";
 import { avatarChoices, initials, mark } from "./mark.js";
 import { typeLine } from "./type.js";
@@ -47,6 +49,7 @@ export function viewerTag(viewer, avatars, actions) {
     item("Change avatar", choose(() => openPanel(changeAvatar()))),
     item("Switch profiles", choose(actions.switchProfiles)),
     item("Delete profile", choose(() => openPanel(confirmDelete())), true),
+    item("About Matinee", choose(() => openAbout(button))),
   );
   tag.append(menu);
   const items = () => [...menu.querySelectorAll("[role=menuitem]")];

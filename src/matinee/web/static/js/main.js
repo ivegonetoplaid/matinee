@@ -2,7 +2,7 @@
 
 import { del, get, post, put } from "./api.js";
 import { noteLink } from "./note.js";
-import { credits } from "./credits.js";
+import { aboutLink, credits } from "./credits.js";
 import { Door, buildMarquee, showCount } from "./door.js";
 import { LockedDoor, WALL_FADE_MS } from "./locked.js";
 import { clear, h, isPhone, prefersLessMotion, sentenceCase, wait } from "./dom.js";
@@ -220,7 +220,7 @@ function problem(data, again, keep = false) {
       line,
       h("button", { class: "action cream", type: "button", onclick: again }, "Try again"),
     ),
-    h("footer", { class: "bottombar" }, h("span"), credits()),
+    h("footer", { class: "bottombar" }, aboutLink(), credits()),
   );
 }
 
@@ -240,7 +240,7 @@ async function setupNote(note, onGo) {
     ? h("button", { class: "action gold", type: "button", onclick: go }, "Show me the films")
     : h("button", { class: "action cream", type: "button", onclick: go }, "Try again");
   action.hidden = true;
-  clear(stage).append(topbar(), h("section", { class: "talk setup" }, line, said, action), h("footer", { class: "bottombar" }, h("span"), credits()));
+  clear(stage).append(topbar(), h("section", { class: "talk setup" }, line, said, action), h("footer", { class: "bottombar" }, aboutLink(), credits()));
   // What it says, and the way on, appear once the heading has typed; the way on takes the focus, which scrolls
   // it clear of the foot's band when the note runs long.
   await typeLine(line, note.heading, "");

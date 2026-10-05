@@ -1800,6 +1800,22 @@ a.wordmark:focus-visible {
   position: relative;
   flex: 0 0 auto;
   padding: 10px var(--pad) 24px;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: end;
+  gap: 16px;
+}
+
+/* "About Matinee" at the foot's middle, apart from the credit at its right, on a screen with no profile menu. */
+.door-foot > .about-link,
+.bottombar > .about-link {
+  grid-column: 2;
+  font-size: 13px;
+}
+
+.bottombar:has(> .about-link) {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
 }
 
 .door-foot::before {
@@ -1811,7 +1827,9 @@ a.wordmark:focus-visible {
   pointer-events: none;
 }
 
-.door-foot .credits {
+.door-foot .credits,
+.bottombar:has(> .about-link) > .credits {
+  grid-column: 3;
   text-align: right;
 }
 
@@ -2264,7 +2282,18 @@ a.wordmark:focus-visible {
     padding: 6px var(--pad) 14px;
   }
 
-  .door-foot .credits {
+  .door-foot,
+  .bottombar:has(> .about-link) {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    gap: 6px;
+  }
+
+  .door-foot > .about-link,
+  .bottombar > .about-link,
+  .door-foot .credits,
+  .bottombar:has(> .about-link) > .credits {
+    grid-column: 1;
     text-align: center;
   }
 

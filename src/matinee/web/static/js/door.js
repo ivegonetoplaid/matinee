@@ -4,7 +4,7 @@
 // the marquee stays until the viewer goes in.
 
 import { get, post, put } from "./api.js";
-import { credits } from "./credits.js";
+import { aboutLink, credits } from "./credits.js";
 import { clear, h, isPhone, prefersLessMotion, sentenceCase, wait } from "./dom.js";
 import { FLIGHT_MS, copyAt, fly, nameAt, riseOf, wordmarkAt } from "./flight.js";
 import { doorLines, findTaken, opensAtOnce, twoParts } from "./door-rules.js";
@@ -167,7 +167,7 @@ export class Door {
   // standing keeps its place, and its letter board turns to the film count.
   build(count, marquee) {
     this.wall = h("div", { class: "door-wall" });
-    const foot = h("footer", { class: "door-foot" }, credits({ around: this, dtdd: true }));
+    const foot = h("footer", { class: "door-foot" }, aboutLink(this), credits({ dtdd: true }));
     this.dtddCredit = foot.querySelector(".dtdd-credit");
     if (!marquee) {
       this.marquee = buildMarquee(count);

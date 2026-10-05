@@ -1598,8 +1598,10 @@ as written. A phone is a viewport 600 px wide or less.
   menu of "Edit my list" (the trigger picker on the door, headed "Your list.
   What should I steer around?", whose "Save my list" and "Never mind, keep my
   list" both go back in), "Change avatar", "Switch profiles" (back to the front
-  door's tiles, the marquee already in place and lit) and "Delete profile" in
-  red, in that order; without a DoesTheDogDie key "Edit my list" is not in it.
+  door's tiles, the marquee already in place and lit), "Delete profile" in
+  red and "About Matinee" (the About page, which gives the focus back to the
+  viewer when it closes), in that order; without a DoesTheDogDie key "Edit my
+  list" is not in it.
   Escape (wherever the focus is), a tap elsewhere, focus
   leaving the viewer, or choosing an item closes it; the arrow keys walk its
   items, round from the last to the first. The same closes either panel
@@ -1783,10 +1785,13 @@ as written. A phone is a viewport 600 px wide or less.
   motion the numbers change without fading and the reply goes at once, leaving
   the scorch. "Not that one" and every later pick speak as usual.
 - **Credits.** The corner credit line reads "Posters and film data from TMDB
-  [logo] · About", the logo linked to TMDB and "About" a button that opens the
-  About page. It sits at the bottom right of the door, the question screens,
-  the pick screen and a problem screen on a desktop (13 px), and centred at the
-  foot on a phone (11 px). The TMDB logo is smaller than Matinee's own mark.
+  [logo]", the logo linked to TMDB. It sits at the bottom right of the door,
+  the question screens, the pick screen and a problem screen on a desktop
+  (13 px), and centred at the foot on a phone (11 px). The link to the About
+  page is named "About Matinee" on every screen: inside the theatre it is the
+  profile menu's last item; on the door, the setup note and a problem screen,
+  which have no profile menu, it sits at the bottom middle, apart from the
+  credit (on a phone, centred above it). The TMDB logo is smaller than Matinee's own mark.
   MovieLens is credited on the About page. Where DoesTheDogDie's data shows
   (section 14) the line ends with "Powered by DoesTheDogDie.com", linked: on
   the trigger picker while it holds DoesTheDogDie's topics, and on a pick
