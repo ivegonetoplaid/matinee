@@ -32,6 +32,8 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, TextIO
 
+from matinee import USER_AGENT
+
 API = "https://api.themoviedb.org/3"
 DEFAULT_RATE = 30.0  # requests a second, the TMDB_RATE default; TMDB's limit sits around 40
 MAX_WORKERS = 32  # requests in flight at most, however high the rate
@@ -189,7 +191,9 @@ def get_json(url: str, token: str, pacer: Pacer) -> dict[str, Any] | None:
     while True:
         pacer.wait()
         req = urllib.request.Request(
-            url, headers={"Authorization": f"Bearer {token}", "Accept": "application/json"}, method="GET"
+            url,
+            headers={"Authorization": f"Bearer {token}", "Accept": "application/json", "User-Agent": USER_AGENT},
+            method="GET",
         )
         try:
             with urllib.request.urlopen(req, timeout=30) as resp:
@@ -230,7 +234,9 @@ def fetch_picture(
     if not PICTURE_PATH.fullmatch(path):
         raise TmdbImageError(f"not a TMDB picture path: {path!r}")
     size = IMAGE_SIZES[kind][width]
-    req = urllib.request.Request(f"{IMAGES}{size}{path}", headers={"Accept": "image/*"}, method="GET")
+    req = urllib.request.Request(
+        f"{IMAGES}{size}{path}", headers={"Accept": "image/*", "User-Agent": USER_AGENT}, method="GET"
+    )
     try:
         with opener(req, timeout=IMAGE_TIMEOUT_S) as resp:
             content_type = resp.headers.get("Content-Type", "")

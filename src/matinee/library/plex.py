@@ -19,6 +19,7 @@ import urllib.request
 from collections.abc import Iterator, Mapping
 from typing import Any
 
+from matinee import USER_AGENT
 from matinee.library import Image, ImageKind, LibraryError, LibraryFilm
 
 TIMEOUT_S = 60
@@ -111,7 +112,9 @@ class PlexReader:
     def _get(self, path: str, accept: str, timeout: float, limit: int = -1) -> tuple[str, bytes]:
         """One GET, reading at most `limit` bytes (all with -1); the token goes in the header only. Errors name
         the path, never the query or the token."""
-        req = urllib.request.Request(f"{self._base}{path}", headers={"Accept": accept}, method="GET")
+        req = urllib.request.Request(
+            f"{self._base}{path}", headers={"Accept": accept, "User-Agent": USER_AGENT}, method="GET"
+        )
         req.add_unredirected_header("X-Plex-Token", self._token)  # a redirect elsewhere never carries it
         where = path.split("?")[0]
         try:

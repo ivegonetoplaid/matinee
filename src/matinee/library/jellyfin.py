@@ -13,6 +13,7 @@ import urllib.request
 from collections.abc import Mapping
 from typing import Any
 
+from matinee import USER_AGENT
 from matinee.library import Image, ImageKind, LibraryError, LibraryFilm
 
 FIELDS = "Genres,ProviderIds,ProductionYear,OfficialRating,RunTimeTicks,CommunityRating,Path"
@@ -70,7 +71,8 @@ class JellyfinReader:
         self._key = api_key
 
     def _get_json(self, path: str) -> Any:
-        req = urllib.request.Request(f"{self._base}{path}", headers={"X-Emby-Token": self._key}, method="GET")
+        req = urllib.request.Request(f"{self._base}{path}", headers={"User-Agent": USER_AGENT}, method="GET")
+        req.add_unredirected_header("X-Emby-Token", self._key)  # never carried to another host on a redirect
         try:
             with urllib.request.urlopen(req, timeout=TIMEOUT_S) as resp:
                 return json.load(resp)
@@ -101,7 +103,7 @@ class JellyfinReader:
         quality = SMALL_IMAGE_QUALITY if width <= SMALL_IMAGE_PX else IMAGE_QUALITY
         query = f"maxWidth={int(width)}&quality={quality}"
         url = f"{self._base}/Items/{self._item(item_id)}/Images/{IMAGE_PATHS[kind]}?{query}"
-        req = urllib.request.Request(url, method="GET")
+        req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT}, method="GET")
         try:
             with urllib.request.urlopen(req, timeout=IMAGE_TIMEOUT_S) as resp:
                 content_type = resp.headers.get("Content-Type", "")

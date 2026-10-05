@@ -15,6 +15,8 @@ import urllib.request
 from collections.abc import Callable
 from typing import Any
 
+from matinee import USER_AGENT
+
 CHECK_EVERY = 300.0
 TIMEOUT_S = 5.0
 log = logging.getLogger("matinee.seerr")
@@ -35,7 +37,8 @@ class SeerrCheck:
         self._answers = True
 
     def _probe(self) -> bool:
-        req = urllib.request.Request(f"{self.url}/api/v1/status", headers={"Accept": "application/json"}, method="GET")
+        headers = {"Accept": "application/json", "User-Agent": USER_AGENT}
+        req = urllib.request.Request(f"{self.url}/api/v1/status", headers=headers, method="GET")
         try:
             with self._opener(req, timeout=TIMEOUT_S):
                 return True

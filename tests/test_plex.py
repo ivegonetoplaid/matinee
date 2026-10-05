@@ -11,6 +11,7 @@ from typing import Any
 
 import pytest
 
+from matinee import USER_AGENT
 from matinee.library import LibraryError
 from matinee.library.plex import PlexReader, certificate, parse_film
 from matinee.pools import kids_band
@@ -135,6 +136,7 @@ def test_films_come_from_every_movie_section_by_get_with_the_token_in_a_header(m
     for req in plex.sent:
         assert req.get_method() == "GET" and TOKEN not in req.full_url
         assert req.unredirected_hdrs["X-plex-token"] == TOKEN and "X-plex-token" not in req.headers
+        assert req.get_header("User-agent") == USER_AGENT
 
 
 def test_synopsis_and_pictures(monkeypatch: pytest.MonkeyPatch) -> None:
