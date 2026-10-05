@@ -1,6 +1,6 @@
 ---
 purpose: Index of Matinee's behaviour specifications — what each spec covers, how much to trust it against the code, and the policy that keeps the two reconciled.
-updated: 2026-10-03
+updated: 2026-10-05
 ---
 
 # Matinee Specs
@@ -54,15 +54,19 @@ deleted rather than left standing. Git history holds it.
 
 ## The specs
 
-- [`matinee.md`](matinee.md) — the whole of Matinee's first build: the
-  conversation model (the first question, trees and modes as data files,
-  answers as filters, and the checker that keeps every film reachable), the
-  pool rules, the reference statistics, the gore scale and house pins, the
-  offline film table and its nightly rebuild, profiles, avatars and device
-  tokens, the store file and its upgrade, the optional door word, exclusions,
-  the DoesTheDogDie check at the moment of a pick, viewers' notes and the notes
-  tool, the web surface and its security headers, the page (the locked door,
-  the front door's tiles and the viewer's profile menu among it), the
-  deployment shape, and the terms of the three data sources. Written from the
-  code on 2026-09-26, and last reconciled with it on 2026-10-03. It ends with a list of known gaps: behaviour deliberately
+- [`matinee.md`](matinee.md) — the whole of Matinee: the Jellyfin and Plex
+  readers, the conversation model (the source question, the first question,
+  trees and modes as data files, answers as filters, and the checker that keeps
+  every film reachable), the shipped labels and the household override file,
+  the pool rules, the reference statistics, the gore scale and house pins, the
+  offline film table and its rebuild (TMDB's records fetched at a set pace,
+  most-voted first, saved as it goes), the setup note and the logs, profiles,
+  avatars and device tokens, the store file and its upgrade, the optional door
+  word, the optional DoesTheDogDie topics and the check at the moment of a
+  pick, viewers' notes and the notes tool, the web surface and its security
+  headers, the page (the locked door, the front door's tiles, the setup note,
+  the stale-data warning and the viewer's profile menu among it), the
+  deployment shape and its settings, and the terms of the three data sources.
+  Written from the code on 2026-09-26, and last reconciled with it on
+  2026-10-05. It ends with a list of known gaps: behaviour deliberately
   absent, still open, or short of the contract.

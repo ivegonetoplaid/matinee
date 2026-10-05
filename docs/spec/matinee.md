@@ -1,6 +1,6 @@
 ---
-purpose: The contract Matinee's first build holds to — the conversation model, the pools and scales, the offline film table, profiles and the store file, the door word, the DoesTheDogDie topics and check, viewers' notes, the web surface, the page, deployment and third-party terms — with a map of where each part lives.
-updated: 2026-10-03
+purpose: The contract Matinee holds to — the media servers it reads, the source question and the conversation model, the labels and the household override file, the pools and scales, the offline film table and its rebuild, the setup note and the logs, profiles and the store file, the door word, the optional DoesTheDogDie topics and check, viewers' notes, the web surface, the page, deployment and third-party terms — with a map of where each part lives.
+updated: 2026-10-05
 governs:
   - src/matinee/
   - tools/
@@ -16,7 +16,7 @@ questions and is handed one film from the library, presented as tonight's
 showing, with `Not that one` to draw again.
 
 This spec was written from the code on 2026-09-26 and last reconciled with it on
-2026-10-03. It has two halves. The
+2026-10-05. It has two halves. The
 **contract** says what Matinee must do and must refuse. It is authoritative. The
 **map** says where each part lives. It is a pointer, never proof. The
 [index](README.md) explains how to read the two when they disagree with the
@@ -35,7 +35,10 @@ contract is listed under [Known gaps](#known-gaps).
 2. **One door to the library.** All media-server access passes through one
    library interface with three reads: the film list, one film's synopsis, and
    one film's poster or backdrop. The Jellyfin reader and the Plex reader sit
-   behind it.
+   behind it. Section 13 says which one an installation reads.
+   - The Jellyfin reader's key travels only in the `X-Emby-Token` header, never
+     in a URL or a log, and never follows a redirect. An item id is 32
+     hexadecimal characters before it is joined into a request.
    - The Plex reader reads every movie section. A film's TMDB id is its
      `tmdb://` guid, or the id in a legacy "The Movie Database" agent guid
      (`com.plexapp.agents.themoviedb://<id>`); a film with neither has no TMDB
@@ -46,7 +49,7 @@ contract is listed under [Known gaps](#known-gaps).
      else its rating. Pictures come through Plex's photo transcoder at the
      asked width, the poster 2:3 and the backdrop 16:9, at quality 60 for an
      image 160 px wide or narrower and 80 otherwise. The synopsis is the film's
-     `summary`. An item id is digits only before it is joined into a request.
+     `summary`. An item id is 1 to 12 digits before it is joined into a request.
      The token travels only in the `X-Plex-Token` header, never in a URL or a
      log, and never follows a redirect.
 3. **The library and the films the labels name.** Matinee offers the films the
@@ -58,10 +61,16 @@ contract is listed under [Known gaps](#known-gaps).
    and viewers' notes live in Matinee's store. None of it reaches a media server.
 5. **No public API and no viewer CLI.** The HTTP routes serve Matinee's own page
    only. The command-line tools are for whoever runs the installation: the
-   nightly rebuild, the tree checker, the reference builder and the notes tool.
+   nightly rebuild, the tree checker and the notes tool. The reference builder
+   and the genome builder are for whoever maintains Matinee.
 6. **The engine is a plain module.** The tree walk imports no web framework and
    reads no request state. The web page and the tree checker call the same
    engine, so they cannot disagree about a pool.
+7. **Every request names Matinee.** Each request Matinee makes, to the media
+   server, TMDB, TMDB's image server, Seerr or DoesTheDogDie, carries a user
+   agent naming it: `Matinee/0.1`, with DoesTheDogDie's address added on
+   requests to DoesTheDogDie (`src/matinee/__init__.py::USER_AGENT`). A proxy in
+   front of a household's service may refuse a library's default agent.
 
 ## 2. The conversation
 
@@ -228,8 +237,8 @@ other answer, and `Just pick one!` anywhere in that tree, leaves them out. No
 other door's pool holds them either (the checker fails otherwise).
 
 **A small kind is not offered.** An answer offering a labelled kind shows only
-when that kind holds at least 30 films of the tree's pool in the library the
-server loaded, counted before any answer narrows it. A kind is exempt when it
+when that kind holds at least 30 films of the tree's pool in the walk's source
+(section 2.0), counted before any answer narrows it. A kind is exempt when it
 is marked `always_shown` (horror's found footage and every kids kind), or when another answer of the
 same question leaves it out (horror's "anything scary" leaves horror_comedy out, so
 hiding horror_comedy would leave its films no answer). The bar changes whether an
@@ -307,8 +316,8 @@ offered after "the little ones. nothing scary.".
 - **Fewer than 12 films left:** no further question is asked, and the walk ends.
 - A question marked `only_if_pool_over` is asked only while the pool holds more
   films than that number. Horror's era question uses 40.
-- A question marked `skip_if_topics` is never asked of a viewer who excludes any
-  of those DoesTheDogDie topics. Its `treat_as` answer is applied to the whole
+- A question marked `skip_if_topics` is never asked of a viewer who holds any
+  of those DoesTheDogDie topics (only with a DoesTheDogDie key, section 8). Its `treat_as` answer is applied to the whole
   starting pool instead, so every count and every shown answer already reflects
   it.
 - **An answer that would leave the pool empty is not shown.** A question with no
@@ -322,17 +331,18 @@ offered after "the little ones. nothing scary.".
   with the reply (`self_destruct` in `/api/walk`); every other walk reports none.
 - An answer that does not fit the question being asked is refused. The page is
   told to start over.
-- Pool counts never include DoesTheDogDie exclusions. Those are checked only at
-  the pick (section 9).
+- Pool counts never leave out a film for the viewer's DoesTheDogDie topics.
+  Those are checked only at the pick (section 9).
 - **`Just pick one!`** is on screen from the first question onward, as the last
   choice beneath each question's answers. It ends the questions and picks from
   the pool as it stands. Pressed at the first question, it picks from each
   door's pool for this viewer before any answer, less the flavour that door's
   tree holds apart.
-- **The trail.** On each question after the first screen, and on the pick
-  screen, the page shows the way here in gold at the bottom centre: `Start`, the
-  source answer when the source question was asked, the door, then each answer
-  so far. Choosing a crumb goes to the screen it led to and forgets every answer
+- **The trail.** Once the walk holds a source answer or a door, each question
+  screen and the pick screen show the way here in gold at the bottom centre:
+  `Start`, the source answer when the source question was asked, the door, then
+  each answer so far. The walk's first screen shows none, and neither does a
+  pick that `Just pick one!` started there. Choosing a crumb goes to the screen it led to and forgets every answer
   after it: `Start` returns to the walk's first screen (the source question
   asks again), the source answer shows the doors within it, the door asks the
   door's first question, and an answer asks the question that followed it.
@@ -345,8 +355,9 @@ Every film in the library must be reachable through at least one complete path
 of answers in some tree or mode a first-question answer leads to. A tree no
 door leads to is no film's home.
 `tools/check_trees.py` holds the trees to this. It reads the film table the
-nightly rebuild writes, builds every tree through the engine, and fails, with a
-non-zero exit, on any of these:
+nightly rebuild writes and checks the films of the library that table was built
+from; a table built with no library is checked whole. It builds every tree
+through the engine, and fails, with a non-zero exit, on any of these:
 
 1. **Data.** A library film has no usable TMDB facts. The standup rule cannot
    see such a film.
@@ -420,12 +431,15 @@ genome. Its shape (format 2):
   suits: `little`, `family` or `older` (section 3.2).
 - A film the file lists under no door at all is unlabelled and waits behind the
   doors its genres name (section 3.1).
-- An absent file stops the server at start-up with the path named. A file in any format but 2 is refused at start-up
-  with its format named. A malformed file, a band outside the three, a tree no
-  file defines, or a kind the tree does not label stops the server at start-up
-  too.
+- A file that cannot be read (absent, in any format but 2, malformed, or with a
+  band outside the three) starts the server with no film placed behind a door:
+  every film waits behind its genres (section 3.1), and the setup note names
+  the problem with its format or path (section 5.6). A file naming a tree no
+  file defines, or a kind the tree does not label, leaves the engine unable to
+  prepare, so no film is offered and the setup note says so.
 - The server reads the file once at start-up. Replacing it takes a restart, and
-  updating Matinee replaces it.
+  updating Matinee replaces it. A `labels.json` in the data directory is not
+  read; the server logs a warning naming it at start-up.
 
 **The household override file.** An installation may keep `overrides.json` in its
 data directory, in the labels file's shape (format 2). Matinee reads it at
@@ -441,7 +455,7 @@ another format, a tree no file defines or a kind its tree does not label, bands
 under any tree but kids, or a kids film with its kinds and no band or its band
 and no kinds) is a
 setup fault (section 5.6): the note names the problem, and the shipped
-placements apply alone. A household shares its file in a "Sorting suggestion"
+placements apply alone until a restart reads a mended file. A household shares its file in a "Sorting suggestion"
 issue, and whoever edits the shipped labels may merge its entries in by hand.
 
 Each labelled flavour's `note` in its tree file states the rule its kind
@@ -572,9 +586,10 @@ reads.
   `data/reference.json`, named by the dataset's own generation date. The same
   release and tree files always produce the same file.
 - Matinee reads that file at runtime and never recomputes it from a library.
-- The engine refuses to prepare, and the server refuses to start, when the file
-  is absent or does not cover a tree file: a missing tree, different genres or
-  floor, or a scale that is missing or has other tags or percentiles.
+- The engine refuses to prepare when the file is absent or does not cover a
+  tree file: a missing tree, different genres or floor, or a scale that is
+  missing or has other tags or percentiles. The server still starts, offers no
+  film, and names the fault on the setup note (section 5.6).
   A test in `./check.sh` fails in the same case, so a changed tree file cannot
   ship with stale statistics.
 
@@ -613,7 +628,7 @@ Horror's gore question is a scale cut into four pails, asked in pictures.
 | Properly messy. I'm fine. | some, messy |
 | RIP AND TEAR. | every pail: the worst and everything under it |
 
-A viewer excluding any of these DoesTheDogDie topics is never asked the gore
+A viewer holding any of these DoesTheDogDie topics is never asked the gore
 question and is treated as "None. I'm squeamish.": 188, 296, 331, 203, 250,
 200, 361, 171, 258, 223, 254 and 255.
 
@@ -641,8 +656,9 @@ checker fails otherwise, so a later rule change cannot silently undo a pin.
 ## 5. The offline film table
 
 The trees filter on an offline film table: one SQLite file in Matinee's state
-directory, never in the repository. The server reads it. It never queries the
-genome or TMDB.
+directory, never in the repository. The server reads it. It never reads the
+genome and never asks TMDB's API for a record; its only requests to TMDB are for
+pictures (section 11.5).
 
 The table holds every library film and every film the labels name that has a
 usable TMDB record (format 2; a table in any other format is refused). A library
@@ -661,17 +677,21 @@ its vote count in their own columns.
 `tools/rebuild_table.py` writes the table. With `--daily HH:MM` it rebuilds at
 once and then every day at that local time. The time is validated before the
 first rebuild. A rebuild that fails on an unexpected error puts back the table it
-started with; one that stops on TMDB (no key, a refused key, TMDB not answering)
-keeps what it saved.
+started with, which it keeps under a second name (`films.sqlite.kept`) while it
+runs; one that stops on TMDB (no key, a refused key, TMDB not answering) keeps
+what it saved.
 
 1. Without a TMDB key (`TMDB_TOKEN`) it fetches nothing, writes no table, and
-   reports the reason (below).
+   reports the reason (below). It still drops cached records past six months
+   (section 5.2).
 2. It reads the media server's film list, by GET only, when a media server is
-   set. With none it runs on the labels alone.
+   set. With none, or with settings that name both servers or cannot be used
+   (logged), it runs on the labels alone.
 3. It writes the table from the library and the records already held, before
    any fetch, so the library can be picked at once on a first start.
-4. It refreshes the TMDB record of every film the shipped labels name and every
-   library film with a TMDB id, most-voted first. With no vote count held (a
+4. It refreshes the TMDB record of every film the labels name (the shipped
+   labels and the household override file) and every library film with a TMDB
+   id, most-voted first. With no vote count held (a
    first start, or records kept before vote counts were) the order is TMDB's
    list of films by vote count (its 500 pages, read then and never stored);
    otherwise it is the vote counts in the records held.
@@ -698,10 +718,19 @@ keeps what it saved.
    record. It uses the media server's id and changes nothing on the server.
 
 The rebuild reports itself in `rebuild.json` in the data directory, replaced
-whole each time: `running` as it starts and at least every 5 seconds while it
+whole each time, and the server reads it
+(`src/matinee/progress.py::RebuildStatus`):
+
+```json
+{"state": "running", "started_at": "2026-10-05T03:00:00+00:00",
+ "updated_at": "2026-10-05T03:01:40+00:00", "done": 2500, "total": 10327, "reason": null}
+```
+
+`state` is `running` as it starts and at least every 5 seconds while it
 fetches, with the films this run has fetched or failed out of those it needs
-(`done`, `total`), `finished`, or `stopped` with the reason: no TMDB key, TMDB
-refused the key, or TMDB is not answering. A `running` report that has not
+(`done`, `total`), `finished`, or `stopped` with the reason: "no TMDB key is
+set", "TMDB refused the key", "TMDB is not answering", or "the rebuild failed;
+its log says why". A `running` report that has not
 changed for 120 seconds means the rebuild died, and the setup note says the
 last rebuild failed. A report
 that cannot be read, or whose fields are not of their kind (a known state, text
@@ -722,14 +751,16 @@ finished.
   line is skipped, logged, and its film fetched again.
 - A film whose TMDB record is missing or 183 days old or more carries no TMDB
   facts. Its keywords are unknown, never empty, and it has no picture paths.
-- A table written before the picture paths were kept still loads. Its films
-  have no picture paths until the next rebuild replaces it.
+- A table in another format, or missing a column its format holds, cannot be
+  read. The server treats it as absent until the rebuild replaces it (section
+  5.6); a table from before this format is such a table.
 - **A table whose oldest TMDB fact is 183 days old or more still serves picks,
   with a loud warning.** The server checks the age on every request. While it
   has passed, `GET /api/setup` carries `warning`: "This film data is over six
   months old, and keeping it breaks TMDB's terms. Refresh it by running the
   rebuild: python tools/rebuild_table.py". The page shows it in a strip across
-  the top of every screen, the screen beneath it. The server logs it once each
+  the top of every screen past the door word, the screen beneath it (section
+  12). The server logs it once each
   time the table turns stale. The warning goes once a rebuild refreshes the
   facts. The nightly rebuild (`--daily`) is on by default and refetches every
   record at 150 days, which keeps the data within TMDB's terms.
@@ -819,6 +850,8 @@ show." and says, one paragraph each, what Matinee sees:
 - Matinee's own shipped files that cannot be used (the labels, the pick's lines,
   or data the engine cannot prepare: stale reference statistics, a malformed
   tree), with "update or reinstall Matinee";
+- a household override file that cannot be used (section 2.6), with what is
+  wrong in it;
 - a rebuild whose report stood still for 120 seconds, as a failed rebuild;
 - when there is no film to recommend, why: the rebuild is still fetching, or no
   film details exist and nothing is fetching them.
@@ -828,9 +861,11 @@ cannot be used or it does not answer, the note also says Matinee is picking from
 TMDB's most popular films (the films the labels name) instead. The note offers
 "Show me the films", which goes on to the front door, and never a way into an
 empty pool: with no film to recommend it offers only "Try again". A note with a
-way in is shown once per page visit; one without is shown every time. When the
-fault clears, the note stops showing without a restart. With nothing to say there
-is no note.
+way in is shown once per page visit; one without is shown every time. A fault
+found as Matinee runs (a server that does not answer, the rebuild's report, the
+films on offer) leaves the note without a restart once it clears; a setting or
+a file read at start-up stays on it until a restart. With nothing to say there
+is no note. Section 12 says how the page shows it.
 
 A film table that is absent, in another format or cannot be read counts as an
 empty one, so the server starts before the first rebuild has written anything.
@@ -839,6 +874,10 @@ needs the film list answers 503 `not_ready`. The pick's lines that cannot be rea
 leave `GET /api/quips` answering 503, and picks come without a line. The labels
 that cannot be read place no film behind a door; every film waits behind its
 genres (section 3.1).
+
+The note names a fault as Matinee found it, so a line about Matinee's own files
+or the override file may carry the problem's own words, a file's path among
+them (`src/matinee/web/app.py::setup_faults`).
 
 ## 6. What one viewer's pool is
 
@@ -878,8 +917,8 @@ picks nothing until it opens or makes a profile.
 - A profile with a PIN opens on another device only after its PIN.
 - **The front door lists every profile** to an admitted device (section 7.2),
   sorted by name ignoring case: its id, name, avatar, whether it has a PIN, and
-  whether this device holds it. It never carries a profile's topics or
-  topics, which can say what frightens a person; only a device holding the
+  whether this device holds it. It never carries a profile's topics, which can
+  say what frightens a person; only a device holding the
   profile, or one that has given its PIN, receives them. There is no typed name
   lookup. A device that is not admitted gets no profiles.
 - A token for a deleted profile is ignored. The door's reply clears it from the
@@ -923,6 +962,9 @@ from before shapes were recorded reads 0 and holds profiles, tokens, notes (in a
 table named `feedback`) and personal corrections.
 
 - A missing or empty file is made at the current shape.
+- Each profile row keeps an `exclusions` column from when Matinee had
+  exclusions of its own. Matinee no longer reads or writes it; a new row takes
+  its empty default.
 - A shape-0 file is upgraded in place when Matinee starts, in one transaction.
   The upgrade keeps every profile, token and note, each note under its own id,
   and removes the corrections. A "Not <genre> at all" note first takes, as where
@@ -971,11 +1013,12 @@ usual headers. The protection is sized for a household film picker.
   case-folded and stripped of everything but letters and digits, and they may
   differ by at most one insertion, deletion or substitution. In strict mode the
   typed word must equal the door word exactly. A typed word over 200 characters
-  is wrong without being compared. The start is refused when a relaxed word is
-  under 8 letters and digits, a strict word under 12 characters, any word over
-  200 characters (more than the door compares), or
-  `DOOR_MATCH` names no mode; the message names the setting, never the
-  word.
+  is wrong without being compared. With a word set, the start is refused when a
+  relaxed word is under 8 letters and digits, a strict word under 12
+  characters, any word over 200 characters (more than the door compares), or
+  `DOOR_MATCH` names no mode; the message names the setting, never the word.
+  With no word set, a `DOOR_MATCH` that names no mode is a setup fault (section
+  5.6) and relaxed stands.
 - **A wrong word** is answered after 2 seconds, and words are checked one at a
   time across the installation. The wait is an asynchronous sleep: waiting
   guesses hold no worker, and every other route answers at its usual speed. The
@@ -988,10 +1031,11 @@ usual headers. The protection is sized for a household film picker.
 - The door word is never written to a log, a reply, an error or either
   repository.
 
-## 8. Exclusions
+## 8. DoesTheDogDie topics
 
-A viewer may exclude DoesTheDogDie topics: things they would rather not see
-happen on screen. A profile saves them. Matinee has no exclusions of its own.
+A viewer may choose DoesTheDogDie topics: things they would rather not see
+happen on screen. A profile saves them. The list a profile edits holds
+DoesTheDogDie's topics alone; Matinee has no exclusions of its own.
 
 **DoesTheDogDie is optional.** It needs the installation's `DTDD_API_KEY`.
 Without one, Matinee offers nothing that needs DoesTheDogDie: no profile is
@@ -1162,8 +1206,8 @@ changes nothing any viewer is shown.
   the choice, the answers that led to the pick in words, whether "Just pick
   one!" ended the questions, the comment and a UTC timestamp. A note needs a
   held profile. Its answers are resolved against the tree when it is saved, and
-  an answer the tree does not have, a tree that does not exist or a film not in
-  the library is refused. Where the film belongs is kept only on a "Not <genre>
+  an answer the tree does not have, a tree that does not exist or a film
+  Matinee does not offer now is refused. Where the film belongs is kept only on a "Not <genre>
   at all" note, and only as trees the catalogue holds other than the one that
   offered the film; anything else is refused. Naming a tree changes nothing any
   viewer is shown.
@@ -1224,7 +1268,7 @@ would hand one device's profiles to another.
 |---|---|---|
 | GET | `/` | the page (`Cache-Control: no-cache`) |
 | GET | `/api/admission` | whether the site is locked, whether this device is admitted, and the locked door's greeting |
-| GET | `/api/setup` | the setup note: its heading, its lines (none when all is well), the films Matinee can offer, and whether it offers a way in (section 5.6) |
+| GET | `/api/setup` | the setup note: its heading, its lines (none when all is well), the films Matinee can offer, whether it offers a way in (section 5.6), and the stale-data warning while the film data is past six months (section 5.2) |
 | POST | `/api/admission` | give the door word; the right one sets the admission cookie |
 | GET | `/static/…` | scripts, styles, self-hosted fonts, icons, pails, avatars, the locked door's art, manifest (`Cache-Control: no-cache`, so a deploy is never seen half-applied) |
 | GET | `/img/{kind}/{tmdb}/{size}` | a poster or backdrop: from the media server for a film the library holds, else from TMDB's image server through Matinee |
@@ -1249,11 +1293,13 @@ would hand one device's profiles to another.
   answers 404 before any request leaves for the media server.
 - **An image** only as `poster` at `xs` (100 px), `s` (160 px), `m` (320 px)
   or `l` (640 px), or `backdrop` at `m` (960 px) or `l` (1600 px). The media-server item id is
-  never taken from the browser. It must be 32 hexadecimal characters before it
-  is joined into a request. An image answer must be `image/*` and at most
+  never taken from the browser. Each reader checks its shape before it is
+  joined into a request (section 1). An image answer must be `image/*` and at most
   8 MiB. An image 160 px wide or narrower, a wall tile shown dimmed, is asked
-  of the media server at quality 60; any other at quality 80. Images are served
-  with `Cache-Control: private, max-age=2592000` (30 days), so a return visit
+  of the media server at quality 60; any other at quality 80. The media
+  server's images are served
+  with `Cache-Control: private, max-age=2592000` (30 days; a TMDB picture is
+  kept one day, section 11.5), so a return visit
   draws the wall from the browser's cache. `private` keeps every shared cache,
   such as a CDN in front of the site, from keeping a copy and handing it to a
   device the door word has not admitted.
@@ -1269,9 +1315,12 @@ would hand one device's profiles to another.
 
 ### 11.3 What no response carries
 
-No response carries the media server's address or key, a file path, a disk
-location or an exception's text. The media server's key travels only in the
-header of Matinee's own requests to it and is never logged. A film card's synopsis is the media server's for a film the library holds, and
+No response carries the media server's address or key, a key or token of any
+kind, or the door word. No response but the setup note carries a file path, a
+disk location or an exception's text; the setup note may, where it names a
+fault in Matinee's own files or the household override file (section 5.6). The
+media server's key travels only in the header of Matinee's own requests to it,
+never follows a redirect, and is never logged. A film card's synopsis is the media server's for a film the library holds, and
 TMDB's, from the film table, for any other film, while the library cannot be
 used, and when the media server gives none or fails to answer: the card never
 answers 503 for that. Synopses always
@@ -1284,7 +1333,7 @@ Every error leaves as `{"error": <code>, "message": <sentence>}`:
 
 | Code | Status | When |
 |---|---|---|
-| `not_ready` | 503 | Matinee's own data cannot make a catalog, or the film table cannot be used |
+| `not_ready` | 503 | Matinee's own data cannot make a catalog, the film table cannot be used, or (on `GET /api/quips`) the pick's lines cannot be read |
 | `topics_unavailable` | 503 | the topic list cannot be fetched |
 | `not_found` | 404 | an unknown film, image or path |
 | `not_admitted` | 401 | a door word is set and this device has not given it (section 7.2) |
@@ -1344,7 +1393,7 @@ the picked poster and the pick's backdrop.
   | poster | `w92` | `w154` | `w342` | `w780` |
   | backdrop | | | `w780` | `w1280` |
 
-- Any other value stops the start with a message that names the setting.
+- Any other value is a setup fault (section 5.6), and `server` stands.
 - An admitted page asks for `/api/pictures` once per visit, beside `/api/door`
   and `/api/first`, before it lays the first wall. A failed reply leaves every
   picture on the image route, logs a warning, and is asked again at the next
@@ -1520,7 +1569,7 @@ as written. A phone is a viewport 600 px wide or less.
     to the first question. Without a DoesTheDogDie key (section 8) the "One more
     question." step is skipped: the PIN choice goes straight to the last step.
 - **Going in.** Every answer at the door that leads into the theatre asks for
-  the first question at the tap, and a door is entered once: a second tap or
+  the walk's first screen at the tap, and a door is entered once: a second tap or
   Enter changes nothing. The door's words and the corner credit line fade out
   (0.3 s), and the rest of the marquee fades over 0.55 s while it lifts 110 px
   and shrinks to 0.93 of its size over 0.8 s. Meanwhile "Matinee" flies from
@@ -1530,9 +1579,10 @@ as written. A phone is a viewport 600 px wide or less.
   viewer beside it, and gives way to that wordmark when the theatre's screen is
   built.
   The poster wall stays on screen throughout. No transition on the page passes
-  through black. The first question types once the name has landed and the
-  question has arrived; a landing that never reports counts as landed 0.95 s
-  after the flight began. When the viewer's pool differs from the door's, the
+  through black. The walk's first screen (the source question, or the doors
+  when it is not asked) types once the name has landed and the screen has
+  arrived; a landing that never reports counts as landed 0.95 s after the
+  flight began. When the viewer's pool differs from the door's, the
   wall re-sorts in place as after any answer. From a phone's lit strip, which
   draws no name, the name stands at the wordmark's place at once while the
   strip lifts, and the question still waits the flight's time. Under reduced
@@ -1541,8 +1591,9 @@ as written. A phone is a viewport 600 px wide or less.
   name does not fly back.
 - **The wordmark.** Inside the theatre the top bar's wordmark "Matinee" is a
   link: activating it, by click, tap or keyboard, does what `Start over` does,
-  back to the first question as the same viewer. On a problem screen reached
-  before going in, where there is no viewer yet, it goes back to the door. On
+  back to the walk's first screen as the same viewer. On the setup note, and on
+  a problem screen reached before going in, where there is no viewer yet, it
+  goes back to the door, by way of the setup note when that has more to say. On
   the front door the marquee stands in its place, so there it does nothing.
 - **Scrims.** Every piece of text standing on the poster wall stands on a
   scrim: a feathered dark patch, the page base at 92 per cent across the text's
@@ -1617,7 +1668,38 @@ as written. A phone is a viewport 600 px wide or less.
   choose from" or "1 film to choose from", the exact number with thousands
   separators; on a narrow phone it wraps its own words rather than drop below
   the button. The top bar shows no count, the pick screen shows none, and the
-  marquee's letter board keeps the library's total.
+  marquee's letter board keeps the total Matinee offers.
+
+  The walk's first screens are question screens too. The source question
+  (section 2.0) types "Right this way, <name>." in gold and its question in
+  cream, over its three answers as letterboxes, one beneath another; its count
+  and `Just pick one!` cover the library's films. The doors then type the
+  source answer's reply in gold and "So, what are we in the mood for?" in
+  cream, over the door answers as letterboxes running across the screen and
+  wrapping; their count and `Just pick one!` cover the source's films. With the
+  source question not asked, the doors open the walk with the greeting in its
+  place. The wall shows the films the screen's count covers.
+- **The setup note** (section 5.6). The page asks for it, once the device is
+  admitted, each time it heads for the front door: on loading, after the locked
+  door opens, and on every return to the door. It shows a note with a way in
+  once per page load, and one without every time. The note empties the poster
+  wall and stands under the
+  theatre's top bar, its wordmark at the left and no viewer. Its heading, "A
+  word before the show.", types in gold; then its lines appear together, one
+  paragraph each, in 19 px cream body type on the wall's scrims, and beneath
+  them one action, which takes the focus: the gold "Show me the films", or the
+  cream "Try again" when there is no film to offer. Either asks for the door
+  afresh, so "Try again" shows the note again while it still has no way in.
+  Its foot band carries "About Matinee" and the credit line.
+  (`src/matinee/web/static/js/main.js::setupNote`, `saidSetup`)
+- **The stale-data warning** (section 5.2) stands in a strip across the top of
+  the screen, above everything, from the first screen after admission: the
+  server's sentence in 14 px bold dark type, centred, on a rose ground. The
+  screen starts beneath the strip, however many lines it wraps to. The page
+  reads the warning with the setup note, so the strip comes and goes when the
+  page loads or returns to the door. Before the door word is given, the page
+  asks for neither.
+  (`src/matinee/web/static/js/main.js::showWarning`)
 - **The viewer.** Inside the theatre the top bar holds the wordmark at the left
   and the viewer at the right: the profile's mark in a 40 px rounded square and
   its name in the wordmark's face, smaller, in cream, on a dark backing so it
@@ -1708,21 +1790,24 @@ as written. A phone is a viewport 600 px wide or less.
   160 px), while the backdrop rises on the right, fading into the title, year
   and synopsis, shown without a tap. The left column hangs from the top of the
   screen: the line, then `Not that one`, "More on Seerr ↗" (a link to the
-  film's page on the configured Seerr, opening a new tab; without a Seerr it
-  reads "More on TMDB ↗" and opens `https://www.themoviedb.org/movie/<tmdb>`,
-  for every pick) and `Start over`,
+  film's page on the configured Seerr, opening a new tab; without a Seerr, or
+  while it does not answer, it reads "More on TMDB ↗" and opens
+  `https://www.themoviedb.org/movie/<tmdb>`, for every pick) and `Start over`,
   actions in one row where the column is wide enough (from about 1,320 px of
   window), wrapping beneath one another below that, then the
   note action. The left column takes a third of the row, widened toward
   470 px but never past 38 per cent of it. An unchecked film's note and its
   "Look it up on DoesTheDogDie ↗" action (section 9) follow the
-  synopsis, on a phone as on a desktop.
+  synopsis, on a phone as on a desktop. A film the library does not hold shows
+  exactly as a library film does: the same layout, words and actions.
 
   On a phone Matinee's words keep the foot of the pick screen, which is about a
   third of the screen (36 per cent of its height, never under 270 px, and
   32 px more for its fades) and holds,
   from its top, the line, `Not that one` and "More on Seerr ↗" (or TMDB), the note
-  action, then the trail on one line, each crumb cut to 16 characters, and the
+  action, then the trail on one line, each crumb cut to 16 characters (26
+  elsewhere), the source answer and the answers shortening further where the
+  line is still too long while "Start" and the door keep their words, and the
   credits. The foot band stands behind the trail and the credits and rises
   48 px behind Matinee's words.
   `Start over` is not shown there: the trail's `Start` beneath does the same.
@@ -1813,8 +1898,8 @@ as written. A phone is a viewport 600 px wide or less.
   the scorch. "Not that one" and every later pick speak as usual.
 - **Credits.** The corner credit line reads "Posters and film data from TMDB
   [logo]", the logo linked to TMDB. It sits at the bottom right of the door,
-  the question screens, the pick screen and a problem screen on a desktop
-  (13 px), and centred at the foot on a phone (11 px). The link to the About
+  the setup note, the question screens, the pick screen and a problem screen on
+  a desktop (13 px), and centred at the foot on a phone (11 px). The link to the About
   page is named "About Matinee" on every screen: inside the theatre it is the
   profile menu's last item; on the door, the setup note and a problem screen,
   which have no profile menu, it sits at the bottom middle, apart from the
@@ -1839,7 +1924,8 @@ as written. A phone is a viewport 600 px wide or less.
   wordmark's place: fixed from 1400 px wide up, and scrolling away with the page
   below that so it never sits over the text. About scrolls as a page when the panel
   is taller than the screen. "Back" at its top, the browser's Back, a phone's back gesture
-  and Escape each close it and return the focus to the About link: opening it
+  and Escape each close it and return the focus to what opened it ("About
+  Matinee" at the foot, or the viewer's button for the profile menu's item): opening it
   adds one history entry at the same address, and a second Back leaves the page
   rather than reopening About. The title is 68 px, the lead 23 px and the
   paragraphs 19 px (on a phone the title is at most 13 per cent of the screen's
@@ -1850,7 +1936,8 @@ as written. A phone is a viewport 600 px wide or less.
   everyone (section 10); "How it
   knows what a film feels like", with links to MovieLens and the tag genome
   dataset and the two MovieLens citations; "How it steers around things", with
-  "Powered by DoesTheDogDie.com", linked; and "Posters and film data", with the
+  "Powered by DoesTheDogDie.com", linked, only with a DoesTheDogDie key
+  (section 8); and "Posters and film data", with the
   TMDB logo (14 px tall), linked, and TMDB's notice. It states no count that
   changes over time. Opened from inside, About moves nothing. Opened from the
   door, the name flies to the wordmark's place and the rest of the marquee lifts
@@ -1860,8 +1947,8 @@ as written. A phone is a viewport 600 px wide or less.
   the marquee and the door's words return. From a phone's lit strip the name
   stands at the wordmark's place at once, and closing removes it.
 - **Failures.** A failed request shows its message and "Try again". No stale
-  film list is shown, with one exception: when the first question fails after
-  the viewer goes in, the problem screen keeps the door's posters on the wall
+  film list is shown, with one exception: when the walk's first screen fails
+  after the viewer goes in, the problem screen keeps the door's posters on the wall
   behind its message, the wordmark and "Try again", and a "Try again" that fails
   keeps them too. A "Try again" that succeeds shows the viewer's own pool. Every
   other problem screen empties the wall.
@@ -1883,9 +1970,12 @@ as written. A phone is a viewport 600 px wide or less.
   proxy. The image carries `tools/`, so the same image can run the nightly
   rebuild with `--daily`.
 - **State** is one directory mounted at `/state` (`DATA_DIR`). It holds
-  the film table (`films.sqlite`), Matinee's store (`matinee.sqlite`), the
-  door's secret (`door.key`, made at the first start with a door word), the
-  TMDB cache (`tmdb/films.jsonl`). None of it is in the image.
+  the film table (`films.sqlite`, and `films.sqlite.kept` while a rebuild
+  runs), Matinee's store (`matinee.sqlite`), the door's secret (`door.key`,
+  made at the first start with a door word), the TMDB cache
+  (`tmdb/films.jsonl`), the rebuild's report (`rebuild.json`) and, where the
+  household keeps one, its override file (`overrides.json`). None of it is in
+  the image. The labels ship in the image with the code (`data/labels.json`).
 - **Settings and keys arrive as environment**, never committed, logged or sent
   to a browser. `.dockerignore` keeps `.env` files out of the image.
 
@@ -1919,12 +2009,16 @@ optional service is on when its setting is filled in and off when it is empty.
 
 The terms of each source are part of the design.
 
-- **TMDB.** Cached at most six months (section 5.2). The notice "This product
+- **TMDB.** Every installation fetches TMDB's records under its own key
+  (`TMDB_TOKEN`), and no TMDB record ships in the repository. Cached at most six
+  months (section 5.2). The notice "This product
   uses the TMDB API but is not endorsed or certified by TMDB." appears on the
   About page. The TMDB logo appears there and in the corner credit line of the
   door, the question screens, the pick screen and a problem screen, less prominent than
   Matinee's own mark. TMDB data is non-commercial under the default licence.
-  Under the `tmdb` image source, a viewer's browser loads pictures from TMDB's
+  Under the `server` image source the server fetches TMDB's pictures for the
+  films the library cannot picture, through one gate (section 11.5). Under the
+  `tmdb` image source, a viewer's browser loads pictures from TMDB's
   image server, so TMDB sees that browser's requests. The page sends them with
   no referrer (`Referrer-Policy: same-origin`).
 - **MovieLens tag genome.** Credited on the About page to F. Maxwell Harper and
@@ -1962,14 +2056,16 @@ Not part of this build, and not to be added until asked:
 - a TV layout;
 - notes shared or pooled between installations;
 - any administrative surface, including PIN reset;
-- offline use of the installed page.
+- offline use of the installed page;
+- reading two media servers at once;
+- a marker on the pick screen for a film the library does not hold.
 
 ---
 
 # Known gaps
 
 Behaviour that is deliberately absent, still open, or short of the contract,
-as the code stood on 2026-10-03.
+as the code stood on 2026-10-05.
 
 **Short of the contract:**
 
@@ -1992,7 +2088,7 @@ as the code stood on 2026-10-03.
    requests. Each may wait up to 3 seconds for its turn, then pause for the
    pacing allowance, then allow 3 seconds for an answer. One check can therefore
    take longer than 3 seconds before it counts as slow.
-   (`src/matinee/dtdd.py:106`, `src/matinee/pick.py:170`)
+   (`src/matinee/dtdd.py::Dtdd.get`, `src/matinee/pick.py::look_up`)
 6. **Names are compared after NFKC normalisation and case folding only.**
    Look-alike letters from other scripts count as different names. The refusal
    message says names are "letters, numbers or spaces". The rule accepts any
@@ -2017,7 +2113,7 @@ as the code stood on 2026-10-03.
     the tree defines the flavour it holds apart. The server starts with such a
     tree, whose held-apart films no answer offers; only the checker's
     answer-coverage rule fails it.
-    (`src/matinee/trees.py:301`)
+    (`src/matinee/trees.py::parse_tree`)
 12. **Nothing ties a kind to its answer's words.** An answer may filter on any
     labelled flavour of its tree, so an answer worded for heists that names the
     cops flavour loads and passes the checker. (`tools/check_trees.py::check_answer_coverage`)
@@ -2053,7 +2149,12 @@ as the code stood on 2026-10-03.
     and `link` as well, which the page reads only for the link's address.
     (`src/matinee/web/static/js/credits.js::dtddCredit`,
     `src/matinee/web/viewing.py::PickOut`, `TopicsOut`)
-
+18. **A phone pick begun at the walk's first screen has no way back but the
+    wordmark.** When the source question is not asked, `Just pick one!` on the
+    doors leads to a pick with no trail, and a phone's pick hides `Start over`
+    in favour of the trail's `Start`. The wordmark still does what `Start over`
+    does. (`src/matinee/web/static/js/main.js::trail`,
+    `src/matinee/web/static/css/matinee.css` phone `.aside .choices > .start-over`)
 ---
 
 # Part 2 — Map
@@ -2066,423 +2167,539 @@ symbol when one does not match.
 
 | Handle | Where | Verified |
 |---|---|---|
-| `src/matinee/library/__init__.py::Library` | `src/matinee/library/__init__.py:44` | 2026-09-26 |
-| `src/matinee/library/__init__.py::LibraryFilm` | `src/matinee/library/__init__.py:20` | 2026-09-26 |
-| `src/matinee/library/jellyfin.py::JellyfinReader` | `src/matinee/library/jellyfin.py:63` | 2026-09-26 |
-| `src/matinee/library/jellyfin.py::JellyfinReader.films` | `src/matinee/library/jellyfin.py:117` | 2026-09-26 |
-| `src/matinee/library/jellyfin.py::JellyfinReader.image` (no key, size and type caps) | `src/matinee/library/jellyfin.py:98` | 2026-10-01 |
-| `src/matinee/library/jellyfin.py::ITEM_ID` | `src/matinee/library/jellyfin.py:24` | 2026-09-26 |
-| `src/matinee/library/jellyfin.py::parse_film` (`{tmdb-N}` folder tag) | `src/matinee/library/jellyfin.py:43` | 2026-09-26 |
+| `src/matinee/library/__init__.py::Library` | `src/matinee/library/__init__.py:44` | 2026-10-05 |
+| `src/matinee/library/__init__.py::LibraryFilm` | `src/matinee/library/__init__.py:20` | 2026-10-05 |
+| `src/matinee/library/jellyfin.py::JellyfinReader` | `src/matinee/library/jellyfin.py:64` | 2026-10-05 |
+| `src/matinee/library/jellyfin.py::JellyfinReader.films` | `src/matinee/library/jellyfin.py:119` | 2026-10-05 |
+| `src/matinee/library/jellyfin.py::JellyfinReader._get_json` (the key in an unredirected header) | `src/matinee/library/jellyfin.py:73` | 2026-10-05 |
+| `src/matinee/library/jellyfin.py::JellyfinReader.image` (no key, size and type caps) | `src/matinee/library/jellyfin.py:100` | 2026-10-05 |
+| `src/matinee/library/jellyfin.py::ITEM_ID` | `src/matinee/library/jellyfin.py:25` | 2026-10-05 |
+| `src/matinee/library/jellyfin.py::parse_film` (`{tmdb-N}` folder tag) | `src/matinee/library/jellyfin.py:44` | 2026-10-05 |
+| `src/matinee/library/plex.py::PlexReader` (every movie section) | `src/matinee/library/plex.py:101` | 2026-10-05 |
+| `src/matinee/library/plex.py::PlexReader._get` (GET only; the token in an unredirected header) | `src/matinee/library/plex.py:112` | 2026-10-05 |
+| `src/matinee/library/plex.py::parse_film` / `_tmdb` / `certificate` (runtime, rating, folder tag) | `src/matinee/library/plex.py:80` | 2026-10-05 |
+| `src/matinee/library/plex.py::ITEM_ID` / `TMDB_GUID` / `LEGACY_TMDB_GUID` / `US_PREFIX` | `src/matinee/library/plex.py:28` | 2026-10-05 |
+| `src/matinee/library/choice.py::configured_server` (the server whose settings are filled in; none, or refused for both) | `src/matinee/library/choice.py:49` | 2026-10-05 |
+| `src/matinee/library/choice.py::MediaServer` / `ServerChoiceError` / `open_reader` | `src/matinee/library/choice.py:31` | 2026-10-05 |
+| `src/matinee/__init__.py::USER_AGENT` (every outbound request names Matinee) | `src/matinee/__init__.py:5` | 2026-10-05 |
 
 ### Conversation model
 
 | Handle | Where | Verified |
 |---|---|---|
-| `data/first_question.json` (lines, answers, labels) | `data/first_question.json:3` | 2026-09-30 |
-| `src/matinee/trees.py::parse_tree` | `src/matinee/trees.py:233` | 2026-09-30 |
-| `src/matinee/trees.py::Tree.apart` (a flavour the tree does not define is refused) | `src/matinee/trees.py:85` | 2026-09-30 |
-| `src/matinee/trees.py::Question.footnote` | `src/matinee/trees.py:73` | 2026-09-30 |
-| `src/matinee/trees.py::SOLE_SIGNALS` / `_check_flavours` (`labelled`, `specials`, `always_shown`) | `src/matinee/trees.py:218` | 2026-09-30 |
-| `src/matinee/trees.py::load_trees` (duplicate names refused) | `src/matinee/trees.py:253` | 2026-09-30 |
-| `src/matinee/trees.py::FILTER_KEYS` / `OPTION_KEYS` / `QUESTION_KEYS` | `src/matinee/trees.py:88` | 2026-09-30 |
-| `src/matinee/trees.py::parse_filter` | `src/matinee/trees.py:148` | 2026-09-30 |
-| `src/matinee/engine.py::STOP_UNDER` | `src/matinee/engine.py:57` | 2026-10-02 |
-| `src/matinee/engine.py::load_catalog` | `src/matinee/engine.py:352` | 2026-10-02 |
-| `src/matinee/engine.py::_first_option` (label required) | `src/matinee/engine.py:296` | 2026-10-02 |
-| `src/matinee/engine.py::first_question` | `src/matinee/engine.py:519` | 2026-10-02 |
-| `src/matinee/engine.py::base_pool` (topic skip) | `src/matinee/engine.py:387` | 2026-10-02 |
-| `src/matinee/engine.py::walk` | `src/matinee/engine.py:467` | 2026-10-02 |
-| `src/matinee/engine.py::_gate` (`only_if_pool_over`, `skip_if_topics`) | `src/matinee/engine.py:450` | 2026-10-02 |
-| `src/matinee/engine.py::_shown` (empty answers hidden, `not_after`, small kinds hidden) | `src/matinee/engine.py:427` | 2026-10-02 |
-| `src/matinee/engine.py::KIND_MIN_FILMS` | `src/matinee/engine.py:58` | 2026-10-02 |
-| `src/matinee/engine.py::_too_small` (`always_shown`, a kind another answer leaves out) | `src/matinee/engine.py:327` | 2026-10-02 |
-| `src/matinee/engine.py::_answer_masks` / `Catalog.small` | `src/matinee/engine.py:343` | 2026-10-02 |
-| `src/matinee/engine.py::_hold_apart` / `Catalog.apart` | `src/matinee/engine.py:314` | 2026-10-02 |
-| `src/matinee/engine.py::opening_pool` | `src/matinee/engine.py:408` | 2026-10-02 |
-| `src/matinee/engine.py::_served` (apart films stay out until their answer) | `src/matinee/engine.py:416` | 2026-10-02 |
-| `src/matinee/engine.py::_asked` / `Asked.footnote` (footnote and asterisks dropped with the apart answer) | `src/matinee/engine.py:437` | 2026-10-02 |
-| `src/matinee/web/viewing.py::everything` (the first question's pool) | `src/matinee/web/viewing.py:174` | 2026-10-03 |
-| `src/matinee/web/viewing.py::QuestionOut.footnote` | `src/matinee/web/viewing.py:79` | 2026-10-03 |
-| `src/matinee/engine.py::_plain_mask` / `_range_mask` (unknown values pass) | `src/matinee/engine.py:244` | 2026-10-02 |
-| `src/matinee/engine.py::walk_ends` / `reachable` | `src/matinee/engine.py:493` | 2026-10-02 |
-| `data/trees/comedy.json` room question (ceilings) | `data/trees/comedy.json:7` | 2026-09-27 |
-| `data/trees/comedy.json` kind question (standup answer, footnote), `standup` flavour, `apart` | `data/trees/comedy.json:49` | 2026-09-30 |
-| `data/trees/thriller.json` kind question (spies `self_destruct`) | `data/trees/thriller.json:6` | 2026-09-30 |
-| `data/trees/action.json`, `drama.json`, `scifi.json`, `fantasy.json`, `romance.json`, `animation.json`, `war.json` kind questions; `western.json` (no question) | `data/trees/action.json:6` | 2026-09-30 |
-| `data/trees/kids.json` age and kind questions (labelled, always shown) | `data/trees/kids.json:6` | 2026-09-30 |
-| `data/trees/crime.json` kind question | `data/trees/crime.json:6` | 2026-09-30 |
-| `data/modes/fall-asleep.json` | `data/modes/fall-asleep.json:3` | 2026-09-26 |
+| `data/first_question.json` (lines, answers, labels) | `data/first_question.json:23` | 2026-10-05 |
+| `data/first_question.json` `source` (the source question's wording, answers and replies) | `data/first_question.json:3` | 2026-10-05 |
+| `src/matinee/trees.py::parse_tree` | `src/matinee/trees.py:233` | 2026-10-05 |
+| `src/matinee/trees.py::Tree.apart` (a flavour the tree does not define is refused) | `src/matinee/trees.py:85` | 2026-10-05 |
+| `src/matinee/trees.py::Question.footnote` | `src/matinee/trees.py:73` | 2026-10-05 |
+| `src/matinee/trees.py::SOLE_SIGNALS` / `_check_flavours` (`labelled`, `specials`, `always_shown`) | `src/matinee/trees.py:218` | 2026-10-05 |
+| `src/matinee/trees.py::load_trees` (duplicate names refused) | `src/matinee/trees.py:253` | 2026-10-05 |
+| `src/matinee/trees.py::FILTER_KEYS` / `OPTION_KEYS` / `QUESTION_KEYS` | `src/matinee/trees.py:88` | 2026-10-05 |
+| `src/matinee/trees.py::parse_filter` | `src/matinee/trees.py:148` | 2026-10-05 |
+| `src/matinee/engine.py::STOP_UNDER` | `src/matinee/engine.py:56` | 2026-10-05 |
+| `src/matinee/engine.py::Source` / `SOURCES` (the three pools) | `src/matinee/engine.py:59` | 2026-10-05 |
+| `src/matinee/engine.py::Viewer.source` (bounds every pool, count and pick of the walk) | `src/matinee/engine.py:70` | 2026-10-05 |
+| `src/matinee/engine.py::SourceOption` | `src/matinee/engine.py:115` | 2026-10-05 |
+| `src/matinee/engine.py::Catalog.sources` (per source, the films it holds) | `src/matinee/engine.py:137` | 2026-10-05 |
+| `src/matinee/engine.py::source_masks` (`held` from the live list; none without one) | `src/matinee/engine.py:414` | 2026-10-05 |
+| `src/matinee/engine.py::load_catalog` | `src/matinee/engine.py:379` | 2026-10-05 |
+| `src/matinee/engine.py::_first_option` (label required) | `src/matinee/engine.py:291` | 2026-10-05 |
+| `src/matinee/engine.py::first_question` | `src/matinee/engine.py:549` | 2026-10-05 |
+| `src/matinee/engine.py::base_pool` (the source, then the topic skip) | `src/matinee/engine.py:422` | 2026-10-05 |
+| `src/matinee/engine.py::walk` | `src/matinee/engine.py:497` | 2026-10-05 |
+| `src/matinee/engine.py::_gate` (`only_if_pool_over`, `skip_if_topics`) | `src/matinee/engine.py:480` | 2026-10-05 |
+| `src/matinee/engine.py::_shown` (empty answers hidden, `not_after`, small kinds hidden) | `src/matinee/engine.py:457` | 2026-10-05 |
+| `src/matinee/engine.py::KIND_MIN_FILMS` | `src/matinee/engine.py:57` | 2026-10-05 |
+| `src/matinee/engine.py::_too_small` (`always_shown`, a kind another answer leaves out; counted in the source) | `src/matinee/engine.py:352` | 2026-10-05 |
+| `src/matinee/engine.py::_answer_masks` / `Catalog.small` (`small` per source) | `src/matinee/engine.py:369` | 2026-10-05 |
+| `src/matinee/engine.py::_hold_apart` / `Catalog.apart` | `src/matinee/engine.py:339` | 2026-10-05 |
+| `src/matinee/engine.py::opening_pool` | `src/matinee/engine.py:438` | 2026-10-05 |
+| `src/matinee/engine.py::_served` (apart films stay out until their answer) | `src/matinee/engine.py:446` | 2026-10-05 |
+| `src/matinee/engine.py::_asked` / `Asked.footnote` (footnote and asterisks dropped with the apart answer) | `src/matinee/engine.py:467` | 2026-10-05 |
+| `src/matinee/web/viewing.py::asks_source` (asked while the library can be used and both pools hold a film) | `src/matinee/web/viewing.py:201` | 2026-10-05 |
+| `src/matinee/web/viewing.py::source_for` (before an answer, the library's films; unasked, every film) | `src/matinee/web/viewing.py:208` | 2026-10-05 |
+| `src/matinee/web/viewing.py::SourceQuestionOut` / `SourceOptionOut` | `src/matinee/web/viewing.py:103` | 2026-10-05 |
+| `src/matinee/web/viewing.py::everything` (the first question's pool) | `src/matinee/web/viewing.py:182` | 2026-10-05 |
+| `src/matinee/web/viewing.py::QuestionOut.footnote` | `src/matinee/web/viewing.py:79` | 2026-10-05 |
+| `src/matinee/engine.py::_plain_mask` / `_range_mask` (unknown values pass) | `src/matinee/engine.py:251` | 2026-10-05 |
+| `src/matinee/engine.py::walk_ends` / `reachable` | `src/matinee/engine.py:523` | 2026-10-05 |
+| `data/trees/comedy.json` room question (ceilings) | `data/trees/comedy.json:7` | 2026-10-05 |
+| `data/trees/comedy.json` kind question (standup answer, footnote), `standup` flavour, `apart` | `data/trees/comedy.json:49` | 2026-10-05 |
+| `data/trees/thriller.json` kind question (spies `self_destruct`) | `data/trees/thriller.json:8` | 2026-10-05 |
+| `data/trees/action.json`, `drama.json`, `scifi.json`, `fantasy.json`, `romance.json`, `animation.json`, `war.json` kind questions; `western.json` (no question) | `data/trees/action.json:8` | 2026-10-05 |
+| `data/trees/kids.json` age and kind questions (labelled, always shown) | `data/trees/kids.json:8` | 2026-10-05 |
+| `data/trees/crime.json` kind question | `data/trees/crime.json:8` | 2026-10-05 |
+| `data/modes/fall-asleep.json` | `data/modes/fall-asleep.json:3` | 2026-10-05 |
+| `tests/test_source.py::test_the_source_question_is_asked_first_in_its_order_and_bounds_every_later_answer` | `tests/test_source.py:92` | 2026-10-05 |
 
 ### The checker
 
 | Handle | Where | Verified |
 |---|---|---|
-| `tools/check_trees.py::main` | `tools/check_trees.py:498` | 2026-09-30 |
-| `tools/check_trees.py::SAMPLES` | `tools/check_trees.py:67` | 2026-09-30 |
-| `tools/check_trees.py::check_answer_coverage` | `tools/check_trees.py:295` | 2026-09-30 |
-| `tools/check_trees.py::check_same_answers` | `tools/check_trees.py:324` | 2026-09-30 |
-| `tools/check_trees.py::check_sample` | `tools/check_trees.py:353` | 2026-09-30 |
-| `tools/check_trees.py::check_homes` | `tools/check_trees.py:341` | 2026-09-30 |
-| `tools/check_trees.py::door_pools` (only doors are homes) | `tools/check_trees.py:116` | 2026-09-30 |
-| `tools/check_trees.py::check_apart` | `tools/check_trees.py:122` | 2026-09-30 |
-| `tools/check_trees.py::check_kinds` / `report_waiting` | `tools/check_trees.py:382` | 2026-09-30 |
-| `tools/check_trees.py::check_hidden` | `tools/check_trees.py:452` | 2026-09-30 |
-| `tools/check_trees.py::check_pins_in_key` | `tools/check_trees.py:241` | 2026-09-30 |
-| `tools/check_trees.py::SPECIALS_KIND` (a `specials` pin's fixture) | `tools/check_trees.py:71` | 2026-09-30 |
-| `tools/check_trees.py::check_gore` | `tools/check_trees.py:284` | 2026-09-30 |
-| `tools/check_trees.py::check_lists` | `tools/check_trees.py:135` | 2026-09-30 |
-| `tools/check_trees.py::check_data` | `tools/check_trees.py:488` | 2026-09-30 |
-| `tools/check_trees.py::check_quips` | `tools/check_trees.py:478` | 2026-09-30 |
-| `data/answer_key.json` list tags | `data/answer_key.json:3` | 2026-09-30 |
-| `data/answer_key.json` `hidden` | `data/answer_key.json:18` | 2026-09-30 |
+| `tools/check_trees.py::main` (the shipped labels unless `--labels`; the library's films when the table names one) | `tools/check_trees.py:498` | 2026-10-05 |
+| `tools/check_trees.py::SAMPLES` | `tools/check_trees.py:67` | 2026-10-05 |
+| `tools/check_trees.py::check_answer_coverage` | `tools/check_trees.py:295` | 2026-10-05 |
+| `tools/check_trees.py::check_same_answers` | `tools/check_trees.py:324` | 2026-10-05 |
+| `tools/check_trees.py::check_sample` | `tools/check_trees.py:353` | 2026-10-05 |
+| `tools/check_trees.py::check_homes` | `tools/check_trees.py:341` | 2026-10-05 |
+| `tools/check_trees.py::door_pools` (only doors are homes) | `tools/check_trees.py:116` | 2026-10-05 |
+| `tools/check_trees.py::check_apart` | `tools/check_trees.py:122` | 2026-10-05 |
+| `tools/check_trees.py::check_kinds` / `report_waiting` | `tools/check_trees.py:382` | 2026-10-05 |
+| `tools/check_trees.py::check_hidden` (the whole source's small kinds) | `tools/check_trees.py:452` | 2026-10-05 |
+| `tools/check_trees.py::check_pins_in_key` | `tools/check_trees.py:241` | 2026-10-05 |
+| `tools/check_trees.py::SPECIALS_KIND` (a `specials` pin's fixture) | `tools/check_trees.py:71` | 2026-10-05 |
+| `tools/check_trees.py::check_gore` | `tools/check_trees.py:284` | 2026-10-05 |
+| `tools/check_trees.py::check_lists` | `tools/check_trees.py:135` | 2026-10-05 |
+| `tools/check_trees.py::check_data` | `tools/check_trees.py:488` | 2026-10-05 |
+| `tools/check_trees.py::check_quips` | `tools/check_trees.py:478` | 2026-10-05 |
+| `data/answer_key.json` list tags | `data/answer_key.json:3` | 2026-10-05 |
+| `data/answer_key.json` `hidden` | `data/answer_key.json:18` | 2026-10-05 |
 
 ### The pick's lines
 
 | Handle | Where | Verified |
 |---|---|---|
-| `data/quips.json` (caps, categories) | `data/quips.json:3` | 2026-09-30 |
-| `src/matinee/quips.py::Quips` / `QuipSet` / `Caps` (universal must hold both sets) | `src/matinee/quips.py:43` | 2026-09-30 |
-| `src/matinee/quips.py::load_quips` / `QuipsError` | `src/matinee/quips.py:61` | 2026-09-30 |
-| `src/matinee/quips.py::quip_problems` / `line_problems` / `in_title_case` | `src/matinee/quips.py:90` | 2026-09-30 |
-| `tests/test_quips.py::test_the_caps_are_the_measured_ones` | `tests/test_quips.py:24` | 2026-09-28 |
+| `data/quips.json` (caps, categories) | `data/quips.json:3` | 2026-10-05 |
+| `src/matinee/quips.py::Quips` / `QuipSet` / `Caps` (universal must hold every set) | `src/matinee/quips.py:45` | 2026-10-05 |
+| `src/matinee/quips.py::load_quips` / `QuipsError` | `src/matinee/quips.py:63` | 2026-10-05 |
+| `src/matinee/quips.py::quip_problems` / `line_problems` / `in_title_case` | `src/matinee/quips.py:92` | 2026-10-05 |
+| `tests/test_quips.py::test_the_caps_are_the_measured_ones` | `tests/test_quips.py:41` | 2026-10-05 |
+
+### Labels and the household override file
+
+| Handle | Where | Verified |
+|---|---|---|
+| `data/labels.json` (format 2, shipped) | `data/labels.json:1` | 2026-10-05 |
+| `src/matinee/labels.py::LABELS` (the shipped file's path) | `src/matinee/labels.py:30` | 2026-10-05 |
+| `src/matinee/labels.py::load_labels` / `Labels` / `TreeLabels` (format 2; anything else refused, naming the path) | `src/matinee/labels.py:112` | 2026-10-05 |
+| `src/matinee/labels.py::_mend` (how a broken file is mended, by whose it is) | `src/matinee/labels.py:107` | 2026-10-05 |
+| `src/matinee/labels.py::OVERRIDES` (`overrides.json` in the data directory) | `src/matinee/labels.py:31` | 2026-10-05 |
+| `src/matinee/labels.py::load_overrides` | `src/matinee/labels.py:75` | 2026-10-05 |
+| `src/matinee/labels.py::with_overrides` (a named film takes its whole placement from the household) | `src/matinee/labels.py:62` | 2026-10-05 |
+| `src/matinee/labels.py::Labels.named` / `overridden` | `src/matinee/labels.py:57` | 2026-10-05 |
+| `src/matinee/pools.py::House.without` (the pins of a household-placed film give way, its gore pail kept) | `src/matinee/pools.py:92` | 2026-10-05 |
+| `src/matinee/engine.py::label_problems` (a tree no file defines, a kind it does not label) | `src/matinee/engine.py:303` | 2026-10-05 |
+| `src/matinee/engine.py::household_problems` (bands only under kids; a kids film needs kinds and band) | `src/matinee/engine.py:318` | 2026-10-05 |
+| `src/matinee/engine.py::_check_labels` (the engine refuses to prepare) | `src/matinee/engine.py:332` | 2026-10-05 |
+| `src/matinee/web/main.py::household` / `OVERRIDES_BROKEN` (the file laid over, or a fault) | `src/matinee/web/main.py:54` | 2026-10-05 |
+| `src/matinee/web/main.py::build` (the shipped labels, an unread `labels.json` in the data directory warned of) | `src/matinee/web/main.py:82` | 2026-10-05 |
+| `tools/rebuild_table.py::household_films` (the rebuild fetches the films the household names) | `tools/rebuild_table.py:182` | 2026-10-05 |
+| `tests/test_overrides.py::test_a_film_the_household_names_takes_its_whole_placement_from_the_file` | `tests/test_overrides.py:24` | 2026-10-05 |
 
 ### Pools and reference statistics
 
 | Handle | Where | Verified |
 |---|---|---|
-| `src/matinee/pools.py::build_pools` (labelled films, the waiting room and pins; comedy holds the specials) | `src/matinee/pools.py:187` | 2026-09-30 |
-| `src/matinee/pools.py::SCORES` (the fall-asleep mode) | `src/matinee/pools.py:46` | 2026-09-30 |
-| `src/matinee/pools.py::kids_bands` / `kids_band` / `CERTIFICATE_BANDS` | `src/matinee/pools.py:141` | 2026-09-30 |
-| `src/matinee/pools.py::waiting` / `WAITING_ROOM` / `GENRE_DOORS` | `src/matinee/pools.py:180` | 2026-09-30 |
-| `src/matinee/pools.py::standup_specials` | `src/matinee/pools.py:158` | 2026-09-30 |
-| `src/matinee/pools.py::specials` (the rule plus `specials` pins) | `src/matinee/pools.py:175` | 2026-09-30 |
-| `src/matinee/reference.py::reference_films` | `src/matinee/reference.py:140` | 2026-09-30 |
-| `src/matinee/reference.py::compute_tree` | `src/matinee/reference.py:155` | 2026-09-30 |
-| `src/matinee/reference.py::problems` | `src/matinee/reference.py:225` | 2026-09-30 |
-| `src/matinee/reference.py::LICENCE` | `src/matinee/reference.py:28` | 2026-09-30 |
-| `tools/build_reference.py::main` | `tools/build_reference.py:24` | 2026-09-30 |
-| `data/reference.json` (horror gore cuts) | `data/reference.json:38` | 2026-09-30 |
-| `tests/test_reference.py::test_shipped_reference_covers_every_tree` | `tests/test_reference.py:126` | 2026-09-30 |
+| `src/matinee/pools.py::build_pools` (labelled films, the waiting room and pins; comedy holds the specials) | `src/matinee/pools.py:209` | 2026-10-05 |
+| `src/matinee/pools.py::SCORES` (the fall-asleep mode) | `src/matinee/pools.py:46` | 2026-10-05 |
+| `src/matinee/pools.py::kids_bands` / `kids_band` / `CERTIFICATE_BANDS` (a pin applies to a film not held only on a passing certificate) | `src/matinee/pools.py:154` | 2026-10-05 |
+| `src/matinee/pools.py::waiting` / `WAITING_ROOM` / `GENRE_DOORS` | `src/matinee/pools.py:202` | 2026-10-05 |
+| `src/matinee/pools.py::standup_specials` | `src/matinee/pools.py:180` | 2026-10-05 |
+| `src/matinee/pools.py::specials` (the rule plus `specials` pins) | `src/matinee/pools.py:197` | 2026-10-05 |
+| `src/matinee/reference.py::reference_films` | `src/matinee/reference.py:140` | 2026-10-05 |
+| `src/matinee/reference.py::compute_tree` | `src/matinee/reference.py:155` | 2026-10-05 |
+| `src/matinee/reference.py::problems` | `src/matinee/reference.py:225` | 2026-10-05 |
+| `src/matinee/reference.py::LICENCE` | `src/matinee/reference.py:28` | 2026-10-05 |
+| `tools/build_reference.py::main` | `tools/build_reference.py:24` | 2026-10-05 |
+| `data/reference.json` (horror gore cuts) | `data/reference.json:22` | 2026-10-05 |
+| `tests/test_reference.py::test_shipped_reference_covers_every_tree` | `tests/test_reference.py:126` | 2026-10-05 |
 
 ### Scales and pins
 
 | Handle | Where | Verified |
 |---|---|---|
-| `src/matinee/scales.py::scale_of` | `src/matinee/scales.py:44` | 2026-09-26 |
-| `src/matinee/scales.py::film_scores` (bonus only with a genome entry) | `src/matinee/scales.py:65` | 2026-09-26 |
-| `src/matinee/scales.py::band_index` | `src/matinee/scales.py:75` | 2026-09-26 |
-| `src/matinee/scales.py::membership` (unscored bands, pins) | `src/matinee/scales.py:81` | 2026-09-26 |
-| `src/matinee/engine.py::scale_members` | `src/matinee/engine.py:184` | 2026-10-02 |
-| `data/trees/horror.json` gore scale | `data/trees/horror.json:38` | 2026-09-26 |
-| `data/trees/horror.json` gore question, `skip_if_topics`, `treat_as` | `data/trees/horror.json:134` | 2026-09-27 |
-| `data/trees/horror.json` labelled flavours (the kinds' rules) | `data/trees/horror.json:244` | 2026-09-30 |
-| `src/matinee/labels.py::load_labels` (format 2; format 1 refused) / `Labels` / `TreeLabels` | `src/matinee/labels.py:75` | 2026-09-30 |
-| `src/matinee/pools.py::load_house` / `House` (`House.specials`) | `src/matinee/pools.py:93` | 2026-09-30 |
-| `src/matinee/engine.py::_check_labels` (unknown tree or kind refused) | `src/matinee/engine.py:302` | 2026-10-02 |
-| `src/matinee/engine.py::house_flavour` (a `specials` flavour holds the standup specials) | `src/matinee/engine.py:160` | 2026-10-02 |
-| `data/house_overrides.json` scale pins | `data/house_overrides.json:101` | 2026-09-30 |
-| `data/house_overrides.json` `specials` pins | `data/house_overrides.json:79` | 2026-09-30 |
+| `src/matinee/scales.py::scale_of` | `src/matinee/scales.py:44` | 2026-10-05 |
+| `src/matinee/scales.py::film_scores` (bonus only with a genome entry) | `src/matinee/scales.py:65` | 2026-10-05 |
+| `src/matinee/scales.py::band_index` | `src/matinee/scales.py:75` | 2026-10-05 |
+| `src/matinee/scales.py::membership` (unscored bands, pins) | `src/matinee/scales.py:81` | 2026-10-05 |
+| `src/matinee/engine.py::scale_members` | `src/matinee/engine.py:191` | 2026-10-05 |
+| `data/trees/horror.json` gore scale | `data/trees/horror.json:38` | 2026-10-05 |
+| `data/trees/horror.json` gore question, `skip_if_topics`, `treat_as` | `data/trees/horror.json:134` | 2026-10-05 |
+| `data/trees/horror.json` labelled flavours (the kinds' rules) | `data/trees/horror.json:244` | 2026-10-05 |
+| `src/matinee/pools.py::load_house` / `House` (`House.specials`) | `src/matinee/pools.py:106` | 2026-10-05 |
+| `src/matinee/engine.py::house_flavour` (a `specials` flavour holds the standup specials) | `src/matinee/engine.py:167` | 2026-10-05 |
+| `data/house_overrides.json` scale pins | `data/house_overrides.json:65` | 2026-10-05 |
+| `data/house_overrides.json` `specials` pins | `data/house_overrides.json:43` | 2026-10-05 |
 
 ### Film table and nightly rebuild
 
 | Handle | Where | Verified |
 |---|---|---|
-| `tools/rebuild_table.py::main` | `tools/rebuild_table.py:68` | 2026-09-26 |
-| `tools/rebuild_table.py::rebuild` | `tools/rebuild_table.py:35` | 2026-09-26 |
-| `src/matinee/tmdb.py::refresh` | `src/matinee/tmdb.py:134` | 2026-09-26 |
-| `src/matinee/tmdb.py::REFETCH_AFTER` / `MAX_AGE` | `src/matinee/tmdb.py:28` | 2026-09-26 |
-| `src/matinee/tmdb.py::compact` | `src/matinee/tmdb.py:82` | 2026-09-26 |
-| `src/matinee/tmdb.py::load_cache` | `src/matinee/tmdb.py:64` | 2026-09-26 |
-| `src/matinee/tmdb.py::needs_fetch` / `picture_path` / `PICTURE_PATH` | `src/matinee/tmdb.py:97` | 2026-10-03 |
-| `src/matinee/genome.py::load_genome` (links.csv join, stamped cache) | `src/matinee/genome.py:98` | 2026-09-26 |
-| `src/matinee/table.py::build_table` / `BuildReport` | `src/matinee/table.py:164` | 2026-09-26 |
-| `src/matinee/table.py::_genome_rows` (first MovieLens film wins) | `src/matinee/table.py:111` | 2026-09-26 |
-| `src/matinee/table.py::write_table` | `src/matinee/table.py:253` | 2026-09-26 |
-| `src/matinee/table.py::load_table` (a column the table predates reads as missing) | `src/matinee/table.py:317` | 2026-10-03 |
-| `src/matinee/table.py::check_age` | `src/matinee/table.py:292` | 2026-09-26 |
-| `src/matinee/table.py::with_live` | `src/matinee/table.py:198` | 2026-09-26 |
-| `src/matinee/web/theatre.py::Theatre.showing` (`LIVE_TTL`, `RETRY_AFTER`) | `src/matinee/web/theatre.py:69` | 2026-09-26 |
+| `tools/rebuild_table.py::main` (`TMDB_TOKEN`, `TMDB_RATE`, the server whose settings are filled in) | `tools/rebuild_table.py:240` | 2026-10-05 |
+| `tools/rebuild_table.py::rebuild` (no key: compact and stop; an unexpected failure puts the kept table back) | `tools/rebuild_table.py:69` | 2026-10-05 |
+| `tools/rebuild_table.py::_keep` / `_compact_without_key` (`films.sqlite.kept`) | `tools/rebuild_table.py:107` | 2026-10-05 |
+| `tools/rebuild_table.py::_rebuild` (the start line; save before any fetch; most-voted order) | `tools/rebuild_table.py:121` | 2026-10-05 |
+| `tools/rebuild_table.py::_Run` / `save` / `tick` (a save every `SAVE_EVERY` records) | `tools/rebuild_table.py:154` | 2026-10-05 |
+| `tools/rebuild_table.py::SAVE_EVERY` / `FAILED` | `tools/rebuild_table.py:62` | 2026-10-05 |
+| `tools/rebuild_table.py::tmdb_rate` (any positive number; anything else the default, logged) | `tools/rebuild_table.py:202` | 2026-10-05 |
+| `src/matinee/progress.py::RebuildStatus` / `STATUS_FILE` (`rebuild.json`) | `src/matinee/progress.py:24` | 2026-10-05 |
+| `src/matinee/progress.py::write_status` / `read_status` / `_well_formed` | `src/matinee/progress.py:33` | 2026-10-05 |
+| `src/matinee/tmdb.py::refresh` (one shared pacer; compaction in `finally`) | `src/matinee/tmdb.py:449` | 2026-10-05 |
+| `src/matinee/tmdb.py::fetch_order` (held vote counts, else TMDB's list) | `src/matinee/tmdb.py:428` | 2026-10-05 |
+| `src/matinee/tmdb.py::most_voted` / `VOTE_PAGES` (`VOTE_PAGES`, progress after every page) | `src/matinee/tmdb.py:396` | 2026-10-05 |
+| `src/matinee/tmdb.py::Pacer` / `wait` / `hold` / `held` (a 429 holds every request) | `src/matinee/tmdb.py:151` | 2026-10-05 |
+| `src/matinee/tmdb.py::DEFAULT_RATE` / `MAX_WORKERS` / `workers_for` | `src/matinee/tmdb.py:38` | 2026-10-05 |
+| `src/matinee/tmdb.py::get_json` | `src/matinee/tmdb.py:196` | 2026-10-05 |
+| `src/matinee/tmdb.py::_fetch_all` / `_Tally` / `Tick` / `TICK_EVERY` | `src/matinee/tmdb.py:487` | 2026-10-05 |
+| `src/matinee/tmdb.py::_Tally.records` / `so_far` / `take` | `src/matinee/tmdb.py:516` | 2026-10-05 |
+| `src/matinee/tmdb.py::TmdbFilm` (title, year, genres, synopsis, vote count, US rating) | `src/matinee/tmdb.py:60` | 2026-10-05 |
+| `src/matinee/tmdb.py::fetch_film` / `_us_certification` | `src/matinee/tmdb.py:349` | 2026-10-05 |
+| `src/matinee/tmdb.py::TmdbRefused` / `Refreshed` / `NETWORK_FAILURES` | `src/matinee/tmdb.py:55` | 2026-10-05 |
+| `src/matinee/tmdb.py::NO_KEY` / `KEY_REFUSED` / `NOT_ANSWERING` | `src/matinee/tmdb.py:46` | 2026-10-05 |
+| `src/matinee/tmdb.py::REFETCH_AFTER` / `MAX_AGE` | `src/matinee/tmdb.py:42` | 2026-10-05 |
+| `src/matinee/tmdb.py::compact` | `src/matinee/tmdb.py:135` | 2026-10-05 |
+| `src/matinee/tmdb.py::load_cache` / `_record` (a damaged line, its fetch time included, is skipped) | `src/matinee/tmdb.py:112` | 2026-10-05 |
+| `src/matinee/tmdb.py::needs_fetch` / `picture_path` / `PICTURE_PATH` | `src/matinee/tmdb.py:143` | 2026-10-05 |
+| `src/matinee/genome.py::load_genome` (links.csv join, stamped cache) | `src/matinee/genome.py:122` | 2026-10-05 |
+| `src/matinee/genome.py::Genome.scores` (the tags read, by TMDB id; the first MovieLens film wins) | `src/matinee/genome.py:57` | 2026-10-05 |
+| `src/matinee/genome.py::Scores` | `src/matinee/genome.py:75` | 2026-10-05 |
+| `src/matinee/genome_file.py::GENOME_FILE` / `tags_read` / `write_scores` / `load_scores` | `src/matinee/genome_file.py:27` | 2026-10-05 |
+| `tools/build_genome.py` (writes `data/genome.json`; refuses a release other than `data/reference.json`'s) | `tools/build_genome.py:1` | 2026-10-05 |
+| `tests/test_genome_file.py::test_every_reader_finds_its_tags_in_a_table_built_from_the_shipped_scores` | `tests/test_genome_file.py:33` | 2026-10-05 |
+| `src/matinee/table.py::build_table` / `BuildReport` (the library and every labelled film with a usable record) | `src/matinee/table.py:247` | 2026-10-05 |
+| `src/matinee/table.py::_library_rows` / `_listed_rows` / `_from_library` / `_from_tmdb` | `src/matinee/table.py:200` | 2026-10-05 |
+| `src/matinee/table.py::FORMAT` / `COLUMNS` / `SHOWN` / `TMDB_COLUMNS` / `INSERT_FILM` | `src/matinee/table.py:41` | 2026-10-05 |
+| `src/matinee/table.py::write_table` / `_cell` | `src/matinee/table.py:396` | 2026-10-05 |
+| `src/matinee/table.py::load_table` / `_read` / `_text` (format 2 with every column, else refused; a stale table is read) | `src/matinee/table.py:436` | 2026-10-05 |
+| `src/matinee/table.py::empty_table` | `src/matinee/table.py:292` | 2026-10-05 |
+| `src/matinee/table.py::is_stale` (the oldest TMDB fact 183 days old or more) | `src/matinee/table.py:419` | 2026-10-05 |
+| `src/matinee/table.py::with_live` / `_offered` / `_aligned` (held from the live list; the films the labels name) | `src/matinee/table.py:343` | 2026-10-05 |
+| `src/matinee/table.py::library_films` | `src/matinee/table.py:298` | 2026-10-05 |
+| `src/matinee/web/theatre.py::Theatre.showing` / `_read_library` / `_ttl` (`LIVE_TTL`, `RETRY_AFTER`) | `src/matinee/web/theatre.py:154` | 2026-10-05 |
+| `src/matinee/web/theatre.py::Theatre` (`listed`, `on_reload`; an absent or unreadable table counts as empty) | `src/matinee/web/theatre.py:59` | 2026-10-05 |
 
 ### Profiles and devices
 
 | Handle | Where | Verified |
 |---|---|---|
-| `src/matinee/store.py::MAX_PROFILES` and the other limits | `src/matinee/store.py:40` | 2026-10-02 |
-| `src/matinee/store.py::AVATARS` / `clean_avatar` / `Profile.avatar` (an unknown avatar reads as none) | `src/matinee/store.py:47` | 2026-10-02 |
-| `src/matinee/store.py::name_key` / `clean_name` / `clean_pin` | `src/matinee/store.py:126` | 2026-10-02 |
-| `src/matinee/store.py::Store.__init__` (brings the file to its shape) | `src/matinee/store.py:202` | 2026-10-02 |
-| `src/matinee/store.py::Store._issue` (token pruning) | `src/matinee/store.py:225` | 2026-10-02 |
-| `src/matinee/store.py::Store.create` | `src/matinee/store.py:233` | 2026-10-02 |
-| `src/matinee/store.py::Store.holding` | `src/matinee/store.py:265` | 2026-10-02 |
-| `src/matinee/store.py::Store.everyone` (every profile, sorted by name) | `src/matinee/store.py:278` | 2026-10-02 |
-| `src/matinee/store.py::Store._held` (the token check inside the write's transaction) | `src/matinee/store.py:285` | 2026-10-02 |
-| `src/matinee/store.py::Store.set_topics` / `set_avatar` | `src/matinee/store.py:299` | 2026-10-02 |
-| `src/matinee/store.py::Store.delete` (notes stay) | `src/matinee/store.py:378` | 2026-10-02 |
-| `src/matinee/store.py::Store.clear_pin` | `src/matinee/store.py:385` | 2026-10-02 |
-| `src/matinee/store.py::Store.open` / `_check_pin` (lockout) | `src/matinee/store.py:398` | 2026-10-02 |
-| `src/matinee/web/common.py::TOKENS_COOKIE` / `MAX_TOKENS` | `src/matinee/web/common.py:23` | 2026-10-02 |
-| `src/matinee/web/common.py::PROFILE_LINES` (each refusal's words) | `src/matinee/web/common.py:26` | 2026-10-02 |
-| `src/matinee/web/common.py::Seat` / `Tile` / `Deleted` / `Door` (what the page is told of a profile) | `src/matinee/web/common.py:39` | 2026-10-02 |
-| `src/matinee/web/common.py::NewProfile` / `AvatarChoice` / `PinEntry` (request caps) | `src/matinee/web/common.py:72` | 2026-10-02 |
-| `src/matinee/web/common.py::set_tokens` / `with_token` | `src/matinee/web/common.py:106` | 2026-10-02 |
-| `src/matinee/web/app.py::add_door_routes` (`GET /api/door`, create, open) | `src/matinee/web/app.py:164` | 2026-10-02 |
-| `src/matinee/web/app.py::add_avatar_route` (`PUT /api/profiles/{id}/avatar`) | `src/matinee/web/app.py:201` | 2026-10-02 |
-| `src/matinee/web/app.py::add_delete_route` (`DELETE /api/profiles/{id}`) | `src/matinee/web/app.py:210` | 2026-10-02 |
-| `src/matinee/web/viewing.py::ViewerIn` (a profile id only) | `src/matinee/web/viewing.py:37` | 2026-10-03 |
-| `src/matinee/web/viewing.py::held_profile` | `src/matinee/web/viewing.py:185` | 2026-10-03 |
-| `src/matinee/web/viewing.py::resolve` (no profile: the front door's pool) | `src/matinee/web/viewing.py:199` | 2026-10-03 |
-| `src/matinee/web/viewing.py::resolve_held` (walks and picks need a held profile) | `src/matinee/web/viewing.py:207` | 2026-10-03 |
-| `tests/test_profiles.py::test_a_write_never_lands_on_a_new_profile_that_reuses_a_deleted_ones_id` | `tests/test_profiles.py:318` | 2026-10-02 |
-| `tests/test_avatar_images.py` (two square sizes each; the size budget) | `tests/test_avatar_images.py:24` | 2026-10-02 |
-| `src/matinee/web/static/avatars/` (`<avatar>-256.webp` and `<avatar>-80.webp`) | `src/matinee/web/static/avatars/` | 2026-10-02 |
+| `src/matinee/store.py::MAX_PROFILES` (and the other limits) | `src/matinee/store.py:42` | 2026-10-05 |
+| `src/matinee/store.py::AVATARS` / `clean_avatar` / `Profile.avatar` (an unknown avatar reads as none) | `src/matinee/store.py:49` | 2026-10-05 |
+| `src/matinee/store.py::name_key` / `clean_name` / `clean_pin` | `src/matinee/store.py:127` | 2026-10-05 |
+| `src/matinee/store.py::Store.__init__` (brings the file to its shape) | `src/matinee/store.py:203` | 2026-10-05 |
+| `src/matinee/store.py::Store._issue` (token pruning) | `src/matinee/store.py:225` | 2026-10-05 |
+| `src/matinee/store.py::Store.create` | `src/matinee/store.py:233` | 2026-10-05 |
+| `src/matinee/store.py::Store.holding` | `src/matinee/store.py:264` | 2026-10-05 |
+| `src/matinee/store.py::Store.everyone` (every profile, sorted by name) | `src/matinee/store.py:277` | 2026-10-05 |
+| `src/matinee/store.py::Store._held` (the token check inside the write's transaction) | `src/matinee/store.py:284` | 2026-10-05 |
+| `src/matinee/store.py::Store.set_topics` / `set_avatar` | `src/matinee/store.py:298` | 2026-10-05 |
+| `src/matinee/store.py::Store.delete` (notes stay) | `src/matinee/store.py:377` | 2026-10-05 |
+| `src/matinee/store.py::Store.clear_pin` | `src/matinee/store.py:384` | 2026-10-05 |
+| `src/matinee/store.py::Store.open` / `_check_pin` (lockout) | `src/matinee/store.py:397` | 2026-10-05 |
+| `src/matinee/web/common.py::TOKENS_COOKIE` / `MAX_TOKENS` | `src/matinee/web/common.py:22` | 2026-10-05 |
+| `src/matinee/web/common.py::PROFILE_LINES` (each refusal's words) | `src/matinee/web/common.py:25` | 2026-10-05 |
+| `src/matinee/web/common.py::Seat` / `Tile` / `Deleted` / `Door` (what the page is told of a profile) | `src/matinee/web/common.py:38` | 2026-10-05 |
+| `src/matinee/web/common.py::NewProfile` / `AvatarChoice` / `PinEntry` (request caps) | `src/matinee/web/common.py:71` | 2026-10-05 |
+| `src/matinee/web/common.py::set_tokens` / `with_token` | `src/matinee/web/common.py:103` | 2026-10-05 |
+| `src/matinee/web/app.py::add_door_routes` (`GET /api/door`, create, open) | `src/matinee/web/app.py:270` | 2026-10-05 |
+| `src/matinee/web/app.py::add_avatar_route` (`PUT /api/profiles/{id}/avatar`) | `src/matinee/web/app.py:307` | 2026-10-05 |
+| `src/matinee/web/app.py::add_delete_route` (`DELETE /api/profiles/{id}`) | `src/matinee/web/app.py:316` | 2026-10-05 |
+| `src/matinee/web/viewing.py::ViewerIn` (a profile id only) | `src/matinee/web/viewing.py:35` | 2026-10-05 |
+| `src/matinee/web/viewing.py::held_profile` | `src/matinee/web/viewing.py:193` | 2026-10-05 |
+| `src/matinee/web/viewing.py::resolve` (no profile: the front door's pool; no key: stored topics ignored) | `src/matinee/web/viewing.py:216` | 2026-10-05 |
+| `src/matinee/web/viewing.py::resolve_held` (walks and picks need a held profile) | `src/matinee/web/viewing.py:229` | 2026-10-05 |
+| `tests/test_profiles.py::test_a_write_never_lands_on_a_new_profile_that_reuses_a_deleted_ones_id` | `tests/test_profiles.py:318` | 2026-10-05 |
+| `tests/test_avatar_images.py` (two square sizes each; the size budget) | `tests/test_avatar_images.py:24` | 2026-10-05 |
+| `src/matinee/web/static/avatars/` (`<avatar>-256.webp` and `<avatar>-80.webp`) | `src/matinee/web/static/avatars` | 2026-10-05 |
 
 ### The store file
 
 | Handle | Where | Verified |
 |---|---|---|
-| `src/matinee/upgrade.py::SHAPE` / `TABLES` (the current shape) | `src/matinee/upgrade.py:24` | 2026-10-02 |
-| `src/matinee/upgrade.py::BELONGS_FROM_CORRECTIONS` (where an old genre note's film belongs) | `src/matinee/upgrade.py:70` | 2026-10-02 |
-| `src/matinee/upgrade.py::FROM_SHAPE_0` | `src/matinee/upgrade.py:83` | 2026-10-02 |
-| `src/matinee/upgrade.py::ShapeError` | `src/matinee/upgrade.py:95` | 2026-10-02 |
-| `src/matinee/upgrade.py::_stranded` / `_refuse_stranded` (notes in an old `feedback` table) | `src/matinee/upgrade.py:131` | 2026-10-02 |
-| `src/matinee/upgrade.py::_keep_copy` (one copy, never overwritten) | `src/matinee/upgrade.py:138` | 2026-10-02 |
-| `src/matinee/upgrade.py::_upgrade_from_0` (one transaction; the count and foreign-key guards) | `src/matinee/upgrade.py:161` | 2026-10-02 |
-| `src/matinee/upgrade.py::prepare` | `src/matinee/upgrade.py:193` | 2026-10-02 |
-| `tests/test_upgrade.py` | `tests/test_upgrade.py:112` | 2026-10-02 |
+| `src/matinee/upgrade.py::SHAPE` / `TABLES` (the current shape; the unread `exclusions` column) | `src/matinee/upgrade.py:24` | 2026-10-05 |
+| `src/matinee/upgrade.py::BELONGS_FROM_CORRECTIONS` (where an old genre note's film belongs) | `src/matinee/upgrade.py:70` | 2026-10-05 |
+| `src/matinee/upgrade.py::FROM_SHAPE_0` | `src/matinee/upgrade.py:83` | 2026-10-05 |
+| `src/matinee/upgrade.py::ShapeError` | `src/matinee/upgrade.py:95` | 2026-10-05 |
+| `src/matinee/upgrade.py::_stranded` / `_refuse_stranded` (notes in an old `feedback` table) | `src/matinee/upgrade.py:131` | 2026-10-05 |
+| `src/matinee/upgrade.py::_keep_copy` (one copy, never overwritten) | `src/matinee/upgrade.py:138` | 2026-10-05 |
+| `src/matinee/upgrade.py::_upgrade_from_0` (one transaction; the count and foreign-key guards) | `src/matinee/upgrade.py:161` | 2026-10-05 |
+| `src/matinee/upgrade.py::prepare` | `src/matinee/upgrade.py:193` | 2026-10-05 |
+| `tests/test_upgrade.py` | `tests/test_upgrade.py:112` | 2026-10-05 |
 
 ### The door word
 
 | Handle | Where | Verified |
 |---|---|---|
-| `src/matinee/web/admission.py::COOKIE` / `LIFE_S` / `RELAXED_MIN` / `STRICT_MIN` / `KEY_FILE` / `MAX_TYPED` / `CLOCK_SKEW_S` | `src/matinee/web/admission.py:28` | 2026-10-02 |
-| `src/matinee/web/admission.py::edits` / `relaxed_key` (relaxed matching) | `src/matinee/web/admission.py:42` | 2026-10-02 |
-| `src/matinee/web/admission.py::too_long` / `too_short` | `src/matinee/web/admission.py:57` | 2026-10-02 |
-| `src/matinee/web/admission.py::load_secret` (made once, owner-only) | `src/matinee/web/admission.py:69` | 2026-10-02 |
-| `src/matinee/web/admission.py::Admission` (`issue`, `admits`, `matches`) | `src/matinee/web/admission.py:88` | 2026-10-02 |
-| `src/matinee/web/config.py::GREETINGS` | `src/matinee/web/config.py:17` | 2026-10-02 |
-| `src/matinee/web/config.py::_door` (the start refused, the word never named) | `src/matinee/web/config.py:58` | 2026-10-02 |
-| `src/matinee/web/app.py::AdmissionOut` / `WordIn` | `src/matinee/web/app.py:229` | 2026-10-02 |
-| `src/matinee/web/app.py::open_before_admission` | `src/matinee/web/app.py:241` | 2026-10-02 |
-| `src/matinee/web/app.py::add_admission` (the gate, `GET`/`POST /api/admission`, the 2-second wait) | `src/matinee/web/app.py:246` | 2026-10-02 |
-| `tests/test_admission.py` | `tests/test_admission.py:82` | 2026-10-02 |
+| `src/matinee/web/admission.py::COOKIE` / `LIFE_S` / `RELAXED_MIN` / `STRICT_MIN` / `KEY_FILE` / `MAX_TYPED` / `CLOCK_SKEW_S` | `src/matinee/web/admission.py:28` | 2026-10-05 |
+| `src/matinee/web/admission.py::edits` / `relaxed_key` (relaxed matching) | `src/matinee/web/admission.py:42` | 2026-10-05 |
+| `src/matinee/web/admission.py::too_long` / `too_short` | `src/matinee/web/admission.py:57` | 2026-10-05 |
+| `src/matinee/web/admission.py::load_secret` (made once, owner-only) | `src/matinee/web/admission.py:69` | 2026-10-05 |
+| `src/matinee/web/admission.py::Admission` (`issue`, `admits`, `matches`) | `src/matinee/web/admission.py:88` | 2026-10-05 |
+| `src/matinee/web/config.py::GREETINGS` | `src/matinee/web/config.py:24` | 2026-10-05 |
+| `src/matinee/web/config.py::_door` (a wrong lock refuses the start; with no word, a bad mode is a fault) | `src/matinee/web/config.py:68` | 2026-10-05 |
+| `src/matinee/web/app.py::AdmissionOut` / `WordIn` | `src/matinee/web/app.py:335` | 2026-10-05 |
+| `src/matinee/web/app.py::open_before_admission` | `src/matinee/web/app.py:347` | 2026-10-05 |
+| `src/matinee/web/app.py::add_admission` (the gate, `GET`/`POST /api/admission`, the 2-second wait) | `src/matinee/web/app.py:352` | 2026-10-05 |
+| `tests/test_admission.py` | `tests/test_admission.py:83` | 2026-10-05 |
 
 ### Notes and the notes tool
 
 | Handle | Where | Verified |
 |---|---|---|
-| `src/matinee/store.py::Note` (`belongs`) | `src/matinee/store.py:69` | 2026-10-02 |
-| `src/matinee/store.py::NOTE_SELECT` / `FiledNote` / `one_line` / `MAX_REASON` | `src/matinee/store.py:65` | 2026-10-02 |
-| `src/matinee/store.py::Store.note` | `src/matinee/store.py:321` | 2026-10-02 |
-| `src/matinee/store.py::Store.notes` / `filed` / `rule` | `src/matinee/store.py:341` | 2026-10-02 |
-| `src/matinee/web/viewing.py::NoteOut` / `NoteIn` (request caps) | `src/matinee/web/viewing.py:118` | 2026-10-03 |
-| `src/matinee/web/viewing.py::NOTED` / `answer_says` / `check_belongs` | `src/matinee/web/viewing.py:351` | 2026-10-03 |
-| `src/matinee/web/viewing.py::add_note_routes` (`POST /api/notes`) | `src/matinee/web/viewing.py:374` | 2026-10-03 |
-| `tools/notes.py::Names` / `load_names` (titles and door labels) | `tools/notes.py:38` | 2026-10-02 |
-| `tools/notes.py::printable` | `tools/notes.py:64` | 2026-10-02 |
-| `tools/notes.py::what_was_wrong` / `describe` | `tools/notes.py:70` | 2026-10-02 |
-| `tools/notes.py::list_open` / `rule` / `clear_pin` | `tools/notes.py:97` | 2026-10-02 |
-| `tools/notes.py::note_id` / `parser` / `main` (exit statuses) | `tools/notes.py:125` | 2026-10-02 |
-| `tests/test_notes.py`, `tests/test_review.py`, `tests/test_notes_tool.py` | `tests/test_notes.py:56` | 2026-10-02 |
+| `src/matinee/store.py::Note` (`belongs`) | `src/matinee/store.py:71` | 2026-10-05 |
+| `src/matinee/store.py::NOTE_SELECT` / `FiledNote` / `one_line` / `MAX_REASON` | `src/matinee/store.py:67` | 2026-10-05 |
+| `src/matinee/store.py::Store.note` | `src/matinee/store.py:320` | 2026-10-05 |
+| `src/matinee/store.py::Store.notes` / `filed` / `rule` | `src/matinee/store.py:340` | 2026-10-05 |
+| `src/matinee/web/viewing.py::NoteOut` / `NoteIn` (request caps) | `src/matinee/web/viewing.py:131` | 2026-10-05 |
+| `src/matinee/web/viewing.py::NOTED` / `answer_says` / `check_belongs` | `src/matinee/web/viewing.py:386` | 2026-10-05 |
+| `src/matinee/web/viewing.py::add_note_routes` (`POST /api/notes`; a film Matinee does not offer now is refused) | `src/matinee/web/viewing.py:409` | 2026-10-05 |
+| `tools/notes.py::Names` / `load_names` (titles and door labels) | `tools/notes.py:39` | 2026-10-05 |
+| `tools/notes.py::printable` | `tools/notes.py:65` | 2026-10-05 |
+| `tools/notes.py::what_was_wrong` / `describe` | `tools/notes.py:71` | 2026-10-05 |
+| `tools/notes.py::list_open` / `rule` / `clear_pin` / `clear_topics` | `tools/notes.py:98` | 2026-10-05 |
+| `tools/notes.py::note_id` / `parser` / `main` (exit statuses) | `tools/notes.py:132` | 2026-10-05 |
+| `src/matinee/store.py::Store.clear_topics` (`clear-topics`) | `src/matinee/store.py:306` | 2026-10-05 |
+| `tests/test_notes.py`, `tests/test_review.py`, `tests/test_notes_tool.py` | `tests/test_notes.py:56` | 2026-10-05 |
 
 ### Topics and the DoesTheDogDie check
 
 | Handle | Where | Verified |
 |---|---|---|
-| `src/matinee/dtdd.py::Dtdd.get` / `_pace` (`BURST`, `RATE_PER_S`) | `src/matinee/dtdd.py:106` | 2026-09-26 |
-| `src/matinee/dtdd.py::Dtdd._check_holds` / `_refused` / `_note_remaining` (`REQUESTS_PER_HOUR`, `MONTH_RESERVE`, `RESERVE_HOLD_S`, `BACKOFF_S`) | `src/matinee/dtdd.py:123` | 2026-09-26 |
-| `src/matinee/dtdd.py::Dtdd.topics` (`TOPICS_REFRESH_S`, `TOPICS_KEEP_S`) | `src/matinee/dtdd.py:178` | 2026-09-26 |
-| `src/matinee/pick.py::failing` (`MIN_VOTES`) | `src/matinee/pick.py:83` | 2026-10-03 |
-| `src/matinee/pick.py::_count` (a DoesTheDogDie number: a plain non-negative integer, never a boolean) | `src/matinee/pick.py:78` | 2026-10-03 |
-| `src/matinee/pick.py::_the_film` (the one Movie with the film's TMDB id; a malformed item id is unreadable) | `src/matinee/pick.py:106` | 2026-10-03 |
-| `src/matinee/pick.py::ItemIds` (`ID_KEEP_S`) | `src/matinee/pick.py:133` | 2026-10-03 |
-| `src/matinee/pick.py::ItemIds._drop_expired` (nothing held past 30 days) | `src/matinee/pick.py:145` | 2026-10-03 |
-| `src/matinee/pick.py::look_up` (`LOOKUP_S`) | `src/matinee/pick.py:170` | 2026-10-03 |
-| `src/matinee/pick.py::DeviceCap` (`LOOKUPS_PER_HOUR`) | `src/matinee/pick.py:206` | 2026-10-03 |
-| `src/matinee/pick.py::candidates` | `src/matinee/pick.py:239` | 2026-10-03 |
-| `src/matinee/engine.py::gentlest` | `src/matinee/engine.py:203` | 2026-10-02 |
-| `src/matinee/pick.py::Picker.pick` (`PICK_TRIES`) | `src/matinee/pick.py:269` | 2026-10-03 |
-| `src/matinee/pick.py::Pick` (`last` / `last_hits`: the third film of three in a row; `item`: an unchecked film's item) | `src/matinee/pick.py:61` | 2026-10-03 |
-| `src/matinee/pick.py::Picker._item` (the item as held after any lookup) | `src/matinee/pick.py:259` | 2026-10-03 |
-| `src/matinee/web/viewing.py::device_id` / `DEVICE_COOKIE` | `src/matinee/web/viewing.py:238` | 2026-10-03 |
-| `src/matinee/web/viewing.py::SWAP_LINE` / `UNCHECKED_LINES` / `EXHAUSTED` / `TIRED` / `PICKED` | `src/matinee/web/viewing.py:216` | 2026-10-03 |
-| `src/matinee/web/viewing.py::LastOut` / `PickOut` (`last`, `dtdd_item`) | `src/matinee/web/viewing.py:153` | 2026-10-03 |
-| `src/matinee/web/viewing.py::_swap_out` / `_last_out` / `pick_out` | `src/matinee/web/viewing.py:256` | 2026-10-03 |
-| `src/matinee/web/viewing.py::pick_pool` | `src/matinee/web/viewing.py:391` | 2026-10-03 |
-| `src/matinee/web/viewing.py::add_pick_routes` | `src/matinee/web/viewing.py:401` | 2026-10-03 |
-| `tests/test_pick.py::test_three_in_a_row_hold_the_third_film_with_its_own_topic` / `test_a_pick_that_asks_to_skip_the_check_is_still_checked` | `tests/test_pick.py:557` | 2026-10-03 |
+| `src/matinee/web/config.py::Config.dtdd_key` (optional) | `src/matinee/web/config.py:44` | 2026-10-05 |
+| `src/matinee/web/app.py::create_app` (one `topics_on`; a picker that disagrees is refused) | `src/matinee/web/app.py:485` | 2026-10-05 |
+| `src/matinee/web/viewing.py::add_topic_routes` (`GET /api/topics`, `PUT /api/profiles/{id}/topics`, only with a key) | `src/matinee/web/viewing.py:310` | 2026-10-05 |
+| `src/matinee/web/viewing.py::save_topics` | `src/matinee/web/viewing.py:334` | 2026-10-05 |
+| `src/matinee/web/viewing.py::FirstOut.checked` (whether this viewer's picks are checked) | `src/matinee/web/viewing.py:113` | 2026-10-05 |
+| `src/matinee/web/common.py::Door.dtdd` (`GET /api/door` says whether a key is set) | `src/matinee/web/common.py:68` | 2026-10-05 |
+| `src/matinee/web/main.py::warn_kept_topics` / `TOPICS_KEPT` / `WARN_EVERY` (kept topics without a key) | `src/matinee/web/main.py:41` | 2026-10-05 |
+| `src/matinee/pick.py::Picker.dtdd` / `_checked` (none without a key) | `src/matinee/pick.py:274` | 2026-10-05 |
+| `src/matinee/dtdd.py::Dtdd.get` / `_pace` (`BURST`, `RATE_PER_S`) | `src/matinee/dtdd.py:106` | 2026-10-05 |
+| `src/matinee/dtdd.py::Dtdd._check_holds` / `_refused` / `_note_remaining` (`REQUESTS_PER_HOUR`, `MONTH_RESERVE`, `RESERVE_HOLD_S`, `BACKOFF_S`) | `src/matinee/dtdd.py:123` | 2026-10-05 |
+| `src/matinee/dtdd.py::Dtdd.topics` (`TOPICS_REFRESH_S`, `TOPICS_KEEP_S`) | `src/matinee/dtdd.py:178` | 2026-10-05 |
+| `src/matinee/pick.py::failing` (`MIN_VOTES`) | `src/matinee/pick.py:83` | 2026-10-05 |
+| `src/matinee/pick.py::_count` (a DoesTheDogDie number: a plain non-negative integer, never a boolean) | `src/matinee/pick.py:78` | 2026-10-05 |
+| `src/matinee/pick.py::_the_film` (the one Movie with the film's TMDB id; a malformed item id is unreadable) | `src/matinee/pick.py:106` | 2026-10-05 |
+| `src/matinee/pick.py::ItemIds` (`ID_KEEP_S`) | `src/matinee/pick.py:133` | 2026-10-05 |
+| `src/matinee/pick.py::ItemIds._drop_expired` (nothing held past 30 days) | `src/matinee/pick.py:145` | 2026-10-05 |
+| `src/matinee/pick.py::look_up` (`LOOKUP_S`) | `src/matinee/pick.py:170` | 2026-10-05 |
+| `src/matinee/pick.py::DeviceCap` (`LOOKUPS_PER_HOUR`) | `src/matinee/pick.py:226` | 2026-10-05 |
+| `src/matinee/pick.py::candidates` | `src/matinee/pick.py:259` | 2026-10-05 |
+| `src/matinee/engine.py::gentlest` | `src/matinee/engine.py:210` | 2026-10-05 |
+| `src/matinee/pick.py::Picker.pick` (`PICK_TRIES`) | `src/matinee/pick.py:289` | 2026-10-05 |
+| `src/matinee/pick.py::Pick` (`last` / `last_hits`: the third film of three in a row; `item`: an unchecked film's item) | `src/matinee/pick.py:61` | 2026-10-05 |
+| `src/matinee/pick.py::Picker._item` (the item as held after any lookup) | `src/matinee/pick.py:279` | 2026-10-05 |
+| `src/matinee/web/viewing.py::device_id` / `DEVICE_COOKIE` | `src/matinee/web/viewing.py:260` | 2026-10-05 |
+| `src/matinee/web/viewing.py::SWAP_LINE` / `UNCHECKED_LINES` / `EXHAUSTED` / `TIRED` / `PICKED` | `src/matinee/web/viewing.py:238` | 2026-10-05 |
+| `src/matinee/web/viewing.py::LastOut` / `PickOut` (`last`, `dtdd_item`) | `src/matinee/web/viewing.py:161` | 2026-10-05 |
+| `src/matinee/web/viewing.py::_swap_out` / `_last_out` / `pick_out` | `src/matinee/web/viewing.py:278` | 2026-10-05 |
+| `src/matinee/web/viewing.py::pick_pool` | `src/matinee/web/viewing.py:426` | 2026-10-05 |
+| `src/matinee/web/viewing.py::add_pick_routes` | `src/matinee/web/viewing.py:436` | 2026-10-05 |
+| `tests/test_pick.py::test_three_in_a_row_hold_the_third_film_with_its_own_topic` / `test_a_pick_that_asks_to_skip_the_check_is_still_checked` | `tests/test_pick.py:555` | 2026-10-05 |
+| `tests/test_without_dtdd.py::test_stored_topics_stay_in_the_store_and_change_no_walk_or_pick` | `tests/test_without_dtdd.py:59` | 2026-10-05 |
+
+### Settings, the setup note and the logs
+
+| Handle | Where | Verified |
+|---|---|---|
+| `src/matinee/web/config.py::from_env` (refuses only `DATA_DIR` and a wrong lock; everything else a fault) | `src/matinee/web/config.py:120` | 2026-10-05 |
+| `src/matinee/web/config.py::Config` / `faults` / `server_unusable` / `server` | `src/matinee/web/config.py:40` | 2026-10-05 |
+| `src/matinee/web/config.py::_server` / `_seerr` / `_images` | `src/matinee/web/config.py:103` | 2026-10-05 |
+| `src/matinee/web/config.py::ImageSource` (`POSTERS_FROM`: `server` or `tmdb`) | `src/matinee/web/config.py:29` | 2026-10-05 |
+| `src/matinee/web/setup.py::SetupNote` (`warning` while the data is stale) | `src/matinee/web/setup.py:49` | 2026-10-05 |
+| `src/matinee/web/setup.py::note` / `unreachable` / `rebuild_lines` / `stalled` | `src/matinee/web/setup.py:89` | 2026-10-05 |
+| `src/matinee/web/setup.py::HEADING` / `MEANWHILE` / `STOPPED` / `STALE` / `STALLED_AFTER` (every line's words) | `src/matinee/web/setup.py:20` | 2026-10-05 |
+| `src/matinee/web/app.py::setup_faults` (the configured, start-up and run-time faults) | `src/matinee/web/app.py:452` | 2026-10-05 |
+| `src/matinee/web/app.py::add_setup_route` (`GET /api/setup`) | `src/matinee/web/app.py:466` | 2026-10-05 |
+| `src/matinee/web/theatre.py::NothingToShow` (shipped data that cannot make a catalog) | `src/matinee/web/theatre.py:47` | 2026-10-05 |
+| `src/matinee/web/theatre.py::Theatre._catalog` | `src/matinee/web/theatre.py:140` | 2026-10-05 |
+| `src/matinee/web/theatre.py::Showing.library` (`none`, `usable`, `unreachable`) | `src/matinee/web/theatre.py:56` | 2026-10-05 |
+| `src/matinee/web/theatre.py::Theatre.table_films` / `stale` / `oldest_tmdb` | `src/matinee/web/theatre.py:191` | 2026-10-05 |
+| `src/matinee/web/seerr.py::SeerrCheck` (`CHECK_EVERY`; picks link to TMDB while it does not answer) | `src/matinee/web/seerr.py:25` | 2026-10-05 |
+| `src/matinee/web/logbook.py::describe` / `StateLog` / `state_log` / `CHECK_EVERY` (the state line) | `src/matinee/web/logbook.py:62` | 2026-10-05 |
+| `src/matinee/web/logbook.py::Quiet` / `QUIET_FOR` / `SERVER_NAMES` (a repeating warning once a minute, with a count) | `src/matinee/web/logbook.py:106` | 2026-10-05 |
+| `src/matinee/web/app.py::add_state_log` / `QUIET` | `src/matinee/web/app.py:474` | 2026-10-05 |
+| `tests/test_setup.py::test_only_a_wrong_lock_and_a_missing_data_directory_refuse_to_start` | `tests/test_setup.py:107` | 2026-10-05 |
+| `tests/test_logbook.py::test_the_state_line_names_every_part_and_no_secret` | `tests/test_logbook.py:30` | 2026-10-05 |
 
 ### Web surface
 
 | Handle | Where | Verified |
 |---|---|---|
-| `src/matinee/web/main.py::build` (reads the quips) | `src/matinee/web/main.py:27` | 2026-09-28 |
-| `src/matinee/web/config.py::from_env` | `src/matinee/web/config.py:76` | 2026-10-02 |
-| `src/matinee/web/app.py::create_app` (docs disabled) | `src/matinee/web/app.py:334` | 2026-10-02 |
-| `src/matinee/web/app.py::security_headers` / `CONTENT_SECURITY_POLICY` | `src/matinee/web/app.py:335` | 2026-10-03 |
-| `src/matinee/web/app.py::add_page` | `src/matinee/web/app.py:341` | 2026-10-03 |
-| `src/matinee/web/config.py::_images` (`POSTERS_FROM`) | `src/matinee/web/config.py:82` | 2026-10-03 |
-| `src/matinee/web/app.py::add_quip_routes` (`GET /api/quips`) | `src/matinee/web/app.py:327` | 2026-10-02 |
-| `src/matinee/web/app.py::add_film_routes` / `IMAGE_WIDTHS` / `IMAGE_CACHE` (`GET /api/pictures`) | `src/matinee/web/app.py:155` | 2026-10-03 |
-| `src/matinee/web/app.py::held` / `stored_path` | `src/matinee/web/app.py:103` | 2026-10-03 |
-| `src/matinee/web/app.py::add_door_routes` | `src/matinee/web/app.py:164` | 2026-10-02 |
-| `src/matinee/web/app.py::add_error_handlers` | `src/matinee/web/app.py:99` | 2026-10-02 |
-| `src/matinee/web/common.py::Problem` | `src/matinee/web/common.py:127` | 2026-10-02 |
-| `src/matinee/web/viewing.py::add_viewing_routes` | `src/matinee/web/viewing.py:288` | 2026-10-03 |
-| `src/matinee/web/viewing.py::WalkIn` / `PickIn` (request caps; no field skips the check) | `src/matinee/web/viewing.py:46` | 2026-10-03 |
+| `src/matinee/web/main.py::build` (reads the labels and the household file; faults go on the note) | `src/matinee/web/main.py:82` | 2026-10-05 |
+| `src/matinee/web/app.py::create_app` (docs disabled) | `src/matinee/web/app.py:485` | 2026-10-05 |
+| `src/matinee/web/app.py::security_headers` / `CONTENT_SECURITY_POLICY` | `src/matinee/web/app.py:408` | 2026-10-05 |
+| `src/matinee/web/app.py::add_page` | `src/matinee/web/app.py:414` | 2026-10-05 |
+| `src/matinee/web/app.py::add_quip_routes` (`GET /api/quips`; 503 when the lines cannot be read) | `src/matinee/web/app.py:440` | 2026-10-05 |
+| `src/matinee/web/app.py::add_film_routes` / `IMAGE_WIDTHS` / `IMAGE_CACHE` (`GET /api/pictures`) | `src/matinee/web/app.py:235` | 2026-10-05 |
+| `src/matinee/web/app.py::film_link` / `FilmCard` (Seerr, else TMDB) | `src/matinee/web/app.py:178` | 2026-10-05 |
+| `src/matinee/web/app.py::Held` / `held` / `stored_path` | `src/matinee/web/app.py:102` | 2026-10-05 |
+| `src/matinee/web/app.py::film_image` / `tmdb_image` / `TMDB_IMAGE_CACHE` (the media server's, else TMDB's) | `src/matinee/web/app.py:185` | 2026-10-05 |
+| `src/matinee/web/app.py::film_synopsis` (the media server's, else TMDB's) | `src/matinee/web/app.py:224` | 2026-10-05 |
+| `src/matinee/tmdb.py::fetch_picture` / `IMAGES` / `IMAGE_SIZES` / `TmdbImageError` | `src/matinee/tmdb.py:286` | 2026-10-05 |
+| `src/matinee/tmdb.py::ImageGate` / `IMAGE_GATE` / `IMAGE_RATE` (50 a second, 20,000 an hour, a hold after a 429 or 503) | `src/matinee/tmdb.py:240` | 2026-10-05 |
+| `src/matinee/web/app.py::add_error_handlers` | `src/matinee/web/app.py:137` | 2026-10-05 |
+| `src/matinee/web/common.py::Problem` | `src/matinee/web/common.py:124` | 2026-10-05 |
+| `src/matinee/web/viewing.py::add_viewing_routes` (`POST /api/first` with the source question, `POST /api/walk`) | `src/matinee/web/viewing.py:339` | 2026-10-05 |
+| `src/matinee/web/viewing.py::WalkIn` / `PickIn` / `FirstIn` (request caps; no field skips the check) | `src/matinee/web/viewing.py:44` | 2026-10-05 |
+| `tests/test_user_agent.py::test_every_outbound_request_names_matinee` | `tests/test_user_agent.py:35` | 2026-10-05 |
 
 ### The page
 
 | Handle | Where | Verified |
 |---|---|---|
-| `src/matinee/web/static/js/door.js::Door` | `src/matinee/web/static/js/door.js:140` | 2026-10-03 |
-| `src/matinee/web/static/js/door.js::Door.open` (the tiles, a viewer's list, or a new profile) | `src/matinee/web/static/js/door.js:154` | 2026-10-03 |
-| `src/matinee/web/static/js/door.js::Door.talk` (a question typed onto the wall; `detail`, a body-type line beneath) | `src/matinee/web/static/js/door.js:222` | 2026-10-03 |
-| `src/matinee/web/static/js/door.js::Door.enter` (entered once) | `src/matinee/web/static/js/door.js:386` | 2026-10-03 |
-| `src/matinee/web/static/js/door.js::Door.leave` / `settle` / `bringBack` (the marquee leaves and returns) | `src/matinee/web/static/js/door.js:397` | 2026-10-03 |
-| `src/matinee/web/static/js/door.js::Door.picker` (sets the phone's lit strip) | `src/matinee/web/static/js/door.js:441` | 2026-10-03 |
-| `src/matinee/web/static/js/door.js::Door.fillTopics` / `topicsTrouble` (the topics, their count, "Read about these on DoesTheDogDie ↗") | `src/matinee/web/static/js/door.js:495` | 2026-10-03 |
-| `src/matinee/web/static/js/door.js::Door.topic` (a letterbox that toggles, with a check mark) | `src/matinee/web/static/js/door.js:544` | 2026-10-03 |
-| `src/matinee/web/static/js/door.js::Door.dtddCredit` (shown on the picker, hidden on every other door screen) | `src/matinee/web/static/js/door.js:171` | 2026-10-03 |
-| `src/matinee/web/static/js/door.js::sign` (frame, rules, name, live count) | `src/matinee/web/static/js/door.js:81` | 2026-10-03 |
-| `src/matinee/web/static/js/door.js::bulbs` / `ringAt` | `src/matinee/web/static/js/door.js:47` | 2026-10-03 |
-| `src/matinee/web/static/js/door.js::time` (the two-bulb chase's start) | `src/matinee/web/static/js/door.js:35` | 2026-10-03 |
-| `src/matinee/web/static/js/door.js::BULBS` / `CHASE_S` | `src/matinee/web/static/js/door.js:16` | 2026-10-03 |
-| `src/matinee/web/static/js/door.js::buildMarquee` / `showCount` ("Private screening" until admitted) | `src/matinee/web/static/js/door.js:129` | 2026-10-03 |
-| `src/matinee/web/static/js/door.js::Door.build` (a standing marquee adopted, never rebuilt) | `src/matinee/web/static/js/door.js:168` | 2026-10-03 |
-| `src/matinee/web/static/js/door.js::tile` / `newTile` (`.seat-label` carries the name's scrim) | `src/matinee/web/static/js/door.js:106` | 2026-10-03 |
-| `src/matinee/web/static/js/door.js::Door.greet` / `choose` | `src/matinee/web/static/js/door.js:184` | 2026-10-03 |
-| `src/matinee/web/static/js/door.js::Door.lock` / `refresh` / `refused` | `src/matinee/web/static/js/door.js:202` | 2026-10-03 |
-| `src/matinee/web/static/js/door.js::Door.first` / `askName` / `taken` / `askAvatar` / `askPin` / `create` / `askList` / `done` (making a profile) | `src/matinee/web/static/js/door.js:238` | 2026-10-03 |
-| `src/matinee/web/static/js/door.js::Door.pin` (a PIN asked at a tile) | `src/matinee/web/static/js/door.js:340` | 2026-10-03 |
-| `src/matinee/web/static/js/door.js::Door.seatOf` / `enterAs` | `src/matinee/web/static/js/door.js:371` | 2026-10-03 |
-| `src/matinee/web/static/js/door.js::Door.neverMind` (the picker's way out) | `src/matinee/web/static/js/door.js:468` | 2026-10-03 |
-| `src/matinee/web/static/js/door-rules.js::doorLines` / `opensAtOnce` / `nameKey` / `findTaken` / `twoParts` | `src/matinee/web/static/js/door-rules.js:5` | 2026-10-02 |
-| `src/matinee/web/static/js/mark.js::initials` / `avatarSrc` / `mark` | `src/matinee/web/static/js/mark.js:10` | 2026-10-02 |
-| `src/matinee/web/static/js/mark.js::AVATAR_NAMES` / `avatarChoices` | `src/matinee/web/static/js/mark.js:32` | 2026-10-02 |
-| `src/matinee/web/static/js/viewer.js::SHORT_NAME` | `src/matinee/web/static/js/viewer.js:12` | 2026-10-03 |
-| `src/matinee/web/static/js/viewer.js::viewerTag` (the profile menu; its Change avatar and Delete profile panels) | `src/matinee/web/static/js/viewer.js:26` | 2026-10-03 |
-| `src/matinee/web/static/js/locked.js::WALL_FADE_MS` / `bandsAt` / `WIPE_MS` (the band wipe) | `src/matinee/web/static/js/locked.js:25` | 2026-10-02 |
-| `src/matinee/web/static/js/locked.js::LockedDoor` (`show`, `place`, `measure`, `greet`, `slide`, `shut`) | `src/matinee/web/static/js/locked.js:52` | 2026-10-02 |
-| `src/matinee/web/static/js/locked.js::LockedDoor.open` / `wipe` (the opening) | `src/matinee/web/static/js/locked.js:160` | 2026-10-02 |
-| `src/matinee/web/static/js/locked.js::LockedDoor.toggle` / `give` (the eye; a word given) | `src/matinee/web/static/js/locked.js:194` | 2026-10-02 |
-| `src/matinee/web/static/door/door.webp`, `subway-tile.svg`, `eye.svg` (the locked door's art) | `src/matinee/web/static/door/` | 2026-10-02 |
-| `tests/js/door-rules.test.mjs`, `tests/js/locked.test.mjs`, `tests/js/mark.test.mjs` | `tests/js/door-rules.test.mjs:6` | 2026-10-02 |
-| `src/matinee/web/static/js/flight.js::fly` (`FLIGHT_MS`, the fail-open) | `src/matinee/web/static/js/flight.js:63` | 2026-09-30 |
-| `src/matinee/web/static/js/flight.js::nameAt` / `wordmarkAt` / `riseOf` / `copyAt` | `src/matinee/web/static/js/flight.js:14` | 2026-09-30 |
-| `src/matinee/web/static/js/about.js::openAbout` | `src/matinee/web/static/js/about.js:111` | 2026-10-03 |
-| `src/matinee/web/static/js/about.js::close` (popstate; Escape steps back) | `src/matinee/web/static/js/about.js:94` | 2026-10-03 |
-| `src/matinee/web/static/js/about.js::copy` (the About page's words and links) | `src/matinee/web/static/js/about.js:21` | 2026-10-03 |
-| `src/matinee/web/static/js/wall-grid.js::posterAcross` / `ACROSS` / `GAP` | `src/matinee/web/static/js/wall-grid.js:27` | 2026-09-28 |
-| `src/matinee/web/static/js/wall-grid.js::wallLayout` | `src/matinee/web/static/js/wall-grid.js:37` | 2026-09-28 |
-| `src/matinee/web/static/js/wall-grid.js::bestStride` / `repeatDistance` | `src/matinee/web/static/js/wall-grid.js:61` | 2026-09-28 |
-| `src/matinee/web/static/js/wall-grid.js::filmIndex` / `nearestCell` / `filmAt` | `src/matinee/web/static/js/wall-grid.js:71` | 2026-09-28 |
-| `src/matinee/web/static/js/wall-grid.js::pictureSize` | `src/matinee/web/static/js/wall-grid.js:89` | 2026-10-01 |
-| `src/matinee/web/static/js/wall-grid.js::rankPool` (the page's order) | `src/matinee/web/static/js/wall-grid.js:98` | 2026-09-28 |
-| `src/matinee/web/static/js/wall-grid.js::resortAnchor` | `src/matinee/web/static/js/wall-grid.js:141` | 2026-09-28 |
-| `src/matinee/web/static/js/wall-grid.js::resortPlan` | `src/matinee/web/static/js/wall-grid.js:168` | 2026-09-28 |
-| `src/matinee/web/static/js/hunt-plan.js::HOP_TABLE` / `hopCount` | `src/matinee/web/static/js/hunt-plan.js:7` | 2026-09-28 |
-| `src/matinee/web/static/js/hunt-plan.js::hopOffset` (the tick) / `TICK_PX` | `src/matinee/web/static/js/hunt-plan.js:58` | 2026-09-28 |
-| `src/matinee/web/static/js/hunt-plan.js::peakStep` / `limitedTime` (the speed limit) | `src/matinee/web/static/js/hunt-plan.js:65` | 2026-09-28 |
-| `src/matinee/web/static/js/hunt-plan.js::settledCamera` | `src/matinee/web/static/js/hunt-plan.js:96` | 2026-09-28 |
-| `src/matinee/web/static/js/hunt-plan.js::planHunt` (first hop, no reversal) | `src/matinee/web/static/js/hunt-plan.js:118` | 2026-09-28 |
-| `src/matinee/web/static/js/hunt-plan.js::hopCell` / `placeLanding` | `src/matinee/web/static/js/hunt-plan.js:138` | 2026-09-28 |
-| `src/matinee/web/static/js/glow.js::posterGlow` / `GOLD` | `src/matinee/web/static/js/glow.js:19` | 2026-09-28 |
-| `src/matinee/web/static/js/quips.js::setFor` | `src/matinee/web/static/js/quips.js:9` | 2026-09-30 |
-| `src/matinee/web/static/js/quips.js::Deck` | `src/matinee/web/static/js/quips.js:19` | 2026-09-30 |
-| `src/matinee/web/static/js/quips.js::dealPair` / `dealBeneath` | `src/matinee/web/static/js/quips.js:51` | 2026-09-30 |
-| `src/matinee/web/static/js/wall.js::Wall` | `src/matinee/web/static/js/wall.js:84` | 2026-09-28 |
-| `src/matinee/web/static/js/wall.js::Wall.show` / `fadeIn` / `clear` / `whenStill` | `src/matinee/web/static/js/wall.js:127` | 2026-10-01 |
-| `src/matinee/web/static/js/wall.js::Wall.endPick` | `src/matinee/web/static/js/wall.js:181` | 2026-09-28 |
-| `src/matinee/web/static/js/wall.js::Wall.hunt` / `jump` / `readyToHunt` / `settle` / `hop` | `src/matinee/web/static/js/wall.js:227` | 2026-10-01 |
-| `src/matinee/web/static/js/wall.js::Wall.stepBack` / `grownScale` | `src/matinee/web/static/js/wall.js:326` | 2026-09-28 |
-| `src/matinee/web/static/js/wall.js::Wall.useSharp` (the front element) | `src/matinee/web/static/js/wall.js:351` | 2026-09-28 |
-| `src/matinee/web/static/js/wall.js::Wall.bringForward` | `src/matinee/web/static/js/wall.js:370` | 2026-09-28 |
-| `src/matinee/web/static/js/wall.js::Wall.dress` / `glowShadow` / `glowAt` | `src/matinee/web/static/js/wall.js:392` | 2026-09-29 |
-| `src/matinee/web/static/js/wall.js::glowOf` | `src/matinee/web/static/js/wall.js:56` | 2026-10-03 |
-| `src/matinee/web/static/js/wall.js::Wall.usePictures` / `posterUrl` / `fromTmdb` | `src/matinee/web/static/js/wall.js:127` | 2026-10-03 |
-| `src/matinee/web/static/js/pictures.js::posterUrl` / `backdropUrl` / `posterPaths` / `corsImage` (`TMDB_WIDTHS`) | `src/matinee/web/static/js/pictures.js:1` | 2026-10-03 |
-| `src/matinee/web/static/js/main.js::askPictures` (once per visit) | `src/matinee/web/static/js/main.js:220` | 2026-10-03 |
-| `src/matinee/web/static/js/pick.js::fetchFilm` (the backdrop waits for the card under `tmdb`) / `picture` (`PICTURE_WAIT_MS`) | `src/matinee/web/static/js/pick.js:301` | 2026-10-03 |
-| `src/matinee/web/static/js/wall.js::Wall.putBack` / `returnPoster` / `liftDim` / `settleBack` | `src/matinee/web/static/js/wall.js:439` | 2026-09-28 |
-| `src/matinee/web/static/js/wall.js::Wall.relayout` / `makeTiles` | `src/matinee/web/static/js/wall.js:539` | 2026-09-28 |
-| `src/matinee/web/static/js/wall.js::Wall.prepare` (the re-sort's wait) | `src/matinee/web/static/js/wall.js:572` | 2026-10-01 |
-| `src/matinee/web/static/js/wall.js::Wall.frame` (the drift, `DRIFT_PX_S`) | `src/matinee/web/static/js/wall.js:592` | 2026-09-28 |
-| `src/matinee/web/static/js/wall.js::Wall.place` / `lay` / `picture` / `request` (`BLANK`) | `src/matinee/web/static/js/wall.js:603` | 2026-09-28 |
-| `src/matinee/web/static/js/wall.js::Wall.resort` / `slide` / `depart` | `src/matinee/web/static/js/wall.js:683` | 2026-09-28 |
-| `src/matinee/web/static/js/main.js::lockStage` / `leaveTo` | `src/matinee/web/static/js/main.js:68` | 2026-10-03 |
-| `src/matinee/web/static/js/main.js::trail` / `lastCrumb` | `src/matinee/web/static/js/main.js:123` | 2026-10-03 |
-| `src/matinee/web/static/js/main.js::frame` / `ask` (the footnote) | `src/matinee/web/static/js/main.js:144` | 2026-10-03 |
-| `src/matinee/web/static/js/main.js::start` | `src/matinee/web/static/js/main.js:274` | 2026-10-03 |
-| `src/matinee/web/static/js/main.js::goTo` / `step` | `src/matinee/web/static/js/main.js:303` | 2026-10-03 |
-| `src/matinee/web/static/js/main.js::checking` / `fadeTalk` (`READ_MS`) | `src/matinee/web/static/js/main.js:354` | 2026-10-03 |
-| `src/matinee/web/static/js/main.js::pickLines` | `src/matinee/web/static/js/main.js:385` | 2026-10-03 |
-| `src/matinee/web/static/js/main.js::clearForPick` / `requestPick` / `openPick` | `src/matinee/web/static/js/main.js:400` | 2026-10-03 |
-| `src/matinee/web/static/js/main.js::pickNow` | `src/matinee/web/static/js/main.js:444` | 2026-10-03 |
-| `src/matinee/web/static/js/main.js::pickActions` (`notThatOne`, `rollAgain`, `showPicked`) | `src/matinee/web/static/js/main.js:472` | 2026-10-03 |
-| `src/matinee/web/static/js/main.js::showPicked` ("Just show me what you picked", from the reply held) | `src/matinee/web/static/js/main.js:496` | 2026-10-03 |
-| `src/matinee/web/static/js/main.js::enter` (the start asked at the tap, the question after the landing) | `src/matinee/web/static/js/main.js:264` | 2026-10-03 |
-| `src/matinee/web/static/js/main.js::topbar` (settles a landed name) | `src/matinee/web/static/js/main.js:92` | 2026-10-03 |
-| `src/matinee/web/static/js/main.js::problem` (`keep`: the failed start's posters) | `src/matinee/web/static/js/main.js:199` | 2026-10-03 |
-| `src/matinee/web/static/js/main.js::countText` (the films left, beside "Just pick one!") | `src/matinee/web/static/js/main.js:38` | 2026-10-03 |
-| `src/matinee/web/static/js/main.js::loadQuips` (asked once admitted) | `src/matinee/web/static/js/main.js:47` | 2026-10-03 |
-| `src/matinee/web/static/js/main.js::wordmark` (a link doing `Start over`) | `src/matinee/web/static/js/main.js:82` | 2026-10-03 |
-| `src/matinee/web/static/js/main.js::nameTag` (the viewer and its menu's actions) | `src/matinee/web/static/js/main.js:101` | 2026-10-03 |
-| `src/matinee/web/static/js/main.js::boot` / `frontDoor` / `lockedDoor` (`GET /api/admission` first) | `src/matinee/web/static/js/main.js:218` | 2026-10-03 |
-| `src/matinee/web/static/js/api.js::del` | `src/matinee/web/static/js/api.js:27` | 2026-10-02 |
-| `src/matinee/web/static/js/pick.js::showPick` / `huntLift` | `src/matinee/web/static/js/pick.js:255` | 2026-10-03 |
-| `src/matinee/web/static/js/pick.js::goldLine` | `src/matinee/web/static/js/pick.js:196` | 2026-10-03 |
-| `src/matinee/web/static/js/pick.js::bringOut` | `src/matinee/web/static/js/pick.js:233` | 2026-10-03 |
-| `src/matinee/web/static/js/pick.js::toRest` (`BEAT_MS`, `STILL_HOLD_MS`) | `src/matinee/web/static/js/pick.js:278` | 2026-10-03 |
-| `src/matinee/web/static/js/pick.js::fetchFilm` / `picture` | `src/matinee/web/static/js/pick.js:291` | 2026-10-03 |
-| `src/matinee/web/static/js/pick.js::restingPoster` | `src/matinee/web/static/js/pick.js:179` | 2026-10-03 |
-| `src/matinee/web/static/js/pick.js::rest` | `src/matinee/web/static/js/pick.js:156` | 2026-10-03 |
-| `src/matinee/web/static/js/pick.js::settle` / `fit` | `src/matinee/web/static/js/pick.js:44` | 2026-10-03 |
-| `src/matinee/web/static/js/fuse.js::lightFuse` / `fuseTimeline` | `src/matinee/web/static/js/fuse.js:37` | 2026-09-30 |
-| `src/matinee/trees.py::_self_destruct` / `_one_self_destruct` | `src/matinee/trees.py:178` | 2026-09-30 |
-| `src/matinee/web/static/js/pick.js::feature` | `src/matinee/web/static/js/pick.js:67` | 2026-10-03 |
-| `src/matinee/web/static/js/pick.js::choices` | `src/matinee/web/static/js/pick.js:143` | 2026-10-03 |
-| `src/matinee/web/static/js/pick.js::showNoFilm` | `src/matinee/web/static/js/pick.js:118` | 2026-10-03 |
-| `src/matinee/web/static/js/pick.js::firstPickReveal` | `src/matinee/web/static/js/pick.js:93` | 2026-10-03 |
-| `src/matinee/web/static/js/pick.js::showCredit` (DoesTheDogDie's credit in the foot band before its line types) | `src/matinee/web/static/js/pick.js:87` | 2026-10-03 |
-| `src/matinee/web/static/js/pick.js::lookUp` ("Look it up on DoesTheDogDie ↗") | `src/matinee/web/static/js/pick.js:80` | 2026-10-03 |
-| `src/matinee/web/static/js/note.js::noteLink` | `src/matinee/web/static/js/note.js:61` | 2026-10-03 |
-| `src/matinee/web/static/js/credits.js::credits` (`dtdd`: room for DoesTheDogDie's credit) | `src/matinee/web/static/js/credits.js:34` | 2026-10-03 |
-| `src/matinee/web/static/js/credits.js::dtddCredit` (built hidden) | `src/matinee/web/static/js/credits.js:25` | 2026-10-03 |
-| `src/matinee/web/static/js/credits.js::aboutLink` | `src/matinee/web/static/js/credits.js:18` | 2026-10-03 |
-| `src/matinee/web/static/js/dom.js::h` (text nodes only) | `src/matinee/web/static/js/dom.js:12` | 2026-09-26 |
-| `src/matinee/web/static/js/type.js::typeLine` (`shown`: a gold line kept while the rest types beneath) | `src/matinee/web/static/js/type.js:11` | 2026-10-02 |
-| `src/matinee/web/static/manifest.webmanifest` | `src/matinee/web/static/manifest.webmanifest:1` | 2026-09-26 |
-| `src/matinee/web/static/css/matinee.css` `:root` (the standard's colour tokens, `--shade`, `--band-fade`) | `src/matinee/web/static/css/matinee.css:17` | 2026-10-03 |
-| `src/matinee/web/static/css/matinee.css` `.action`, `.action.rose`, `.action.petrol`, `.action.cream` (gold is the base rule) | `src/matinee/web/static/css/matinee.css:1067` | 2026-10-03 |
-| `src/matinee/web/static/css/matinee.css` `.letterbox` (one size) | `src/matinee/web/static/css/matinee.css:387` | 2026-10-03 |
-| `src/matinee/web/static/css/matinee.css` the scrims: `.line > .ack`/`.ask`, `.countdown`, `.note`, `.footnote`, `.count`, `.seat-label`, `.feature-text`, `.correct-panel` | `src/matinee/web/static/css/matinee.css:347` | 2026-10-03 |
-| `src/matinee/web/static/css/matinee.css` the bands: `.topbar::before`, `.bottombar::before`, `.door-foot::before`, `.stage.at-door.behind-about::before` | `src/matinee/web/static/css/matinee.css:169` | 2026-10-03 |
-| `src/matinee/web/static/css/matinee.css` `.showing` (the pick's left column) | `src/matinee/web/static/css/matinee.css:553` | 2026-10-03 |
-| `src/matinee/web/static/css/matinee.css` `.topic-list`, `.topic`, `.topic-foot` (the picker's topics) | `src/matinee/web/static/css/matinee.css:2116` | 2026-10-03 |
-| `tests/test_design_standards.py` (the standard's mechanical rules; `declarations`, `built`, `enclosing`, `PERMITTED`, `ARTWORK`) | `tests/test_design_standards.py:21` | 2026-10-03 |
-| `src/matinee/web/static/css/matinee.css` reduced-motion rules (the marquee and the door's words change at once) | `src/matinee/web/static/css/matinee.css:1137` | 2026-10-03 |
-| `src/matinee/web/static/css/matinee.css` `.wall`, `.wall-tiles`, `.tile` (`--tile`, the one strength; the dark cell) | `src/matinee/web/static/css/matinee.css:101` | 2026-10-03 |
-| `src/matinee/web/static/css/matinee.css` `.marquee` (its measures as properties, the top fade, the short windows' scaling) | `src/matinee/web/static/css/matinee.css:1168` | 2026-10-03 |
-| `src/matinee/web/static/css/matinee.css` `.marquee.lifted`, `.stage.leaving`, `.flying-name` (going in) | `src/matinee/web/static/css/matinee.css:1198` | 2026-10-03 |
-| `src/matinee/web/static/css/matinee.css` `.sign`, `.bulb`, `@keyframes chase` | `src/matinee/web/static/css/matinee.css:1383` | 2026-10-03 |
-| `src/matinee/web/static/css/matinee.css` `.door-wall`, `.door-talk`, `.door-foot` | `src/matinee/web/static/css/matinee.css:1738` | 2026-10-03 |
-| `src/matinee/web/static/css/matinee.css` `.picker` | `src/matinee/web/static/css/matinee.css:2064` | 2026-10-03 |
-| `src/matinee/web/static/css/matinee.css` phone door: `.marquee` sizes, `.marquee.compact` (the lit strip) | `src/matinee/web/static/css/matinee.css:2186` | 2026-10-03 |
-| `src/matinee/web/static/css/matinee.css` `.credits`, `.dtdd-credit`, `.tmdb-logo`, `.bottombar .credits`, `.inline-link` | `src/matinee/web/static/css/matinee.css:1529` | 2026-10-03 |
-| `src/matinee/web/static/css/matinee.css` `.stage.behind-about`, `.about`, `.about-wordmark`, `.about-panel` | `src/matinee/web/static/css/matinee.css:1575` | 2026-10-03 |
-| `src/matinee/web/static/css/matinee.css` `.pick-line` (size, four lines reserved), `.hushed` | `src/matinee/web/static/css/matinee.css:606` | 2026-10-03 |
-| `src/matinee/web/static/css/matinee.css` `.talk > .footnote` | `src/matinee/web/static/css/matinee.css:445` | 2026-10-03 |
-| `src/matinee/web/static/css/matinee.css` `a.wordmark` | `src/matinee/web/static/css/matinee.css:187` | 2026-10-03 |
-| `src/matinee/web/static/css/matinee.css` `.just-pick-row` (the count beside the button) | `src/matinee/web/static/css/matinee.css:457` | 2026-10-03 |
-| `src/matinee/web/static/css/matinee.css` `.mark`, `.seats`, `.seat` (the tiles; the short window's sizes) | `src/matinee/web/static/css/matinee.css:1830` | 2026-10-03 |
-| `src/matinee/web/static/css/matinee.css` `.avatar-choices` | `src/matinee/web/static/css/matinee.css:1973` | 2026-10-03 |
-| `src/matinee/web/static/css/matinee.css` `.viewer`, `.viewer-menu`, `.viewer-panel` (the phone's initials) | `src/matinee/web/static/css/matinee.css:2352` | 2026-10-03 |
-| `src/matinee/web/static/css/matinee.css` the locked door: `.locked`, `.subway`, `.door-frame`, `.locked-door`, `.slot`, `.peek`, `.line.locked-line` | `src/matinee/web/static/css/matinee.css:2608` | 2026-10-03 |
-| `src/matinee/web/static/blank.svg` (a tile with no picture) | `src/matinee/web/static/blank.svg:1` | 2026-09-28 |
+| `src/matinee/web/static/js/main.js::boot` / `frontDoor` / `lockedDoor` (`GET /api/admission` first, then the setup note) | `src/matinee/web/static/js/main.js:301` | 2026-10-05 |
+| `src/matinee/web/static/js/main.js::saidSetup` / `setupNote` (once per page load with a way in; every time without) | `src/matinee/web/static/js/main.js:271` | 2026-10-05 |
+| `src/matinee/web/static/js/main.js::showWarning` (the stale-data strip; the stage starts beneath it) | `src/matinee/web/static/js/main.js:254` | 2026-10-05 |
+| `src/matinee/web/static/js/main.js::start` (the source question, or the doors; nothing carried from the last walk) | `src/matinee/web/static/js/main.js:361` | 2026-10-05 |
+| `src/matinee/web/static/js/main.js::chooseSource` / `doors` / `showFirst` | `src/matinee/web/static/js/main.js:392` | 2026-10-05 |
+| `src/matinee/web/static/js/main.js::crumbs` / `trail` / `lastCrumb` | `src/matinee/web/static/js/main.js:127` | 2026-10-05 |
+| `src/matinee/web/static/js/main.js::goTo` / `step` (`Start` asks again; the source answer shows the doors) | `src/matinee/web/static/js/main.js:415` | 2026-10-05 |
+| `src/matinee/web/static/js/main.js::lockStage` / `leaveTo` | `src/matinee/web/static/js/main.js:73` | 2026-10-05 |
+| `src/matinee/web/static/js/main.js::frame` / `ask` (the footnote) | `src/matinee/web/static/js/main.js:156` | 2026-10-05 |
+| `src/matinee/web/static/js/main.js::checking` / `fadeTalk` (`READ_MS`) | `src/matinee/web/static/js/main.js:469` | 2026-10-05 |
+| `src/matinee/web/static/js/main.js::pickLines` | `src/matinee/web/static/js/main.js:500` | 2026-10-05 |
+| `src/matinee/web/static/js/main.js::clearForPick` / `requestPick` / `openPick` | `src/matinee/web/static/js/main.js:521` | 2026-10-05 |
+| `src/matinee/web/static/js/main.js::pickNow` | `src/matinee/web/static/js/main.js:566` | 2026-10-05 |
+| `src/matinee/web/static/js/main.js::pickActions` (`notThatOne`, `rollAgain`, `showPicked`) | `src/matinee/web/static/js/main.js:594` | 2026-10-05 |
+| `src/matinee/web/static/js/main.js::showPicked` ("Just show me what you picked", from the reply held) | `src/matinee/web/static/js/main.js:618` | 2026-10-05 |
+| `src/matinee/web/static/js/main.js::enter` (the start asked at the tap, the first screen after the landing) | `src/matinee/web/static/js/main.js:350` | 2026-10-05 |
+| `src/matinee/web/static/js/main.js::topbar` (settles a landed name) | `src/matinee/web/static/js/main.js:97` | 2026-10-05 |
+| `src/matinee/web/static/js/main.js::problem` (`keep`: the failed start's posters; "About Matinee" at the foot) | `src/matinee/web/static/js/main.js:211` | 2026-10-05 |
+| `src/matinee/web/static/js/main.js::countText` (the films left, beside "Just pick one!") | `src/matinee/web/static/js/main.js:43` | 2026-10-05 |
+| `src/matinee/web/static/js/main.js::loadQuips` (asked once admitted) | `src/matinee/web/static/js/main.js:52` | 2026-10-05 |
+| `src/matinee/web/static/js/main.js::wordmark` (a link doing `Start over`) | `src/matinee/web/static/js/main.js:87` | 2026-10-05 |
+| `src/matinee/web/static/js/main.js::nameTag` (the viewer and its menu's actions; no "Edit my list" without a key) | `src/matinee/web/static/js/main.js:106` | 2026-10-05 |
+| `src/matinee/web/static/js/main.js::askPictures` (once per visit) | `src/matinee/web/static/js/main.js:287` | 2026-10-05 |
+| `src/matinee/web/static/js/offers.js::offers` / `learnOffers` (whether a DoesTheDogDie key is set, from `/api/door`) | `src/matinee/web/static/js/offers.js:4` | 2026-10-05 |
+| `src/matinee/web/static/js/door.js::Door` | `src/matinee/web/static/js/door.js:141` | 2026-10-05 |
+| `src/matinee/web/static/js/door.js::Door.open` (the tiles, a viewer's list, or a new profile) | `src/matinee/web/static/js/door.js:154` | 2026-10-05 |
+| `src/matinee/web/static/js/door.js::Door.build` (a standing marquee adopted, never rebuilt; "About Matinee" in the foot) | `src/matinee/web/static/js/door.js:168` | 2026-10-05 |
+| `src/matinee/web/static/js/door.js::Door.talk` (a question typed onto the wall; `detail`, a body-type line beneath) | `src/matinee/web/static/js/door.js:222` | 2026-10-05 |
+| `src/matinee/web/static/js/door.js::Door.enter` (entered once) | `src/matinee/web/static/js/door.js:388` | 2026-10-05 |
+| `src/matinee/web/static/js/door.js::Door.leave` / `settle` / `bringBack` (the marquee leaves and returns) | `src/matinee/web/static/js/door.js:399` | 2026-10-05 |
+| `src/matinee/web/static/js/door.js::Door.picker` (sets the phone's lit strip) | `src/matinee/web/static/js/door.js:443` | 2026-10-05 |
+| `src/matinee/web/static/js/door.js::Door.fillTopics` / `topicsTrouble` (DoesTheDogDie's topics alone, their count, "Read about these on DoesTheDogDie ↗") | `src/matinee/web/static/js/door.js:495` | 2026-10-05 |
+| `src/matinee/web/static/js/door.js::Door.topic` (a letterbox that toggles, with a check mark) | `src/matinee/web/static/js/door.js:543` | 2026-10-05 |
+| `src/matinee/web/static/js/door.js::Door.dtddCredit` (shown on the picker, hidden on every other door screen) | `src/matinee/web/static/js/door.js:171` | 2026-10-05 |
+| `src/matinee/web/static/js/door.js::sign` (frame, rules, name, live count) | `src/matinee/web/static/js/door.js:82` | 2026-10-05 |
+| `src/matinee/web/static/js/door.js::bulbs` / `ringAt` | `src/matinee/web/static/js/door.js:48` | 2026-10-05 |
+| `src/matinee/web/static/js/door.js::time` (the two-bulb chase's start) | `src/matinee/web/static/js/door.js:36` | 2026-10-05 |
+| `src/matinee/web/static/js/door.js::BULBS` / `CHASE_S` | `src/matinee/web/static/js/door.js:17` | 2026-10-05 |
+| `src/matinee/web/static/js/door.js::buildMarquee` / `showCount` ("Private screening" until admitted) | `src/matinee/web/static/js/door.js:130` | 2026-10-05 |
+| `src/matinee/web/static/js/door.js::tile` / `newTile` (`.seat-label` carries the name's scrim) | `src/matinee/web/static/js/door.js:107` | 2026-10-05 |
+| `src/matinee/web/static/js/door.js::Door.greet` / `choose` | `src/matinee/web/static/js/door.js:184` | 2026-10-05 |
+| `src/matinee/web/static/js/door.js::Door.lock` / `refresh` / `refused` | `src/matinee/web/static/js/door.js:202` | 2026-10-05 |
+| `src/matinee/web/static/js/door.js::Door.first` / `askName` / `taken` / `askAvatar` / `askPin` / `create` / `askList` / `done` (making a profile) | `src/matinee/web/static/js/door.js:238` | 2026-10-05 |
+| `src/matinee/web/static/js/door.js::Door.askList` (skipped without a key) | `src/matinee/web/static/js/door.js:323` | 2026-10-05 |
+| `src/matinee/web/static/js/door.js::Door.pin` (a PIN asked at a tile) | `src/matinee/web/static/js/door.js:342` | 2026-10-05 |
+| `src/matinee/web/static/js/door.js::Door.seatOf` / `enterAs` | `src/matinee/web/static/js/door.js:373` | 2026-10-05 |
+| `src/matinee/web/static/js/door.js::Door.neverMind` (the picker's way out) | `src/matinee/web/static/js/door.js:469` | 2026-10-05 |
+| `src/matinee/web/static/js/door.js::Door.save` (`PUT /api/profiles/{id}/topics`) | `src/matinee/web/static/js/door.js:488` | 2026-10-05 |
+| `src/matinee/web/static/js/door-rules.js::doorLines` / `opensAtOnce` / `nameKey` / `findTaken` / `twoParts` | `src/matinee/web/static/js/door-rules.js:5` | 2026-10-05 |
+| `src/matinee/web/static/js/mark.js::initials` / `avatarSrc` / `mark` | `src/matinee/web/static/js/mark.js:10` | 2026-10-05 |
+| `src/matinee/web/static/js/mark.js::AVATAR_NAMES` / `avatarChoices` | `src/matinee/web/static/js/mark.js:32` | 2026-10-05 |
+| `src/matinee/web/static/js/viewer.js::SHORT_NAME` | `src/matinee/web/static/js/viewer.js:15` | 2026-10-05 |
+| `src/matinee/web/static/js/viewer.js::viewerTag` (the profile menu, ending with "About Matinee"; its Change avatar and Delete profile panels) | `src/matinee/web/static/js/viewer.js:30` | 2026-10-05 |
+| `src/matinee/web/static/js/locked.js::WALL_FADE_MS` / `bandsAt` / `WIPE_MS` (the band wipe) | `src/matinee/web/static/js/locked.js:26` | 2026-10-05 |
+| `src/matinee/web/static/js/locked.js::LockedDoor` (`show`, `place`, `measure`, `greet`, `slide`, `shut`) | `src/matinee/web/static/js/locked.js:53` | 2026-10-05 |
+| `src/matinee/web/static/js/locked.js::LockedDoor.open` / `wipe` (the opening) | `src/matinee/web/static/js/locked.js:162` | 2026-10-05 |
+| `src/matinee/web/static/js/locked.js::LockedDoor.toggle` / `give` (the eye; a word given) | `src/matinee/web/static/js/locked.js:196` | 2026-10-05 |
+| `src/matinee/web/static/door/door.webp`, `subway-tile.svg`, `eye.svg` (the locked door's art) | `src/matinee/web/static/door` | 2026-10-05 |
+| `tests/js/door-rules.test.mjs`, `tests/js/locked.test.mjs`, `tests/js/mark.test.mjs` | `tests/js/door-rules.test.mjs:6` | 2026-10-05 |
+| `src/matinee/web/static/js/flight.js::fly` (`FLIGHT_MS`, the fail-open) | `src/matinee/web/static/js/flight.js:63` | 2026-10-05 |
+| `src/matinee/web/static/js/flight.js::nameAt` / `wordmarkAt` / `riseOf` / `copyAt` | `src/matinee/web/static/js/flight.js:14` | 2026-10-05 |
+| `src/matinee/web/static/js/about.js::openAbout` (the focus returns to what opened it) | `src/matinee/web/static/js/about.js:113` | 2026-10-05 |
+| `src/matinee/web/static/js/about.js::close` (popstate; Escape steps back) | `src/matinee/web/static/js/about.js:96` | 2026-10-05 |
+| `src/matinee/web/static/js/about.js::copy` (the About page's words and links; no steering section without a key) | `src/matinee/web/static/js/about.js:22` | 2026-10-05 |
+| `src/matinee/web/static/js/wall-grid.js::posterAcross` / `ACROSS` / `GAP` | `src/matinee/web/static/js/wall-grid.js:27` | 2026-10-05 |
+| `src/matinee/web/static/js/wall-grid.js::wallLayout` | `src/matinee/web/static/js/wall-grid.js:37` | 2026-10-05 |
+| `src/matinee/web/static/js/wall-grid.js::bestStride` / `repeatDistance` | `src/matinee/web/static/js/wall-grid.js:61` | 2026-10-05 |
+| `src/matinee/web/static/js/wall-grid.js::filmIndex` / `nearestCell` / `filmAt` | `src/matinee/web/static/js/wall-grid.js:71` | 2026-10-05 |
+| `src/matinee/web/static/js/wall-grid.js::pictureSize` | `src/matinee/web/static/js/wall-grid.js:89` | 2026-10-05 |
+| `src/matinee/web/static/js/wall-grid.js::rankPool` (the page's order) | `src/matinee/web/static/js/wall-grid.js:98` | 2026-10-05 |
+| `src/matinee/web/static/js/wall-grid.js::resortAnchor` | `src/matinee/web/static/js/wall-grid.js:141` | 2026-10-05 |
+| `src/matinee/web/static/js/wall-grid.js::resortPlan` | `src/matinee/web/static/js/wall-grid.js:168` | 2026-10-05 |
+| `src/matinee/web/static/js/hunt-plan.js::HOP_TABLE` / `hopCount` | `src/matinee/web/static/js/hunt-plan.js:7` | 2026-10-05 |
+| `src/matinee/web/static/js/hunt-plan.js::hopOffset` / `TICK_PX` (the tick) | `src/matinee/web/static/js/hunt-plan.js:58` | 2026-10-05 |
+| `src/matinee/web/static/js/hunt-plan.js::peakStep` / `limitedTime` (the speed limit) | `src/matinee/web/static/js/hunt-plan.js:65` | 2026-10-05 |
+| `src/matinee/web/static/js/hunt-plan.js::settledCamera` | `src/matinee/web/static/js/hunt-plan.js:96` | 2026-10-05 |
+| `src/matinee/web/static/js/hunt-plan.js::planHunt` (first hop, no reversal) | `src/matinee/web/static/js/hunt-plan.js:118` | 2026-10-05 |
+| `src/matinee/web/static/js/hunt-plan.js::hopCell` / `placeLanding` | `src/matinee/web/static/js/hunt-plan.js:138` | 2026-10-05 |
+| `src/matinee/web/static/js/glow.js::posterGlow` / `GOLD` | `src/matinee/web/static/js/glow.js:19` | 2026-10-05 |
+| `src/matinee/web/static/js/quips.js::setFor` | `src/matinee/web/static/js/quips.js:9` | 2026-10-05 |
+| `src/matinee/web/static/js/quips.js::Deck` | `src/matinee/web/static/js/quips.js:19` | 2026-10-05 |
+| `src/matinee/web/static/js/quips.js::dealPair` / `dealBeneath` | `src/matinee/web/static/js/quips.js:51` | 2026-10-05 |
+| `src/matinee/web/static/js/wall.js::Wall` | `src/matinee/web/static/js/wall.js:85` | 2026-10-05 |
+| `src/matinee/web/static/js/wall.js::Wall.show` / `fadeIn` / `clear` / `whenStill` | `src/matinee/web/static/js/wall.js:142` | 2026-10-05 |
+| `src/matinee/web/static/js/wall.js::Wall.endPick` | `src/matinee/web/static/js/wall.js:196` | 2026-10-05 |
+| `src/matinee/web/static/js/wall.js::Wall.hunt` / `jump` / `readyToHunt` / `settle` / `hop` | `src/matinee/web/static/js/wall.js:242` | 2026-10-05 |
+| `src/matinee/web/static/js/wall.js::Wall.stepBack` / `grownScale` | `src/matinee/web/static/js/wall.js:341` | 2026-10-05 |
+| `src/matinee/web/static/js/wall.js::Wall.useSharp` (the front element) | `src/matinee/web/static/js/wall.js:366` | 2026-10-05 |
+| `src/matinee/web/static/js/wall.js::Wall.bringForward` | `src/matinee/web/static/js/wall.js:385` | 2026-10-05 |
+| `src/matinee/web/static/js/wall.js::Wall.dress` / `glowShadow` / `glowAt` | `src/matinee/web/static/js/wall.js:407` | 2026-10-05 |
+| `src/matinee/web/static/js/wall.js::glowOf` | `src/matinee/web/static/js/wall.js:56` | 2026-10-05 |
+| `src/matinee/web/static/js/wall.js::Wall.usePictures` / `posterUrl` (and the `fromTmdb` flag it sets) | `src/matinee/web/static/js/wall.js:127` | 2026-10-05 |
+| `src/matinee/web/static/js/pictures.js::posterUrl` / `backdropUrl` / `posterPaths` / `corsImage` (`TMDB_WIDTHS`) | `src/matinee/web/static/js/pictures.js:24` | 2026-10-05 |
+| `src/matinee/web/static/js/wall.js::Wall.putBack` / `returnPoster` / `liftDim` / `settleBack` | `src/matinee/web/static/js/wall.js:454` | 2026-10-05 |
+| `src/matinee/web/static/js/wall.js::Wall.relayout` / `makeTiles` | `src/matinee/web/static/js/wall.js:554` | 2026-10-05 |
+| `src/matinee/web/static/js/wall.js::Wall.prepare` (the re-sort's wait) | `src/matinee/web/static/js/wall.js:587` | 2026-10-05 |
+| `src/matinee/web/static/js/wall.js::Wall.frame` (the drift, `DRIFT_PX_S`) | `src/matinee/web/static/js/wall.js:607` | 2026-10-05 |
+| `src/matinee/web/static/js/wall.js::Wall.place` / `lay` / `picture` / `request` (`BLANK`) | `src/matinee/web/static/js/wall.js:618` | 2026-10-05 |
+| `src/matinee/web/static/js/wall.js::Wall.resort` / `slide` / `depart` | `src/matinee/web/static/js/wall.js:702` | 2026-10-05 |
+| `src/matinee/web/static/js/api.js::del` | `src/matinee/web/static/js/api.js:27` | 2026-10-05 |
+| `src/matinee/web/static/js/pick.js::showPick` / `huntLift` | `src/matinee/web/static/js/pick.js:274` | 2026-10-05 |
+| `src/matinee/web/static/js/pick.js::goldLine` | `src/matinee/web/static/js/pick.js:215` | 2026-10-05 |
+| `src/matinee/web/static/js/pick.js::bringOut` | `src/matinee/web/static/js/pick.js:252` | 2026-10-05 |
+| `src/matinee/web/static/js/pick.js::toRest` (`BEAT_MS`, `STILL_HOLD_MS`) | `src/matinee/web/static/js/pick.js:297` | 2026-10-05 |
+| `src/matinee/web/static/js/pick.js::fetchFilm` / `picture` (the backdrop waits for the card under `tmdb`) | `src/matinee/web/static/js/pick.js:311` | 2026-10-05 |
+| `src/matinee/web/static/js/pick.js::restingPoster` | `src/matinee/web/static/js/pick.js:198` | 2026-10-05 |
+| `src/matinee/web/static/js/pick.js::rest` | `src/matinee/web/static/js/pick.js:175` | 2026-10-05 |
+| `src/matinee/web/static/js/pick.js::settle` / `fit` | `src/matinee/web/static/js/pick.js:54` | 2026-10-05 |
+| `src/matinee/web/static/js/pick.js::moreOn` ("More on Seerr ↗" or "More on TMDB ↗", by `link_to`) | `src/matinee/web/static/js/pick.js:151` | 2026-10-05 |
+| `src/matinee/web/static/js/fuse.js::lightFuse` / `fuseTimeline` | `src/matinee/web/static/js/fuse.js:37` | 2026-10-05 |
+| `src/matinee/trees.py::_self_destruct` / `_one_self_destruct` | `src/matinee/trees.py:178` | 2026-10-05 |
+| `src/matinee/web/static/js/pick.js::feature` | `src/matinee/web/static/js/pick.js:77` | 2026-10-05 |
+| `src/matinee/web/static/js/pick.js::choices` | `src/matinee/web/static/js/pick.js:162` | 2026-10-05 |
+| `src/matinee/web/static/js/pick.js::showNoFilm` | `src/matinee/web/static/js/pick.js:129` | 2026-10-05 |
+| `src/matinee/web/static/js/pick.js::firstPickReveal` | `src/matinee/web/static/js/pick.js:104` | 2026-10-05 |
+| `src/matinee/web/static/js/pick.js::showCredit` (DoesTheDogDie's credit before its line types; none without a key) | `src/matinee/web/static/js/pick.js:97` | 2026-10-05 |
+| `src/matinee/web/static/js/pick.js::lookUp` ("Look it up on DoesTheDogDie ↗") | `src/matinee/web/static/js/pick.js:90` | 2026-10-05 |
+| `src/matinee/web/static/js/note.js::noteLink` | `src/matinee/web/static/js/note.js:61` | 2026-10-05 |
+| `src/matinee/web/static/js/credits.js::credits` (`dtdd`: room for DoesTheDogDie's credit) | `src/matinee/web/static/js/credits.js:35` | 2026-10-05 |
+| `src/matinee/web/static/js/credits.js::dtddCredit` (built hidden) | `src/matinee/web/static/js/credits.js:26` | 2026-10-05 |
+| `src/matinee/web/static/js/credits.js::aboutLink` ("About Matinee"; `around`, the door) | `src/matinee/web/static/js/credits.js:19` | 2026-10-05 |
+| `src/matinee/web/static/js/dom.js::h` (text nodes only) | `src/matinee/web/static/js/dom.js:12` | 2026-10-05 |
+| `src/matinee/web/static/js/type.js::typeLine` (`shown`: a gold line kept while the rest types beneath) | `src/matinee/web/static/js/type.js:11` | 2026-10-05 |
+| `src/matinee/web/static/manifest.webmanifest` | `src/matinee/web/static/manifest.webmanifest:1` | 2026-10-05 |
+| `src/matinee/web/static/css/matinee.css` `:root` (the standard's colour tokens, `--shade`, `--band-fade`) | `src/matinee/web/static/css/matinee.css:17` | 2026-10-05 |
+| `src/matinee/web/static/css/matinee.css` `.stage` (starts beneath the warning strip, `--warning-h`) | `src/matinee/web/static/css/matinee.css:149` | 2026-10-05 |
+| `src/matinee/web/static/css/matinee.css` `.warning-strip` (the stale-data warning) | `src/matinee/web/static/css/matinee.css:1563` | 2026-10-05 |
+| `src/matinee/web/static/css/matinee.css` `.talk > .setup-lines`, `.talk.setup` (the setup note) | `src/matinee/web/static/css/matinee.css:455` | 2026-10-05 |
+| `src/matinee/web/static/css/matinee.css` `.door-foot > .about-link`, `.bottombar > .about-link` ("About Matinee" at the foot's middle) | `src/matinee/web/static/css/matinee.css:1827` | 2026-10-05 |
+| `src/matinee/web/static/css/matinee.css` `.trail` (crumbs, separators, `.keep`) | `src/matinee/web/static/css/matinee.css:241` | 2026-10-05 |
+| `src/matinee/web/static/css/matinee.css` `.action`, `.action.rose`, `.action.petrol`, `.action.cream` (gold is the base rule) | `src/matinee/web/static/css/matinee.css:1100` | 2026-10-05 |
+| `src/matinee/web/static/css/matinee.css` `.letterbox` (one size) | `src/matinee/web/static/css/matinee.css:397` | 2026-10-05 |
+| `src/matinee/web/static/css/matinee.css` `.answers`, `.answers.many` (the doors run across and wrap) | `src/matinee/web/static/css/matinee.css:385` | 2026-10-05 |
+| `src/matinee/web/static/css/matinee.css` the scrims: `.line > .ack`/`.ask`, `.countdown`, `.note`, `.footnote`, `.count`, `.seat-label`, `.feature-text`, `.correct-panel` | `src/matinee/web/static/css/matinee.css:357` | 2026-10-05 |
+| `src/matinee/web/static/css/matinee.css` the bands: `.topbar::before`, `.bottombar::before`, `.door-foot::before`, `.stage.at-door.behind-about::before` | `src/matinee/web/static/css/matinee.css:172` | 2026-10-05 |
+| `src/matinee/web/static/css/matinee.css` `.showing` (the pick's left column) | `src/matinee/web/static/css/matinee.css:586` | 2026-10-05 |
+| `src/matinee/web/static/css/matinee.css` `.topic-list`, `.topic`, `.topic-foot` (the picker's topics) | `src/matinee/web/static/css/matinee.css:2183` | 2026-10-05 |
+| `tests/test_design_standards.py::declarations` / `built` / `enclosing` / `PERMITTED` / `ARTWORK` (the standard's mechanical rules) | `tests/test_design_standards.py:232` | 2026-10-05 |
+| `src/matinee/web/static/css/matinee.css` reduced-motion rules (the marquee and the door's words change at once) | `src/matinee/web/static/css/matinee.css:1170` | 2026-10-05 |
+| `src/matinee/web/static/css/matinee.css` `.wall`, `.wall-tiles`, `.tile` (`--tile`, the one strength; the dark cell) | `src/matinee/web/static/css/matinee.css:101` | 2026-10-05 |
+| `src/matinee/web/static/css/matinee.css` `.marquee` (its measures as properties, the top fade, the short windows' scaling) | `src/matinee/web/static/css/matinee.css:1201` | 2026-10-05 |
+| `src/matinee/web/static/css/matinee.css` `.marquee.lifted`, `.stage.leaving`, `.flying-name` (going in) | `src/matinee/web/static/css/matinee.css:1231` | 2026-10-05 |
+| `src/matinee/web/static/css/matinee.css` `.sign`, `.bulb`, `@keyframes chase` | `src/matinee/web/static/css/matinee.css:1416` | 2026-10-05 |
+| `src/matinee/web/static/css/matinee.css` `.door-wall`, `.door-talk`, `.door-foot` | `src/matinee/web/static/css/matinee.css:1787` | 2026-10-05 |
+| `src/matinee/web/static/css/matinee.css` `.picker` | `src/matinee/web/static/css/matinee.css:2131` | 2026-10-05 |
+| `src/matinee/web/static/css/matinee.css` phone door: `.marquee` sizes, `.marquee.compact` (the lit strip) | `src/matinee/web/static/css/matinee.css:1313` | 2026-10-05 |
+| `src/matinee/web/static/css/matinee.css` `.credits`, `.dtdd-credit`, `.tmdb-logo`, `.bottombar .credits`, `.inline-link` | `src/matinee/web/static/css/matinee.css:1578` | 2026-10-05 |
+| `src/matinee/web/static/css/matinee.css` `.stage.behind-about`, `.about`, `.about-wordmark`, `.about-panel` | `src/matinee/web/static/css/matinee.css:1624` | 2026-10-05 |
+| `src/matinee/web/static/css/matinee.css` `.pick-line` (size, four lines reserved), `.hushed` | `src/matinee/web/static/css/matinee.css:639` | 2026-10-05 |
+| `src/matinee/web/static/css/matinee.css` `.talk > .footnote` | `src/matinee/web/static/css/matinee.css:478` | 2026-10-05 |
+| `src/matinee/web/static/css/matinee.css` `a.wordmark` | `src/matinee/web/static/css/matinee.css:190` | 2026-10-05 |
+| `src/matinee/web/static/css/matinee.css` `.just-pick-row` (the count beside the button) | `src/matinee/web/static/css/matinee.css:499` | 2026-10-05 |
+| `src/matinee/web/static/css/matinee.css` `.mark`, `.seats`, `.seat` (the tiles; the short window's sizes) | `src/matinee/web/static/css/matinee.css:1897` | 2026-10-05 |
+| `src/matinee/web/static/css/matinee.css` `.avatar-choices` | `src/matinee/web/static/css/matinee.css:2040` | 2026-10-05 |
+| `src/matinee/web/static/css/matinee.css` `.viewer`, `.viewer-menu`, `.viewer-panel` (the phone's initials) | `src/matinee/web/static/css/matinee.css:2430` | 2026-10-05 |
+| `src/matinee/web/static/css/matinee.css` the locked door: `.locked`, `.subway`, `.door-frame`, `.locked-door`, `.slot`, `.peek`, `.line.locked-line` | `src/matinee/web/static/css/matinee.css:2696` | 2026-10-05 |
+| `src/matinee/web/static/blank.svg` (a tile with no picture) | `src/matinee/web/static/blank.svg:1` | 2026-10-05 |
 
 ### Deployment
 
 | Handle | Where | Verified |
 |---|---|---|
-| `Dockerfile` (one worker, uid 1000, `/state`) | `Dockerfile:1` | 2026-09-26 |
-| `.dockerignore` | `.dockerignore:1` | 2026-09-26 |
+| `Dockerfile` (one worker, uid 1000, `/state`, `DATA_DIR`) | `Dockerfile:1` | 2026-10-05 |
+| `.dockerignore` | `.dockerignore:1` | 2026-10-05 |
+| `example.env` (every setting of section 13, none filled in) | `example.env:1` | 2026-10-05 |
+| `tests/test_example_env.py::test_example_env_names_every_setting_the_spec_lists_and_fills_in_none` | `tests/test_example_env.py:11` | 2026-10-05 |
+
