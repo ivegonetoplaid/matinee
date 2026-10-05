@@ -34,9 +34,11 @@ from matinee.web.theatre import Theatre
 from test_engine import TAGS, reference, write_data
 from test_web_library import SERVER, FakeLibrary, answers, write_film_table
 
+NOW = datetime(2026, 10, 5, 12, tzinfo=UTC)  # one fixed moment: parameters are built when the file loads, not run
+
 
 def status(state: str, reason: str | None = None, age: float = 0) -> RebuildStatus:
-    updated = (datetime.now(UTC) - timedelta(seconds=age)).isoformat()
+    updated = (NOW - timedelta(seconds=age)).isoformat()
     return RebuildStatus(state, "", updated, reason=reason)  # type: ignore[arg-type]
 
 
@@ -61,7 +63,7 @@ def status(state: str, reason: str | None = None, age: float = 0) -> RebuildStat
 def test_the_rebuild_report_says_why_it_stopped_and_why_there_is_no_film(
     report: RebuildStatus | None, films: int, said: list[str]
 ) -> None:
-    assert rebuild_lines(report, films) == said
+    assert rebuild_lines(report, films, NOW) == said
 
 
 def site(tmp_path: Path, config: Config, seerr: SeerrCheck, library: Any = None, **kw: Any) -> TestClient:
