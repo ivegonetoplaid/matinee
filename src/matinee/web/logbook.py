@@ -59,12 +59,21 @@ def _seerr(config: Config, seerr: SeerrCheck) -> str:
     return "answers" if seerr.answers() else "does not answer"
 
 
+def _age(oldest: datetime | None, now: datetime) -> str:
+    """How old the film table's oldest TMDB fact is, in words: "1 day old", "2 days old"."""
+    if oldest is None:
+        return "no TMDB facts"
+    days = (now - oldest).days
+    unit = "day" if days == 1 else "days"
+    return f"TMDB facts from {oldest:%Y-%m-%d} ({days} {unit} old)"
+
+
 def describe(theatre: Theatre, config: Config, seerr: SeerrCheck, dtdd_on: bool, now: datetime) -> tuple[State, str]:
     """The state as a comparable key and as the line the log says."""
     library, offered = _library(theatre, config)
     seerr_text = _seerr(config, seerr)
     oldest = theatre.oldest_tmdb
-    age = "no TMDB facts" if oldest is None else f"TMDB facts from {oldest:%Y-%m-%d} ({(now - oldest).days} days old)"
+    age = _age(oldest, now)
     stale = theatre.stale
     status = read_status(config.state)
     key: State = (library, seerr_text, dtdd_on, theatre.table_films, offered, stale, getattr(status, "state", None))

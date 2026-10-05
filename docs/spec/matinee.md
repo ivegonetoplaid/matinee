@@ -2550,8 +2550,8 @@ symbol when one does not match.
 | `src/matinee/web/theatre.py::Showing.library` (`none`, `usable`, `unreachable`) | `src/matinee/web/theatre.py:56` | 2026-10-05 |
 | `src/matinee/web/theatre.py::Theatre.table_films` / `stale` / `oldest_tmdb` | `src/matinee/web/theatre.py:191` | 2026-10-05 |
 | `src/matinee/web/seerr.py::SeerrCheck` (`CHECK_EVERY`; picks link to TMDB while it does not answer) | `src/matinee/web/seerr.py:25` | 2026-10-05 |
-| `src/matinee/web/logbook.py::describe` / `StateLog` / `state_log` / `CHECK_EVERY` (the state line) | `src/matinee/web/logbook.py:62` | 2026-10-05 |
-| `src/matinee/web/logbook.py::Quiet` / `QUIET_FOR` / `SERVER_NAMES` (a repeating warning once a minute, with a count) | `src/matinee/web/logbook.py:106` | 2026-10-05 |
+| `src/matinee/web/logbook.py::describe` / `StateLog` / `state_log` / `CHECK_EVERY` (the state line) | `src/matinee/web/logbook.py:71` | 2026-10-05 |
+| `src/matinee/web/logbook.py::Quiet` / `QUIET_FOR` / `SERVER_NAMES` (a repeating warning once a minute, with a count) | `src/matinee/web/logbook.py:115` | 2026-10-05 |
 | `src/matinee/web/app.py::add_state_log` / `QUIET` | `src/matinee/web/app.py:476` | 2026-10-05 |
 | `tests/test_setup.py::test_only_a_wrong_lock_and_a_missing_data_directory_refuse_to_start` | `tests/test_setup.py:107` | 2026-10-05 |
 | `tests/test_logbook.py::test_the_state_line_names_every_part_and_no_secret` | `tests/test_logbook.py:30` | 2026-10-05 |

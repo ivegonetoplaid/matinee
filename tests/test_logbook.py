@@ -75,3 +75,14 @@ def test_a_broken_labels_file_says_how_to_mend_it_by_whose_it_is(tmp_path: Path,
     with pytest.raises(LabelsError, match="update or reinstall Matinee"):
         load_labels(mine)
     assert LABELS.name == "labels.json"
+
+
+def test_the_state_line_says_one_day_and_many_days() -> None:
+    from datetime import UTC, datetime, timedelta
+
+    from matinee.web.logbook import _age
+
+    now = datetime(2026, 10, 5, 12, tzinfo=UTC)
+    assert _age(None, now) == "no TMDB facts"
+    assert _age(now - timedelta(days=1), now) == "TMDB facts from 2026-10-04 (1 day old)"
+    assert _age(now - timedelta(days=3), now) == "TMDB facts from 2026-10-02 (3 days old)"
