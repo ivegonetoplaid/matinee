@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import sqlite3
 import urllib.error
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -16,7 +17,17 @@ from matinee.genome import Genome, Scores
 from matinee.library import LibraryError, LibraryFilm
 from matinee.library.jellyfin import parse_film
 from matinee.table import TableError, build_table, load_table, write_table
-from matinee.tmdb import TmdbFilm, fetch_film, load_cache, needs_fetch, refresh
+from matinee.tmdb import (
+    KEY_REFUSED,
+    NOT_ANSWERING,
+    Refreshed,
+    TmdbFilm,
+    TmdbRefused,
+    fetch_film,
+    load_cache,
+    needs_fetch,
+    refresh,
+)
 
 NOW = datetime(2026, 9, 25, tzinfo=UTC)
 
@@ -43,7 +54,8 @@ def tmdb(
 ) -> TmdbFilm:
     fetched = (NOW - timedelta(days=age_days)).isoformat()
     backdrop = poster and poster.replace("/p", "/b")
-    return TmdbFilm(tmdb_id, fetched, 900 if tmdb_id == 11 else None, None, keywords, language, poster, backdrop)
+    collection = 900 if tmdb_id == 11 else None
+    return TmdbFilm(tmdb_id, fetched, collection, None, keywords, language, poster, backdrop, title=f"Film {tmdb_id}")
 
 
 LIBRARY = [
@@ -178,12 +190,14 @@ def test_needs_fetch() -> None:
     assert needs_fetch(tmdb(1, 151, []), NOW)
     assert needs_fetch(tmdb(1, 150, []), NOW)
     assert not needs_fetch(
-        TmdbFilm(1, (NOW - timedelta(days=150) + timedelta(seconds=1)).isoformat(), None, None, [], "en", "", ""), NOW
+        TmdbFilm(1, (NOW - timedelta(days=150) + timedelta(seconds=1)).isoformat(), None, None, [], "en", "", "", "T"),
+        NOW,
     )
     assert needs_fetch(tmdb(1, 10, [], language=None), NOW)
     assert not needs_fetch(tmdb(1, 10, [], language=""), NOW)
     assert needs_fetch(tmdb(1, 10, [], poster=None), NOW)  # written before picture paths were kept
     assert not needs_fetch(tmdb(1, 10, [], poster="/p1.jpg"), NOW)
+    assert needs_fetch(replace(tmdb(1, 10, []), title=None), NOW)  # written before the title and shown facts were kept
 
 
 def test_refresh_appends_newest_and_stops_on_an_outage(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -197,7 +211,7 @@ def test_refresh_appends_newest_and_stops_on_an_outage(tmp_path: Path, monkeypat
         calls.append(t)
         return TmdbFilm(t, NOW.isoformat(), None, None, ["k"], "en", "", "")
 
-    assert refresh([1, 2], cache, "tok", fetch=ok) == (2, 0)
+    assert refresh([1, 2], cache, "tok", fetch=ok) == Refreshed(2, 0)
     assert calls == [1, 2]
     assert load_cache(cache)[1].original_language == "en"
 
@@ -206,7 +220,7 @@ def test_refresh_appends_newest_and_stops_on_an_outage(tmp_path: Path, monkeypat
         raise urllib.error.URLError("down")
 
     calls.clear()
-    assert refresh(range(10, 20), cache, "tok", fetch=down) == (0, 5)
+    assert refresh(range(10, 20), cache, "tok", fetch=down) == Refreshed(0, 5, NOT_ANSWERING)
     assert calls == [10, 11, 12, 13, 14]
 
 
@@ -262,7 +276,7 @@ def test_unknown_to_tmdb_is_not_cached_and_not_an_outage(tmp_path: Path, monkeyp
         seen.append(t)
         return None if t < 16 else TmdbFilm(t, NOW.isoformat(), None, None, [], "en")
 
-    assert refresh(range(10, 17), cache, "tok", fetch=missing_then_ok) == (1, 6)
+    assert refresh(range(10, 17), cache, "tok", fetch=missing_then_ok) == Refreshed(1, 6)
     assert seen == list(range(10, 17))
     assert list(load_cache(cache)) == [16]
 
@@ -370,3 +384,88 @@ def test_a_loaded_table_can_be_written_again(tmp_path: Path) -> None:
     back = load_table(tmp_path / "b.sqlite", NOW)
     assert pd.isna(back.films.loc[33, "collection_id"]) and back.films.loc[11, "collection_id"] == 900
     assert back.films.loc[22, "keywords"] is None
+
+
+def test_fetch_film_keeps_the_shown_facts_and_the_us_age_rating(monkeypatch: pytest.MonkeyPatch) -> None:
+    seen: list[str] = []
+    body = {
+        "title": "Jaws",
+        "release_date": "1975-06-20",
+        "runtime": 124,
+        "vote_average": 7.7,
+        "vote_count": 10_500,
+        "genres": [{"id": 27, "name": "Horror"}, {"id": 53, "name": "Thriller"}],
+        "overview": " A shark. ",
+        "release_dates": {
+            "results": [
+                {"iso_3166_1": "GB", "release_dates": [{"certification": "12A", "type": 3}]},
+                {
+                    "iso_3166_1": "US",
+                    "release_dates": [
+                        {"certification": "", "type": 1},
+                        {"certification": "TV-14", "type": 6},
+                        {"certification": "PG", "type": 3},
+                    ],
+                },
+            ]
+        },
+    }
+
+    def answer(url: str, token: str) -> dict[str, object]:
+        seen.append(url)
+        return body
+
+    monkeypatch.setattr("matinee.tmdb.get_json", answer)
+    got = fetch_film(578, "tok")
+    assert got is not None and "append_to_response=keywords,release_dates" in seen[0]
+    assert (got.title, got.year, got.runtime_min, got.rating, got.vote_count) == ("Jaws", 1975, 124.0, 7.7, 10_500)
+    assert got.genres == ["Horror", "Thriller"] and got.synopsis == "A shark." and got.certification == "PG"
+    assert not needs_fetch(got, datetime.now(UTC))
+    us_only_tv = {
+        **body,
+        "release_dates": {"results": [{"iso_3166_1": "US", "release_dates": [{"certification": "TV-14", "type": 6}]}]},
+    }
+    monkeypatch.setattr("matinee.tmdb.get_json", lambda url, token: us_only_tv)
+    assert (got2 := fetch_film(578, "tok")) is not None and got2.certification == "TV-14"
+    bare = {"title": "Unknown", "release_date": "", "runtime": 0, "vote_average": 0, "genres": []}
+    monkeypatch.setattr("matinee.tmdb.get_json", lambda url, token: bare)
+    unrated = fetch_film(9, "tok")
+    assert unrated is not None and unrated.certification == "" and unrated.year is None
+    assert (unrated.runtime_min, unrated.rating, unrated.vote_count, unrated.synopsis) == (None, None, 0, "")
+
+
+def test_a_refused_key_stops_the_refresh_at_once(tmp_path: Path) -> None:
+    calls: list[int] = []
+
+    def refused(t: int, _: str) -> TmdbFilm:
+        calls.append(t)
+        raise TmdbRefused(KEY_REFUSED)
+
+    assert refresh([1, 2, 3], tmp_path / "t.jsonl", "bad", fetch=refused) == Refreshed(0, 0, KEY_REFUSED)
+    assert calls == [1]
+
+
+def test_a_401_is_a_refused_key(monkeypatch: pytest.MonkeyPatch) -> None:
+    def answer_401(req: object, timeout: float) -> object:
+        raise urllib.error.HTTPError("https://api.themoviedb.org/3/movie/1", 401, "Unauthorized", {}, None)  # type: ignore[arg-type]
+
+    monkeypatch.setattr("matinee.tmdb.urllib.request.urlopen", answer_401)
+    monkeypatch.setattr("matinee.tmdb.time.sleep", lambda s: None)
+    with pytest.raises(TmdbRefused):
+        fetch_film(1, "bad")
+
+
+def test_a_dropped_connection_is_a_network_failure_not_a_crash(tmp_path: Path) -> None:
+    import http.client
+
+    def dropped(t: int, _: str) -> TmdbFilm:
+        raise http.client.RemoteDisconnected("gone")
+
+    assert refresh(range(10), tmp_path / "t.jsonl", "tok", fetch=dropped) == Refreshed(0, 5, NOT_ANSWERING)
+
+
+def test_an_empty_theatrical_rating_never_wins_over_a_real_one(monkeypatch: pytest.MonkeyPatch) -> None:
+    us = {"iso_3166_1": "US", "release_dates": [{"certification": "", "type": 3}, {"certification": "PG", "type": 4}]}
+    monkeypatch.setattr("matinee.tmdb.get_json", lambda url, token: {"title": "X", "release_dates": {"results": [us]}})
+    got = fetch_film(1, "tok")
+    assert got is not None and got.certification == "PG"

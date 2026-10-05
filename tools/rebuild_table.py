@@ -1,11 +1,16 @@
-"""Rebuild the offline film table: refresh TMDB for every library film, then write the table.
+"""Rebuild the offline film table: refresh TMDB for every film the labels name and every library film, then write
+the table.
 
-Reads the media server (GET only), the shipped genome scores and the TMDB cache,
+Reads the media server when one is set (GET only), the shipped labels, the shipped
+genome scores and the TMDB cache,
 and writes `<state>/films.sqlite`, replacing the previous table only once the new
 one is complete. Prints what it saw, including every file whose `{tmdb-N}` folder
 tag differs from the server's TMDB id; it uses the server's id and changes
 nothing. With `--daily HH:MM` it rebuilds now and then every day at that local
-time, which is how the deployed stack runs it every night.
+time, which is how the deployed stack runs it every night. It reports itself in
+`rebuild.json` (`matinee.progress`): running, finished, or stopped with the reason,
+such as no TMDB key, a refused key, or TMDB not answering. Without a key it
+fetches nothing and writes no table.
 
 Settings come from the environment: DATA_DIR (or `--state`), the media server
 (JELLYFIN_URL and JELLYFIN_API_KEY, or PLEX_URL and PLEX_TOKEN) and TMDB_TOKEN.
@@ -24,25 +29,56 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from matinee.genome_file import load_scores
-from matinee.library.choice import MediaServer, ServerChoiceError, media_server, open_reader
+from matinee.labels import load_labels
+from matinee.library.choice import MediaServer, ServerChoiceError, configured_server, open_reader
+from matinee.progress import RebuildStatus, write_status
 from matinee.table import build_table, write_table
-from matinee.tmdb import load_cache, refresh
+from matinee.tmdb import NO_KEY, compact, load_cache, refresh
 
 log = logging.getLogger("rebuild_table")
 DEFAULT_STATE = Path.home() / ".local/share/matinee"
+FAILED = "the rebuild failed; its log says why"
 
 
-def rebuild(server: MediaServer, state: Path, token: str) -> None:
-    films = open_reader(server).films()
+def _now() -> str:
+    return datetime.now(UTC).isoformat()
+
+
+def rebuild(server: MediaServer | None, state: Path, token: str) -> RebuildStatus:
+    """One rebuild; returns, and leaves in `rebuild.json`, how it ended."""
+    started = _now()
     cache = state / "tmdb" / "films.jsonl"
-    ids = sorted({f.tmdb for f in films if f.tmdb is not None})
-    fetched, failed = refresh(ids, cache, token)
-    log.info("TMDB: fetched %d, failed %d", fetched, failed)
+    if not token:
+        if cache.exists():
+            compact(cache, datetime.now(UTC))  # the six-month limit holds even when nothing can be fetched
+        log.error("no TMDB key is set, so no film table can be built. Set TMDB_TOKEN and run the rebuild again.")
+        return _report(state, RebuildStatus("stopped", started, _now(), reason=NO_KEY))
+    try:
+        return _rebuild(server, state, cache, token, started)
+    except Exception:
+        _report(state, RebuildStatus("stopped", started, _now(), reason=FAILED))
+        raise
+
+
+def _rebuild(server: MediaServer | None, state: Path, cache: Path, token: str, started: str) -> RebuildStatus:
+    films = open_reader(server).films() if server is not None else []
+    ids = sorted(load_labels().films() | {f.tmdb for f in films if f.tmdb is not None})
+    write_status(state, RebuildStatus("running", started, _now(), total=len(ids)))
+    result = refresh(ids, cache, token)
+    log.info("TMDB: fetched %d, failed %d", result.fetched, result.failed)
     table, report = build_table(films, load_scores(), load_cache(cache), datetime.now(UTC))
     write_table(table, state / "films.sqlite")
     for line in report.lines():
         log.info("%s", line)
     log.info("wrote %d films to %s", len(table.films), state / "films.sqlite")
+    if result.stopped is not None:
+        return _report(state, RebuildStatus("stopped", started, _now(), result.fetched, len(ids), result.stopped))
+    return _report(state, RebuildStatus("finished", started, _now(), len(ids), len(ids)))
+
+
+def _report(state: Path, status: RebuildStatus) -> RebuildStatus:
+    write_status(state, status)
+    return status
 
 
 def daily_time(text: str) -> tuple[int, int]:
@@ -73,17 +109,14 @@ def main() -> int:
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     token = os.environ.get("TMDB_TOKEN", "").strip()
-    if not token:
-        parser.error("TMDB_TOKEN is required")
     try:
-        server = media_server(os.environ)
+        server = configured_server(os.environ)
     except ServerChoiceError as exc:
         parser.error(str(exc))
     if not args.state.is_dir():
         parser.error(f"the state directory {args.state} does not exist")
     if not args.daily:
-        rebuild(server, args.state, token)
-        return 0
+        return 0 if rebuild(server, args.state, token).state == "finished" else 1
     while True:
         try:
             rebuild(server, args.state, token)

@@ -46,16 +46,22 @@ def _filled(env: Mapping[str, str], kind: ServerKind) -> MediaServer | None:
     return MediaServer(kind, url.rstrip("/"), key)
 
 
+def configured_server(env: Mapping[str, str]) -> MediaServer | None:
+    """The one media server the settings name, or None when they name none; raises for both or a half-set one."""
+    filled = [s for s in (_filled(env, "jellyfin"), _filled(env, "plex")) if s is not None]
+    if len(filled) == 2:
+        raise ServerChoiceError("Jellyfin and Plex are both set; Matinee reads one, so remove one of them")
+    return filled[0] if filled else None
+
+
 def media_server(env: Mapping[str, str]) -> MediaServer:
     """The one media server the settings name; raises ServerChoiceError for none, both, or a half-set one."""
-    filled = [s for s in (_filled(env, "jellyfin"), _filled(env, "plex")) if s is not None]
-    if not filled:
+    server = configured_server(env)
+    if server is None:
         raise ServerChoiceError(
             "no media server is set: fill in JELLYFIN_URL and JELLYFIN_API_KEY, or PLEX_URL and PLEX_TOKEN"
         )
-    if len(filled) == 2:
-        raise ServerChoiceError("Jellyfin and Plex are both set; Matinee reads one, so remove one of them")
-    return filled[0]
+    return server
 
 
 def open_reader(server: MediaServer) -> Library:

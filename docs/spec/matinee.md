@@ -591,24 +591,37 @@ genome or TMDB.
 once and then every day at that local time. The time is validated before the
 first rebuild. A failed nightly rebuild leaves the previous table in place.
 
-1. It reads the media server's film list, by GET only.
-2. It refreshes TMDB facts (collection, keywords, original language, and the
-   poster and backdrop paths) for every library film with a TMDB id. That is one GET per film, 0.15 seconds apart.
-   It honours `Retry-After` on a 429 and stops after 5 network failures in a
-   row.
-3. It reads the shipped genome scores (section 5.3).
-4. It builds and writes the table, replacing the previous one only once the new
+1. Without a TMDB key (`TMDB_TOKEN`) it fetches nothing, writes no table, and
+   reports the reason (below).
+2. It reads the media server's film list, by GET only, when a media server is
+   set. With none it runs on the labels alone.
+3. It refreshes the TMDB record of every film the shipped labels name and every
+   library film with a TMDB id: one GET per film, 0.15 seconds apart. A record
+   keeps the film's title, year, runtime, rating (TMDB's vote average), TMDB
+   genres, synopsis, vote count and US age rating, and its collection,
+   keywords, original language and poster and backdrop paths. The US age rating
+   is the film's US theatrical certification, else its first other non-empty US
+   certification, else none. It honours `Retry-After` on a 429. It stops after
+   5 network failures in a row, and at once when TMDB refuses the key (401).
+4. It reads the shipped genome scores (section 5.3).
+5. It builds and writes the table, replacing the previous one only once the new
    one is complete.
-5. It logs a report. The report counts films with and without genome scores and
+6. It logs a report. The report counts films with and without genome scores and
    items with no TMDB id. It names every file whose `{tmdb-N}` folder tag differs
    from the TMDB id the media server gives, and every film missing a usable TMDB
    record. It uses the media server's id and changes nothing on the server.
 
+The rebuild reports itself in `rebuild.json` in the data directory, replaced
+whole each time: `running` as it starts, `finished`, or `stopped` with the
+reason: no TMDB key, TMDB refused the key, or TMDB is not answering. A report
+that cannot be read counts as absent. A one-shot rebuild exits 0 only when it
+finished.
+
 ### 5.2 TMDB facts and the six-month limit
 
 - The TMDB cache holds the newest record per film. A record is refetched once
-  it is **150 days** old, or when it predates the original-language field or
-  the picture paths.
+  it is **150 days** old, or when it predates the original-language field, the
+  picture paths or the title and the other facts kept with it.
 - A picture path is kept only when it has TMDB's shape: a slash, letters and
   digits, then `.jpg` or `.png`. Any other value is logged and kept as no
   picture, so nothing else is ever joined into a picture's address. A film TMDB

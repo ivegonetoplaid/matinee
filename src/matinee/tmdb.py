@@ -1,7 +1,10 @@
-"""TMDB facts per film: collection, keywords, original language and picture paths, cached as JSON lines.
+"""TMDB facts per film, cached as JSON lines: the title, year, runtime, rating, genres, synopsis, vote count,
+US age rating, collection, keywords, original language and picture paths.
 
-One GET per film (movie details with keywords appended), paced well under TMDB's
-limits. New records are appended and the newest line per TMDB id wins; after
+One GET per film (movie details with keywords and release dates appended), paced
+well under TMDB's limits. The US age rating is the film's US theatrical
+certification, else its first other non-empty US certification, else "" (none).
+New records are appended and the newest line per TMDB id wins; after
 each refresh the file is rewritten atomically to hold only the newest record per
 id, and nothing older than `MAX_AGE`, because TMDB's terms cap caching at six
 months. A record is refetched after `REFETCH_AFTER`. A film TMDB does not know
@@ -11,6 +14,7 @@ skipped with a warning and its film is fetched again.
 
 from __future__ import annotations
 
+import http.client
 import json
 import logging
 import os
@@ -18,20 +22,29 @@ import re
 import time
 import urllib.error
 import urllib.request
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Mapping
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import Any
+from typing import Any, TextIO
 
 API = "https://api.themoviedb.org/3"
 PAUSE_S = 0.15
 REFETCH_AFTER = timedelta(days=150)
 MAX_AGE = timedelta(days=183)
 MAX_CONSECUTIVE_ERRORS = 5
+THEATRICAL = 3  # TMDB's release type for a theatrical release
+NO_KEY = "no TMDB key is set"
+KEY_REFUSED = "TMDB refused the key"
+NOT_ANSWERING = "TMDB is not answering"
+NETWORK_FAILURES = (OSError, http.client.HTTPException, json.JSONDecodeError)  # URLError and timeouts are OSErrors
 PICTURE_PATH = re.compile(r"^/[A-Za-z0-9]+\.(?:jpg|png)$")
 
 log = logging.getLogger("matinee.tmdb")
+
+
+class TmdbRefused(RuntimeError):
+    """TMDB answered 401: the key is wrong or revoked, so no further request can succeed."""
 
 
 @dataclass(frozen=True)
@@ -45,6 +58,15 @@ class TmdbFilm:
     # A picture path is None in a record written before paths were kept, and "" where TMDB has no picture.
     poster_path: str | None = None
     backdrop_path: str | None = None
+    # None in a record written before these were kept; such a record is fetched again.
+    title: str | None = None
+    year: int | None = None
+    runtime_min: float | None = None
+    rating: float | None = None
+    genres: list[str] | None = None
+    synopsis: str | None = None  # "" where TMDB has none
+    vote_count: int | None = None
+    certification: str | None = None  # the US age rating; "" where TMDB has none
 
     @property
     def fetched(self) -> datetime:
@@ -63,6 +85,14 @@ def _record(line: str) -> TmdbFilm | None:
             original_language=rec.get("original_language"),
             poster_path=rec.get("poster_path"),
             backdrop_path=rec.get("backdrop_path"),
+            title=rec.get("title"),
+            year=rec.get("year"),
+            runtime_min=rec.get("runtime_min"),
+            rating=rec.get("rating"),
+            genres=rec.get("genres"),
+            synopsis=rec.get("synopsis"),
+            vote_count=rec.get("vote_count"),
+            certification=rec.get("certification"),
         )
     except (json.JSONDecodeError, KeyError, TypeError, ValueError, AttributeError):
         return None
@@ -95,11 +125,11 @@ def compact(path: Path, now: datetime) -> None:
 
 
 def needs_fetch(rec: TmdbFilm | None, now: datetime) -> bool:
-    """True when a film has no record, a record due for refresh, or one written before languages or picture
-    paths were kept."""
+    """True when a film has no record, a record due for refresh, or one written before languages, picture
+    paths or the title and its other shown facts were kept."""
     if rec is None or now - rec.fetched >= REFETCH_AFTER:
         return True
-    return rec.original_language is None or rec.poster_path is None or rec.backdrop_path is None
+    return rec.original_language is None or rec.poster_path is None or rec.backdrop_path is None or rec.title is None
 
 
 def get_json(url: str, token: str) -> dict[str, Any] | None:
@@ -121,6 +151,8 @@ def get_json(url: str, token: str) -> dict[str, Any] | None:
                 continue
             if exc.code == 404:
                 return None
+            if exc.code == 401:
+                raise TmdbRefused(KEY_REFUSED) from exc
             raise
 
 
@@ -135,13 +167,34 @@ def picture_path(tmdb: int, field: str, value: object) -> str:
     return ""
 
 
+def _us_certification(body: Mapping[str, Any]) -> str:
+    """The film's US age rating: its theatrical certification, else its first other non-empty one, else ""."""
+    countries = (body.get("release_dates") or {}).get("results") or []
+    us = next((c for c in countries if isinstance(c, dict) and c.get("iso_3166_1") == "US"), {})
+    dates = [
+        d for d in us.get("release_dates") or [] if isinstance(d, dict) and str(d.get("certification") or "").strip()
+    ]
+    dates.sort(key=lambda d: d.get("type") != THEATRICAL)
+    return str(dates[0]["certification"]).strip() if dates else ""
+
+
+def _year(release_date: object) -> int | None:
+    text = str(release_date or "")
+    return int(text[:4]) if len(text) >= 4 and text[:4].isdigit() else None
+
+
+def _number(value: object) -> float | None:
+    return float(value) if isinstance(value, int | float) and not isinstance(value, bool) and value > 0 else None
+
+
 def fetch_film(tmdb: int, token: str) -> TmdbFilm | None:
-    """The film's TMDB facts, or None when TMDB does not know the id."""
-    body = get_json(f"{API}/movie/{tmdb}?append_to_response=keywords", token)
+    """The film's TMDB facts, or None when TMDB does not know the id. Raises TmdbRefused when TMDB refuses the key."""
+    body = get_json(f"{API}/movie/{tmdb}?append_to_response=keywords,release_dates", token)
     if body is None:
         return None
     coll = body.get("belongs_to_collection") or {}
     words = [k["name"] for k in (body.get("keywords") or {}).get("keywords", [])]
+    votes = body.get("vote_count")
     return TmdbFilm(
         tmdb,
         datetime.now(UTC).isoformat(),
@@ -151,43 +204,75 @@ def fetch_film(tmdb: int, token: str) -> TmdbFilm | None:
         body.get("original_language") or "",
         picture_path(tmdb, "poster_path", body.get("poster_path")),
         picture_path(tmdb, "backdrop_path", body.get("backdrop_path")),
+        title=str(body.get("title") or ""),
+        year=_year(body.get("release_date")),
+        runtime_min=_number(body.get("runtime")),
+        rating=_number(body.get("vote_average")),
+        genres=[str(g["name"]) for g in body.get("genres") or [] if isinstance(g, dict) and g.get("name")],
+        synopsis=str(body.get("overview") or "").strip(),
+        vote_count=votes if isinstance(votes, int) and not isinstance(votes, bool) else 0,
+        certification=_us_certification(body),
     )
+
+
+@dataclass(frozen=True)
+class Refreshed:
+    """What a refresh did: records fetched, films that failed, and why it stopped early (None when it did not)."""
+
+    fetched: int
+    failed: int
+    stopped: str | None = None
 
 
 def refresh(
     ids: Iterable[int], cache: Path, token: str, fetch: Callable[[int, str], TmdbFilm | None] = fetch_film
-) -> tuple[int, int]:
-    """Fetch every id the cache lacks or holds stale, append them, then compact. Returns (fetched, failed).
+) -> Refreshed:
+    """Fetch every id the cache lacks or holds stale, append them, then compact.
 
     A film TMDB does not know counts as failed and is not cached. Stops after
     MAX_CONSECUTIVE_ERRORS network failures in a row, since that is an outage
-    rather than a film. Compaction runs only after the loop finishes.
+    rather than a film, and at once when TMDB refuses the key. Compaction runs
+    after the loop however it ends, an unexpected error included.
     """
     now = datetime.now(UTC)
     have = load_cache(cache)
     todo = [t for t in ids if needs_fetch(have.get(t), now)]
     log.info("TMDB: %d films to fetch", len(todo))
     cache.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        with cache.open("a", encoding="utf-8") as out:
+            fetched, failed, stopped = _fetch_all(todo, out, token, fetch)
+    finally:
+        compact(cache, datetime.now(UTC))
+    return Refreshed(fetched, failed, stopped)
+
+
+def _fetch_all(
+    todo: Iterable[int], out: TextIO, token: str, fetch: Callable[[int, str], TmdbFilm | None]
+) -> tuple[int, int, str | None]:
+    """Fetch and append each record; returns (fetched, failed, why it stopped early or None)."""
     fetched = failed = streak = 0
-    with cache.open("a", encoding="utf-8") as out:
-        for tmdb in todo:
-            try:
-                rec = fetch(tmdb, token)
-            except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
-                failed += 1
-                streak += 1
-                log.warning("TMDB %s failed: %r", tmdb, exc)
-                if streak >= MAX_CONSECUTIVE_ERRORS:
-                    log.error("TMDB: %d consecutive failures, stopping", streak)
-                    break
-                continue
-            streak = 0
-            if rec is None:
-                failed += 1
-                log.warning("TMDB does not know film %s; it stays without TMDB facts", tmdb)
-                continue
-            fetched += 1
-            out.write(json.dumps(asdict(rec)) + "\n")
-            out.flush()
-    compact(cache, datetime.now(UTC))
-    return fetched, failed
+    stopped: str | None = None
+    for tmdb in todo:
+        try:
+            rec = fetch(tmdb, token)
+        except TmdbRefused:
+            stopped = KEY_REFUSED
+            break
+        except NETWORK_FAILURES as exc:
+            failed += 1
+            streak += 1
+            log.warning("TMDB %s failed: %r", tmdb, exc)
+            if streak >= MAX_CONSECUTIVE_ERRORS:
+                stopped = NOT_ANSWERING
+                break
+            continue
+        streak = 0
+        if rec is None:
+            failed += 1
+            log.warning("TMDB does not know film %s; it stays without TMDB facts", tmdb)
+            continue
+        fetched += 1
+        out.write(json.dumps(asdict(rec)) + "\n")
+        out.flush()
+    return fetched, failed, stopped
