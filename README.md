@@ -33,16 +33,17 @@ promises is written down in `docs/spec/matinee.md`.
 ## Running
 
 ```sh
-MATINEE_STATE=... MATINEE_JELLYFIN_URL=... MATINEE_SEERR_URL=... \
-JELLYFIN_API_KEY=... DTDD_API_KEY=... \
+DATA_DIR=... JELLYFIN_URL=... JELLYFIN_API_KEY=... \
 uvicorn --factory matinee.web.main:build --workers 1
 ```
 
-`MATINEE_DOOR_WORD` optionally locks the site behind a word; `MATINEE_DOOR_MATCH`
-(`relaxed` or `strict`) and `MATINEE_DOOR_GREETING` tune it (spec section 7.2).
-`MATINEE_IMAGES=tmdb` has viewers' browsers load posters and backdrops straight
-from TMDB's image server instead of through Matinee from the media server; the
-default, `jellyfin`, keeps every picture on your own server (spec section 11.5).
+A Plex library takes `PLEX_URL` and `PLEX_TOKEN` in place of the Jellyfin pair;
+set one server, never both. `SEERR_URL` and `DTDD_API_KEY` are optional.
+`DOOR_WORD` optionally locks the site behind a word; `DOOR_MATCH` (`relaxed` or
+`strict`) and `DOOR_GREETING` tune it (spec section 7.2). `POSTERS_FROM=tmdb` has
+viewers' browsers load posters and backdrops straight from TMDB's image server;
+the default, `server`, keeps every picture on your own server (spec section
+11.5). The rebuild reads the same media server settings and `TMDB_TOKEN`.
 
 The `Dockerfile` builds the same server. Run exactly one worker: every
 DoesTheDogDie limit, hold and remembered answer lives in the process.

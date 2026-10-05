@@ -20,7 +20,7 @@ from matinee.web.common import TOKENS_COOKIE
 from matinee.web.config import Config
 from matinee.web.theatre import Theatre
 from test_engine import reference, write_data
-from test_web_library import SECRET_KEY, SECRET_URL, FakeLibrary, write_film_table
+from test_web_library import SERVER, FakeLibrary, write_film_table
 
 
 @pytest.fixture
@@ -137,7 +137,7 @@ def door(tmp_path: Path) -> tuple[TestClient, Store]:
 
     theatre = Theatre(FakeLibrary(), tmp_path / "films.sqlite", catalog_of=catalog_of)
     store = Store(tmp_path / "matinee.sqlite")
-    config = Config(SECRET_URL, SECRET_KEY, tmp_path, "https://seerr.invalid", "d" * 16)
+    config = Config(SERVER, tmp_path, "https://seerr.invalid", "d" * 16)
     return TestClient(
         create_app(config, theatre, store, Dtdd("k"), clock=lambda: 0.0), base_url="https://testserver"
     ), store

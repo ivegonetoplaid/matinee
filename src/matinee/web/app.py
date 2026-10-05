@@ -178,7 +178,7 @@ def add_film_routes(app: FastAPI, theatre: Theatre, seerr: str | None, images: I
     @app.get("/api/pictures")
     def pictures() -> Pictures:
         """The image source and, when it is TMDB, the TMDB poster path of every live film that has one."""
-        if images == "jellyfin":
+        if images == "server":
             return Pictures(source=images, posters={})
         films = theatre.showing().catalog.table.films
         paths = {int(str(tmdb)): stored_path(path) for tmdb, path in films.poster_path.items()}
@@ -345,7 +345,7 @@ SECURITY_HEADERS = {
 
 def security_headers(images: ImageSource) -> dict[str, str]:
     """The headers every response carries. Images may come from TMDB's image server only when it is the source."""
-    img = "'self'" if images == "jellyfin" else f"'self' {TMDB_IMAGES}"
+    img = "'self'" if images == "server" else f"'self' {TMDB_IMAGES}"
     return {"Content-Security-Policy": CONTENT_SECURITY_POLICY.format(img=img), **SECURITY_HEADERS}
 
 

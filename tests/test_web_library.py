@@ -18,6 +18,7 @@ from fastapi.testclient import TestClient
 from matinee.dtdd import Dtdd
 from matinee.engine import load_catalog
 from matinee.library import Image, LibraryError, LibraryFilm
+from matinee.library.choice import MediaServer
 from matinee.library.jellyfin import JellyfinReader
 from matinee.reference import ReferenceError
 from matinee.store import Store
@@ -29,6 +30,7 @@ from test_engine import make_table, reference, write_data
 
 SECRET_URL = "http://media.invalid:8096"
 SECRET_KEY = "k" * 32
+SERVER = MediaServer("jellyfin", SECRET_URL, SECRET_KEY)
 
 
 _names = itertools.count(1)
@@ -106,7 +108,7 @@ def world(tmp_path: Path) -> tuple[TestClient, FakeLibrary, Clock, Theatre]:
 
 
 def make_world(
-    tmp_path: Path, images: ImageSource = "jellyfin", seerr: str | None = "https://seerr.invalid"
+    tmp_path: Path, images: ImageSource = "server", seerr: str | None = "https://seerr.invalid"
 ) -> tuple[TestClient, FakeLibrary, Clock, Theatre]:
     data = write_data(tmp_path / "data")
     write_film_table(tmp_path / "films.sqlite")
@@ -116,7 +118,7 @@ def make_world(
         return load_catalog(table, data, reference())
 
     theatre = Theatre(library, tmp_path / "films.sqlite", clock=clock, catalog_of=catalog_of)
-    config = Config(SECRET_URL, SECRET_KEY, tmp_path, seerr, "d" * 16, images=images)
+    config = Config(SERVER, tmp_path, seerr, "d" * 16, images=images)
     return TestClient(create_app(config, theatre, Store(tmp_path / "store.sqlite"), Dtdd("k"))), library, clock, theatre
 
 
@@ -251,37 +253,48 @@ def test_the_jellyfin_image_request_carries_no_key_and_refuses_odd_ids(monkeypat
 
 def test_config_refuses_missing_settings_and_a_missing_state_dir(tmp_path: Path) -> None:
     env = {
-        "MATINEE_STATE": str(tmp_path),
-        "MATINEE_JELLYFIN_URL": SECRET_URL,
+        "DATA_DIR": str(tmp_path),
+        "JELLYFIN_URL": SECRET_URL,
         "JELLYFIN_API_KEY": SECRET_KEY,
-        "MATINEE_SEERR_URL": "https://seerr.invalid/",
+        "SEERR_URL": "https://seerr.invalid/",
         "DTDD_API_KEY": "d",
     }
     assert from_env(env).seerr_url == "https://seerr.invalid"
     with pytest.raises(ConfigError, match="JELLYFIN_API_KEY"):
         from_env({**env, "JELLYFIN_API_KEY": " "})
     with pytest.raises(ConfigError, match="does not exist"):
-        from_env({**env, "MATINEE_STATE": str(tmp_path / "nope")})
+        from_env({**env, "DATA_DIR": str(tmp_path / "nope")})
+    assert from_env(env).server == MediaServer("jellyfin", SECRET_URL, SECRET_KEY)
+    plex = {**env, "JELLYFIN_URL": "", "JELLYFIN_API_KEY": "", "PLEX_URL": "http://plex.invalid/", "PLEX_TOKEN": "t"}
+    assert from_env(plex).server == MediaServer("plex", "http://plex.invalid", "t")
+    with pytest.raises(ConfigError, match="both set"):
+        from_env({**env, "PLEX_URL": "http://plex.invalid", "PLEX_TOKEN": "t"})
+    with pytest.raises(ConfigError, match="no media server"):
+        from_env({**env, "JELLYFIN_URL": "", "JELLYFIN_API_KEY": ""})
+    with pytest.raises(ConfigError, match="http"):
+        from_env({**env, "JELLYFIN_URL": "file:///etc"})
+    for old in ("MATINEE_STATE", "MATINEE_JELLYFIN_URL", "MATINEE_IMAGES", "MATINEE_SEERR_URL"):  # never read
+        assert from_env({**env, old: "/elsewhere"}) == from_env(env)
 
 
 def test_the_image_source_is_the_media_server_unless_tmdb_is_named(tmp_path: Path) -> None:
     env = {
-        "MATINEE_STATE": str(tmp_path),
-        "MATINEE_JELLYFIN_URL": SECRET_URL,
+        "DATA_DIR": str(tmp_path),
+        "JELLYFIN_URL": SECRET_URL,
         "JELLYFIN_API_KEY": SECRET_KEY,
-        "MATINEE_SEERR_URL": "https://seerr.invalid/",
+        "SEERR_URL": "https://seerr.invalid/",
         "DTDD_API_KEY": "d",
     }
-    assert from_env(env).images == "jellyfin"
-    assert from_env({**env, "MATINEE_IMAGES": " "}).images == "jellyfin"
-    assert from_env({**env, "MATINEE_IMAGES": "tmdb"}).images == "tmdb"
-    with pytest.raises(ConfigError, match="MATINEE_IMAGES"):
-        from_env({**env, "MATINEE_IMAGES": "TMDB"})
+    assert from_env(env).images == "server"
+    assert from_env({**env, "POSTERS_FROM": " "}).images == "server"
+    assert from_env({**env, "POSTERS_FROM": "tmdb"}).images == "tmdb"
+    with pytest.raises(ConfigError, match="POSTERS_FROM"):
+        from_env({**env, "POSTERS_FROM": "TMDB"})
 
 
 def test_the_media_server_as_source_gives_no_tmdb_paths(world: Any) -> None:
     client, _, _, _ = world
-    assert client.get("/api/pictures").json() == {"source": "jellyfin", "posters": {}}
+    assert client.get("/api/pictures").json() == {"source": "server", "posters": {}}
     assert client.get("/api/film/5").json()["backdrop_path"] is None
     assert "img-src 'self';" in client.get("/").headers["content-security-policy"]
 
@@ -332,7 +345,7 @@ def test_start_up_refuses_missing_reference_statistics(tmp_path: Path) -> None:
 
 
 def test_config_does_not_print_its_keys() -> None:
-    text = repr(Config(SECRET_URL, SECRET_KEY, Path("/state"), "https://seerr.invalid", "d" * 16))
+    text = repr(Config(SERVER, Path("/state"), "https://seerr.invalid", "d" * 16))
     assert SECRET_KEY not in text and "d" * 16 not in text
 
 

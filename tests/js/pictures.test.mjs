@@ -4,7 +4,7 @@ import { test } from "node:test";
 import { backdropUrl, posterPaths, posterUrl } from "../../src/matinee/web/static/js/pictures.js";
 
 test("a film without a TMDB path keeps Matinee's image route at every size", () => {
-  const paths = posterPaths({ source: "jellyfin", posters: {} });
+  const paths = posterPaths({ source: "server", posters: {} });
   for (const size of ["xs", "s", "m", "l"]) assert.equal(posterUrl(paths, 5, size), `/img/poster/5/${size}`);
   assert.equal(backdropUrl(5, "l", null), "/img/backdrop/5/l");
 });

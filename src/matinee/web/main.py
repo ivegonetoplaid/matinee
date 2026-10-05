@@ -16,7 +16,7 @@ from fastapi import FastAPI
 from matinee.dtdd import Dtdd
 from matinee.engine import load_catalog
 from matinee.labels import LABELS, load_labels
-from matinee.library.jellyfin import JellyfinReader
+from matinee.library.choice import open_reader
 from matinee.quips import load_quips
 from matinee.store import Store
 from matinee.web.app import create_app
@@ -50,7 +50,7 @@ def build() -> FastAPI:
             config.state / "labels.json",
             LABELS,
         )
-    library = JellyfinReader(config.jellyfin_url, config.jellyfin_key)
+    library = open_reader(config.server)
     store = Store(config.store_path)
     dtdd = Dtdd(config.dtdd_key) if config.dtdd_key else None
 

@@ -21,7 +21,7 @@ from matinee.web.main import warn_kept_topics
 from matinee.web.theatre import Theatre
 from notes import main as notes_main
 from test_engine import reference, write_data
-from test_web_library import SECRET_KEY, SECRET_URL, FakeLibrary, write_film_table
+from test_web_library import SERVER, FakeLibrary, write_film_table
 
 GORE_SKIPPED = 188  # a topic that skips the gore question
 
@@ -36,14 +36,14 @@ def keyless(tmp_path: Path) -> tuple[TestClient, Store, Theatre]:
 
     theatre = Theatre(FakeLibrary(), tmp_path / "films.sqlite", catalog_of=catalog_of)
     store = Store(tmp_path / "matinee.sqlite")
-    config = Config(SECRET_URL, SECRET_KEY, tmp_path, "https://seerr.invalid", None)
+    config = Config(SERVER, tmp_path, "https://seerr.invalid", None)
     app = create_app(config, theatre, store, None, clock=lambda: 0.0)
     return TestClient(app, base_url="https://testserver"), store, theatre
 
 
 def test_the_key_is_optional(tmp_path: Path) -> None:
-    env = {"MATINEE_STATE": str(tmp_path), "MATINEE_JELLYFIN_URL": "u", "JELLYFIN_API_KEY": "k"}
-    env["MATINEE_SEERR_URL"] = "s"
+    env = {"DATA_DIR": str(tmp_path), "JELLYFIN_URL": "http://u", "JELLYFIN_API_KEY": "k"}
+    env["SEERR_URL"] = "s"
     assert from_env(env).dtdd_key is None
     assert from_env({**env, "DTDD_API_KEY": " key "}).dtdd_key == "key"
 
@@ -82,7 +82,7 @@ def test_a_keyed_picker_cannot_serve_a_keyless_app(tmp_path: Path) -> None:
         tmp_path / "films.sqlite",
         catalog_of=lambda t: load_catalog(t, write_data(tmp_path / "d"), reference()),
     )
-    config = Config(SECRET_URL, SECRET_KEY, tmp_path, "https://seerr.invalid", None)
+    config = Config(SERVER, tmp_path, "https://seerr.invalid", None)
     with pytest.raises(ValueError, match="agree"):
         create_app(config, theatre, Store(tmp_path / "s.sqlite"), None, picker=Picker(ScriptedDtdd({}), DeviceCap()))
 

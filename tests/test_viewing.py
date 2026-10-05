@@ -38,7 +38,7 @@ from matinee.web.app import create_app
 from matinee.web.config import Config
 from matinee.web.theatre import Theatre
 from test_engine import TREE, reference, write_data
-from test_web_library import SECRET_KEY, SECRET_URL, FakeLibrary, seat_for, write_film_table
+from test_web_library import SERVER, FakeLibrary, seat_for, write_film_table
 
 TOPICS = [
     {"id": 188, "name": "there's blood/gore", "minimalName": "blood/gore", "keywords": "blood", "topicCategoryId": 4},
@@ -130,7 +130,7 @@ def site(tmp_path: Path) -> tuple[TestClient, Store, FakeDtdd]:
 
     theatre = Theatre(FakeLibrary(), tmp_path / "films.sqlite", catalog_of=catalog_of)
     store, dtdd = Store(tmp_path / "matinee.sqlite"), FakeDtdd()
-    config = Config(SECRET_URL, SECRET_KEY, tmp_path, "https://seerr.invalid", "d" * 16)
+    config = Config(SERVER, tmp_path, "https://seerr.invalid", "d" * 16)
     app = create_app(config, theatre, store, dtdd, clock=lambda: 0.0)
     return TestClient(app, base_url="https://testserver"), store, dtdd
 

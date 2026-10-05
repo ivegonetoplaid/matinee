@@ -664,7 +664,9 @@ first rebuild. A failed nightly rebuild leaves the previous table in place.
 
 The server refuses to start, and logs why, when any of these holds:
 
-- a required setting is missing;
+- a required setting is missing, or the media server settings name no server,
+  both servers, an address without its key, or an address that does not start
+  with `http://` or `https://`;
 - the state directory does not exist (Matinee does not start empty and lose
   every profile silently);
 - the film table is absent, in another format, or too old;
@@ -787,7 +789,7 @@ table named `feedback`) and personal corrections.
 
 ### 7.2 The door word
 
-The door word is optional. With none set (`MATINEE_DOOR_WORD` unset, empty or
+The door word is optional. With none set (`DOOR_WORD` unset, empty or
 only spaces), every device is admitted. With one set, a device that is not admitted reaches
 only the page, its static files (the locked door's art among them) and the word
 check, `/api/admission`. Every other route answers `401 not_admitted`, with the
@@ -814,13 +816,13 @@ usual headers. The protection is sized for a household film picker.
   is wrong without being compared. The start is refused when a relaxed word is
   under 8 letters and digits, a strict word under 12 characters, any word over
   200 characters (more than the door compares), or
-  `MATINEE_DOOR_MATCH` names no mode; the message names the setting, never the
+  `DOOR_MATCH` names no mode; the message names the setting, never the
   word.
 - **A wrong word** is answered after 2 seconds, and words are checked one at a
   time across the installation. The wait is an asynchronous sleep: waiting
   guesses hold no worker, and every other route answers at its usual speed. The
   wait is not keyed on the client's address.
-- **The greeting** (`MATINEE_DOOR_GREETING`): `show` (the default) is "State
+- **The greeting** (`DOOR_GREETING`): `show` (the default) is "State
   your business. Make it quick, the show's about to start."; `gin` is "State
   your business. And it better be sweeter than bathtub gin, or I'll feed you to
   the copper pipes."; any other text is the operator's own greeting.
@@ -1024,7 +1026,7 @@ changes nothing any viewer is shown.
   an accepted note is fixed for every viewer through the operator's label
   rulings and the settle step. Matinee offers no note review on the web.
 - **The notes tool**, `tools/notes.py`, is run on the server inside the server's
-  image against the state directory (`--state`, or `MATINEE_STATE`). It never
+  image against the state directory (`--state`, or `DATA_DIR`). It never
   creates a store, and it writes only Matinee's own store, never a film's
   placement, labels or pins.
   - `list` prints every open note, oldest first: its id, the film's title and
@@ -1152,10 +1154,10 @@ the server can never become part of the page's HTML.
 
 ### 11.5 The image source
 
-`MATINEE_IMAGES` says where the page's pictures come from: the wall's posters,
+`POSTERS_FROM` says where the page's pictures come from: the wall's posters,
 the picked poster and the pick's backdrop.
 
-- **`jellyfin`**, the default, or unset or empty. Every picture comes from the
+- **`server`**, the default, or unset or empty. Every picture comes from the
   image route, read from the media server. The page asks for exactly the
   addresses it asked for before the setting existed.
 - **`tmdb`.** The browser loads a picture with a TMDB path from
@@ -1174,7 +1176,7 @@ the picked poster and the pick's backdrop.
   and `/api/first`, before it lays the first wall. A failed reply leaves every
   picture on the image route, logs a warning, and is asked again at the next
   boot. Under `tmdb` the pick reads the backdrop path from the film's card
-  before it fetches the backdrop; under `jellyfin` it fetches the backdrop at
+  before it fetches the backdrop; under `server` it fetches the backdrop at
   once.
 - The pick gives up on its sharp poster or its backdrop after **10 seconds**,
   the same limit the server sets on the media server's images. A picture given
@@ -1702,7 +1704,7 @@ as written. A phone is a viewport 600 px wide or less.
   trusts forwarded headers from any address, so it must sit behind a reverse
   proxy. The image carries `tools/`, so the same image can run the nightly
   rebuild with `--daily`.
-- **State** is one directory mounted at `/state` (`MATINEE_STATE`). It holds
+- **State** is one directory mounted at `/state` (`DATA_DIR`). It holds
   the film table (`films.sqlite`), Matinee's store (`matinee.sqlite`), the
   door's secret (`door.key`, made at the first start with a door word), the
   TMDB cache (`tmdb/films.jsonl`). None of it is in the image.
@@ -1711,16 +1713,22 @@ as written. A phone is a viewport 600 px wide or less.
 
 | Variable | Used by | Holds |
 |---|---|---|
-| `MATINEE_STATE` | server, rebuild | the state directory |
-| `MATINEE_JELLYFIN_URL` | server, rebuild | the media server's address |
-| `JELLYFIN_API_KEY` | server, rebuild | the media server's key |
-| `MATINEE_SEERR_URL` | server, optional | the base of the "More on Seerr ↗" action's address; unset or empty means "More on TMDB ↗" |
+| `DATA_DIR` | server, rebuild, notes tool | the data directory |
+| `JELLYFIN_URL`, `JELLYFIN_API_KEY` | server, rebuild | a Jellyfin library's address and key |
+| `PLEX_URL`, `PLEX_TOKEN` | server, rebuild | a Plex library's address and token |
+| `SEERR_URL` | server, optional | the base of the "More on Seerr ↗" action's address; unset or empty means "More on TMDB ↗" |
 | `DTDD_API_KEY` | server, optional | the DoesTheDogDie key; unset or empty means no list of topics and no check (section 8) |
-| `TMDB_READ_TOKEN` | rebuild | the TMDB read token |
-| `MATINEE_DOOR_WORD` | server, optional | the door word (section 7.2); unset or empty means no lock |
-| `MATINEE_DOOR_MATCH` | server, optional | `relaxed` (the default) or `strict` |
-| `MATINEE_DOOR_GREETING` | server, optional | `show` (the default), `gin`, or the operator's own greeting |
-| `MATINEE_IMAGES` | server, optional | `jellyfin` (the default) or `tmdb`: where the page's pictures come from (section 11.5) |
+| `TMDB_TOKEN` | rebuild | the TMDB read token |
+| `DOOR_WORD` | server, optional | the door word (section 7.2); unset or empty means no lock |
+| `DOOR_MATCH` | server, optional | `relaxed` (the default) or `strict` |
+| `DOOR_GREETING` | server, optional | `show` (the default), `gin`, or the operator's own greeting |
+| `POSTERS_FROM` | server, optional | `server` (the default) or `tmdb`: where the page's pictures come from (section 11.5) |
+
+No setting carries a `MATINEE_` prefix, and the old names are not read. An
+installation reads one media server: Jellyfin when `JELLYFIN_URL` and
+`JELLYFIN_API_KEY` are set, Plex when `PLEX_URL` and `PLEX_TOKEN` are. No setting
+names the server. An address must start with `http://` or `https://`. An
+optional service is on when its setting is filled in and off when it is empty.
 
 ## 14. Third-party terms
 
@@ -2128,7 +2136,7 @@ symbol when one does not match.
 | `src/matinee/web/app.py::create_app` (docs disabled) | `src/matinee/web/app.py:334` | 2026-10-02 |
 | `src/matinee/web/app.py::security_headers` / `CONTENT_SECURITY_POLICY` | `src/matinee/web/app.py:335` | 2026-10-03 |
 | `src/matinee/web/app.py::add_page` | `src/matinee/web/app.py:341` | 2026-10-03 |
-| `src/matinee/web/config.py::_images` (`MATINEE_IMAGES`) | `src/matinee/web/config.py:82` | 2026-10-03 |
+| `src/matinee/web/config.py::_images` (`POSTERS_FROM`) | `src/matinee/web/config.py:82` | 2026-10-03 |
 | `src/matinee/web/app.py::add_quip_routes` (`GET /api/quips`) | `src/matinee/web/app.py:327` | 2026-10-02 |
 | `src/matinee/web/app.py::add_film_routes` / `IMAGE_WIDTHS` / `IMAGE_CACHE` (`GET /api/pictures`) | `src/matinee/web/app.py:155` | 2026-10-03 |
 | `src/matinee/web/app.py::held` / `stored_path` | `src/matinee/web/app.py:103` | 2026-10-03 |

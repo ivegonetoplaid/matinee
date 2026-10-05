@@ -31,7 +31,7 @@ from matinee.web.config import Config
 from matinee.web.theatre import Theatre
 from matinee.web.viewing import PickIn
 from test_engine import gore_cut_tree, reference, write_data
-from test_web_library import SECRET_KEY, SECRET_URL, FakeLibrary, seat_for, write_film_table
+from test_web_library import SERVER, FakeLibrary, seat_for, write_film_table
 
 
 def stat(topic: int, yes: object, no: object) -> dict[str, Any]:
@@ -214,7 +214,7 @@ def site(tmp_path: Path) -> tuple[TestClient, ScriptedDtdd]:
 
     theatre = Theatre(FakeLibrary(held=[1, 2, 3]), tmp_path / "films.sqlite", catalog_of=catalog_of)
     dtdd = ScriptedDtdd({1: [stat(153, 30, 1)], 2: [stat(153, 30, 1)], 3: [stat(153, 30, 1)]})
-    config = Config(SECRET_URL, SECRET_KEY, tmp_path, "https://seerr.invalid", "d" * 16)
+    config = Config(SERVER, tmp_path, "https://seerr.invalid", "d" * 16)
     app = create_app(config, theatre, Store(tmp_path / "s.sqlite"), dtdd, clock=lambda: 0.0)
     return TestClient(app, base_url="https://testserver"), dtdd
 
@@ -284,7 +284,7 @@ def site_with(tmp_path: Path, picker: Picker | None, dtdd: ScriptedDtdd) -> Test
         return load_catalog(table, data, reference())
 
     theatre = Theatre(FakeLibrary(held=[1, 2, 3]), tmp_path / "films.sqlite", catalog_of=catalog_of)
-    config = Config(SECRET_URL, SECRET_KEY, tmp_path, "https://seerr.invalid", "d" * 16)
+    config = Config(SERVER, tmp_path, "https://seerr.invalid", "d" * 16)
     app = create_app(config, theatre, Store(tmp_path / "s.sqlite"), dtdd, clock=lambda: 0.0, picker=picker)
     return TestClient(app, base_url="https://testserver")
 
@@ -368,7 +368,7 @@ def test_the_route_honours_the_rating_half(tmp_path: Path) -> None:
         return load_catalog(table, data, reference())
 
     theatre = Theatre(FakeLibrary(), tmp_path / "films.sqlite", catalog_of=catalog_of)
-    config = Config(SECRET_URL, SECRET_KEY, tmp_path, "https://seerr.invalid", "d" * 16)
+    config = Config(SERVER, tmp_path, "https://seerr.invalid", "d" * 16)
     dtdd = ScriptedDtdd({})
     picker = Picker(dtdd, DeviceCap(), InOrder())
     client = TestClient(
@@ -500,7 +500,7 @@ def test_the_route_draws_the_least_gory_third_first_for_a_blood_topic(tmp_path: 
         return load_catalog(table, data, reference())
 
     theatre = Theatre(FakeLibrary(), tmp_path / "films.sqlite", catalog_of=catalog_of)  # all forty films
-    config = Config(SECRET_URL, SECRET_KEY, tmp_path, "https://seerr.invalid", "d" * 16)
+    config = Config(SERVER, tmp_path, "https://seerr.invalid", "d" * 16)
     picker = Picker(dtdd, DeviceCap(), random.Random(0))
     client = TestClient(
         create_app(config, theatre, Store(tmp_path / "s.sqlite"), dtdd, clock=lambda: 0.0, picker=picker),
@@ -546,7 +546,7 @@ def forty_film_site(tmp_path: Path, dtdd: ScriptedDtdd) -> TestClient:
         return load_catalog(table, data, reference())
 
     theatre = Theatre(FakeLibrary(), tmp_path / "films.sqlite", catalog_of=catalog_of)  # all forty films
-    config = Config(SECRET_URL, SECRET_KEY, tmp_path, "https://seerr.invalid", "d" * 16)
+    config = Config(SERVER, tmp_path, "https://seerr.invalid", "d" * 16)
     picker = Picker(dtdd, DeviceCap(), random.Random(0))
     app = create_app(config, theatre, Store(tmp_path / "s.sqlite"), dtdd, clock=lambda: 0.0, picker=picker)
     return TestClient(app, base_url="https://testserver")

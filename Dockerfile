@@ -4,7 +4,7 @@
 # mounted at /state; settings and keys arrive as environment.
 FROM python:3.13-slim
 
-ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 MATINEE_STATE=/state
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 DATA_DIR=/state
 
 WORKDIR /app
 COPY pyproject.toml ./

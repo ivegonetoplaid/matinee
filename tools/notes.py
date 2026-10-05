@@ -11,7 +11,7 @@ and the settle step.
     python tools/notes.py clear-pin "<profile name>"
     python tools/notes.py clear-topics
 
-The state directory comes from `--state` or MATINEE_STATE. A ruling on a note
+The data directory comes from `--state` or DATA_DIR. A ruling on a note
 already ruled replaces the earlier one and prints it. The film is printed before
 any ruling is written.
 """
@@ -138,7 +138,7 @@ def note_id(text: str) -> int:
 
 def parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    p.add_argument("--state", type=Path, default=os.environ.get("MATINEE_STATE"), help="Matinee's state directory")
+    p.add_argument("--state", type=Path, default=os.environ.get("DATA_DIR"), help="Matinee's data directory")
     commands = p.add_subparsers(dest="command", required=True)
     commands.add_parser("list", help="the open notes, oldest first")
     accept = commands.add_parser("accept", help="accept a note, naming the label ruling that fixed it")
@@ -157,7 +157,7 @@ def parser() -> argparse.ArgumentParser:
 def main(argv: Sequence[str] | None = None) -> int:
     args = parser().parse_args(argv)
     if args.state is None or not (args.state / "matinee.sqlite").is_file():
-        print(f"No Matinee store in {args.state}; pass --state or set MATINEE_STATE.", file=sys.stderr)
+        print(f"No Matinee store in {args.state}; pass --state or set DATA_DIR.", file=sys.stderr)
         return 2
     try:
         store = Store(args.state / "matinee.sqlite")

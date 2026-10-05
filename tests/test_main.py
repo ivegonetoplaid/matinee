@@ -32,10 +32,10 @@ def run_build(monkeypatch: pytest.MonkeyPatch, state: Path, dtdd_key: str = "d")
     monkeypatch.setattr(main, "Theatre", theatre)
     monkeypatch.setattr(main, "create_app", lambda *a, **k: None)
     env = {
-        "MATINEE_STATE": str(state),
-        "MATINEE_JELLYFIN_URL": "http://127.0.0.1:1",
+        "DATA_DIR": str(state),
+        "JELLYFIN_URL": "http://127.0.0.1:1",
         "JELLYFIN_API_KEY": "k",
-        "MATINEE_SEERR_URL": "http://127.0.0.1:2",
+        "SEERR_URL": "http://127.0.0.1:2",
         "DTDD_API_KEY": dtdd_key,
     }
     for name, value in env.items():

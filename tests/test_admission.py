@@ -24,7 +24,7 @@ from matinee.web.config import GREETINGS, Config, ConfigError, from_env
 from matinee.web.theatre import Theatre
 from test_engine import reference, write_data
 from test_viewing import FakeDtdd
-from test_web_library import SECRET_KEY, SECRET_URL, FakeLibrary, write_film_table
+from test_web_library import SECRET_KEY, SECRET_URL, SERVER, FakeLibrary, write_film_table
 
 WORD = "Open, Sesame! 1983"  # relaxes to "opensesame1983"
 STRICT = "Correct Horse Battery"
@@ -50,7 +50,7 @@ def make_app(
         return load_catalog(table, data, reference())
 
     theatre = Theatre(FakeLibrary(), state / "films.sqlite", catalog_of=catalog_of)
-    config = Config(SECRET_URL, SECRET_KEY, state, "https://seerr.invalid", "d" * 16, word, mode, GREETINGS["gin"])
+    config = Config(SERVER, state, "https://seerr.invalid", "d" * 16, word, mode, GREETINGS["gin"])
     return create_app(
         config, theatre, Store(state / "matinee.sqlite"), FakeDtdd(), clock=clock or Clock(), wrong_word_delay_s=delay
     )
@@ -153,8 +153,8 @@ def test_edit_distance() -> None:
 
 
 def test_a_door_word_too_long_to_type_stops_the_start_and_odd_text_is_just_wrong(tmp_path: Path) -> None:
-    env = {**ENV, "MATINEE_STATE": str(tmp_path), "MATINEE_DOOR_WORD": "sesame " * 30}
-    with pytest.raises(ConfigError, match="MATINEE_DOOR_WORD is longer than 200") as refused:
+    env = {**ENV, "DATA_DIR": str(tmp_path), "DOOR_WORD": "sesame " * 30}
+    with pytest.raises(ConfigError, match="DOOR_WORD is longer than 200") as refused:
         from_env(env)
     assert "sesame" not in str(refused.value)
     assert Admission(STRICT, "strict", b"k" * 32).matches("\udfff") is False
@@ -270,13 +270,13 @@ def test_the_door_word_is_never_said_back(tmp_path: Path, caplog: pytest.LogCapt
     for reply in replies:
         assert "esame" not in reply.text.lower() and all("esame" not in v.lower() for v in reply.headers.values())
     assert "esame" not in caplog.text.lower()
-    assert "esame" not in repr(Config(SECRET_URL, SECRET_KEY, tmp_path, "https://s.invalid", "d", WORD)).lower()
+    assert "esame" not in repr(Config(SERVER, tmp_path, "https://s.invalid", "d", WORD)).lower()
 
 
 ENV = {
-    "MATINEE_JELLYFIN_URL": SECRET_URL,
+    "JELLYFIN_URL": SECRET_URL,
     "JELLYFIN_API_KEY": SECRET_KEY,
-    "MATINEE_SEERR_URL": "https://seerr.invalid",
+    "SEERR_URL": "https://seerr.invalid",
     "DTDD_API_KEY": "d",
 }
 
@@ -284,18 +284,18 @@ ENV = {
 @pytest.mark.parametrize(
     "word,mode,setting",
     [
-        ("Sesame 7", "", "MATINEE_DOOR_WORD"),  # seven letters and digits once relaxed
-        ("a.b.c.d.e.f.g", "relaxed", "MATINEE_DOOR_WORD"),
+        ("Sesame 7", "", "DOOR_WORD"),  # seven letters and digits once relaxed
+        ("a.b.c.d.e.f.g", "relaxed", "DOOR_WORD"),
         ("Short strict", "strict", None),  # exactly twelve: allowed
         ("Shorter one!", "strict", None),
-        ("Too short!!", "strict", "MATINEE_DOOR_WORD"),
-        ("Long enough word", "sideways", "MATINEE_DOOR_MATCH"),
+        ("Too short!!", "strict", "DOOR_WORD"),
+        ("Long enough word", "sideways", "DOOR_MATCH"),
     ],
 )
 def test_a_door_word_too_short_for_its_mode_or_an_unknown_mode_stops_the_start(
     tmp_path: Path, word: str, mode: str, setting: str | None
 ) -> None:
-    env = {**ENV, "MATINEE_STATE": str(tmp_path), "MATINEE_DOOR_WORD": word, "MATINEE_DOOR_MATCH": mode}
+    env = {**ENV, "DATA_DIR": str(tmp_path), "DOOR_WORD": word, "DOOR_MATCH": mode}
     if setting is None:
         assert from_env(env).door_word == word
         return
@@ -305,14 +305,11 @@ def test_a_door_word_too_short_for_its_mode_or_an_unknown_mode_stops_the_start(
 
 
 def test_the_settings_default_to_no_lock_relaxed_and_the_show_greeting(tmp_path: Path) -> None:
-    config = from_env({**ENV, "MATINEE_STATE": str(tmp_path), "MATINEE_DOOR_WORD": "   "})
+    config = from_env({**ENV, "DATA_DIR": str(tmp_path), "DOOR_WORD": "   "})
     assert (config.door_word, config.door_match, config.door_greeting) == (None, "relaxed", GREETINGS["show"])
-    own = from_env({**ENV, "MATINEE_STATE": str(tmp_path), "MATINEE_DOOR_GREETING": "Psst. Password?"})
+    own = from_env({**ENV, "DATA_DIR": str(tmp_path), "DOOR_GREETING": "Psst. Password?"})
     assert own.door_greeting == "Psst. Password?"
-    assert (
-        from_env({**ENV, "MATINEE_STATE": str(tmp_path), "MATINEE_DOOR_GREETING": "gin"}).door_greeting
-        == GREETINGS["gin"]
-    )
+    assert from_env({**ENV, "DATA_DIR": str(tmp_path), "DOOR_GREETING": "gin"}).door_greeting == GREETINGS["gin"]
 
 
 def test_the_secret_is_made_once_owner_only_and_an_unreadable_one_stops_the_start(tmp_path: Path) -> None:
