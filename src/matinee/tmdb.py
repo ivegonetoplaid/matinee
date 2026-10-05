@@ -181,11 +181,6 @@ class Pacer:
                 if self._clock() >= self._held_until:
                     return
 
-    def held(self) -> bool:
-        """Whether a hold from a 429 is still running."""
-        with self._lock:
-            return self._clock() < self._held_until
-
     def hold(self, seconds: float) -> None:
         """Hold every request, those already waiting included, for `seconds`: a 429's Retry-After."""
         with self._lock:
@@ -245,23 +240,33 @@ class ImageGate:
     def __init__(
         self, clock: Callable[[], float] = time.monotonic, sleep: Callable[[float], None] = time.sleep
     ) -> None:
-        self._pacer = Pacer(IMAGE_RATE, clock, sleep)
         self._clock = clock
+        self._sleep = sleep
         self._lock = threading.Lock()
+        self._gap = 1.0 / IMAGE_RATE
+        self._next = 0.0
+        self._held_until = 0.0
         self._hour: tuple[float, int] = (-math.inf, 0)  # when the current hour began, and requests sent in it
         self._backoff = 0.0
 
     def admit(self) -> None:
-        """Take a turn, or raise TmdbImageError while TMDB has asked Matinee to wait or the hour's ceiling is spent."""
+        """Take a turn, or raise TmdbImageError while TMDB has asked Matinee to wait (a hold that lands while this
+        request waits for its turn included) or the hour's ceiling is spent."""
         with self._lock:
-            if self._pacer.held():
-                raise TmdbImageError("TMDB's image server asked Matinee to wait")
             now = self._clock()
+            if now < self._held_until:
+                raise TmdbImageError("TMDB's image server asked Matinee to wait")
             start, sent = self._hour if now - self._hour[0] < 3600 else (now, 0)
             if sent >= IMAGE_PER_HOUR:
                 raise TmdbImageError(f"Matinee's ceiling of {IMAGE_PER_HOUR} TMDB pictures an hour is spent")
             self._hour = (start, sent + 1)
-        self._pacer.wait()
+            slot = max(now, self._next)
+            self._next = slot + self._gap
+        if slot > now:
+            self._sleep(slot - now)
+        with self._lock:
+            if self._clock() < self._held_until:
+                raise TmdbImageError("TMDB's image server asked Matinee to wait")
 
     def refused(self, retry_after: str | None) -> None:
         """TMDB answered 429 or 503: hold every picture request for its Retry-After, else a doubling backoff."""
@@ -273,7 +278,7 @@ class ImageGate:
             if seconds <= 0:
                 self._backoff = min(IMAGE_BACKOFF_MAX_S, max(IMAGE_BACKOFF_S, 2 * self._backoff))
                 seconds = self._backoff
-        self._pacer.hold(seconds)
+            self._held_until = max(self._held_until, self._clock() + seconds)
 
     def answered(self) -> None:
         with self._lock:

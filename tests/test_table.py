@@ -742,6 +742,12 @@ def test_tmdb_pictures_pass_one_gate_with_a_ceiling_and_a_hold() -> None:
         fetch()  # no Retry-After: the backoff holds it
     time_.now += 1
     fetch()
+    queued = ImageGate(clock=time_.clock, sleep=time_.sleep)
+    queued.admit()  # takes the turn at once; the next waits a fiftieth of a second
+    time_.during.append(lambda: queued.refused("600"))  # a 429 lands while that request waits
+    with pytest.raises(TmdbImageError, match="wait"):
+        queued.admit()  # it fails at once instead of sleeping through the hold
+    assert time_.slept[-1] < 1
     capped = ImageGate(clock=time_.clock, sleep=time_.sleep)
     for _ in range(IMAGE_PER_HOUR):
         capped.admit()
