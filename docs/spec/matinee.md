@@ -76,11 +76,12 @@ contract is listed under [Known gaps](#known-gaps).
 
 ### 2.0 The source question
 
-While the library can be used (a media server is set, its settings can be used,
-and it answers), it holds a film, and a film it lacks is offered, every walk
-starts with the source question, before the doors. With either pool empty every
-answer would draw from the same films or from none, so it is not asked. Matinee types "Right this way, <name>." and "what are we
-choosing from tonight?". Its answers, in this order, bound the walk:
+The source question opens every walk when three things hold. The library can be
+used: a media server is set, its settings can be used, and it answers. The
+library holds at least one film. At least one film the library lacks is offered.
+With either pool empty, every answer would draw from the same films or from
+none, so the question is not asked. Matinee types "Right this way, <name>." and
+"what are we choosing from tonight?". Its answers, in this order, bound the walk:
 
 | Answer | The walk draws from | Matinee's reply on the doors |
 |---|---|---|
@@ -289,8 +290,9 @@ lists them, then "anything", which has no filter. The kinds, all labelled, are:
 | War | war_battle, war_cost, behind_lines |
 
 Westerns asks no question, like Documentaries: the door is the choice, and it
-rolls from its whole pool after its opening line. Thriller's spies answer
-carries `self_destruct` of 5 seconds (section 12), the one answer that does. A
+rolls from its whole pool after its opening line. The spies answer, behind
+Thriller and behind Action, carries `self_destruct` of 5 seconds (section 12);
+no other answer carries it. A
 film may sit in two kinds of a door. A kind several doors offer (superheroes,
 spies, war_battle, war_cost, crime_drama, romcom, cartoon_comedy,
 action_comedy, serial_killers, horror_comedy) is one label per film, written to
