@@ -149,6 +149,7 @@ button {
 .stage {
   position: fixed;
   inset: 0;
+  top: var(--warning-h, 0px);
   display: flex;
   flex-direction: column;
   gap: 24px;
@@ -1556,6 +1557,22 @@ a.wordmark:focus-visible {
   .bulb {
     animation: none;
   }
+}
+
+/* Film data past TMDB's six months: a loud strip across the top of every screen, above everything. */
+.warning-strip {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  margin: 0;
+  padding: 8px var(--pad);
+  background: var(--velvet);
+  color: var(--strip-ink);
+  font-size: 14px;
+  font-weight: 700;
+  text-align: center;
 }
 
 .credits {

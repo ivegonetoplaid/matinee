@@ -445,7 +445,7 @@ def add_setup_route(app: FastAPI, theatre: Theatre, config: Config, seerr: Seerr
     def setup() -> SetupNote:
         """The setup note the page shows before any pick; empty lines when all is well."""
         found, films = setup_faults(theatre, config, seerr, faults)
-        return note(found, films)
+        return note(found, films, theatre.stale)
 
 
 def create_app(

@@ -6,6 +6,7 @@ import contextlib
 import io
 import itertools
 import json
+import logging
 import os
 import time
 import urllib.error
@@ -353,13 +354,22 @@ def test_media_server_errors_never_reach_the_browser(world: Any) -> None:
         assert "media.invalid" not in resp.text and "/media/" not in resp.text and "500" not in resp.text
 
 
-def test_a_table_that_ages_past_six_months_stops_being_served(world: Any, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_a_table_past_six_months_still_serves_and_warns_until_it_is_fresh(
+    world: Any, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    from matinee.web.setup import STALE
+
     client, _, _, theatre = world
-    assert client.get("/api/film/6").status_code == 200
-    aged = replace(theatre._table, oldest_tmdb=datetime.now(UTC) - timedelta(days=184))
-    monkeypatch.setattr(theatre, "_table", aged)
-    resp = client.get("/api/film/6")
-    assert resp.status_code == 503 and resp.json()["error"] == "not_ready"
+    fresh = theatre._table
+    assert client.get("/api/setup").json()["warning"] is None
+    monkeypatch.setattr(theatre, "_table", replace(fresh, oldest_tmdb=datetime.now(UTC) - timedelta(days=184)))
+    with caplog.at_level(logging.ERROR, logger="matinee.theatre"):
+        assert client.get("/api/film/6").status_code == 200  # picks go on
+        note = client.get("/api/setup").json()
+    assert note["warning"] == STALE and "rebuild_table.py" in STALE and note["lines"] == []
+    assert sum("over six months ago" in r.getMessage() for r in caplog.records) == 1  # said once, not per request
+    monkeypatch.setattr(theatre, "_table", fresh)  # a rebuild refreshed the facts
+    assert client.get("/api/setup").json()["warning"] is None
 
 
 def test_start_up_refuses_missing_reference_statistics(tmp_path: Path) -> None:

@@ -101,7 +101,7 @@ def test_write_then_load_round_trips(tmp_path: Path) -> None:
     table, _ = build_table(LIBRARY, genome(), CACHE, NOW)
     path = tmp_path / "films.sqlite"
     write_table(table, path)
-    back = load_table(path, NOW)
+    back = load_table(path)
     assert list(back.films.index) == [11, 22, 33]
     assert back.films.loc[11, "genres"] == frozenset({"Horror"})
     assert back.films.loc[11, "collection_id"] == 900
@@ -114,15 +114,17 @@ def test_write_then_load_round_trips(tmp_path: Path) -> None:
     assert not (tmp_path / "films.sqlite.partial").exists()
 
 
-def test_load_refuses_absent_and_stale(tmp_path: Path) -> None:
+def test_load_refuses_absent_and_reads_a_stale_table_flagged(tmp_path: Path) -> None:
+    from matinee.table import is_stale
+
     with pytest.raises(TableError):
-        load_table(tmp_path / "nope.sqlite", NOW)
+        load_table(tmp_path / "nope.sqlite")
     table, _ = build_table(LIBRARY, genome(), CACHE, NOW)
     write_table(table, tmp_path / "films.sqlite")
+    back = load_table(tmp_path / "films.sqlite")
     oldest = CACHE[33].fetched
-    load_table(tmp_path / "films.sqlite", oldest + timedelta(days=183) - timedelta(seconds=1))
-    with pytest.raises(TableError, match="six months"):
-        load_table(tmp_path / "films.sqlite", oldest + timedelta(days=183))
+    assert not is_stale(back, oldest + timedelta(days=183) - timedelta(seconds=1))
+    assert is_stale(back, oldest + timedelta(days=183))
 
 
 def test_load_refuses_another_format(tmp_path: Path) -> None:
@@ -133,7 +135,7 @@ def test_load_refuses_another_format(tmp_path: Path) -> None:
         db.execute("UPDATE meta SET value = '1' WHERE key = 'format'")  # the table before films outside the library
     db.close()
     with pytest.raises(TableError, match="format"):
-        load_table(path, NOW)
+        load_table(path)
 
 
 def test_failed_write_leaves_the_previous_table(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -149,7 +151,7 @@ def test_failed_write_leaves_the_previous_table(tmp_path: Path, monkeypatch: pyt
     with pytest.raises(OSError):
         write_table(table, path)
     assert path.read_bytes() == before
-    assert list(load_table(path, NOW).films.index) == [11, 22, 33]
+    assert list(load_table(path).films.index) == [11, 22, 33]
 
 
 def test_record_exactly_six_months_old_is_not_used() -> None:
@@ -340,7 +342,7 @@ def test_picture_paths_follow_the_six_month_rule_through_the_table(tmp_path: Pat
     assert pd.isna(table.films.loc[22, "poster_path"])  # its record is too old to serve
     assert pd.isna(table.films.loc[33, "poster_path"])  # TMDB has no picture for it
     write_table(table, tmp_path / "films.sqlite")
-    back = load_table(tmp_path / "films.sqlite", NOW)
+    back = load_table(tmp_path / "films.sqlite")
     assert back.films.loc[11, "poster_path"] == "/p11.jpg" and back.films.loc[11, "backdrop_path"] == "/b11.jpg"
     assert pd.isna(back.films.loc[22, "poster_path"]) and pd.isna(back.films.loc[33, "backdrop_path"])
 
@@ -353,7 +355,7 @@ def test_a_table_missing_a_column_is_refused(tmp_path: Path) -> None:
         db.execute("ALTER TABLE films DROP COLUMN language")
     db.close()
     with pytest.raises(TableError, match="no language column"):
-        load_table(path, NOW)
+        load_table(path)
 
 
 def test_daily_time_is_checked() -> None:
@@ -376,9 +378,9 @@ def test_empty_tag_list_is_refused() -> None:
 def test_a_loaded_table_can_be_written_again(tmp_path: Path) -> None:
     table, _ = build_table(LIBRARY, genome(), CACHE, NOW)
     write_table(table, tmp_path / "a.sqlite")
-    again = load_table(tmp_path / "a.sqlite", NOW)
+    again = load_table(tmp_path / "a.sqlite")
     write_table(again, tmp_path / "b.sqlite")
-    back = load_table(tmp_path / "b.sqlite", NOW)
+    back = load_table(tmp_path / "b.sqlite")
     assert pd.isna(back.films.loc[33, "collection_id"]) and back.films.loc[11, "collection_id"] == 900
     assert back.films.loc[22, "keywords"] is None
 

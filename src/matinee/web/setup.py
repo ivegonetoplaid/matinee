@@ -40,13 +40,20 @@ BROKEN = (
 )
 
 
+STALE = (
+    "This film data is over six months old, and keeping it breaks TMDB's terms. Refresh it by running the rebuild:"
+    " python tools/rebuild_table.py"
+)
+
+
 class SetupNote(BaseModel):
-    """What the page shows before any pick: nothing when `lines` is empty."""
+    """What the page shows before any pick: nothing when `lines` is empty. `warning` stands on every screen."""
 
     heading: str
     lines: list[str]
     films: int
     go_on: bool  # "Show me the films" is offered; never into an empty pool
+    warning: str | None = None
 
 
 def unreachable(server: str) -> str:
@@ -79,6 +86,7 @@ def rebuild_lines(status: RebuildStatus | None, films: int, now: datetime | None
     return lines
 
 
-def note(faults: list[str], films: int) -> SetupNote:
-    """The note for these faults, or an empty one when there is nothing to say."""
-    return SetupNote(heading=HEADING, lines=faults, films=films, go_on=films > 0)
+def note(faults: list[str], films: int, stale: bool = False) -> SetupNote:
+    """The note for these faults, or an empty one when there is nothing to say; the stale-data warning when
+    `stale`."""
+    return SetupNote(heading=HEADING, lines=faults, films=films, go_on=films > 0, warning=STALE if stale else None)

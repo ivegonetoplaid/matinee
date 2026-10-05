@@ -22,7 +22,10 @@ promises is written down in `docs/spec/matinee.md`.
 - `data/answer_key.json`, `data/fixtures/`, `data/house_overrides.json`: what
   the trees are checked against, and single films pinned by hand.
 - `tools/rebuild_table.py`: builds the offline film table from the library,
-  TMDB and the tag genome; `--daily HH:MM` rebuilds it every night.
+  TMDB and the tag genome; `--daily HH:MM` rebuilds it every night. Keep the
+  nightly rebuild on: it refetches each film's TMDB facts before they are six
+  months old, which keeps the data within TMDB's terms. Past six months Matinee
+  keeps picking but warns on every screen.
 - `tools/check_trees.py`: checks every tree against the film table:
   reachability, the answer key and the famous-film lists, at three library sizes.
 - `tools/notes.py`: lists viewers' open notes, records a ruling on one, and

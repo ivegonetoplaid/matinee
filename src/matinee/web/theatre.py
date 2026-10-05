@@ -7,7 +7,8 @@ after a failed read no new read is attempted, so a hung server cannot queue ever
 request behind it. With no media server configured there is no list to read.
 
 The table file is reloaded when the rebuild replaces it, and its TMDB age is
-checked on every call. A table that is absent, or that cannot be read, counts as
+checked on every call: a table six months old or more is still served, and
+`stale` says so (logged once each time it turns stale). A table that is absent, or that cannot be read, counts as
 an empty one, so Matinee starts before its first rebuild has written anything.
 Building the theatre prepares a catalog once, so shipped data that cannot make
 one (stale reference statistics, a malformed tree) is logged at start-up; every
@@ -31,7 +32,7 @@ from matinee.engine import Catalog, EngineError, load_catalog
 from matinee.labels import LabelsError
 from matinee.library import Library, LibraryError, LibraryFilm
 from matinee.reference import ReferenceError
-from matinee.table import FilmTable, TableError, check_age, empty_table, load_table, with_live
+from matinee.table import FilmTable, TableError, empty_table, is_stale, load_table, with_live
 from matinee.trees import TreeError
 
 LIVE_TTL = 300.0
@@ -78,6 +79,7 @@ class Theatre:
         self._showing: Showing | None = None
         self._failed_at: float | None = None
         self.broken: str | None = None  # why Matinee's own data cannot make a catalog, as last found
+        self._stale_said = False
         with contextlib.suppress(NothingToShow):  # logged where it was found; every later call tries again
             self._catalog(self._table)
 
@@ -152,7 +154,7 @@ class Theatre:
         """The current catalog, rebuilt from a fresh film list when the last read is older than LIVE_TTL."""
         with self._lock:
             self._reload_table_if_replaced()
-            check_age(self._table)
+            self._say_if_stale()
             now = self._clock()
             if self._showing is not None and now - self._showing.read_at < self._ttl(self._showing):
                 return self._showing
@@ -162,6 +164,22 @@ class Theatre:
                 log.info("%d films not yet in the film table, offered by genre alone: %s", len(unknown), unknown)
             self._showing = Showing(self._catalog(table), len(table.films), now, state)
             return self._showing
+
+    @property
+    def stale(self) -> bool:
+        """Whether the film table's TMDB facts are six months old or more, which TMDB's terms forbid keeping."""
+        return is_stale(self._table)
+
+    def _say_if_stale(self) -> None:
+        stale = self.stale
+        if stale and not self._stale_said:
+            log.error(
+                "the film table's TMDB facts were fetched %s, over six months ago, and TMDB's terms forbid keeping"
+                " them. Meanwhile Matinee keeps picking and warns on every screen. Run the rebuild"
+                " (tools/rebuild_table.py) to refresh them.",
+                f"{self._table.oldest_tmdb:%Y-%m-%d}",
+            )
+        self._stale_said = stale
 
     @property
     def table_films(self) -> int:

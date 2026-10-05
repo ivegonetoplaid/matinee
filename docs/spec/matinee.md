@@ -720,9 +720,15 @@ finished.
   facts. Its keywords are unknown, never empty, and it has no picture paths.
 - A table written before the picture paths were kept still loads. Its films
   have no picture paths until the next rebuild replaces it.
-- **The table is refused once its oldest TMDB fact is 183 days old.** The server
-  will not start on such a table. A running server checks the age on every
-  request and answers 503 `not_ready` once it passes.
+- **A table whose oldest TMDB fact is 183 days old or more still serves picks,
+  with a loud warning.** The server checks the age on every request. While it
+  has passed, `GET /api/setup` carries `warning`: "This film data is over six
+  months old, and keeping it breaks TMDB's terms. Refresh it by running the
+  rebuild: python tools/rebuild_table.py". The page shows it in a strip across
+  the top of every screen, the screen beneath it. The server logs it once each
+  time the table turns stale. The warning goes once a rebuild refreshes the
+  facts. The nightly rebuild (`--daily`) is on by default and refetches every
+  record at 150 days, which keeps the data within TMDB's terms.
 
 ### 5.3 The genome join
 
@@ -1260,7 +1266,7 @@ Every error leaves as `{"error": <code>, "message": <sentence>}`:
 
 | Code | Status | When |
 |---|---|---|
-| `not_ready` | 503 | the film table is too old to serve |
+| `not_ready` | 503 | Matinee's own data cannot make a catalog, or the film table cannot be used |
 | `topics_unavailable` | 503 | the topic list cannot be fetched |
 | `not_found` | 404 | an unknown film, image or path |
 | `not_admitted` | 401 | a door word is set and this device has not given it (section 7.2) |

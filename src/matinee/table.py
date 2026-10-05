@@ -15,9 +15,10 @@ media server's live list (`with_live`), never from the table.
 A film the genome does not cover carries no genome scores (NaN), never zeros.
 A film whose TMDB record is missing or older than six months carries no TMDB
 facts (`tmdb_known` is False, keywords None rather than empty); a film the library
-does not hold needs those facts to be offered at all. The table refuses to be
-served once its oldest TMDB fact is older than six months, because TMDB's terms
-cap caching there.
+does not hold needs those facts to be offered at all. A table whose oldest TMDB
+fact is six months old or more is still read and served, flagged (`is_stale`):
+TMDB's terms cap caching there, and the server warns on every screen until a
+rebuild refreshes it.
 """
 
 from __future__ import annotations
@@ -415,17 +416,9 @@ def write_table(table: FilmTable, path: Path) -> None:
     os.replace(partial, path)
 
 
-def check_age(table: FilmTable, now: datetime | None = None) -> None:
-    """Raise TableError once the table's oldest TMDB fact is six months old; a running server calls this too."""
-    _check_age(table.oldest_tmdb, now or datetime.now(UTC), Path("the film table"))
-
-
-def _check_age(oldest: datetime | None, now: datetime, path: Path) -> None:
-    if oldest is not None and now - oldest >= MAX_AGE:
-        raise TableError(
-            f"the film table at {path} holds TMDB data fetched {oldest:%Y-%m-%d}, over six months ago; "
-            "TMDB's terms forbid serving it. Run the nightly rebuild."
-        )
+def is_stale(table: FilmTable, now: datetime | None = None) -> bool:
+    """Whether the table's oldest TMDB fact is six months old or more, which TMDB's terms forbid keeping."""
+    return table.oldest_tmdb is not None and (now or datetime.now(UTC)) - table.oldest_tmdb >= MAX_AGE
 
 
 def _read(path: Path) -> tuple[dict[str, str], list[str], list[tuple[object, ...]], dict[int, bytes]]:
@@ -440,8 +433,9 @@ def _read(path: Path) -> tuple[dict[str, str], list[str], list[tuple[object, ...
     return meta, names, rows, blobs
 
 
-def load_table(path: Path, now: datetime | None = None) -> FilmTable:
-    """Read the table; raises TableError when it is absent, in another format, or too old to serve."""
+def load_table(path: Path) -> FilmTable:
+    """Read the table; raises TableError when it is absent or in another format. A table too old for TMDB's terms
+    is still read (`is_stale`)."""
     if not path.exists():
         raise TableError(f"no film table at {path}; run tools/rebuild_table.py")
     meta, names, rows, blobs = _read(path)
@@ -451,7 +445,6 @@ def load_table(path: Path, now: datetime | None = None) -> FilmTable:
     if lacking:
         raise TableError(f"the film table at {path} has no {', '.join(sorted(lacking))} column")
     oldest = datetime.fromisoformat(meta["oldest_tmdb"]) if meta["oldest_tmdb"] else None
-    _check_age(oldest, now or datetime.now(UTC), path)
     tags = tuple(json.loads(meta["tags"]))
     at = names.index("tmdb")
     frame = _frame({int(str(row[at])): dict(zip(names, row, strict=True)) for row in rows})

@@ -106,7 +106,7 @@ def test_a_film_the_library_does_not_hold_can_be_drawn_into_a_pool(tmp_path: Pat
 def test_the_table_round_trips_and_names_its_library(tmp_path: Path) -> None:
     table, _ = build_table([lib(1)], SCORES, CACHE, NOW, listed=[1, 2, 3])
     write_table(table, tmp_path / "films.sqlite")
-    back = load_table(tmp_path / "films.sqlite", NOW)
+    back = load_table(tmp_path / "films.sqlite")
     assert list(back.films.index) == [1, 2, 3]
     assert (
         back.films.loc[2, "tmdb_genres"] == frozenset({"Western", "Family"}) and back.films.loc[2, "vote_count"] == 2000
@@ -152,7 +152,7 @@ def test_a_film_whose_record_names_no_title_is_never_offered_from_a_loaded_table
     untitled = {**CACHE, 1: replace(CACHE[1], title=None)}
     table, _ = build_table([lib(1)], SCORES, untitled, NOW, listed=[1, 2])
     write_table(table, tmp_path / "films.sqlite")
-    back = load_table(tmp_path / "films.sqlite", NOW)
+    back = load_table(tmp_path / "films.sqlite")
     unusable, _ = with_live(back, None, listed=[1, 2])
     assert list(unusable.films.index) == [2]  # 1 is the library's, and with no title it cannot be named alone
     assert all(isinstance(n, str) and n for n in unusable.films["name"])

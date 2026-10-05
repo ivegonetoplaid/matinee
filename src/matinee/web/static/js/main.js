@@ -249,6 +249,23 @@ async function setupNote(note, onGo) {
   action.focus();
 }
 
+// The warning the server gives while the film data breaks TMDB's terms: a strip across the top of every
+// screen, the stage starting beneath it. None given, the strip goes.
+function showWarning(text) {
+  let strip = document.getElementById("warning");
+  if (!text) {
+    strip?.remove();
+    document.documentElement.style.removeProperty("--warning-h");
+    return;
+  }
+  if (!strip) {
+    strip = h("p", { id: "warning", class: "warning-strip", role: "alert" });
+    document.body.prepend(strip);
+    new ResizeObserver(() => document.documentElement.style.setProperty("--warning-h", `${strip.offsetHeight}px`)).observe(strip);
+  }
+  strip.textContent = text;
+}
+
 // The setup note, when there is something to say and it has not been said this visit; a note with no way in
 // is said every time, since there is nowhere else to go. Resolves to true when the note took the screen.
 async function saidSetup(again) {
@@ -257,6 +274,7 @@ async function saidSetup(again) {
     console.warn("the setup note could not be read; going on without it", res.data);
     return false;
   }
+  showWarning(res.data.warning);
   if (!res.data.lines.length || (setupSeen && res.data.go_on)) return false;
   await setupNote(res.data, again);
   return true;
