@@ -165,7 +165,9 @@ Keyboard focus shows a 2 px gold outline 2 px outside the edge.
 
 Letterboxes carry every choice: the answers to Matinee's questions, the doors
 and kinds, the profile-making answers, the trigger topics, and the answers to
-"Delete <name>?". "Yes, delete it" keeps its rose words.
+"Delete <name>?". "Yes, delete it" keeps its rose words. Inside the profile
+menu's panels ("Delete <name>?" and "Change avatar") a letterbox has no glow at
+rest and glows on hover.
 
 A letterbox that toggles, as a trigger topic does, shows a check mark before
 its words when chosen. Its face, glow and size do not change.

@@ -2574,6 +2574,17 @@ a.wordmark:focus-visible {
   color: var(--velvet);
 }
 
+/* Inside the profile menu's panels a letterbox has no glow at rest, only its face's inner light; it glows on hover. */
+.viewer-panel .letterbox {
+  box-shadow: inset 0 0 18px color-mix(in srgb, var(--white) 80%, transparent);
+}
+
+@media (hover: hover) {
+  .viewer-panel .letterbox:hover {
+    box-shadow: 0 0 30px color-mix(in srgb, var(--glow) 60%, transparent), inset 0 0 18px color-mix(in srgb, var(--white) 90%, transparent);
+  }
+}
+
 /* On a phone the top bar stays one row: a name over ten characters shows as initials beside the avatar,
    or as the avatar's own initials when it has none. */
 @media (max-width: 600px) {

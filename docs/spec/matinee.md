@@ -1749,6 +1749,8 @@ as written. A phone is a viewport 600 px wide or less.
   tap elsewhere changes nothing. "Yes, delete it" deletes the profile (section
   7) and returns to the front door, whose line reads "Done." and "<name>'s seat
   is empty." over the tiles; a refusal stays on the panel and says why.
+- **The profile menu's panels** ("Change avatar" and "Delete profile") show
+  their letterboxes with no glow at rest; each glows on hover.
 - **The pails.** The gore question shows four pail pictures, spotless to
   overflowing, each with its answer's words beneath it as text.
 - **The pick, as a hunt.** From a question screen the question's words fade
