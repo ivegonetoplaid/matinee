@@ -11,9 +11,8 @@ dist/
 build/
 
 # Local-only convenience links (scripts/dev-links.sh)
-/CLAUDE.md
+/CLAUDE.local.md
 /.session-tracker.md
-/CODING_STANDARDS.md
 /STYLE.md
 
 # Third-party data is fetched, never committed (MovieLens, TMDB, DoesTheDogDie terms)
@@ -34,7 +33,7 @@ ml-latest/
 *.swp
 .DS_Store
 
-# Work artifacts belong in the workbench, never here
+# Work artifacts (build reports, review reports) stay out of the repository
 codex-review-report*
 *-build-report.md
 

@@ -15,13 +15,10 @@ taste.
 focus, keyboard reach, WCAG 2.1 AA contrast. This document does not repeat it.
 It states what is specific to Matinee.
 
-The rules here were settled in the workbench's design-standards decisions
-(`feats/matinee-design-standards/decisions.md`). This file transcribes the
-rules that hold on every screen; a decision about one screen's wording or
-placement goes to the page spec. The `:root` block of
+This file holds the rules that hold on every screen; a decision about one
+screen's wording or placement goes to the page spec. The `:root` block of
 `src/matinee/web/static/css/matinee.css` is this file's one transcription for
-the browser. Where the decisions, this file and the stylesheet disagree, the
-decisions win.
+the browser. Where this file and the stylesheet disagree, this file wins.
 
 ---
 
@@ -30,10 +27,9 @@ decisions win.
 When the code strongly disagrees with a rule here, that is information about
 the rule. Do not break it silently, do not contort a screen to satisfy it, and
 do not edit the rule to match what got built. Build the thing the way it wants
-to be built, then raise the conflict in the workbench's
-`discussions/matinee-design-standards-discussion-log.md`, naming the rule, what
-the code wanted, and why. If the code was right, amend the decisions and this
-file. If the rule was right, fix the code.
+to be built, then raise the conflict as an issue on the code host, naming the
+rule, what the code wanted, and why. If the code was right, amend this file. If
+the rule was right, fix the code.
 
 ---
 
