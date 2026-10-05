@@ -10,7 +10,7 @@ __pycache__/
 dist/
 build/
 
-# Local-only convenience links (scripts/dev-links.sh)
+# Local-only convenience links, laid by the maintainer's own tooling
 /CLAUDE.local.md
 /.session-tracker.md
 /STYLE.md

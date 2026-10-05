@@ -56,7 +56,7 @@ roughly 10,000 of the films TMDB's users have voted on most.
 1. **Get the code.**
 
    ```sh
-   git clone <this repository> matinee
+   git clone https://github.com/ivegonetoplaid/matinee.git
    cd matinee
    ```
 
