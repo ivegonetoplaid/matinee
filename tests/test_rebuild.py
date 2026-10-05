@@ -159,3 +159,30 @@ def test_a_one_shot_rebuild_that_stopped_exits_one(tmp_path: Path, monkeypatch: 
     monkeypatch.setattr(rebuild_table, "rebuild", lambda *a: RebuildStatus("stopped", "", "", reason=KEY_REFUSED))
     monkeypatch.setattr("sys.argv", ["rebuild_table.py"])
     assert rebuild_table.main() == 1
+
+
+def test_the_rebuild_writes_labelled_films_the_library_lacks_beside_the_library(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from matinee.table import load_table
+    from matinee.tmdb import TmdbFilm
+
+    world, owned = sorted(load_labels().films())[:2]
+    fetched = datetime.now(UTC).isoformat()
+    cache = {
+        t: TmdbFilm(t, fetched, None, None, [], "en", "", "", title=f"Film {t}", certification="PG", genres=["Drama"])
+        for t in (world, owned)
+    }
+
+    class Reader:
+        def films(self) -> list[LibraryFilm]:
+            return [LibraryFilm("c" * 32, owned, "Owned", 2003, frozenset({"Drama"}), "PG", 90.0, 7.0, None)]
+
+    monkeypatch.setattr(rebuild_table, "open_reader", lambda server: Reader())
+    monkeypatch.setattr(rebuild_table, "refresh", lambda ids, cache_path, token: Refreshed(0, 0))
+    monkeypatch.setattr(rebuild_table, "load_cache", lambda path: cache)
+    rebuild_table.rebuild(MediaServer("jellyfin", "http://jf.invalid", "k"), tmp_path, "t")
+    films = load_table(tmp_path / "films.sqlite").films
+    assert films.loc[owned, "item_id"] == "c" * 32 and films.loc[owned, "name"] == "Owned"
+    assert films.loc[world, "item_id"] != films.loc[world, "item_id"]  # NaN: no media-server item
+    assert films.loc[world, "name"] == f"Film {world}"

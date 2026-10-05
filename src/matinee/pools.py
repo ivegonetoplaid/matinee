@@ -141,13 +141,22 @@ def kids_band(labelled: str | None, certificate: str | None, spooky: bool = Fals
 def kids_bands(table: FilmTable, labels: TreeLabels, pins: Mapping[int, str]) -> dict[str, Mask]:
     """The kids pool split into little, family and older bands; family includes little, older includes both.
 
-    A film's band is `kids_band` of its label, certificate and spooky kind; a house pin sets the band outright.
+    A film's band is `kids_band` of its label, certificate and spooky kind. A house pin sets the band outright for a
+    film the library holds; for one it does not hold, the pin applies only when the film's certificate passes the
+    gate, so a pin never carries an unrated film the household has not vetted into the pool.
     """
     films = table.films
+    held = films.held if "held" in films else pd.Series(True, index=films.index)
+
+    def pinned(t: int, certificate: str, is_held: bool) -> str | None:
+        pin = pins.get(t)
+        return pin if pin is not None and (is_held or certificate in CERTIFICATE_BANDS) else None
+
     band = pd.Series(
         [
-            pins.get(int(t)) or kids_band(labels.bands.get(int(t)), c, "spooky" in labels.kinds.get(int(t), ()))
-            for t, c in zip(films.index, films.certificate, strict=True)
+            pinned(int(t), c, bool(h))
+            or kids_band(labels.bands.get(int(t)), c, "spooky" in labels.kinds.get(int(t), ()))
+            for t, c, h in zip(films.index, films.certificate, held, strict=True)
         ],
         index=films.index,
         dtype=object,

@@ -25,7 +25,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from matinee.dtdd import Dtdd
 from matinee.engine import EngineError
-from matinee.library import ImageKind, LibraryError
+from matinee.library import Image, ImageKind, LibraryError
 from matinee.pick import DeviceCap, Picker
 from matinee.quips import Quips, load_quips
 from matinee.store import AVATARS, Locked, Store, StoreError
@@ -93,27 +93,30 @@ class Pictures(BaseModel):
 
 @dataclass(frozen=True)
 class Held:
-    """A film in the current list: its media-server item and the facts shown with it."""
+    """A film Matinee offers now: its media-server item (None when the library does not hold it), the facts shown
+    with it, and TMDB's synopsis."""
 
-    item_id: str
+    item_id: str | None
     title: str
     year: int | None
     runtime_min: int | None
     backdrop_path: str | None
+    synopsis: str | None
 
 
 def held(theatre: Theatre, tmdb: int) -> Held:
-    """The film if it is in the current list; 404 for any other id."""
+    """The film if Matinee offers it now; 404 for any other id."""
     films = theatre.showing().catalog.table.films
     if tmdb not in films.index:
         raise HTTPException(status_code=404, detail="not_found")
     row = films.loc[tmdb]
     return Held(
-        str(row.item_id),
+        stored_path(row.item_id),
         str(row["name"]),
         optional_int(row.year),
         optional_int(row.runtime_min),
         stored_path(row.backdrop_path),
+        stored_path(row.synopsis),
     )
 
 
@@ -161,18 +164,35 @@ def film_link(seerr: str | None, tmdb: int) -> tuple[str, Literal["seerr", "tmdb
     return f"{TMDB_FILM}/{tmdb}", "tmdb"
 
 
+def film_image(theatre: Theatre, film: Held, tmdb: int, kind: ImageKind, width: int) -> Image:
+    """The film's picture from the media server; 404 when the library does not hold it or the server fails."""
+    if film.item_id is None:
+        raise HTTPException(status_code=404, detail="not_found")
+    try:
+        return theatre.library.image(film.item_id, kind, width)
+    except LibraryError as exc:
+        log.warning("image %s for tmdb %s: %s", kind, tmdb, exc)
+        raise HTTPException(status_code=404, detail="not_found") from exc
+
+
+def film_synopsis(theatre: Theatre, film: Held, tmdb: int) -> str | None:
+    """The media server's synopsis for a film it holds, else TMDB's."""
+    if film.item_id is None:
+        return film.synopsis
+    try:
+        return theatre.library.synopsis(film.item_id)
+    except LibraryError as exc:
+        log.warning("synopsis for tmdb %s: %s", tmdb, exc)
+        raise LibraryUnavailable("the library cannot be reached") from exc
+
+
 def add_film_routes(app: FastAPI, theatre: Theatre, seerr: str | None, images: ImageSource) -> None:
     @app.get("/img/{kind}/{tmdb}/{size}")
     def image(kind: str, tmdb: int, size: str) -> Response:
         image_kind: ImageKind = "backdrop" if kind == "backdrop" else "poster"
         if kind != image_kind or size not in IMAGE_WIDTHS[image_kind]:
             raise HTTPException(status_code=404, detail="not_found")
-        film = held(theatre, tmdb)
-        try:
-            img = theatre.library.image(film.item_id, image_kind, IMAGE_WIDTHS[image_kind][size])
-        except LibraryError as exc:
-            log.warning("image %s for tmdb %s: %s", kind, tmdb, exc)
-            raise HTTPException(status_code=404, detail="not_found") from exc
+        img = film_image(theatre, held(theatre, tmdb), tmdb, image_kind, IMAGE_WIDTHS[image_kind][size])
         return Response(img.body, media_type=img.content_type, headers={"Cache-Control": IMAGE_CACHE})
 
     @app.get("/api/pictures")
@@ -187,11 +207,7 @@ def add_film_routes(app: FastAPI, theatre: Theatre, seerr: str | None, images: I
     @app.get("/api/film/{tmdb}")
     def film(tmdb: int) -> FilmCard:
         film = held(theatre, tmdb)
-        try:
-            synopsis = theatre.library.synopsis(film.item_id)
-        except LibraryError as exc:
-            log.warning("synopsis for tmdb %s: %s", tmdb, exc)
-            raise LibraryUnavailable("the library cannot be reached") from exc
+        synopsis = film_synopsis(theatre, film, tmdb)
         link, link_to = film_link(seerr, tmdb)
         return FilmCard(
             tmdb=tmdb,

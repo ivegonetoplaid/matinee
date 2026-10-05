@@ -47,12 +47,14 @@ class Theatre:
         clock: Callable[[], float] = time.monotonic,
         catalog_of: Callable[[FilmTable], Catalog] = load_catalog,
         on_reload: Callable[[], None] = lambda: None,
+        listed: frozenset[int] = frozenset(),
     ) -> None:
         self._library = library
         self._table_path = table_path
         self._clock = clock
         self._catalog_of = catalog_of
         self._on_reload = on_reload
+        self._listed = listed
         self._lock = threading.Lock()
         self._table = load_table(table_path)
         self._table_mtime = table_path.stat().st_mtime
@@ -86,11 +88,10 @@ class Theatre:
                 log.warning("the media server could not be read: %s", exc)
                 raise LibraryUnavailable("the library cannot be reached") from exc
             self._failed_at = None
-            table, unknown = with_live(self._table, films)
+            table, unknown = with_live(self._table, films, self._listed)
             if unknown:
                 log.info("%d films not yet in the film table, offered by genre alone: %s", len(unknown), unknown)
-            count = len({f.tmdb for f in films if f.tmdb is not None})
-            self._showing = Showing(self._catalog_of(table), count, now)
+            self._showing = Showing(self._catalog_of(table), len(table.films), now)
             return self._showing
 
     @property

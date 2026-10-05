@@ -49,8 +49,11 @@ contract is listed under [Known gaps](#known-gaps).
      `summary`. An item id is digits only before it is joined into a request.
      The token travels only in the `X-Plex-Token` header, never in a URL or a
      log, and never follows a redirect.
-3. **Library mode only.** Matinee offers only films the library holds at the
-   moment of the request. A film gone from the library is never offered.
+3. **The library and the films the labels name.** Matinee offers the films the
+   library holds at the moment of the request, and the films the labels name
+   that it does not hold. A film gone from the library that no label names is
+   never offered. Which films the library holds is read from the media server's
+   live film list, never from the film table.
 4. **Matinee's own state is its own.** Profiles, device tokens, saved topics
    and viewers' notes live in Matinee's store. None of it reaches a media server.
 5. **No public API and no viewer CLI.** The HTTP routes serve Matinee's own page
@@ -489,8 +492,10 @@ One exception: a film labelled for the whole family with a G-class certificate
 is in the little band, unless one of its kids kinds is spooky.
 
 Any other certificate, R, NC-17, TV-MA, an absent or unusable one, never
-passes. A house kids pin puts a film in the pool in the named band, whatever
-its certificate and labels. The bands allow rather than require:
+passes. A house kids pin puts a library film in the pool in the named band,
+whatever its certificate and labels. For a film the library does not hold, the
+pin applies only when its certificate passes the gate, so a pin never carries an
+unrated film into the pool. The bands allow rather than require:
 
 | Answer | Offers |
 |---|---|
@@ -585,6 +590,18 @@ The trees filter on an offline film table: one SQLite file in Matinee's state
 directory, never in the repository. The server reads it. It never queries the
 genome or TMDB.
 
+The table holds every library film and every film the labels name that has a
+usable TMDB record (format 2; a table in any other format is refused). A library
+film's row carries its media-server item and the media server's title, year,
+genres, certificate, runtime and rating, with three exceptions: its genres are
+TMDB's when it has a usable record, because the rules read TMDB's genre names and
+a Plex library writes its own; an empty title is TMDB's; and a rating another
+country's system wrote (a prefix such as `gb/`) is TMDB's US rating. A row for a
+film the library does not hold carries no item and TMDB's title, year, genres,
+US age rating (empty where TMDB has none, which never passes the kids gate),
+runtime and rating. Every row also keeps the film's TMDB facts, its synopsis and
+its vote count in their own columns.
+
 ### 5.1 The nightly rebuild
 
 `tools/rebuild_table.py` writes the table. With `--daily HH:MM` it rebuilds at
@@ -661,8 +678,12 @@ finished.
 
 ### 5.4 The live library
 
-- The server reads the media server's film list at most every **300 seconds**
-  and narrows the table to the films the library holds now.
+- The server reads the media server's film list at most every **300 seconds**.
+  A film on the list is held. It shows the media server's facts as the rebuild
+  read them, with the item the list names now; one the library took in since the
+  rebuild shows the list's facts. A film the labels name that the list lacks is
+  offered with its TMDB facts and no item. A film neither on the list nor named
+  by a label is not offered.
 - A library film the table does not yet hold is offered by its media-server
   facts alone, with no genome scores and no TMDB facts, and is logged.
 - When the media server cannot be read, nothing is served from an older list.
@@ -670,8 +691,8 @@ finished.
   a read succeeds. For
   **15 seconds** after a failed read no new read is attempted.
 - The table file is reloaded when the nightly rebuild replaces it.
-- The sign's "Now showing N films" counts the distinct TMDB ids in the live
-  film list.
+- The sign's "Now showing N films" counts every film Matinee offers: the
+  library's and the films the labels name.
 
 ### 5.5 Refusing to start
 
@@ -1782,7 +1803,6 @@ The terms of each source are part of the design.
 
 Not part of this build, and not to be added until asked:
 
-- offering films the library does not hold (TMDB mode);
 - a checker run over every film in the genome;
 - a CLI or HTTP API for anyone but Matinee's own page;
 - `Watch this`, or any hand-off to a player;

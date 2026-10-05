@@ -402,3 +402,22 @@ def test_without_seerr_every_pick_links_to_its_tmdb_page(tmp_path: Path) -> None
     client, _, _, _ = make_world(tmp_path, seerr=None)
     card = client.get("/api/film/5").json()
     assert (card["link"], card["link_to"]) == ("https://www.themoviedb.org/movie/5", "tmdb")
+
+
+def test_now_showing_counts_the_films_the_labels_name_beside_the_library(tmp_path: Path) -> None:
+    data = write_data(tmp_path / "data")
+    stored = film_table()
+    world = int(stored.films.index[-1])
+    stored.films["tmdb_title"] = stored.films["tmdb_title"].astype(object)
+    stored.films.loc[world, "tmdb_title"] = "World film"
+    write_table(stored, tmp_path / "films.sqlite")
+    library = FakeLibrary(held=[t for t in range(1, 40) if t != world])
+    theatre = Theatre(
+        library,
+        tmp_path / "films.sqlite",
+        catalog_of=lambda t: load_catalog(t, data, reference()),
+        listed=frozenset({world}),
+    )
+    showing = theatre.showing()
+    assert showing.now_showing == len(library.held) + 1
+    assert not showing.catalog.table.films.loc[world, "held"]

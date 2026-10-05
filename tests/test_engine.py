@@ -27,7 +27,7 @@ from matinee.engine import (
 from matinee.labels import Labels, TreeLabels
 from matinee.pools import SCORES
 from matinee.reference import Cuts, Reference, TreeReference
-from matinee.table import FilmTable
+from matinee.table import COLUMNS, FilmTable
 from matinee.trees import Bands, Filter, Option
 
 EXTRA = ("p_fast", "p_slow", "gore_a", "spook", "hero")
@@ -83,7 +83,7 @@ def without(table: FilmTable, gone: Iterable[int]) -> FilmTable:
 
 
 def make_table() -> FilmTable:
-    frame = pd.DataFrame(film_rows()).set_index("tmdb")
+    frame = pd.DataFrame(film_rows()).set_index("tmdb").reindex(columns=list(COLUMNS))  # TMDB facts unknown
     frame["year"] = frame["year"].astype("Int64")
     frame["collection_id"] = frame["collection_id"].astype("Int64")
     matrix = np.full((N, len(TAGS)), np.nan, dtype=np.float32)

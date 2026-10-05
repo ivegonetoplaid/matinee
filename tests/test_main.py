@@ -20,13 +20,14 @@ class Recorded:
     def __init__(self) -> None:
         self.catalog_of: Any = None
         self.on_reload: Any = None
+        self.listed: Any = None
 
 
 def run_build(monkeypatch: pytest.MonkeyPatch, state: Path, dtdd_key: str = "d") -> Recorded:
     seen = Recorded()
 
-    def theatre(_library: object, _table: object, catalog_of: Any, on_reload: Any) -> object:
-        seen.catalog_of, seen.on_reload = catalog_of, on_reload
+    def theatre(_library: object, _table: object, catalog_of: Any, on_reload: Any, listed: Any) -> object:
+        seen.catalog_of, seen.on_reload, seen.listed = catalog_of, on_reload, listed
         return object()
 
     monkeypatch.setattr(main, "Theatre", theatre)
@@ -52,6 +53,7 @@ def test_the_server_serves_the_shipped_labels_whatever_the_state_directory_holds
     with caplog.at_level(logging.WARNING, logger="matinee.web"):
         seen = run_build(monkeypatch, tmp_path)
     assert seen.catalog_of.keywords["labels"].films() == load_labels().films()
+    assert seen.listed == load_labels().films()  # every film the labels name may be offered
     assert any("labels.json is not read" in r.getMessage() for r in caplog.records)
 
 

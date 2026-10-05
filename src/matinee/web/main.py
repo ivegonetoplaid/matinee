@@ -59,6 +59,7 @@ def build() -> FastAPI:
             warn_kept_topics(store)
 
     on_reload()
-    catalog_of = partial(load_catalog, labels=load_labels())
-    theatre = Theatre(library, config.table_path, catalog_of=catalog_of, on_reload=on_reload)
+    labels = load_labels()
+    catalog_of = partial(load_catalog, labels=labels)
+    theatre = Theatre(library, config.table_path, catalog_of=catalog_of, on_reload=on_reload, listed=labels.films())
     return create_app(config, theatre, store, dtdd, quips=load_quips())

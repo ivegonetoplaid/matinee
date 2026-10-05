@@ -126,7 +126,7 @@ def test_load_refuses_another_format(tmp_path: Path) -> None:
     path = tmp_path / "films.sqlite"
     write_table(table, path)
     with sqlite3.connect(path) as db:
-        db.execute("UPDATE meta SET value = '2' WHERE key = 'format'")
+        db.execute("UPDATE meta SET value = '1' WHERE key = 'format'")  # the table before films outside the library
     db.close()
     with pytest.raises(TableError, match="format"):
         load_table(path, NOW)
@@ -341,17 +341,10 @@ def test_picture_paths_follow_the_six_month_rule_through_the_table(tmp_path: Pat
     assert pd.isna(back.films.loc[22, "poster_path"]) and pd.isna(back.films.loc[33, "backdrop_path"])
 
 
-def test_a_table_written_before_picture_paths_loads_without_them(tmp_path: Path) -> None:
+def test_a_table_missing_a_column_is_refused(tmp_path: Path) -> None:
     table, _ = build_table(LIBRARY, genome(), CACHE, NOW)
     path = tmp_path / "films.sqlite"
     write_table(table, path)
-    with sqlite3.connect(path) as db:
-        db.execute("ALTER TABLE films DROP COLUMN poster_path")
-        db.execute("ALTER TABLE films DROP COLUMN backdrop_path")
-    db.close()
-    back = load_table(path, NOW)
-    assert list(back.films.index) == [11, 22, 33]
-    assert back.films.poster_path.isna().all() and back.films.backdrop_path.isna().all()
     with sqlite3.connect(path) as db:
         db.execute("ALTER TABLE films DROP COLUMN language")
     db.close()

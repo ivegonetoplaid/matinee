@@ -60,7 +60,7 @@ from matinee.labels import LABELS, LabelsError, load_labels
 from matinee.pools import GENRE_DOORS, House, waiting
 from matinee.quips import QuipsError, load_quips, quip_problems
 from matinee.reference import DATA
-from matinee.table import FilmTable, load_table
+from matinee.table import FilmTable, library_films, load_table, with_live
 from matinee.trees import Tree
 
 DEFAULT_TABLE = Path.home() / ".local/share/matinee/films.sqlite"
@@ -501,7 +501,11 @@ def main() -> int:
     parser.add_argument("--labels", type=Path, help="labels file; default: the shipped data/labels.json")
     args = parser.parse_args()
     key = json.loads((DATA / "answer_key.json").read_text())
-    table = load_table(args.table)
+    stored = load_table(args.table)
+    library = library_films(stored)
+    # The trees are checked against the library the table was built from; a table built with no library is
+    # checked whole.
+    table = with_live(stored, library)[0] if library else stored
     report = Report()
     try:
         cat = load_catalog(table, labels=load_labels(args.labels or LABELS))
@@ -514,7 +518,8 @@ def main() -> int:
     house = cat.house
     pools = {name: pd.Series(mask, index=table.films.index) for name, mask in cat.pools.items()}
     gore = scale_members(cat, cat.trees["horror"], "gore")
-    report.say(f"film table {args.table}: {len(table.films)} films, {int(table.has_genome().sum())} with genome scores")
+    report.say(f"film table {args.table}: {len(stored.films)} films, {len(library)} of them the library's")
+    report.say(f"checked: {len(table.films)} films, {int(table.has_genome().sum())} with genome scores")
     report.say(f"built {table.built_at:%Y-%m-%d %H:%M}, genome {table.release}")
     for tree_id, labels in cat.labels.trees.items():
         report.say(f"labels: {len(labels.kinds)} films labelled behind {tree_id}")

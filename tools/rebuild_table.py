@@ -62,11 +62,12 @@ def rebuild(server: MediaServer | None, state: Path, token: str) -> RebuildStatu
 
 def _rebuild(server: MediaServer | None, state: Path, cache: Path, token: str, started: str) -> RebuildStatus:
     films = open_reader(server).films() if server is not None else []
-    ids = sorted(load_labels().films() | {f.tmdb for f in films if f.tmdb is not None})
+    listed = load_labels().films()
+    ids = sorted(listed | {f.tmdb for f in films if f.tmdb is not None})
     write_status(state, RebuildStatus("running", started, _now(), total=len(ids)))
     result = refresh(ids, cache, token)
     log.info("TMDB: fetched %d, failed %d", result.fetched, result.failed)
-    table, report = build_table(films, load_scores(), load_cache(cache), datetime.now(UTC))
+    table, report = build_table(films, load_scores(), load_cache(cache), datetime.now(UTC), listed)
     write_table(table, state / "films.sqlite")
     for line in report.lines():
         log.info("%s", line)
