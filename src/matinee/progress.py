@@ -53,11 +53,27 @@ def read_status(data_dir: Path) -> RebuildStatus | None:
             exc,
         )
         return None
-    if status.state not in ("running", "finished", "stopped"):
+    if not _well_formed(status):
         log.warning(
-            "the rebuild's report %s names no known state. Meanwhile it counts as absent; the next rebuild"
-            " rewrites it.",
+            "the rebuild's report %s names no known state or holds a field of the wrong kind. Meanwhile it counts"
+            " as absent; the next rebuild rewrites it.",
             path,
         )
         return None
     return status
+
+
+def _count(value: object) -> bool:
+    return isinstance(value, int) and not isinstance(value, bool) and value >= 0
+
+
+def _well_formed(status: RebuildStatus) -> bool:
+    """Every field of the kind the report promises: a known state, text times, counts, and text or no reason."""
+    return (
+        status.state in ("running", "finished", "stopped")
+        and isinstance(status.started_at, str)
+        and isinstance(status.updated_at, str)
+        and _count(status.done)
+        and _count(status.total)
+        and (status.reason is None or isinstance(status.reason, str))
+    )

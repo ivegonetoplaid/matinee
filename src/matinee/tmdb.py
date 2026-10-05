@@ -83,9 +83,10 @@ class TmdbFilm:
 
 
 def _record(line: str) -> TmdbFilm | None:
+    """One cache line as a record; None when it is damaged, its fetch time included (unreadable or without a zone)."""
     try:
         rec = json.loads(line)
-        return TmdbFilm(
+        film = TmdbFilm(
             tmdb=int(rec["tmdb"]),
             fetched_at=str(rec["fetched_at"]),
             collection_id=rec.get("collection_id"),
@@ -103,6 +104,7 @@ def _record(line: str) -> TmdbFilm | None:
             vote_count=rec.get("vote_count"),
             certification=rec.get("certification"),
         )
+        return film if film.fetched.tzinfo is not None else None
     except (json.JSONDecodeError, KeyError, TypeError, ValueError, AttributeError):
         return None
 
@@ -179,6 +181,11 @@ class Pacer:
                 if self._clock() >= self._held_until:
                     return
 
+    def held(self) -> bool:
+        """Whether a hold from a 429 is still running."""
+        with self._lock:
+            return self._clock() < self._held_until
+
     def hold(self, seconds: float) -> None:
         """Hold every request, those already waiting included, for `seconds`: a 429's Retry-After."""
         with self._lock:
@@ -214,6 +221,10 @@ def get_json(url: str, token: str, pacer: Pacer) -> dict[str, Any] | None:
 
 IMAGES = "https://image.tmdb.org/t/p/"
 IMAGE_TIMEOUT_S = 10
+IMAGE_RATE = 50.0  # picture requests a second to TMDB's image server, at most
+IMAGE_PER_HOUR = 20_000  # Matinee's own ceiling on picture requests to TMDB in any hour
+IMAGE_BACKOFF_S = 10.0  # the first hold after a 429 or 503 that names no Retry-After; it doubles
+IMAGE_BACKOFF_MAX_S = 600.0
 MAX_IMAGE_BYTES = 8 * 1024 * 1024
 # Matinee's picture widths as TMDB's sizes: the nearest TMDB width, as the page maps them under `tmdb`.
 IMAGE_SIZES: dict[str, dict[int, str]] = {
@@ -226,14 +237,65 @@ class TmdbImageError(RuntimeError):
     """TMDB's image server gave no usable picture."""
 
 
+class ImageGate:
+    """The one door to TMDB's image server: a pace, an hourly ceiling of Matinee's own, and a hold after a 429 or 503
+    (its Retry-After, else a backoff doubling from IMAGE_BACKOFF_S). A request the gate will not admit fails at once,
+    so a viewer's wall shows no picture rather than a server thread waiting."""
+
+    def __init__(
+        self, clock: Callable[[], float] = time.monotonic, sleep: Callable[[float], None] = time.sleep
+    ) -> None:
+        self._pacer = Pacer(IMAGE_RATE, clock, sleep)
+        self._clock = clock
+        self._lock = threading.Lock()
+        self._hour: tuple[float, int] = (-math.inf, 0)  # when the current hour began, and requests sent in it
+        self._backoff = 0.0
+
+    def admit(self) -> None:
+        """Take a turn, or raise TmdbImageError while TMDB has asked Matinee to wait or the hour's ceiling is spent."""
+        with self._lock:
+            if self._pacer.held():
+                raise TmdbImageError("TMDB's image server asked Matinee to wait")
+            now = self._clock()
+            start, sent = self._hour if now - self._hour[0] < 3600 else (now, 0)
+            if sent >= IMAGE_PER_HOUR:
+                raise TmdbImageError(f"Matinee's ceiling of {IMAGE_PER_HOUR} TMDB pictures an hour is spent")
+            self._hour = (start, sent + 1)
+        self._pacer.wait()
+
+    def refused(self, retry_after: str | None) -> None:
+        """TMDB answered 429 or 503: hold every picture request for its Retry-After, else a doubling backoff."""
+        with self._lock:
+            try:
+                seconds = float(retry_after) if retry_after else 0.0
+            except ValueError:
+                seconds = 0.0
+            if seconds <= 0:
+                self._backoff = min(IMAGE_BACKOFF_MAX_S, max(IMAGE_BACKOFF_S, 2 * self._backoff))
+                seconds = self._backoff
+        self._pacer.hold(seconds)
+
+    def answered(self) -> None:
+        with self._lock:
+            self._backoff = 0.0
+
+
+IMAGE_GATE = ImageGate()
+
+
 def fetch_picture(
-    path: str, kind: str, width: int, opener: Callable[..., Any] = urllib.request.urlopen
+    path: str,
+    kind: str,
+    width: int,
+    opener: Callable[..., Any] = urllib.request.urlopen,
+    gate: ImageGate = IMAGE_GATE,
 ) -> tuple[bytes, str]:
-    """One TMDB picture at the TMDB size nearest `width`, as (body, content type). Needs no key; a path not shaped
-    like a TMDB picture path is refused before any request."""
+    """One TMDB picture at the TMDB size nearest `width`, as (body, content type), through `gate`. Needs no key; a
+    path not shaped like a TMDB picture path is refused before any request."""
     if not PICTURE_PATH.fullmatch(path):
         raise TmdbImageError(f"not a TMDB picture path: {path!r}")
     size = IMAGE_SIZES[kind][width]
+    gate.admit()
     req = urllib.request.Request(
         f"{IMAGES}{size}{path}", headers={"Accept": "image/*", "User-Agent": USER_AGENT}, method="GET"
     )
@@ -241,8 +303,13 @@ def fetch_picture(
         with opener(req, timeout=IMAGE_TIMEOUT_S) as resp:
             content_type = resp.headers.get("Content-Type", "")
             body = resp.read(MAX_IMAGE_BYTES + 1)
+    except urllib.error.HTTPError as exc:
+        if exc.code in (429, 503):
+            gate.refused(exc.headers.get("Retry-After") if exc.headers else None)
+        raise TmdbImageError(f"TMDB's image server gave no {kind}: {exc}") from exc
     except (urllib.error.URLError, OSError, http.client.HTTPException) as exc:
         raise TmdbImageError(f"TMDB's image server gave no {kind}: {exc}") from exc
+    gate.answered()
     if not content_type.startswith("image/") or len(body) > MAX_IMAGE_BYTES:
         raise TmdbImageError(f"TMDB's image server answered a {kind} with {content_type or 'no type'}")
     return body, content_type

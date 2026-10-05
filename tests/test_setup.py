@@ -208,3 +208,28 @@ def test_the_stall_limit_stands_far_above_how_often_a_running_rebuild_reports() 
     from matinee.tmdb import TICK_EVERY
 
     assert STALLED_AFTER.total_seconds() > 4 * TICK_EVERY
+
+
+@pytest.mark.parametrize(
+    "report",
+    [
+        {"state": "running", "started_at": "", "updated_at": {}, "done": "many", "total": "lots"},
+        {"state": "running", "started_at": "", "updated_at": "", "done": True, "total": 3},
+        {"state": "finished", "started_at": "", "updated_at": "", "done": -1, "total": 3},
+        {"state": "stopped", "started_at": "", "updated_at": "", "reason": 7},
+    ],
+)
+def test_a_report_with_fields_of_the_wrong_kind_counts_as_absent_and_starts_matinee(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, report: dict[str, Any]
+) -> None:
+    import json
+
+    from matinee.progress import read_status
+
+    (tmp_path / "rebuild.json").write_text(json.dumps(report))
+    assert read_status(tmp_path) is None
+    client = build_real(monkeypatch, tmp_path)
+    assert client.get("/api/setup").status_code == 200
+    good = RebuildStatus("running", "a", datetime.now(UTC).isoformat(), 3, 9)
+    write_status(tmp_path, good)
+    assert read_status(tmp_path) == good

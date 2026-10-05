@@ -693,3 +693,59 @@ def test_refresh_paces_with_the_pacer_it_is_given(tmp_path: Path, monkeypatch: p
     monkeypatch.setattr("matinee.tmdb.fetch_film", recorded)
     refresh(range(5), tmp_path / "t.jsonl", "tok", rate=30, pacer=given)
     assert len(seen) == 5 and all(p is given for p in seen)
+
+
+def test_tmdb_pictures_pass_one_gate_with_a_ceiling_and_a_hold() -> None:
+    import io
+
+    from matinee.tmdb import IMAGE_BACKOFF_S, IMAGE_PER_HOUR, ImageGate, TmdbImageError, fetch_picture
+
+    time_ = FakeTime()
+    gate = ImageGate(clock=time_.clock, sleep=time_.sleep)
+    calls: list[object] = []
+    answers: list[object] = []
+
+    class Resp(io.BytesIO):
+        headers = {"Content-Type": "image/jpeg"}
+
+        def __enter__(self) -> Resp:
+            return self
+
+        def __exit__(self, *_: object) -> None:
+            return None
+
+    def opener(req: object, timeout: float) -> Resp:
+        calls.append(req)
+        answer = answers.pop(0) if answers else None
+        if isinstance(answer, Exception):
+            raise answer
+        return Resp(b"jpeg")
+
+    def fetch() -> None:
+        fetch_picture("/p.jpg", "poster", 160, opener=opener, gate=gate)
+
+    fetch()
+    answers.append(urllib.error.HTTPError("u", 429, "Too Many", {"Retry-After": "30"}, None))  # type: ignore[arg-type]
+    with pytest.raises(TmdbImageError):
+        fetch()
+    sent = len(calls)
+    with pytest.raises(TmdbImageError, match="asked Matinee to wait"):
+        fetch()  # held: refused at once, no request sent
+    assert len(calls) == sent
+    time_.now += 30
+    fetch()
+    answers.append(urllib.error.HTTPError("u", 503, "Busy", {}, None))  # type: ignore[arg-type]
+    with pytest.raises(TmdbImageError):
+        fetch()
+    time_.now += IMAGE_BACKOFF_S - 1
+    with pytest.raises(TmdbImageError, match="wait"):
+        fetch()  # no Retry-After: the backoff holds it
+    time_.now += 1
+    fetch()
+    capped = ImageGate(clock=time_.clock, sleep=time_.sleep)
+    for _ in range(IMAGE_PER_HOUR):
+        capped.admit()
+    with pytest.raises(TmdbImageError, match="ceiling"):
+        capped.admit()
+    time_.now += 3600
+    capped.admit()  # a new hour

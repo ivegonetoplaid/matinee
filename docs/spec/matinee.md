@@ -660,7 +660,9 @@ its vote count in their own columns.
 
 `tools/rebuild_table.py` writes the table. With `--daily HH:MM` it rebuilds at
 once and then every day at that local time. The time is validated before the
-first rebuild. A failed nightly rebuild leaves the previous table in place.
+first rebuild. A rebuild that fails on an unexpected error puts back the table it
+started with; one that stops on TMDB (no key, a refused key, TMDB not answering)
+keeps what it saved.
 
 1. Without a TMDB key (`TMDB_TOKEN`) it fetches nothing, writes no table, and
    reports the reason (below).
@@ -702,7 +704,8 @@ fetches, with the films this run has fetched or failed out of those it needs
 refused the key, or TMDB is not answering. A `running` report that has not
 changed for 120 seconds means the rebuild died, and the setup note says the
 last rebuild failed. A report
-that cannot be read counts as absent. A one-shot rebuild exits 0 only when it
+that cannot be read, or whose fields are not of their kind (a known state, text
+times, whole counts of zero or more, a text reason or none), counts as absent. A one-shot rebuild exits 0 only when it
 finished.
 
 ### 5.2 TMDB facts and the six-month limit
@@ -1318,7 +1321,10 @@ the picked poster and the pick's backdrop.
 
 - **`server`**, the default, or unset or empty. Every picture comes from the
   image route: read from the media server for a film the library holds, and
-  fetched by the server from TMDB's image server, at the TMDB size the table
+  fetched by the server from TMDB's image server through one gate (at most 50
+  requests a second and 20,000 an hour; a 429 or 503 holds every picture
+  request for its `Retry-After`, else 10 s doubling to at most 10 minutes, and
+  a request the gate will not admit gets no picture at once), at the TMDB size the table
   below gives, for a film it does not hold, while the library cannot be used,
   and when the media server gives none, so a viewer's browser talks only to
   Matinee. A TMDB picture served this way is kept by the browser one day

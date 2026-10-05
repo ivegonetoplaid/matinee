@@ -273,3 +273,53 @@ def test_a_first_start_fetches_in_tmdbs_vote_order_which_is_never_stored(
     written = {p.relative_to(tmp_path).as_posix() for p in tmp_path.rglob("*") if p.is_file()}
     assert written <= {"films.sqlite", "rebuild.json", "tmdb/films.jsonl"}
     assert all(str(123_456_789) not in (tmp_path / w).read_bytes().decode("latin-1") for w in written)
+
+
+def test_an_unexpected_failure_puts_back_the_table_the_run_started_with(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from matinee.table import load_table
+    from matinee.tmdb import TmdbFilm
+
+    labelled = sorted(load_labels().films())[:3]
+
+    def rec(t: int) -> TmdbFilm:
+        return TmdbFilm(t, datetime.now(UTC).isoformat(), None, None, [], "en", "", "", title=f"Film {t}")
+
+    held = {t: rec(t) for t in labelled}
+    monkeypatch.setattr(rebuild_table, "load_cache", lambda path: held)
+    monkeypatch.setattr(rebuild_table, "refresh", lambda ids, cache, token, **_: Refreshed(0, 0))
+    rebuild_table.rebuild(None, tmp_path, "t")
+    table = tmp_path / "films.sqlite"
+    before = list(load_table(table).films.index)
+    assert before == labelled
+
+    def thinned_then_broken(ids: Any, cache: Path, token: str, tick: Any = None, **_: Any) -> Refreshed:
+        tick(Refreshed(0, 0), 1, {})  # a save that leaves no film, then a fault
+        assert list(load_table(table).films.index) == []
+        raise ValueError("a code fault mid-run")
+
+    monkeypatch.setattr(rebuild_table, "SAVE_EVERY", 0)
+    monkeypatch.setattr(rebuild_table, "refresh", thinned_then_broken)
+    with pytest.raises(ValueError):
+        rebuild_table.rebuild(None, tmp_path, "t")
+    assert list(load_table(table).films.index) == before
+    assert not (tmp_path / "films.sqlite.kept").exists() and not (tmp_path / "films.sqlite.partial").exists()
+    assert read_status(tmp_path).reason == rebuild_table.FAILED  # type: ignore[union-attr]
+    monkeypatch.setattr(rebuild_table, "refresh", lambda ids, cache, token, **_: Refreshed(1, 0, KEY_REFUSED))
+    rebuild_table.rebuild(None, tmp_path, "t")  # a stop on TMDB keeps what it saved, and leaves no second name
+    assert not (tmp_path / "films.sqlite.kept").exists()
+
+
+def test_without_a_key_a_record_whose_date_cannot_be_read_is_skipped_and_the_stop_reported(tmp_path: Path) -> None:
+    cache = tmp_path / "tmdb" / "films.jsonl"
+    cache.parent.mkdir()
+    now = datetime.now(UTC)
+    good = {"tmdb": 1, "fetched_at": (now - timedelta(days=10)).isoformat(), "collection_id": None, "keywords": []}
+    bad = {**good, "tmdb": 2, "fetched_at": "not-a-date"}
+    naive = {**good, "tmdb": 1, "fetched_at": "2026-10-01T00:00:00"}  # newer line for film 1, but no zone
+    cache.write_text("\n".join(json.dumps(r) for r in (good, bad, naive)) + "\n")
+    status = rebuild_table.rebuild(None, tmp_path, "")
+    assert (status.state, status.reason) == ("stopped", NO_KEY)
+    kept = load_cache(cache)
+    assert set(kept) == {1} and kept[1].fetched_at == good["fetched_at"]

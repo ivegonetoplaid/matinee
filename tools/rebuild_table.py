@@ -25,6 +25,7 @@ import argparse
 import logging
 import math
 import os
+import shutil
 import sys
 import time
 from collections.abc import Mapping, Sequence
@@ -70,15 +71,51 @@ def rebuild(server: MediaServer | None, state: Path, token: str, rate: float = D
     started = _now()
     cache = state / "tmdb" / "films.jsonl"
     if not token:
-        if cache.exists():
-            compact(cache, datetime.now(UTC))  # the six-month limit holds even when nothing can be fetched
+        _compact_without_key(cache)
         log.error("no TMDB key is set, so no film table can be built. Set TMDB_TOKEN and run the rebuild again.")
         return _report(state, RebuildStatus("stopped", started, _now(), reason=NO_KEY))
+    table = state / "films.sqlite"
+    kept = _keep(table)
     try:
-        return _rebuild(server, state, cache, token, started, rate)
+        status = _rebuild(server, state, cache, token, started, rate)
     except Exception:
+        if kept is not None:
+            os.replace(kept, table)  # an unexpected failure puts back the table this run started with
+            log.warning("the rebuild failed, so the film table it started with is back in place")
         _report(state, RebuildStatus("stopped", started, _now(), reason=FAILED))
         raise
+    if kept is not None:
+        kept.unlink(missing_ok=True)
+    return status
+
+
+def _compact_without_key(cache: Path) -> None:
+    """The six-month limit holds even when nothing can be fetched; a cache that cannot be rewritten is logged."""
+    if not cache.exists():
+        return
+    try:
+        compact(cache, datetime.now(UTC))
+    except OSError as exc:
+        log.error(
+            "the TMDB cache %s could not be rewritten to drop records past six months: %s. Meanwhile it stays as it"
+            " is; check the data directory's permissions and free space.",
+            cache,
+            exc,
+        )
+
+
+def _keep(table: Path) -> Path | None:
+    """A second name for the table this run starts with, so an unexpected failure can put it back; every save
+    replaces the table's own name, so the kept one stays whole. None on a first start, with no table yet."""
+    if not table.exists():
+        return None
+    kept = table.with_name(table.name + ".kept")
+    kept.unlink(missing_ok=True)
+    try:
+        os.link(table, kept)
+    except OSError:
+        shutil.copy2(table, kept)
+    return kept
 
 
 def _rebuild(
