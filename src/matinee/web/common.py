@@ -11,7 +11,6 @@ from pydantic import BaseModel, Field
 from matinee.store import Profile
 
 ErrorCode = Literal[
-    "library_unreachable",
     "not_ready",
     "not_found",
     "refused",

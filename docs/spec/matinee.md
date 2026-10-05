@@ -686,36 +686,64 @@ finished.
   by a label is not offered.
 - A library film the table does not yet hold is offered by its media-server
   facts alone, with no genome scores and no TMDB facts, and is logged.
-- When the media server cannot be read, nothing is served from an older list.
-  Every request that needs the film list answers 503 `library_unreachable` until
-  a read succeeds. For
-  **15 seconds** after a failed read no new read is attempted.
+- While the media server cannot be read, or with no media server configured,
+  no film is held: Matinee offers the films the labels name alone, with their
+  TMDB facts. The last list read stands until a read fails. For **15 seconds**
+  after a failed read no new read is attempted.
 - The table file is reloaded when the nightly rebuild replaces it.
 - The sign's "Now showing N films" counts every film Matinee offers: the
   library's and the films the labels name.
 
-### 5.5 Refusing to start
+### 5.5 Refusing to start, and the setup note
 
-The server refuses to start, and logs why, when any of these holds:
+The server refuses to start, and logs why, in exactly these cases:
 
-- a required setting is missing, or the media server settings name no server,
-  both servers, an address without its key, or an address that does not start
-  with `http://` or `https://`;
-- the state directory does not exist (Matinee does not start empty and lose
-  every profile silently);
-- the film table is absent, in another format, or too old;
-- the reference statistics are absent or stale;
-- a tree or mode file is malformed;
-- the labels file is absent, malformed, or names a tree no file defines or a
-  kind its tree does not label;
-- the pick's lines (`data/quips.json`) are missing or malformed, or universal
-  lacks reveal, nope or rush lines (section 2.7);
-- the door word is shorter than its mode allows or longer than 200 characters,
-  the door mode names no mode, or the door's secret cannot be read or is not
-  32 bytes (section 7.2);
+- `DATA_DIR` is unset or names no directory (Matinee does not start empty and
+  lose every profile silently);
+- a door word is set and is shorter than its mode allows or longer than 200
+  characters, or the door mode names no mode, or the door's secret cannot be
+  read or is not 32 bytes (section 7.2): a lock whose settings are wrong stays
+  shut;
 - the store file is newer than the code, is not a SQLite database, holds notes
   that older code filed into its old `feedback` table, or cannot be upgraded to
   the current shape (section 7.1). The file is left unchanged.
+
+Every other fault starts Matinee, logs it, and puts it on the **setup note**, a
+page the visitor sees once per visit before the front door (`GET /api/setup`,
+after the door word where one is set). The note is headed "A word before the
+show." and says, one paragraph each, what Matinee sees:
+
+- a setting Matinee cannot use, named with what it takes: both Jellyfin and Plex
+  set (neither is read), a media server address without its key or not starting
+  with `http://` or `https://`, a `SEERR_URL` of that kind (picks link to TMDB),
+  a `POSTERS_FROM` or, with no door word, a `DOOR_MATCH` it does not understand
+  (the default stands);
+- a configured media server it cannot reach, reported without instructions;
+- a configured Seerr it cannot reach (picks link to TMDB until it answers);
+- the rebuild's last stop and its reason (section 5.1): no TMDB key and a
+  refused key with the step that fixes them, TMDB not answering without one;
+- Matinee's own shipped files that cannot be used (the labels, the pick's lines,
+  or data the engine cannot prepare: stale reference statistics, a malformed
+  tree), with "update or reinstall Matinee";
+- when there is no film to recommend, why: the rebuild is still fetching, or no
+  film details exist and nothing is fetching them.
+
+While the library cannot be used, because both servers are set, its settings
+cannot be used or it does not answer, the note also says Matinee is picking from
+TMDB's most popular films (the films the labels name) instead. The note offers
+"Show me the films", which goes on to the front door, and never a way into an
+empty pool: with no film to recommend it offers only "Try again". A note with a
+way in is shown once per page visit; one without is shown every time. When the
+fault clears, the note stops showing without a restart. With nothing to say there
+is no note.
+
+A film table that is absent, in another format or cannot be read counts as an
+empty one, so the server starts before the first rebuild has written anything.
+Data Matinee ships that the engine cannot prepare offers no film: every route that
+needs the film list answers 503 `not_ready`. The pick's lines that cannot be read
+leave `GET /api/quips` answering 503, and picks come without a line. The labels
+that cannot be read place no film behind a door; every film waits behind its
+genres (section 3.1).
 
 ## 6. What one viewer's pool is
 
@@ -1100,6 +1128,7 @@ would hand one device's profiles to another.
 |---|---|---|
 | GET | `/` | the page (`Cache-Control: no-cache`) |
 | GET | `/api/admission` | whether the site is locked, whether this device is admitted, and the locked door's greeting |
+| GET | `/api/setup` | the setup note: its heading, its lines (none when all is well), the films Matinee can offer, and whether it offers a way in (section 5.5) |
 | POST | `/api/admission` | give the door word; the right one sets the admission cookie |
 | GET | `/static/…` | scripts, styles, self-hosted fonts, icons, pails, avatars, the locked door's art, manifest (`Cache-Control: no-cache`, so a deploy is never seen half-applied) |
 | GET | `/img/{kind}/{tmdb}/{size}` | a poster or backdrop, read from the media server |
@@ -1155,7 +1184,6 @@ Every error leaves as `{"error": <code>, "message": <sentence>}`:
 
 | Code | Status | When |
 |---|---|---|
-| `library_unreachable` | 503 | the media server cannot be read |
 | `not_ready` | 503 | the film table is too old to serve |
 | `topics_unavailable` | 503 | the topic list cannot be fetched |
 | `not_found` | 404 | an unknown film, image or path |

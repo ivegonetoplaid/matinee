@@ -21,10 +21,11 @@ from matinee.web.admission import COOKIE, KEY_FILE, LIFE_S, Admission, Admission
 from matinee.web.app import create_app
 from matinee.web.common import TOKENS_COOKIE
 from matinee.web.config import GREETINGS, Config, ConfigError, from_env
+from matinee.web.seerr import SeerrCheck
 from matinee.web.theatre import Theatre
 from test_engine import reference, write_data
 from test_viewing import FakeDtdd
-from test_web_library import SECRET_KEY, SECRET_URL, SERVER, FakeLibrary, write_film_table
+from test_web_library import SECRET_KEY, SECRET_URL, SERVER, FakeLibrary, answers, write_film_table
 
 WORD = "Open, Sesame! 1983"  # relaxes to "opensesame1983"
 STRICT = "Correct Horse Battery"
@@ -51,9 +52,9 @@ def make_app(
 
     theatre = Theatre(FakeLibrary(), state / "films.sqlite", catalog_of=catalog_of)
     config = Config(SERVER, state, "https://seerr.invalid", "d" * 16, word, mode, GREETINGS["gin"])
-    return create_app(
-        config, theatre, Store(state / "matinee.sqlite"), FakeDtdd(), clock=clock or Clock(), wrong_word_delay_s=delay
-    )
+    seerr = SeerrCheck(config.seerr_url, opener=answers)  # never a real request
+    store = Store(state / "matinee.sqlite")
+    return create_app(config, theatre, store, FakeDtdd(), clock=clock or Clock(), wrong_word_delay_s=delay, seerr=seerr)
 
 
 def client_of(app: FastAPI) -> TestClient:

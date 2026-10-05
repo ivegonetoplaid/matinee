@@ -144,3 +144,15 @@ def test_the_insert_names_one_placeholder_per_column() -> None:
     from matinee.table import COLUMNS, INSERT_FILM
 
     assert INSERT_FILM.count("?") == len(COLUMNS) + 1
+
+
+def test_a_film_whose_record_names_no_title_is_never_offered_from_a_loaded_table(tmp_path: Path) -> None:
+    from dataclasses import replace
+
+    untitled = {**CACHE, 1: replace(CACHE[1], title=None)}
+    table, _ = build_table([lib(1)], SCORES, untitled, NOW, listed=[1, 2])
+    write_table(table, tmp_path / "films.sqlite")
+    back = load_table(tmp_path / "films.sqlite", NOW)
+    unusable, _ = with_live(back, None, listed=[1, 2])
+    assert list(unusable.films.index) == [2]  # 1 is the library's, and with no title it cannot be named alone
+    assert all(isinstance(n, str) and n for n in unusable.films["name"])

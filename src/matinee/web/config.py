@@ -17,8 +17,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Literal
 
-from matinee.library.choice import MediaServer, ServerChoiceError, media_server
+from matinee.library.choice import SETTINGS, MediaServer, ServerChoiceError, configured_server
 from matinee.web.admission import MAX_TYPED, RELAXED_MIN, STRICT_MIN, Mode, too_long, too_short
+from matinee.web.setup import MEANWHILE
 
 GREETINGS = {
     "show": "State your business. Make it quick, the show's about to start.",
@@ -28,13 +29,16 @@ GREETINGS = {
 ImageSource = Literal["server", "tmdb"]
 
 
+SERVER_SETTINGS = tuple(name for pair in SETTINGS.values() for name in pair)
+
+
 class ConfigError(ValueError):
     """A required setting is missing or points at nothing."""
 
 
 @dataclass(frozen=True)
 class Config:
-    server: MediaServer
+    server: MediaServer | None  # None: no library, or settings Matinee cannot use (see `faults`)
     state: Path
     seerr_url: str | None
     dtdd_key: str | None = field(repr=False)
@@ -42,6 +46,8 @@ class Config:
     door_match: Mode = "relaxed"
     door_greeting: str = GREETINGS["show"]
     images: ImageSource = "server"
+    faults: tuple[str, ...] = ()  # settings Matinee cannot use, in words for the setup note
+    server_unusable: bool = False  # media server settings are filled in but name both servers or cannot be used
 
     @property
     def table_path(self) -> Path:
@@ -59,15 +65,22 @@ def _required(env: Mapping[str, str], name: str) -> str:
     return value
 
 
-def _door(env: Mapping[str, str]) -> tuple[str | None, Mode, str]:
-    """The door word, its match mode and the greeting; a word too short for its mode stops the start, unnamed."""
+def _door(env: Mapping[str, str], faults: list[str]) -> tuple[str | None, Mode, str]:
+    """The door word, its match mode and the greeting.
+
+    With a word set, a word too short or too long for its mode, or a mode that names none, stops the start: a lock
+    whose settings are wrong must stay shut, never open. With no word, a mode Matinee cannot use is only a fault.
+    """
     word = env.get("DOOR_WORD", "")
     raw_mode = env.get("DOOR_MATCH", "").strip() or "relaxed"
-    if raw_mode not in ("relaxed", "strict"):
-        raise ConfigError("DOOR_MATCH names no mode; it is relaxed or strict")
-    mode: Mode = "strict" if raw_mode == "strict" else "relaxed"
     greeting = env.get("DOOR_GREETING", "").strip() or "show"
-    if not word.strip():
+    locked = bool(word.strip())
+    if raw_mode not in ("relaxed", "strict"):
+        if locked:
+            raise ConfigError("DOOR_MATCH names no mode; it is relaxed or strict")
+        faults.append("DOOR_MATCH is set to something I don't understand: it takes relaxed or strict.")
+    mode: Mode = "strict" if raw_mode == "strict" else "relaxed"
+    if not locked:
         return None, mode, GREETINGS.get(greeting, greeting)
     if too_long(word):
         raise ConfigError(f"DOOR_WORD is longer than {MAX_TYPED} characters, more than the door compares")
@@ -77,33 +90,51 @@ def _door(env: Mapping[str, str]) -> tuple[str | None, Mode, str]:
     return word, mode, GREETINGS.get(greeting, greeting)
 
 
-def _images(env: Mapping[str, str]) -> ImageSource:
-    """Where the page's pictures come from; unset or empty is the media server."""
+def _images(env: Mapping[str, str], faults: list[str]) -> ImageSource:
+    """Where the page's pictures come from; unset, empty or a value Matinee cannot use is the media server."""
     raw = env.get("POSTERS_FROM", "").strip() or "server"
-    if raw == "server":
-        return "server"
     if raw == "tmdb":
         return "tmdb"
-    raise ConfigError("POSTERS_FROM names no picture source; it is server or tmdb")
+    if raw != "server":
+        faults.append("POSTERS_FROM is set to something I don't understand: it takes server or tmdb. I'm using server.")
+    return "server"
+
+
+def _server(env: Mapping[str, str], faults: list[str]) -> MediaServer | None:
+    """The media server the settings name; none, with a fault, when they name both or one Matinee cannot use."""
+    try:
+        return configured_server(env)
+    except ServerChoiceError as exc:
+        faults.append(f"{exc}. {MEANWHILE}")
+        return None
+
+
+def _seerr(env: Mapping[str, str], faults: list[str]) -> str | None:
+    url = env.get("SEERR_URL", "").strip().rstrip("/")
+    if url and not url.startswith(("http://", "https://")):
+        faults.append("SEERR_URL must start with http:// or https://, so I'm linking each film to TMDB instead.")
+        return None
+    return url or None
 
 
 def from_env(env: Mapping[str, str] = os.environ) -> Config:
-    """Read the settings; raises ConfigError naming the first missing one, or a state directory that does not exist."""
+    """Read the settings. Refuses (ConfigError) only a data directory that is unset or missing and door settings
+    that are wrong; every other setting Matinee cannot use is recorded in `faults` and left at its default."""
     state = Path(_required(env, "DATA_DIR"))
     if not state.is_dir():
         raise ConfigError(f"the data directory {state} does not exist; Matinee will not start empty")
-    word, mode, greeting = _door(env)
-    try:
-        server = media_server(env)
-    except ServerChoiceError as exc:
-        raise ConfigError(str(exc)) from exc
+    faults: list[str] = []
+    word, mode, greeting = _door(env, faults)
+    server = _server(env, faults)
     return Config(
         server=server,
         state=state,
-        seerr_url=env.get("SEERR_URL", "").strip().rstrip("/") or None,
+        seerr_url=_seerr(env, faults),
         dtdd_key=env.get("DTDD_API_KEY", "").strip() or None,
         door_word=word,
         door_match=mode,
         door_greeting=greeting,
-        images=_images(env),
+        images=_images(env, faults),
+        faults=tuple(faults),
+        server_unusable=server is None and any(env.get(n, "").strip() for n in SERVER_SETTINGS),
     )

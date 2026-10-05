@@ -150,6 +150,11 @@ def _tmdb_fields(rec: TmdbFilm | None, usable: bool) -> dict[str, object]:
     }
 
 
+def _text(value: object) -> str | None:
+    """A non-empty string, or None for anything else (None, NaN or pandas' NA read from the table included)."""
+    return value if isinstance(value, str) and value else None
+
+
 def _from_tmdb(tmdb: dict[str, object]) -> dict[str, object]:
     """The shown facts of a film the library does not hold: TMDB's, with no item."""
     genres = tmdb["tmdb_genres"]
@@ -177,7 +182,7 @@ def _from_library(f: LibraryFilm, tmdb: Mapping[str, object]) -> dict[str, objec
         certificate = str(tmdb.get("tmdb_certificate") or "")
     return {
         "item_id": f.item_id,
-        "name": f.name or tmdb.get("tmdb_title") or "",
+        "name": f.name or _text(tmdb.get("tmdb_title")) or "",
         "year": f.year,
         "genres": genres if tmdb.get("tmdb_known") and genres else f.genres,
         "certificate": certificate,
@@ -283,6 +288,12 @@ INSERT_FILM = (
 )  # one placeholder per column of SCHEMA's films table, tmdb first
 
 
+def empty_table(tags: Sequence[str]) -> FilmTable:
+    """A table with no films: what the server shows before the first rebuild writes one."""
+    frame = _frame({})
+    return FilmTable(frame, tuple(tags), np.zeros((0, len(tags)), dtype=np.float32), datetime.now(UTC), None, "")
+
+
 def library_films(table: FilmTable) -> list[LibraryFilm]:
     """The library the table was built from: its rows with a media-server item, as the table holds them."""
     if "item_id" not in table.films:
@@ -312,7 +323,7 @@ def _offered(tmdb_id: int, r: pd.Series, live: Mapping[int, LibraryFilm], names:
         return {"item_id": live[tmdb_id].item_id, **shown, **fields, "held": True}
     if tmdb_id in live:  # the library has taken it in since the rebuild, which read TMDB's facts
         return {**_from_library(live[tmdb_id], fields), **fields, "held": True}
-    if tmdb_id in names and fields["tmdb_known"] and fields["tmdb_title"]:
+    if tmdb_id in names and fields["tmdb_known"] and _text(fields["tmdb_title"]):
         return {**_from_tmdb(fields), **fields, "held": False}
     return None
 

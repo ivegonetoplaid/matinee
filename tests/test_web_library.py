@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import contextlib
 import itertools
 import json
 import os
+import time
 import urllib.request
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime, timedelta
@@ -20,11 +22,11 @@ from matinee.engine import load_catalog
 from matinee.library import Image, LibraryError, LibraryFilm
 from matinee.library.choice import MediaServer
 from matinee.library.jellyfin import JellyfinReader
-from matinee.reference import ReferenceError
 from matinee.store import Store
 from matinee.table import FilmTable, write_table
 from matinee.web.app import STATIC, create_app
 from matinee.web.config import Config, ConfigError, ImageSource, from_env
+from matinee.web.seerr import SeerrCheck
 from matinee.web.theatre import LIVE_TTL, RETRY_AFTER, Theatre
 from test_engine import make_table, reference, write_data
 
@@ -119,7 +121,15 @@ def make_world(
 
     theatre = Theatre(library, tmp_path / "films.sqlite", clock=clock, catalog_of=catalog_of)
     config = Config(SERVER, tmp_path, seerr, "d" * 16, images=images)
-    return TestClient(create_app(config, theatre, Store(tmp_path / "store.sqlite"), Dtdd("k"))), library, clock, theatre
+    app = create_app(
+        config, theatre, Store(tmp_path / "store.sqlite"), Dtdd("k"), seerr=SeerrCheck(seerr, opener=answers)
+    )
+    return TestClient(app), library, clock, theatre
+
+
+def answers(req: Any, timeout: float) -> Any:
+    """A Seerr that answers its status page."""
+    return contextlib.nullcontext()
 
 
 def test_image_is_served_by_tmdb_id_at_a_fixed_size(world: Any) -> None:
@@ -167,22 +177,26 @@ def test_a_film_new_to_the_library_is_offered_by_its_tags(world: Any) -> None:
     assert client.get("/api/film/99").json()["title"] == "Film 99"
 
 
-def test_an_unreachable_library_serves_nothing_stale(world: Any) -> None:
+def test_an_unreachable_library_holds_no_film_and_says_so(world: Any) -> None:
     client, library, clock, _ = world
     assert client.get("/api/film/5").status_code == 200
+    assert client.get("/api/setup").json()["lines"] == []
     library.down = True
     clock.now += LIVE_TTL + 1
     for path in ("/api/film/5", "/img/poster/5/m"):
         resp = client.get(path)
-        assert resp.status_code == 503
-        assert resp.json() == {"error": "library_unreachable", "message": "I can't reach the film library right now."}
+        assert resp.status_code == 404  # no film is held, and the labels name none here
         assert "media.invalid" not in resp.text
+    note = client.get("/api/setup").json()
+    assert note["lines"][0].startswith("I can't reach your Jellyfin right now.") and not note["go_on"]
+    assert client.get("/api/door").status_code == 200  # the site still answers
     reads = len([c for c in library.calls if c[0] == "films"])
     library.down = False
-    assert client.get("/api/film/5").status_code == 503  # still inside the hold-off: no new read
+    assert client.get("/api/film/5").status_code == 404  # still inside the hold-off: no new read
     assert len([c for c in library.calls if c[0] == "films"]) == reads
     clock.now += RETRY_AFTER + 1
     assert client.get("/api/film/5").status_code == 200
+    assert client.get("/api/setup").json()["lines"] == []  # the note goes without a restart
 
 
 def test_the_film_list_is_reread_only_after_its_time(world: Any) -> None:
@@ -260,19 +274,23 @@ def test_config_refuses_missing_settings_and_a_missing_state_dir(tmp_path: Path)
         "DTDD_API_KEY": "d",
     }
     assert from_env(env).seerr_url == "https://seerr.invalid"
-    with pytest.raises(ConfigError, match="JELLYFIN_API_KEY"):
-        from_env({**env, "JELLYFIN_API_KEY": " "})
+    half = from_env({**env, "JELLYFIN_API_KEY": " "})
+    assert half.server is None and "JELLYFIN_API_KEY" in half.faults[0]
+    with pytest.raises(ConfigError, match="DATA_DIR"):
+        from_env({k: v for k, v in env.items() if k != "DATA_DIR"})
     with pytest.raises(ConfigError, match="does not exist"):
         from_env({**env, "DATA_DIR": str(tmp_path / "nope")})
     assert from_env(env).server == MediaServer("jellyfin", SECRET_URL, SECRET_KEY)
     plex = {**env, "JELLYFIN_URL": "", "JELLYFIN_API_KEY": "", "PLEX_URL": "http://plex.invalid/", "PLEX_TOKEN": "t"}
     assert from_env(plex).server == MediaServer("plex", "http://plex.invalid", "t")
-    with pytest.raises(ConfigError, match="both set"):
-        from_env({**env, "PLEX_URL": "http://plex.invalid", "PLEX_TOKEN": "t"})
-    with pytest.raises(ConfigError, match="no media server"):
-        from_env({**env, "JELLYFIN_URL": "", "JELLYFIN_API_KEY": ""})
-    with pytest.raises(ConfigError, match="http"):
-        from_env({**env, "JELLYFIN_URL": "file:///etc"})
+    both = from_env({**env, "PLEX_URL": "http://plex.invalid", "PLEX_TOKEN": "t"})
+    assert both.server is None and both.server_unusable and "both Jellyfin and Plex" in both.faults[0]
+    none = from_env({**env, "JELLYFIN_URL": "", "JELLYFIN_API_KEY": ""})
+    assert none.server is None and not none.server_unusable and none.faults == ()  # no library is no fault
+    odd = from_env({**env, "JELLYFIN_URL": "file:///etc"})
+    assert odd.server is None and "http" in odd.faults[0]
+    bad_seerr = from_env({**env, "SEERR_URL": "seerr.lan"})
+    assert bad_seerr.seerr_url is None and "SEERR_URL" in bad_seerr.faults[0]
     for old in ("MATINEE_STATE", "MATINEE_JELLYFIN_URL", "MATINEE_IMAGES", "MATINEE_SEERR_URL"):  # never read
         assert from_env({**env, old: "/elsewhere"}) == from_env(env)
 
@@ -288,8 +306,8 @@ def test_the_image_source_is_the_media_server_unless_tmdb_is_named(tmp_path: Pat
     assert from_env(env).images == "server"
     assert from_env({**env, "POSTERS_FROM": " "}).images == "server"
     assert from_env({**env, "POSTERS_FROM": "tmdb"}).images == "tmdb"
-    with pytest.raises(ConfigError, match="POSTERS_FROM"):
-        from_env({**env, "POSTERS_FROM": "TMDB"})
+    odd = from_env({**env, "POSTERS_FROM": "TMDB"})
+    assert odd.images == "server" and "POSTERS_FROM" in odd.faults[0]
 
 
 def test_the_media_server_as_source_gives_no_tmdb_paths(world: Any) -> None:
@@ -319,7 +337,7 @@ def test_media_server_errors_never_reach_the_browser(world: Any) -> None:
     assert img.status_code == 404
     assert img.json() == {"error": "not_found", "message": "I don't have that one."}
     card = client.get("/api/film/6")
-    assert card.status_code == 503 and card.json()["error"] == "library_unreachable"
+    assert card.status_code == 200 and card.json()["synopsis"] is None  # TMDB's synopsis, which this film lacks
     for resp in (img, card):
         assert "media.invalid" not in resp.text and "/media/" not in resp.text and "500" not in resp.text
 
@@ -340,8 +358,13 @@ def test_start_up_refuses_missing_reference_statistics(tmp_path: Path) -> None:
     def catalog_of(table: FilmTable) -> Any:
         return load_catalog(table, data)  # no reference.json in this data directory
 
-    with pytest.raises(ReferenceError):
-        Theatre(FakeLibrary(), tmp_path / "films.sqlite", catalog_of=catalog_of)
+    theatre = Theatre(FakeLibrary(), tmp_path / "films.sqlite", catalog_of=catalog_of)
+    assert theatre.broken is not None and "reference" in theatre.broken
+    config = Config(SERVER, tmp_path, None, None)
+    client = TestClient(create_app(config, theatre, Store(tmp_path / "s.sqlite"), None), base_url="https://testserver")
+    note = client.get("/api/setup").json()
+    assert note["films"] == 0 and not note["go_on"] and "Matinee's own files" in note["lines"][-1]
+    assert client.post("/api/first", json={}).status_code == 503
 
 
 def test_config_does_not_print_its_keys() -> None:
@@ -421,3 +444,16 @@ def test_now_showing_counts_the_films_the_labels_name_beside_the_library(tmp_pat
     showing = theatre.showing()
     assert showing.now_showing == len(library.held) + 1
     assert not showing.catalog.table.films.loc[world, "held"]
+
+
+def test_a_reloaded_table_does_not_rush_a_library_that_just_failed(world: Any, tmp_path: Path) -> None:
+    client, library, clock, _ = world
+    library.down = True
+    clock.now += LIVE_TTL + 1
+    client.get("/api/door")
+    reads = len([c for c in library.calls if c[0] == "films"])
+    later = time.time() + 5
+    write_film_table(tmp_path / "films.sqlite")
+    os.utime(tmp_path / "films.sqlite", (later, later))  # the rebuild replaced the table meanwhile
+    client.get("/api/door")
+    assert len([c for c in library.calls if c[0] == "films"]) == reads  # still inside the hold-off

@@ -12,7 +12,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
@@ -27,7 +27,8 @@ from matinee.dtdd import Dtdd
 from matinee.engine import EngineError
 from matinee.library import Image, ImageKind, LibraryError
 from matinee.pick import DeviceCap, Picker
-from matinee.quips import Quips, load_quips
+from matinee.progress import read_status
+from matinee.quips import Quips, QuipsError, load_quips
 from matinee.store import AVATARS, Locked, Store, StoreError
 from matinee.table import TableError
 from matinee.web.admission import COOKIE as ADMISSION_COOKIE
@@ -50,7 +51,9 @@ from matinee.web.common import (
     with_token,
 )
 from matinee.web.config import Config, ImageSource
-from matinee.web.theatre import LibraryUnavailable, Theatre
+from matinee.web.seerr import SeerrCheck
+from matinee.web.setup import BROKEN, SEERR_AWAY, SetupNote, note, rebuild_lines, unreachable
+from matinee.web.theatre import NothingToShow, Theatre
 from matinee.web.viewing import (
     add_note_routes,
     add_pick_routes,
@@ -68,7 +71,6 @@ IMAGE_WIDTHS: dict[ImageKind, dict[str, int]] = {
 IMAGE_CACHE = f"private, max-age={30 * 24 * 3600}"
 TMDB_IMAGES = "https://image.tmdb.org"
 TMDB_FILM = "https://www.themoviedb.org/movie"
-UNREACHABLE = "I can't reach the film library right now."
 NOT_READY = "Matinee isn't ready: its film data needs rebuilding."
 NOT_FOUND = "I don't have that one."
 
@@ -128,9 +130,10 @@ def stored_path(value: Any) -> str | None:
 def add_error_handlers(app: FastAPI, clock: Callable[[], float]) -> None:
     """Every error leaves as one Problem shape, and never with an exception's text."""
 
-    @app.exception_handler(LibraryUnavailable)
-    def unavailable(_request: Request, _exc: LibraryUnavailable) -> JSONResponse:
-        return problem(503, "library_unreachable", UNREACHABLE)
+    @app.exception_handler(NothingToShow)
+    def nothing(_request: Request, exc: NothingToShow) -> JSONResponse:
+        log.error("refusing to serve: Matinee's own data cannot be used: %s", exc)
+        return problem(503, "not_ready", NOT_READY)
 
     @app.exception_handler(TableError)
     def not_ready(_request: Request, exc: TableError) -> JSONResponse:
@@ -166,7 +169,7 @@ def film_link(seerr: str | None, tmdb: int) -> tuple[str, Literal["seerr", "tmdb
 
 def film_image(theatre: Theatre, film: Held, tmdb: int, kind: ImageKind, width: int) -> Image:
     """The film's picture from the media server; 404 when the library does not hold it or the server fails."""
-    if film.item_id is None:
+    if film.item_id is None or theatre.library is None:
         raise HTTPException(status_code=404, detail="not_found")
     try:
         return theatre.library.image(film.item_id, kind, width)
@@ -176,17 +179,17 @@ def film_image(theatre: Theatre, film: Held, tmdb: int, kind: ImageKind, width: 
 
 
 def film_synopsis(theatre: Theatre, film: Held, tmdb: int) -> str | None:
-    """The media server's synopsis for a film it holds, else TMDB's."""
-    if film.item_id is None:
+    """The media server's synopsis for a film it holds, else TMDB's; TMDB's too when the server fails to answer."""
+    if film.item_id is None or theatre.library is None:
         return film.synopsis
     try:
         return theatre.library.synopsis(film.item_id)
     except LibraryError as exc:
-        log.warning("synopsis for tmdb %s: %s", tmdb, exc)
-        raise LibraryUnavailable("the library cannot be reached") from exc
+        log.warning("the media server gave no synopsis for tmdb %s, so the card shows TMDB's: %s", tmdb, exc)
+        return film.synopsis
 
 
-def add_film_routes(app: FastAPI, theatre: Theatre, seerr: str | None, images: ImageSource) -> None:
+def add_film_routes(app: FastAPI, theatre: Theatre, seerr: SeerrCheck, images: ImageSource) -> None:
     @app.get("/img/{kind}/{tmdb}/{size}")
     def image(kind: str, tmdb: int, size: str) -> Response:
         image_kind: ImageKind = "backdrop" if kind == "backdrop" else "poster"
@@ -208,7 +211,7 @@ def add_film_routes(app: FastAPI, theatre: Theatre, seerr: str | None, images: I
     def film(tmdb: int) -> FilmCard:
         film = held(theatre, tmdb)
         synopsis = film_synopsis(theatre, film, tmdb)
-        link, link_to = film_link(seerr, tmdb)
+        link, link_to = film_link(seerr.link_base(), tmdb)
         return FilmCard(
             tmdb=tmdb,
             title=film.title,
@@ -391,11 +394,38 @@ def add_page(app: FastAPI, images: ImageSource) -> None:
         return response
 
 
-def add_quip_routes(app: FastAPI, quips: Quips) -> None:
-    @app.get("/api/quips")
-    def pick_lines() -> Quips:
-        """Matinee's lines for a pick and their caps, as data/quips.json holds them."""
+def add_quip_routes(app: FastAPI, quips: Quips | None) -> None:
+    @app.get("/api/quips", response_model=None)
+    def pick_lines() -> Quips | JSONResponse:
+        """Matinee's lines for a pick and their caps, as data/quips.json holds them; 503 when it cannot be read."""
+        if quips is None:
+            return problem(503, "not_ready", "My lines for a pick can't be read right now.")
         return quips
+
+
+SERVER_NAMES = {"jellyfin": "Jellyfin", "plex": "Plex"}
+
+
+def setup_faults(theatre: Theatre, config: Config, seerr: SeerrCheck, faults: Sequence[str]) -> tuple[list[str], int]:
+    """Everything Matinee sees wrong now, in words, and how many films it can offer."""
+    found = [*config.faults, *faults]
+    try:
+        showing = theatre.showing()
+    except NothingToShow as exc:
+        return [*found, BROKEN.format(detail=exc)], 0
+    if showing.library == "unreachable" and config.server is not None:
+        found.append(unreachable(SERVER_NAMES[config.server.kind]))
+    if config.seerr_url is not None and not seerr.answers():
+        found.append(SEERR_AWAY)
+    return [*found, *rebuild_lines(read_status(config.state), theatre.table_films)], showing.now_showing
+
+
+def add_setup_route(app: FastAPI, theatre: Theatre, config: Config, seerr: SeerrCheck, faults: Sequence[str]) -> None:
+    @app.get("/api/setup")
+    def setup() -> SetupNote:
+        """The setup note the page shows before any pick; empty lines when all is well."""
+        found, films = setup_faults(theatre, config, seerr, faults)
+        return note(found, films)
 
 
 def create_app(
@@ -407,19 +437,33 @@ def create_app(
     picker: Picker | None = None,
     quips: Quips | None = None,
     wrong_word_delay_s: float = WRONG_WORD_DELAY_S,
+    seerr: SeerrCheck | None = None,
+    faults: Sequence[str] = (),
 ) -> FastAPI:
-    """The app. `quips` defaults to data/quips.json, read now, so a malformed file stops the start.
+    """The app. `quips` defaults to data/quips.json, read now. `faults` are setup faults found before the app,
+    in words for the setup note.
 
     With a door word set, the installation secret is read, or made at the first start, now; an unreadable one
     stops the start.
     """
     app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
+    faults = list(faults)
+    try:
+        lines: Quips | None = quips or load_quips()
+    except QuipsError as exc:
+        lines = None
+        log.error("the pick's lines (data/quips.json) cannot be read, so picks show no line: %s", exc)
+        faults.append(
+            f"My lines for a pick can't be read ({exc}), so picks come without one. Update or reinstall Matinee."
+        )
     secret = load_secret(config.state) if config.door_word is not None else b""
     admission = Admission(config.door_word, config.door_match, secret)
     add_error_handlers(app, clock)
     # Registered before the page's headers, so the headers wrap the locked door's refusals too.
     add_admission(app, admission, config.door_greeting, clock, wrong_word_delay_s)
-    add_film_routes(app, theatre, config.seerr_url, config.images)
+    seerr = seerr or SeerrCheck(config.seerr_url)
+    add_film_routes(app, theatre, seerr, config.images)
+    add_setup_route(app, theatre, config, seerr, faults)
     add_page(app, config.images)
     add_door_routes(app, theatre, store, clock, dtdd is not None)
     add_delete_route(app, store)
@@ -433,6 +477,6 @@ def create_app(
     add_viewing_routes(app, theatre, store, topics_on)
     add_pick_routes(app, theatre, store, picker, topics_on)
     add_note_routes(app, theatre, store)
-    add_quip_routes(app, quips or load_quips())
+    add_quip_routes(app, lines)
     app.state.config = config
     return app

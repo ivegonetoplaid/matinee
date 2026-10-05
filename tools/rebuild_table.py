@@ -113,7 +113,8 @@ def main() -> int:
     try:
         server = configured_server(os.environ)
     except ServerChoiceError as exc:
-        parser.error(str(exc))
+        server = None
+        log.warning("%s. Meanwhile the rebuild reads no library and fetches the films the labels name.", exc)
     if not args.state.is_dir():
         parser.error(f"the state directory {args.state} does not exist")
     if not args.daily:

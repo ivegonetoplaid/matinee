@@ -53,11 +53,11 @@ def test_the_rebuild_reads_whichever_server_is_set_or_none(tmp_path: Path, monke
         {"JELLYFIN_URL": "http://a"},
     ],
 )
-def test_the_rebuild_refuses_server_settings_it_cannot_use(
+def test_server_settings_it_cannot_use_leave_the_rebuild_reading_the_labels_alone(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, env: dict[str, str]
 ) -> None:
-    with pytest.raises(SystemExit):
-        run(monkeypatch, {"DATA_DIR": str(tmp_path), "TMDB_TOKEN": "t", **env})
+    [call] = run(monkeypatch, {"DATA_DIR": str(tmp_path), "TMDB_TOKEN": "t", **env})
+    assert call[0] is None
 
 
 def test_without_a_key_it_fetches_nothing_writes_no_table_and_says_why(tmp_path: Path) -> None:

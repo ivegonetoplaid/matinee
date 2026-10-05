@@ -214,6 +214,44 @@ function problem(data, again, keep = false) {
   );
 }
 
+// The setup note: what Matinee sees wrong with its setup, said once per visit before any pick. "Show me the
+// films" goes on to the door; with no film to offer there is no way in, only "Try again", which asks afresh.
+let setupSeen = false;
+async function setupNote(note, onGo) {
+  setupSeen = true;
+  wall.clear();
+  const line = h("h1", { class: "line", "aria-live": "polite" });
+  const said = h("div", { class: "setup-lines", hidden: true }, note.lines.map((text) => h("p", { class: "note" }, text)));
+  const go = () => {
+    lockStage();
+    onGo();
+  };
+  const action = note.go_on
+    ? h("button", { class: "action gold", type: "button", onclick: go }, "Show me the films")
+    : h("button", { class: "action cream", type: "button", onclick: go }, "Try again");
+  action.hidden = true;
+  clear(stage).append(topbar(), h("section", { class: "talk setup" }, line, said, action), h("footer", { class: "bottombar" }, h("span"), credits()));
+  // What it says, and the way on, appear once the heading has typed; the way on takes the focus, which scrolls
+  // it clear of the foot's band when the note runs long.
+  await typeLine(line, note.heading, "");
+  said.hidden = false;
+  action.hidden = false;
+  action.focus();
+}
+
+// The setup note, when there is something to say and it has not been said this visit; a note with no way in
+// is said every time, since there is nowhere else to go. Resolves to true when the note took the screen.
+async function saidSetup(again) {
+  const res = await get("/api/setup");
+  if (!res.ok) {
+    console.warn("the setup note could not be read; going on without it", res.data);
+    return false;
+  }
+  if (!res.data.lines.length || (setupSeen && res.data.go_on)) return false;
+  await setupNote(res.data, again);
+  return true;
+}
+
 // The wall's picture source, asked for beside the door and the first pool, so the first wall is laid from
 // it. It is asked for once per visit; a failed answer leaves every picture on Matinee's own image route
 // and is asked again at the next boot.
@@ -236,6 +274,7 @@ async function boot(opts = {}) {
   const gate = await get("/api/admission");
   if (!gate.ok) return problem(gate.data, () => boot(opts));
   if (!gate.data.admitted) return lockedDoor(gate.data.greeting);
+  if (await saidSetup(() => boot(opts))) return undefined;
   loadQuips();
   const [door, first] = await Promise.all([get("/api/door"), post("/api/first", { viewer: {} }), askPictures()]);
   if (first.ok) wall.show(first.data.pool);
@@ -272,6 +311,7 @@ function lockedDoor(greeting) {
     });
     const door = await locked.open(ready, (res) => res.ok && showCount(marquee, res.data.now_showing));
     stage.classList.remove("at-locked");
+    if (await saidSetup(() => boot())) return undefined;
     return frontDoor(door, { marquee });
   };
   return new LockedDoor({ stage, marquee, greeting, onAdmitted }).show();

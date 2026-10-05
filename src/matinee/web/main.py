@@ -15,13 +15,13 @@ from fastapi import FastAPI
 
 from matinee.dtdd import Dtdd
 from matinee.engine import load_catalog
-from matinee.labels import LABELS, load_labels
+from matinee.genome_file import tags_read
+from matinee.labels import LABELS, Labels, LabelsError, load_labels
 from matinee.library.choice import open_reader
-from matinee.quips import load_quips
 from matinee.store import Store
 from matinee.web.app import create_app
 from matinee.web.config import from_env
-from matinee.web.theatre import Theatre
+from matinee.web.theatre import BROKEN_DATA, Theatre
 
 log = logging.getLogger("matinee.web")
 
@@ -50,7 +50,7 @@ def build() -> FastAPI:
             config.state / "labels.json",
             LABELS,
         )
-    library = open_reader(config.server)
+    library = open_reader(config.server) if config.server is not None else None
     store = Store(config.store_path)
     dtdd = Dtdd(config.dtdd_key) if config.dtdd_key else None
 
@@ -59,7 +59,29 @@ def build() -> FastAPI:
             warn_kept_topics(store)
 
     on_reload()
-    labels = load_labels()
+    faults: list[str] = []
+    try:
+        labels = load_labels()
+    except LabelsError as exc:
+        labels = Labels()
+        log.error("the shipped labels cannot be read, so no film is placed behind a door: %s", exc)
+        faults.append(
+            f"My labels file can't be read ({exc}), so films wait behind their genres. Update or reinstall Matinee."
+        )
+    try:
+        tags = tags_read()
+    except BROKEN_DATA as exc:
+        tags = ()  # the theatre meets the same file, and the setup note names it
+        log.error(
+            "Matinee's own tree files cannot be read, so it offers no film: %s. Update or reinstall Matinee.", exc
+        )
     catalog_of = partial(load_catalog, labels=labels)
-    theatre = Theatre(library, config.table_path, catalog_of=catalog_of, on_reload=on_reload, listed=labels.films())
-    return create_app(config, theatre, store, dtdd, quips=load_quips())
+    theatre = Theatre(
+        library,
+        config.table_path,
+        catalog_of=catalog_of,
+        on_reload=on_reload,
+        listed=labels.films(),
+        tags=tags,
+    )
+    return create_app(config, theatre, store, dtdd, faults=faults)

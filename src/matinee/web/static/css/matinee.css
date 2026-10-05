@@ -154,6 +154,8 @@ button {
   gap: 24px;
   padding: var(--pad);
   overflow-y: auto;
+  /* A control given the focus scrolls clear of the pinned foot's band, never under it. */
+  scroll-padding-bottom: calc(var(--band-fade) + 72px);
 }
 
 /* The bands: the page base at 92 per cent behind the top bar and behind the foot's bar, feathering to nothing
@@ -439,6 +441,29 @@ a.wordmark:focus-visible {
 /* A problem screen's "Try again" stands at the left, under the message. */
 .talk > .action {
   align-self: flex-start;
+}
+
+/* The setup note: what Matinee sees wrong with its setup, one paragraph each, beneath its heading. */
+.talk > .setup-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-width: 680px;
+  margin: 0 0 28px;
+}
+
+.setup-lines > .note {
+  font-size: 19px;
+}
+
+.talk > .setup-lines[hidden],
+.talk.setup > .action[hidden] {
+  display: none;
+}
+
+/* The note's heading is one line, so it reserves none of the three a question keeps. */
+.talk.setup > .line {
+  min-height: 0;
 }
 
 /* A question's footnote: one small line beneath the answers, above "Just pick one!". */

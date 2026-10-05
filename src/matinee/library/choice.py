@@ -2,8 +2,8 @@
 
 Jellyfin is read when `JELLYFIN_URL` and `JELLYFIN_API_KEY` are set, Plex when
 `PLEX_URL` and `PLEX_TOKEN` are. No setting names the server. An address must
-start with `http://` or `https://`. Both servers set, neither, or an address
-without its key is refused here; the caller decides what that means for the start.
+start with `http://` or `https://`. Both servers set, or an address without its
+key or with another scheme, is refused here; the caller decides what that means.
 """
 
 from __future__ import annotations
@@ -50,18 +50,11 @@ def configured_server(env: Mapping[str, str]) -> MediaServer | None:
     """The one media server the settings name, or None when they name none; raises for both or a half-set one."""
     filled = [s for s in (_filled(env, "jellyfin"), _filled(env, "plex")) if s is not None]
     if len(filled) == 2:
-        raise ServerChoiceError("Jellyfin and Plex are both set; Matinee reads one, so remove one of them")
-    return filled[0] if filled else None
-
-
-def media_server(env: Mapping[str, str]) -> MediaServer:
-    """The one media server the settings name; raises ServerChoiceError for none, both, or a half-set one."""
-    server = configured_server(env)
-    if server is None:
         raise ServerChoiceError(
-            "no media server is set: fill in JELLYFIN_URL and JELLYFIN_API_KEY, or PLEX_URL and PLEX_TOKEN"
+            "You've set up both Jellyfin and Plex. I can only use one at a time, so pick your favourite and comment"
+            " out or remove the other"
         )
-    return server
+    return filled[0] if filled else None
 
 
 def open_reader(server: MediaServer) -> Library:

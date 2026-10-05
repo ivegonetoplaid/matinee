@@ -26,7 +26,7 @@ class Recorded:
 def run_build(monkeypatch: pytest.MonkeyPatch, state: Path, dtdd_key: str = "d") -> Recorded:
     seen = Recorded()
 
-    def theatre(_library: object, _table: object, catalog_of: Any, on_reload: Any, listed: Any) -> object:
+    def theatre(_library: object, _table: object, catalog_of: Any, on_reload: Any, listed: Any, tags: Any) -> object:
         seen.catalog_of, seen.on_reload, seen.listed = catalog_of, on_reload, listed
         return object()
 
