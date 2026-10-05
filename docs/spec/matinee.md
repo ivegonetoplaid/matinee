@@ -1458,7 +1458,10 @@ action's accent are those of `DESIGN_STANDARDS.md`. Matinee's lines and the word
 Shoulders Display, other text in DM Sans. Both fonts are self-hosted with their
 OFL licences. All displayed text is in sentence case, except that a cream
 part carrying on its gold part's sentence after a comma keeps its first letter
-as written. A phone is a viewport 600 px wide or less.
+as written. A phone is a viewport 600 px wide or less. The page declares
+itself dark only (`color-scheme: only dark`, in its head and its stylesheet),
+so a browser's forced dark mode, such as Samsung Internet's, leaves its
+colours as they are.
 
 - **The door.** The marquee stands at the top centre of the screen over the
   poster wall, and nothing else frames it: no booth and no curtains. The

@@ -15,7 +15,8 @@
 }
 
 :root {
-  color-scheme: dark;
+  /* `only` keeps a browser's forced dark mode (Samsung Internet's, Chrome's) from repainting a page that is already dark. */
+  color-scheme: only dark;
   --base: #07080d;
   --text: #efe9dc;
   --dim: color-mix(in srgb, var(--text) 66%, transparent);
