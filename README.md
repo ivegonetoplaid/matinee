@@ -44,8 +44,8 @@ roughly 10,000 of the films TMDB's users have voted on most.
   have, from what you don't, or from both.
 - **Seerr** (Overseerr or Jellyseerr): each pick links to the film on your
   Seerr, where you can request it. Without it, the link goes to TMDB.
-- **DoesTheDogDie**: with your own API key from
-  [DoesTheDogDie](https://www.doesthedogdie.com), each viewer can keep a list
+- **DoesTheDogDie**: with your own API key from your
+  [DoesTheDogDie profile](https://www.doesthedogdie.com/profile), each viewer can keep a list
   of things they'd rather not see, and every pick is checked against it before
   it's shown. Without a key there's no list and no check.
 - **A door word**, if your Matinee faces the internet: a device types it once
@@ -121,7 +121,8 @@ roughly 10,000 of the films TMDB's users have voted on most.
 
    ```sh
    python3 -m venv .venv && .venv/bin/pip install -e .
-   set -a; . ./.env; set +a           # Matinee reads its environment, not the file
+   # Matinee reads its environment, not the file. This loads each line as written, the way Docker does:
+   while IFS= read -r line || [ -n "$line" ]; do case $line in ""|"#"*) ;; *) export "$line" ;; esac; done < .env
    .venv/bin/python tools/rebuild_table.py --daily 04:30 &
    .venv/bin/uvicorn --factory matinee.web.main:build --workers 1 --port 8000 --no-access-log
    ```
@@ -210,6 +211,9 @@ personal.
   `docker compose exec matinee python tools/notes.py list`.
 - To change a setting, edit `.env` and run `docker compose up -d`: it recreates
   each service whose settings changed. (A plain `restart` keeps the old ones.)
+- To change when the nightly rebuild runs, change the time after `--daily` in
+  the compose file (24-hour, in the time zone `TZ` names in `.env`), then
+  `docker compose up -d`.
 - To update, `git pull`, then `docker compose up -d --build`. Your data folder
   and `overrides.json` are untouched.
 - Everything Matinee promises is written down in

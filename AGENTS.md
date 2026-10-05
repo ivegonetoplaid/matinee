@@ -131,7 +131,7 @@ The keys and settings:
   image already sets it to `/state`; mount the data directory there.
 - Optional: `JELLYFIN_URL` with `JELLYFIN_API_KEY`, or `PLEX_URL` with
   `PLEX_TOKEN`; `SEERR_URL`; `DTDD_API_KEY`; `DOOR_WORD`, `DOOR_MATCH`,
-  `DOOR_GREETING`; `POSTERS_FROM`; `TMDB_RATE`. Section 13 of the spec lists
+  `DOOR_GREETING`; `POSTERS_FROM`; `TMDB_RATE`; `TZ`. Section 13 of the spec lists
   every setting and what it takes. An optional service is on when its setting
   is filled in and off when it is empty.
 
@@ -156,7 +156,9 @@ The steps:
    only sent over HTTPS.
 
 Without Docker, install the package into a virtualenv (`pip install -e .`),
-load the file into the shell (`set -a; . ./.env; set +a`) and run
+load the file into the shell with the README's line, which takes each value
+as written, the way Docker does (`. ./.env` breaks on a value with a space),
+and run
 `uvicorn --factory matinee.web.main:build --workers 1 --no-access-log` and
 `python tools/rebuild_table.py --daily HH:MM` from the repository root, each in
 a shell that loaded the file.

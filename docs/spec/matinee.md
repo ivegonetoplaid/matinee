@@ -2009,6 +2009,7 @@ as written. A phone is a viewport 600 px wide or less.
 | `DOOR_MATCH` | server, optional | `relaxed` (the default) or `strict` |
 | `DOOR_GREETING` | server, optional | `show` (the default), `gin`, or the operator's own greeting |
 | `POSTERS_FROM` | server, optional | `server` (the default) or `tmdb`: where the page's pictures come from (section 11.5) |
+| `TZ` | server, rebuild, optional | a tz database name; the clock `--daily` and the logs follow, UTC in the image when unset |
 
 The repository's `example.env` lists every setting above, each commented out,
 grouped and explained, under a box that tells the installer to copy it to `.env`,
@@ -2038,7 +2039,6 @@ The terms of each source are part of the design.
   `tmdb` image source, a viewer's browser loads pictures from TMDB's
   image server, so TMDB sees that browser's requests. The page sends them with
   no referrer (`Referrer-Policy: same-origin`).
-- **MovieLens tag genome.** Credited on the About page to F. Maxwell Harper and
 - **The privacy statement.** DoesTheDogDie's API terms bind whoever holds a key
   to keep a privacy policy for the application (section 2.4(b)). The About
   page's last section, "What Matinee keeps", is that policy for every
@@ -2056,6 +2056,7 @@ The terms of each source are part of the design.
   whoever runs the installation removes anything else. Each sentence states
   only what the code does, and a change to what Matinee keeps or sends amends
   it.
+- **MovieLens tag genome.** Credited on the About page to F. Maxwell Harper and
   Joseph A. Konstan (2015), *The MovieLens Datasets: History and Context*, and
   Jesse Vig, Shilad Sen and John Riedl (2012), *The Tag Genome: Encoding
   Community Knowledge to Support Novel Interaction*. The raw dataset is never
