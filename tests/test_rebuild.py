@@ -78,8 +78,9 @@ def test_without_a_library_it_fetches_every_film_the_labels_name(
         return Refreshed(5, 0)
 
     monkeypatch.setattr(rebuild_table, "refresh", refresh)
+    (tmp_path / "overrides.json").write_text('{"format": 2, "trees": {"comedy": {"kinds": {"999999998": []}}}}')
     status = rebuild_table.rebuild(None, tmp_path, "t")
-    assert set(asked[0]) == set(load_labels().films())
+    assert set(asked[0]) == set(load_labels().films()) | {999_999_998}  # the household's films are fetched too
     assert (status.state, status.done, status.total) == ("finished", len(asked[0]), len(asked[0]))
     assert (tmp_path / "films.sqlite").exists()
 

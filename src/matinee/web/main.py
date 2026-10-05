@@ -10,15 +10,17 @@ from __future__ import annotations
 
 import logging
 from functools import partial
+from pathlib import Path
 
 from fastapi import FastAPI
 
 from matinee.dtdd import Dtdd
-from matinee.engine import load_catalog
+from matinee.engine import household_problems, load_catalog
 from matinee.genome_file import tags_read
-from matinee.labels import LABELS, Labels, LabelsError, load_labels
+from matinee.labels import LABELS, OVERRIDES, Labels, LabelsError, load_labels, load_overrides, with_overrides
 from matinee.library.choice import open_reader
 from matinee.store import Store
+from matinee.trees import load_trees
 from matinee.web.app import create_app
 from matinee.web.config import from_env
 from matinee.web.theatre import BROKEN_DATA, Theatre
@@ -38,6 +40,39 @@ def warn_kept_topics(store: Store) -> None:
     held = sum(1 for p in store.everyone() if p.topics)
     if held:
         log.warning(TOPICS_KEPT, held, "profile" if held == 1 else "profiles")
+
+
+OVERRIDES_BROKEN = (
+    "Your override file ({path}) can't be used: {problem}. Until it's fixed, films sit where Matinee ships them."
+)
+
+
+def household(shipped: Labels, data_dir: Path, faults: list[str]) -> Labels:
+    """The shipped labels with the household override file laid over them; the shipped alone, with a fault, when
+    the file cannot be used. Matinee only reads the file."""
+    try:
+        theirs = load_overrides(data_dir)
+        trees = load_trees() if theirs is not None else {}
+    except LabelsError as exc:
+        theirs, trees = None, {}
+        problems = [str(exc)]
+    except BROKEN_DATA as exc:  # Matinee's own tree files: the theatre meets them too, and the note names them
+        log.error("the override file cannot be checked, since Matinee's own tree files cannot be read: %s", exc)
+        return shipped
+    else:
+        problems = [] if theirs is None else household_problems(theirs, trees)
+    if problems:
+        log.error(
+            "the override file %s cannot be used, so the shipped placements apply alone: %s. Fix it and restart.",
+            data_dir / OVERRIDES,
+            problems[0],
+        )
+        faults.append(OVERRIDES_BROKEN.format(path=OVERRIDES, problem=problems[0]))
+        return shipped
+    if theirs is None:
+        return shipped
+    log.info("the override file places %d films its own way", len(theirs.named()))
+    return with_overrides(shipped, theirs)
 
 
 def build() -> FastAPI:
@@ -68,6 +103,7 @@ def build() -> FastAPI:
         faults.append(
             f"My labels file can't be read ({exc}), so films wait behind their genres. Update or reinstall Matinee."
         )
+    labels = household(labels, config.state, faults)
     try:
         tags = tags_read()
     except BROKEN_DATA as exc:

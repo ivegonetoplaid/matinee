@@ -278,16 +278,40 @@ def _first_option(o: dict[str, str]) -> FirstOption:
     return FirstOption(o["say"], o["tree"], o["label"])
 
 
+def label_problems(labels: Labels, trees: Mapping[str, Tree]) -> list[str]:
+    """What in `labels` the trees cannot hold: a tree no file defines, or a kind its tree does not label."""
+    found = []
+    for tree_id, placed in labels.trees.items():
+        tree = trees.get(tree_id)
+        if tree is None:
+            found.append(f"the labels name tree '{tree_id}', which no tree file defines")
+            continue
+        known = {name for name, spec in tree.flavours.items() if spec.get("labelled")}
+        unknown = set().union(*placed.kinds.values()) - known
+        if unknown:
+            found.append(f"the labels give tree '{tree_id}' kinds it does not label: {sorted(unknown)}")
+    return found
+
+
+def household_problems(labels: Labels, trees: Mapping[str, Tree]) -> list[str]:
+    """What in a household override file the pools cannot place: `label_problems`, and bands under any tree but
+    kids, or a kids film without both its kinds and its band, which would leave it behind no door."""
+    found = label_problems(labels, trees)
+    for tree_id, placed in labels.trees.items():
+        if placed.bands and tree_id != "kids":
+            found.append(f"the labels give tree '{tree_id}' age bands, which only kids carries")
+    kids = labels.of("kids")
+    if set(kids.bands) != set(kids.kinds):
+        odd = sorted(set(kids.bands) ^ set(kids.kinds))
+        found.append(f"a kids film needs both its kinds and its band; these have one alone: {odd}")
+    return found
+
+
 def _check_labels(cat: Catalog) -> None:
     """Every tree the labels name exists and labels every kind they give it; raises EngineError otherwise."""
-    for tree_id, labels in cat.labels.trees.items():
-        tree = cat.trees.get(tree_id)
-        if tree is None:
-            raise EngineError(f"the labels name tree '{tree_id}', which no tree file defines")
-        known = {name for name, spec in tree.flavours.items() if spec.get("labelled")}
-        unknown = set().union(*labels.kinds.values()) - known
-        if unknown:
-            raise EngineError(f"the labels give tree '{tree_id}' kinds it does not label: {sorted(unknown)}")
+    problems = label_problems(cat.labels, cat.trees)
+    if problems:
+        raise EngineError(problems[0])
 
 
 def _hold_apart(cat: Catalog) -> None:
@@ -341,7 +365,7 @@ def load_catalog(
         table=table,
         reference=ref,
         trees=load_trees((data / "trees", data / "modes")),
-        house=load_house(data / "house_overrides.json"),
+        house=load_house(data / "house_overrides.json").without((labels or Labels()).overridden),
         first_lines=tuple(first["lines"]),
         first_options=tuple(_first_option(o) for o in first["options"]),
         labels=labels or Labels(),

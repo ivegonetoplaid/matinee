@@ -28,6 +28,7 @@ from matinee.reference import DATA
 
 FORMAT = 2
 LABELS = DATA / "labels.json"
+OVERRIDES = "overrides.json"  # the household's own placements, in the data directory; Matinee never writes it
 BANDS = ("little", "family", "older")  # youngest first
 
 
@@ -44,6 +45,7 @@ class TreeLabels:
 @dataclass(frozen=True)
 class Labels:
     trees: Mapping[str, TreeLabels] = field(default_factory=dict)
+    overridden: frozenset[int] = frozenset()  # films whose whole placement comes from the household file
 
     def of(self, tree: str) -> TreeLabels:
         return self.trees.get(tree, TreeLabels())
@@ -51,6 +53,32 @@ class Labels:
     def films(self) -> frozenset[int]:
         """Every film the file lists under any door."""
         return frozenset().union(*(set(t.kinds) for t in self.trees.values()))
+
+    def named(self) -> frozenset[int]:
+        """Every film the file names anywhere: under a door's kinds or in the kids bands."""
+        return self.films() | frozenset().union(*(set(t.bands) for t in self.trees.values()))
+
+
+def with_overrides(shipped: Labels, household: Labels) -> Labels:
+    """The shipped labels with the household's laid over them: a film the household file names anywhere takes its
+    whole placement from that file, every door and band of it, and keeps none of the shipped ones."""
+    taken = household.named()
+    trees: dict[str, TreeLabels] = {}
+    for name in set(shipped.trees) | set(household.trees):
+        ours, theirs = shipped.of(name), household.of(name)
+        kinds = {t: k for t, k in ours.kinds.items() if t not in taken} | dict(theirs.kinds)
+        bands = {t: b for t, b in ours.bands.items() if t not in taken} | dict(theirs.bands)
+        trees[name] = TreeLabels(kinds, bands)
+    return Labels(trees, taken)
+
+
+def load_overrides(data_dir: Path) -> Labels | None:
+    """The household override file, `overrides.json` in the data directory, or None when there is none.
+
+    It has the labels file's shape. Raises LabelsError naming the path when it cannot be used.
+    """
+    path = data_dir / OVERRIDES
+    return load_labels(path) if path.exists() else None
 
 
 def _bands(name: str, raw: object) -> dict[int, str]:

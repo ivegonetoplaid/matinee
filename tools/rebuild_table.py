@@ -29,7 +29,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from matinee.genome_file import load_scores
-from matinee.labels import load_labels
+from matinee.labels import LabelsError, load_labels, load_overrides
 from matinee.library.choice import MediaServer, ServerChoiceError, configured_server, open_reader
 from matinee.progress import RebuildStatus, write_status
 from matinee.table import build_table, write_table
@@ -62,7 +62,7 @@ def rebuild(server: MediaServer | None, state: Path, token: str) -> RebuildStatu
 
 def _rebuild(server: MediaServer | None, state: Path, cache: Path, token: str, started: str) -> RebuildStatus:
     films = open_reader(server).films() if server is not None else []
-    listed = load_labels().films()
+    listed = load_labels().films() | household_films(state)
     ids = sorted(listed | {f.tmdb for f in films if f.tmdb is not None})
     write_status(state, RebuildStatus("running", started, _now(), total=len(ids)))
     result = refresh(ids, cache, token)
@@ -75,6 +75,17 @@ def _rebuild(server: MediaServer | None, state: Path, cache: Path, token: str, s
     if result.stopped is not None:
         return _report(state, RebuildStatus("stopped", started, _now(), result.fetched, len(ids), result.stopped))
     return _report(state, RebuildStatus("finished", started, _now(), len(ids), len(ids)))
+
+
+def household_films(state: Path) -> frozenset[int]:
+    """The films the household override file names, so their records are fetched too; none when it cannot be
+    read (the server's setup note names that)."""
+    try:
+        theirs = load_overrides(state)
+    except LabelsError as exc:
+        log.warning("the override file cannot be read, so the rebuild fetches only the shipped films: %s", exc)
+        return frozenset()
+    return frozenset() if theirs is None else theirs.named()
 
 
 def _report(state: Path, status: RebuildStatus) -> RebuildStatus:

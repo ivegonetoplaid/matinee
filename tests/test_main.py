@@ -77,3 +77,14 @@ def test_without_a_key_kept_topics_are_warned_of_at_start_and_on_every_reload(
     with caplog.at_level(logging.WARNING, logger="matinee.web"):
         seen.on_reload()
     assert ["now missing" in r.getMessage() for r in caplog.records] == [True]
+
+
+def test_the_household_file_in_the_data_directory_reaches_the_catalog_and_the_offered_films(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    doc = {"format": 2, "trees": {"comedy": {"kinds": {"999999999": ["slapstick"]}}}}
+    (tmp_path / "overrides.json").write_text(json.dumps(doc))
+    seen = run_build(monkeypatch, tmp_path)
+    labels = seen.catalog_of.keywords["labels"]
+    assert labels.of("comedy").kinds[999_999_999] == frozenset({"slapstick"})
+    assert 999_999_999 in seen.listed and labels.overridden == frozenset({999_999_999})

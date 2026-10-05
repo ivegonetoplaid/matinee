@@ -89,6 +89,19 @@ class House:
     flavour_pins: Mapping[tuple[str, str], Mapping[int, bool]] = field(default_factory=dict)
     specials: frozenset[int] = frozenset()  # films counted as standup specials whatever the rule says
 
+    def without(self, films: frozenset[int]) -> House:
+        """The pins less every placement of `films` (kids, tree, flavour and specials pins): the household file
+        places them. Scale pins stay, since a gore pail is neither a door nor a kind."""
+        return House(
+            kids_pins={t: b for t, b in self.kids_pins.items() if t not in films},
+            tree_pins={tree: ids - films for tree, ids in self.tree_pins.items()},
+            scale_pins=self.scale_pins,
+            flavour_pins={
+                k: {t: m for t, m in pins.items() if t not in films} for k, pins in self.flavour_pins.items()
+            },
+            specials=self.specials - films,
+        )
+
 
 def load_house(path: Path = DATA / "house_overrides.json") -> House:
     doc = json.loads(path.read_text(encoding="utf-8"))

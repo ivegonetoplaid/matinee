@@ -390,6 +390,23 @@ genome. Its shape (format 2):
 - The server reads the file once at start-up. Replacing it takes a restart, and
   updating Matinee replaces it.
 
+**The household override file.** An installation may keep `overrides.json` in its
+data directory, in the labels file's shape (format 2). Matinee reads it at
+start-up, after the shipped labels and the house pins, and never writes it; an
+update never touches it. A film the file names anywhere, under a door's kinds or
+in the kids bands, takes its whole placement from the file: the shipped labels'
+doors, kinds and band for it are set aside, and so are its house pins that place
+it (kids, tree, flavour and specials pins). Its gore-pail pin stays, since a pail
+is neither a door nor a kind. The file may label a film the shipped labels lack,
+which then joins the films the rebuild fetches and Matinee offers. Removing the
+file restores the shipped placements. A file Matinee cannot use (not valid JSON,
+another format, a tree no file defines or a kind its tree does not label, bands
+under any tree but kids, or a kids film with its kinds and no band or its band
+and no kinds) is a
+setup fault (section 5.5): the note names the problem, and the shipped
+placements apply alone. A household shares its file in a "Sorting suggestion"
+issue, and whoever edits the shipped labels may merge its entries in by hand.
+
 Each labelled flavour's `note` in its tree file states the rule its kind
 follows. The labels were written by a language model against those rules, with
 the operator's calls laid over them. A kids-first film, made mainly for
