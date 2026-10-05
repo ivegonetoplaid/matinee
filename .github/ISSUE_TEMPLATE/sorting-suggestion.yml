@@ -1,0 +1,32 @@
+name: Sorting suggestion
+description: Think a film belongs behind a different door? Share your override file.
+title: "Sorting suggestion: "
+labels: ["sorting"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Matinee's sort is opinionated on purpose: each film sits behind the doors it truly fits, and no more.
+        Your own `overrides.json` already sorts your Matinee your way. If you think your call is right for
+        everyone, paste it below and say why. Every suggestion is read; some are taken and some aren't.
+  - type: textarea
+    id: overrides
+    attributes:
+      label: Your override file
+      description: >-
+        The contents of overrides.json from your data directory (or just the films this suggestion is about),
+        in the labels file's shape. A kids film needs both its kinds and its age band.
+      render: json
+      placeholder: |
+        {"format": 2,
+         "trees": {"western": {"kinds": {"11969": []}},
+                   "kids": {"kinds": {"9340": ["adventure"]}, "bands": {"9340": "family"}}}}
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why
+      description: What's wrong with where Matinee puts these films now, and why your placement fits better.
+    validations:
+      required: true
