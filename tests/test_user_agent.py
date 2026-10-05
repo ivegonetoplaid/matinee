@@ -49,4 +49,6 @@ def test_the_jellyfin_key_is_never_carried_to_another_host(monkeypatch: pytest.M
     monkeypatch.setattr("matinee.library.jellyfin.urllib.request.urlopen", capture)
     JellyfinReader("http://jellyfin.invalid", "jf-key").films()
     req: Any = sent[0]
-    assert req.unredirected_hdrs.get("X-emby-token") == "jf-key" and "X-emby-token" not in req.headers
+    assert req.unredirected_hdrs.get("Authorization") == 'MediaBrowser Token="jf-key"'
+    assert "Authorization" not in req.headers
+    assert not [h for h in req.header_items() if h[0].lower().startswith("x-emby")]  # Jellyfin 12 refuses them

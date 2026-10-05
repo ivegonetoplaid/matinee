@@ -1,7 +1,9 @@
 """The Jellyfin reader. Every request it makes is an HTTP GET.
 
 The server address and key arrive as arguments. The key travels only in the
-`X-Emby-Token` header of requests to that server and is never logged.
+`Authorization: MediaBrowser Token="<key>"` header of requests to that server,
+the one form Jellyfin 12 accepts and every earlier Jellyfin reads too, and is
+never logged.
 """
 
 from __future__ import annotations
@@ -72,7 +74,8 @@ class JellyfinReader:
 
     def _get_json(self, path: str) -> Any:
         req = urllib.request.Request(f"{self._base}{path}", headers={"User-Agent": USER_AGENT}, method="GET")
-        req.add_unredirected_header("X-Emby-Token", self._key)  # never carried to another host on a redirect
+        # Never carried to another host on a redirect.
+        req.add_unredirected_header("Authorization", f'MediaBrowser Token="{self._key}"')
         try:
             with urllib.request.urlopen(req, timeout=TIMEOUT_S) as resp:
                 return json.load(resp)

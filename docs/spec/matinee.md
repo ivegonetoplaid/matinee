@@ -36,7 +36,8 @@ contract is listed under [Known gaps](#known-gaps).
    library interface with three reads: the film list, one film's synopsis, and
    one film's poster or backdrop. The Jellyfin reader and the Plex reader sit
    behind it. Section 13 says which one an installation reads.
-   - The Jellyfin reader's key travels only in the `X-Emby-Token` header, never
+   - The Jellyfin reader's key travels only in the `Authorization` header, as
+     `MediaBrowser Token="<key>"` (the one form Jellyfin 12 accepts), never
      in a URL or a log, and never follows a redirect. An item id is 32
      hexadecimal characters before it is joined into a request.
    - The Plex reader reads every movie section. A film's TMDB id is its
