@@ -2342,7 +2342,7 @@ symbol when one does not match.
 | `src/matinee/engine.py::_check_labels` (the engine refuses to prepare) | `src/matinee/engine.py:332` | 2026-10-05 |
 | `src/matinee/web/main.py::household` / `OVERRIDES_BROKEN` (the file laid over, or a fault) | `src/matinee/web/main.py:54` | 2026-10-05 |
 | `src/matinee/web/main.py::build` (the shipped labels, an unread `labels.json` in the data directory warned of) | `src/matinee/web/main.py:82` | 2026-10-05 |
-| `tools/rebuild_table.py::household_films` (the rebuild fetches the films the household names) | `tools/rebuild_table.py:186` | 2026-10-05 |
+| `tools/rebuild_table.py::household_films` (the rebuild fetches the films the household names) | `tools/rebuild_table.py:206` | 2026-10-05 |
 | `tests/test_overrides.py::test_a_film_the_household_names_takes_its_whole_placement_from_the_file` | `tests/test_overrides.py:24` | 2026-10-05 |
 
 ### Pools and reference statistics
@@ -2384,28 +2384,28 @@ symbol when one does not match.
 
 | Handle | Where | Verified |
 |---|---|---|
-| `tools/rebuild_table.py::main` (`TMDB_TOKEN`, `TMDB_RATE`, the server whose settings are filled in) | `tools/rebuild_table.py:265` | 2026-10-05 |
-| `tools/rebuild_table.py::daily_time` / `daily_arg` / `seconds_until` (`--daily HH:MM`, validated before the first rebuild) | `tools/rebuild_table.py:225` | 2026-10-05 |
-| `tools/rebuild_table.py::rebuild_time` / `DEFAULT_DAILY` (`REBUILD_TIME` for `--daily` alone; 04:30 when unset or not a time, logged) | `tools/rebuild_table.py:241` | 2026-10-05 |
-| `tools/rebuild_table.py::rebuild` (no key: compact and stop; an unexpected failure puts the kept table back) | `tools/rebuild_table.py:73` | 2026-10-05 |
+| `tools/rebuild_table.py::main` (`TMDB_TOKEN`, `TMDB_RATE`, the server whose settings are filled in) | `tools/rebuild_table.py:285` | 2026-10-05 |
+| `tools/rebuild_table.py::daily_time` / `daily_arg` / `seconds_until` (`--daily HH:MM`, validated before the first rebuild) | `tools/rebuild_table.py:245` | 2026-10-05 |
+| `tools/rebuild_table.py::rebuild_time` / `DEFAULT_DAILY` (`REBUILD_TIME` for `--daily` alone; 04:30 when unset or not a time, logged) | `tools/rebuild_table.py:261` | 2026-10-05 |
+| `tools/rebuild_table.py::rebuild` (no key: compact and stop; an unexpected failure puts the kept table back) | `tools/rebuild_table.py:74` | 2026-10-05 |
 | `tools/rebuild_table.py::_keep` / `_compact_without_key` (`films.sqlite.kept`) | `tools/rebuild_table.py:131` | 2026-10-05 |
 | `tools/rebuild_table.py::_sweep_pictures` (every rebuild sweeps the picture shelf) | `tools/rebuild_table.py:113` | 2026-10-05 |
-| `tools/rebuild_table.py::_rebuild` (the start line; save before any fetch; most-voted order) | `tools/rebuild_table.py:125` | 2026-10-05 |
-| `tools/rebuild_table.py::_Run` / `save` / `tick` (a save every `SAVE_EVERY` records) | `tools/rebuild_table.py:158` | 2026-10-05 |
-| `tools/rebuild_table.py::SAVE_EVERY` / `FAILED` | `tools/rebuild_table.py:64` | 2026-10-05 |
-| `tools/rebuild_table.py::tmdb_rate` (any positive number; anything else the default, logged) | `tools/rebuild_table.py:206` | 2026-10-05 |
+| `tools/rebuild_table.py::_rebuild` (the start line; save before any fetch; most-voted order) | `tools/rebuild_table.py:145` | 2026-10-05 |
+| `tools/rebuild_table.py::_Run` / `save` / `tick` (a save every `SAVE_EVERY` records) | `tools/rebuild_table.py:178` | 2026-10-05 |
+| `tools/rebuild_table.py::SAVE_EVERY` / `FAILED` | `tools/rebuild_table.py:65` | 2026-10-05 |
+| `tools/rebuild_table.py::tmdb_rate` (any positive number; anything else the default, logged) | `tools/rebuild_table.py:226` | 2026-10-05 |
 | `src/matinee/progress.py::RebuildStatus` / `STATUS_FILE` (`rebuild.json`) | `src/matinee/progress.py:24` | 2026-10-05 |
 | `src/matinee/progress.py::write_status` / `read_status` / `_well_formed` | `src/matinee/progress.py:33` | 2026-10-05 |
-| `src/matinee/tmdb.py::refresh` (one shared pacer; compaction in `finally`) | `src/matinee/tmdb.py:449` | 2026-10-05 |
-| `src/matinee/tmdb.py::fetch_order` (held vote counts, else TMDB's list) | `src/matinee/tmdb.py:428` | 2026-10-05 |
-| `src/matinee/tmdb.py::most_voted` / `VOTE_PAGES` (`VOTE_PAGES`, progress after every page) | `src/matinee/tmdb.py:396` | 2026-10-05 |
+| `src/matinee/tmdb.py::refresh` (one shared pacer; compaction in `finally`) | `src/matinee/tmdb.py:494` | 2026-10-05 |
+| `src/matinee/tmdb.py::fetch_order` (held vote counts, else TMDB's list) | `src/matinee/tmdb.py:473` | 2026-10-05 |
+| `src/matinee/tmdb.py::most_voted` / `VOTE_PAGES` (`VOTE_PAGES`, progress after every page) | `src/matinee/tmdb.py:441` | 2026-10-05 |
 | `src/matinee/tmdb.py::Pacer` / `wait` / `hold` / `held` (a 429 holds every request) | `src/matinee/tmdb.py:151` | 2026-10-05 |
 | `src/matinee/tmdb.py::DEFAULT_RATE` / `MAX_WORKERS` / `workers_for` | `src/matinee/tmdb.py:38` | 2026-10-05 |
-| `src/matinee/tmdb.py::get_json` | `src/matinee/tmdb.py:196` | 2026-10-05 |
-| `src/matinee/tmdb.py::_fetch_all` / `_Tally` / `Tick` / `TICK_EVERY` | `src/matinee/tmdb.py:487` | 2026-10-05 |
-| `src/matinee/tmdb.py::_Tally.records` / `so_far` / `take` | `src/matinee/tmdb.py:516` | 2026-10-05 |
+| `src/matinee/tmdb.py::get_json` | `src/matinee/tmdb.py:191` | 2026-10-05 |
+| `src/matinee/tmdb.py::_fetch_all` / `_Tally` / `Tick` / `TICK_EVERY` | `src/matinee/tmdb.py:532` | 2026-10-05 |
+| `src/matinee/tmdb.py::_Tally.records` / `so_far` / `take` | `src/matinee/tmdb.py:561` | 2026-10-05 |
 | `src/matinee/tmdb.py::TmdbFilm` (title, year, genres, synopsis, vote count, US rating) | `src/matinee/tmdb.py:60` | 2026-10-05 |
-| `src/matinee/tmdb.py::fetch_film` / `_us_certification` | `src/matinee/tmdb.py:349` | 2026-10-05 |
+| `src/matinee/tmdb.py::fetch_film` / `_us_certification` | `src/matinee/tmdb.py:394` | 2026-10-05 |
 | `src/matinee/tmdb.py::TmdbRefused` / `Refreshed` / `NETWORK_FAILURES` | `src/matinee/tmdb.py:55` | 2026-10-05 |
 | `src/matinee/tmdb.py::NO_KEY` / `KEY_REFUSED` / `NOT_ANSWERING` | `src/matinee/tmdb.py:46` | 2026-10-05 |
 | `src/matinee/tmdb.py::REFETCH_AFTER` / `MAX_AGE` | `src/matinee/tmdb.py:42` | 2026-10-05 |
@@ -2452,9 +2452,9 @@ symbol when one does not match.
 | `src/matinee/web/common.py::Seat` / `Tile` / `Deleted` / `Door` (what the page is told of a profile) | `src/matinee/web/common.py:38` | 2026-10-05 |
 | `src/matinee/web/common.py::NewProfile` / `AvatarChoice` / `PinEntry` (request caps) | `src/matinee/web/common.py:72` | 2026-10-05 |
 | `src/matinee/web/common.py::set_tokens` / `with_token` | `src/matinee/web/common.py:104` | 2026-10-05 |
-| `src/matinee/web/app.py::add_door_routes` (`GET /api/door`, create, open) | `src/matinee/web/app.py:270` | 2026-10-05 |
-| `src/matinee/web/app.py::add_avatar_route` (`PUT /api/profiles/{id}/avatar`) | `src/matinee/web/app.py:309` | 2026-10-05 |
-| `src/matinee/web/app.py::add_delete_route` (`DELETE /api/profiles/{id}`) | `src/matinee/web/app.py:318` | 2026-10-05 |
+| `src/matinee/web/app.py::add_door_routes` (`GET /api/door`, create, open) | `src/matinee/web/app.py:310` | 2026-10-05 |
+| `src/matinee/web/app.py::add_avatar_route` (`PUT /api/profiles/{id}/avatar`) | `src/matinee/web/app.py:349` | 2026-10-05 |
+| `src/matinee/web/app.py::add_delete_route` (`DELETE /api/profiles/{id}`) | `src/matinee/web/app.py:358` | 2026-10-05 |
 | `src/matinee/web/viewing.py::ViewerIn` (a profile id only) | `src/matinee/web/viewing.py:36` | 2026-10-05 |
 | `src/matinee/web/viewing.py::held_profile` | `src/matinee/web/viewing.py:197` | 2026-10-05 |
 | `src/matinee/web/viewing.py::resolve` (no profile: the front door's pool; no key: stored topics ignored) | `src/matinee/web/viewing.py:229` | 2026-10-05 |
@@ -2487,10 +2487,10 @@ symbol when one does not match.
 | `src/matinee/web/admission.py::load_secret` (made once, owner-only) | `src/matinee/web/admission.py:69` | 2026-10-05 |
 | `src/matinee/web/admission.py::Admission` (`issue`, `admits`, `matches`) | `src/matinee/web/admission.py:88` | 2026-10-05 |
 | `src/matinee/web/config.py::GREETINGS` | `src/matinee/web/config.py:24` | 2026-10-05 |
-| `src/matinee/web/config.py::_door` (a wrong lock refuses the start; with no word, a bad mode is a fault) | `src/matinee/web/config.py:68` | 2026-10-05 |
-| `src/matinee/web/app.py::AdmissionOut` / `WordIn` | `src/matinee/web/app.py:337` | 2026-10-05 |
-| `src/matinee/web/app.py::open_before_admission` | `src/matinee/web/app.py:349` | 2026-10-05 |
-| `src/matinee/web/app.py::add_admission` (the gate, `GET`/`POST /api/admission`, the 2-second wait) | `src/matinee/web/app.py:354` | 2026-10-05 |
+| `src/matinee/web/config.py::_door` (a wrong lock refuses the start; with no word, a bad mode is a fault) | `src/matinee/web/config.py:72` | 2026-10-05 |
+| `src/matinee/web/app.py::AdmissionOut` / `WordIn` | `src/matinee/web/app.py:377` | 2026-10-05 |
+| `src/matinee/web/app.py::open_before_admission` | `src/matinee/web/app.py:389` | 2026-10-05 |
+| `src/matinee/web/app.py::add_admission` (the gate, `GET`/`POST /api/admission`, the 2-second wait) | `src/matinee/web/app.py:394` | 2026-10-05 |
 | `tests/test_admission.py` | `tests/test_admission.py:83` | 2026-10-05 |
 
 ### Notes and the notes tool
@@ -2517,7 +2517,7 @@ symbol when one does not match.
 | Handle | Where | Verified |
 |---|---|---|
 | `src/matinee/web/config.py::Config.dtdd_key` (optional) | `src/matinee/web/config.py:44` | 2026-10-05 |
-| `src/matinee/web/app.py::create_app` (one `topics_on`; a picker that disagrees is refused) | `src/matinee/web/app.py:487` | 2026-10-05 |
+| `src/matinee/web/app.py::create_app` (one `topics_on`; a picker that disagrees is refused) | `src/matinee/web/app.py:527` | 2026-10-05 |
 | `src/matinee/web/viewing.py::add_topic_routes` (`GET /api/topics`, `PUT /api/profiles/{id}/topics`, only with a key) | `src/matinee/web/viewing.py:324` | 2026-10-05 |
 | `src/matinee/web/viewing.py::save_topics` | `src/matinee/web/viewing.py:348` | 2026-10-05 |
 | `src/matinee/web/viewing.py::FirstOut.checked` (whether this viewer's picks are checked) | `src/matinee/web/viewing.py:115` | 2026-10-05 |
@@ -2552,15 +2552,15 @@ symbol when one does not match.
 
 | Handle | Where | Verified |
 |---|---|---|
-| `src/matinee/web/config.py::from_env` (refuses only `DATA_DIR` and a wrong lock; everything else a fault) | `src/matinee/web/config.py:120` | 2026-10-05 |
+| `src/matinee/web/config.py::from_env` (refuses only `DATA_DIR` and a wrong lock; everything else a fault) | `src/matinee/web/config.py:124` | 2026-10-05 |
 | `src/matinee/web/config.py::Config` / `faults` / `server_unusable` / `server` | `src/matinee/web/config.py:40` | 2026-10-05 |
-| `src/matinee/web/config.py::_server` / `_seerr` / `_images` | `src/matinee/web/config.py:103` | 2026-10-05 |
+| `src/matinee/web/config.py::_server` / `_seerr` / `_images` | `src/matinee/web/config.py:107` | 2026-10-05 |
 | `src/matinee/web/config.py::ImageSource` (`POSTERS_FROM`: `server` or `tmdb`) | `src/matinee/web/config.py:29` | 2026-10-05 |
 | `src/matinee/web/setup.py::SetupNote` (`warning` while the data is stale) | `src/matinee/web/setup.py:49` | 2026-10-05 |
 | `src/matinee/web/setup.py::note` / `unreachable` / `rebuild_lines` / `stalled` | `src/matinee/web/setup.py:97` | 2026-10-05 |
 | `src/matinee/web/setup.py::HEADING` / `MEANWHILE` / `STOPPED` / `STALE` / `STALLED_AFTER` (every line's words) | `src/matinee/web/setup.py:20` | 2026-10-05 |
-| `src/matinee/web/app.py::setup_faults` (the configured, start-up and run-time faults) | `src/matinee/web/app.py:454` | 2026-10-05 |
-| `src/matinee/web/app.py::add_setup_route` (`GET /api/setup`) | `src/matinee/web/app.py:468` | 2026-10-05 |
+| `src/matinee/web/app.py::setup_faults` (the configured, start-up and run-time faults) | `src/matinee/web/app.py:494` | 2026-10-05 |
+| `src/matinee/web/app.py::add_setup_route` (`GET /api/setup`) | `src/matinee/web/app.py:508` | 2026-10-05 |
 | `src/matinee/web/theatre.py::NothingToShow` (shipped data that cannot make a catalog) | `src/matinee/web/theatre.py:47` | 2026-10-05 |
 | `src/matinee/web/theatre.py::Theatre._catalog` | `src/matinee/web/theatre.py:140` | 2026-10-05 |
 | `src/matinee/web/theatre.py::Showing.library` (`none`, `usable`, `unreachable`) | `src/matinee/web/theatre.py:56` | 2026-10-05 |
@@ -2568,8 +2568,8 @@ symbol when one does not match.
 | `src/matinee/web/seerr.py::SeerrCheck` (`CHECK_EVERY`; picks link to TMDB while it does not answer) | `src/matinee/web/seerr.py:25` | 2026-10-05 |
 | `src/matinee/web/logbook.py::describe` / `StateLog` / `state_log` / `CHECK_EVERY` (the state line) | `src/matinee/web/logbook.py:71` | 2026-10-05 |
 | `src/matinee/web/logbook.py::Quiet` / `QUIET_FOR` / `SERVER_NAMES` (a repeating warning once a minute, with a count) | `src/matinee/web/logbook.py:115` | 2026-10-05 |
-| `src/matinee/web/app.py::add_state_log` / `QUIET` | `src/matinee/web/app.py:476` | 2026-10-05 |
-| `tests/test_setup.py::test_only_a_wrong_lock_and_a_missing_data_directory_refuse_to_start` | `tests/test_setup.py:107` | 2026-10-05 |
+| `src/matinee/web/app.py::add_state_log` / `QUIET` | `src/matinee/web/app.py:516` | 2026-10-05 |
+| `tests/test_setup.py::test_only_a_wrong_lock_and_a_missing_data_directory_refuse_to_start` | `tests/test_setup.py:109` | 2026-10-05 |
 | `tests/test_logbook.py::test_the_state_line_names_every_part_and_no_secret` | `tests/test_logbook.py:30` | 2026-10-05 |
 
 ### Web surface
@@ -2577,19 +2577,19 @@ symbol when one does not match.
 | Handle | Where | Verified |
 |---|---|---|
 | `src/matinee/web/main.py::build` (reads the labels and the household file; faults go on the note) | `src/matinee/web/main.py:82` | 2026-10-05 |
-| `src/matinee/web/app.py::create_app` (docs disabled) | `src/matinee/web/app.py:487` | 2026-10-05 |
-| `src/matinee/web/app.py::security_headers` / `CONTENT_SECURITY_POLICY` | `src/matinee/web/app.py:410` | 2026-10-05 |
-| `src/matinee/web/app.py::add_page` | `src/matinee/web/app.py:416` | 2026-10-05 |
-| `src/matinee/web/app.py::add_quip_routes` (`GET /api/quips`; 503 when the lines cannot be read) | `src/matinee/web/app.py:442` | 2026-10-05 |
-| `src/matinee/web/app.py::add_film_routes` / `IMAGE_WIDTHS` / `IMAGE_CACHE` (`GET /api/pictures`) | `src/matinee/web/app.py:235` | 2026-10-05 |
+| `src/matinee/web/app.py::create_app` (docs disabled) | `src/matinee/web/app.py:527` | 2026-10-05 |
+| `src/matinee/web/app.py::security_headers` / `CONTENT_SECURITY_POLICY` | `src/matinee/web/app.py:450` | 2026-10-05 |
+| `src/matinee/web/app.py::add_page` | `src/matinee/web/app.py:456` | 2026-10-05 |
+| `src/matinee/web/app.py::add_quip_routes` (`GET /api/quips`; 503 when the lines cannot be read) | `src/matinee/web/app.py:482` | 2026-10-05 |
+| `src/matinee/web/app.py::add_film_routes` / `IMAGE_WIDTHS` / `IMAGE_CACHE` (`GET /api/pictures`) | `src/matinee/web/app.py:275` | 2026-10-05 |
 | `src/matinee/web/app.py::film_link` / `FilmCard` (Seerr, else TMDB) | `src/matinee/web/app.py:178` | 2026-10-05 |
 | `src/matinee/web/app.py::Held` / `held` / `stored_path` | `src/matinee/web/app.py:102` | 2026-10-05 |
 | `src/matinee/web/app.py::film_image` / `tmdb_image` / `TMDB_IMAGE_CACHE` (the media server's, else TMDB's; 30 days for a film the library does not hold) | `src/matinee/web/app.py:185` | 2026-10-05 |
-| `src/matinee/web/app.py::Shelf` / `from_shelf` (each TMDB picture fetched once for every viewer) | `src/matinee/web/app.py:209` | 2026-10-05 |
+| `src/matinee/web/app.py::Shelf` / `from_shelf` (each TMDB picture fetched once for every viewer) | `src/matinee/web/app.py:207` | 2026-10-05 |
 | `src/matinee/tmdb.py::shelf_file` / `read_shelf` / `shelve` / `sweep_shelf` / `PICTURE_KEEP` (150 days) | `src/matinee/tmdb.py:324` | 2026-10-05 |
-| `src/matinee/web/app.py::film_synopsis` (the media server's, else TMDB's) | `src/matinee/web/app.py:224` | 2026-10-05 |
-| `src/matinee/tmdb.py::fetch_picture` / `IMAGES` / `IMAGE_SIZES` / `TmdbImageError` | `src/matinee/tmdb.py:286` | 2026-10-05 |
-| `src/matinee/tmdb.py::ImageGate` / `IMAGE_GATE` / `IMAGE_RATE` (50 a second, 20,000 an hour, a hold after a 429 or 503) | `src/matinee/tmdb.py:240` | 2026-10-05 |
+| `src/matinee/web/app.py::film_synopsis` (the media server's, else TMDB's) | `src/matinee/web/app.py:264` | 2026-10-05 |
+| `src/matinee/tmdb.py::fetch_picture` / `IMAGES` / `IMAGE_SIZES` / `TmdbImageError` | `src/matinee/tmdb.py:292` | 2026-10-05 |
+| `src/matinee/tmdb.py::ImageGate` / `IMAGE_GATE` / `IMAGE_RATE` (50 a second, 20,000 an hour, a hold after a 429 or 503) | `src/matinee/tmdb.py:236` | 2026-10-05 |
 | `src/matinee/web/app.py::add_error_handlers` | `src/matinee/web/app.py:137` | 2026-10-05 |
 | `src/matinee/web/common.py::Problem` | `src/matinee/web/common.py:125` | 2026-10-05 |
 | `src/matinee/web/viewing.py::add_viewing_routes` (`POST /api/first` with the source question, `POST /api/walk`) | `src/matinee/web/viewing.py:353` | 2026-10-05 |
@@ -2662,9 +2662,9 @@ symbol when one does not match.
 | `tests/js/door-rules.test.mjs`, `tests/js/locked.test.mjs`, `tests/js/mark.test.mjs` | `tests/js/door-rules.test.mjs:6` | 2026-10-05 |
 | `src/matinee/web/static/js/flight.js::fly` (`FLIGHT_MS`, the fail-open) | `src/matinee/web/static/js/flight.js:63` | 2026-10-05 |
 | `src/matinee/web/static/js/flight.js::nameAt` / `wordmarkAt` / `riseOf` / `copyAt` | `src/matinee/web/static/js/flight.js:14` | 2026-10-05 |
-| `src/matinee/web/static/js/about.js::openAbout` (the focus returns to what opened it) | `src/matinee/web/static/js/about.js:156` | 2026-10-05 |
-| `src/matinee/web/static/js/about.js::close` (popstate; Escape steps back) | `src/matinee/web/static/js/about.js:139` | 2026-10-05 |
-| `src/matinee/web/static/js/about.js::keeps` (the privacy statement, "What Matinee keeps") | `src/matinee/web/static/js/about.js:95` | 2026-10-05 |
+| `src/matinee/web/static/js/about.js::openAbout` (the focus returns to what opened it) | `src/matinee/web/static/js/about.js:176` | 2026-10-05 |
+| `src/matinee/web/static/js/about.js::close` (popstate; Escape steps back) | `src/matinee/web/static/js/about.js:159` | 2026-10-05 |
+| `src/matinee/web/static/js/about.js::keeps` (the privacy statement, "What Matinee keeps") | `src/matinee/web/static/js/about.js:115` | 2026-10-05 |
 | `src/matinee/web/static/js/about.js::copy` (the About page's words and links; no steering section without a key; "Good company" always) | `src/matinee/web/static/js/about.js:22` | 2026-10-05 |
 | `src/matinee/web/static/js/wall-grid.js::posterAcross` / `ACROSS` / `GAP` | `src/matinee/web/static/js/wall-grid.js:27` | 2026-10-05 |
 | `src/matinee/web/static/js/wall-grid.js::wallLayout` | `src/matinee/web/static/js/wall-grid.js:37` | 2026-10-05 |
@@ -2753,11 +2753,11 @@ symbol when one does not match.
 | `src/matinee/web/static/css/matinee.css` `.pick-line` (size, four lines reserved), `.hushed` | `src/matinee/web/static/css/matinee.css:639` | 2026-10-05 |
 | `src/matinee/web/static/css/matinee.css` `.talk > .footnote` | `src/matinee/web/static/css/matinee.css:478` | 2026-10-05 |
 | `src/matinee/web/static/css/matinee.css` `a.wordmark` | `src/matinee/web/static/css/matinee.css:190` | 2026-10-05 |
-| `src/matinee/web/static/css/matinee.css` `.just-pick-row` (the count beside the button) | `src/matinee/web/static/css/matinee.css:499` | 2026-10-05 |
+| `src/matinee/web/static/css/matinee.css` `.just-pick-row` (the count beside the button) | `src/matinee/web/static/css/matinee.css:490` | 2026-10-05 |
 | `src/matinee/web/static/css/matinee.css` `.mark`, `.seats`, `.seat` (the tiles; the short window's sizes) | `src/matinee/web/static/css/matinee.css:1897` | 2026-10-05 |
 | `src/matinee/web/static/css/matinee.css` `.avatar-choices` | `src/matinee/web/static/css/matinee.css:2040` | 2026-10-05 |
 | `src/matinee/web/static/css/matinee.css` `.viewer`, `.viewer-menu`, `.viewer-panel` (the phone's initials) | `src/matinee/web/static/css/matinee.css:2430` | 2026-10-05 |
-| `src/matinee/web/static/css/matinee.css` the locked door: `.locked`, `.subway`, `.door-frame`, `.locked-door`, `.slot`, `.peek`, `.line.locked-line` | `src/matinee/web/static/css/matinee.css:2696` | 2026-10-05 |
+| `src/matinee/web/static/css/matinee.css` the locked door: `.locked`, `.subway`, `.door-frame`, `.locked-door`, `.slot`, `.peek`, `.line.locked-line` | `src/matinee/web/static/css/matinee.css:2707` | 2026-10-05 |
 | `src/matinee/web/static/blank.svg` (a tile with no picture) | `src/matinee/web/static/blank.svg:1` | 2026-10-05 |
 
 ### Deployment
