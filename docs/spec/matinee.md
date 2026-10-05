@@ -630,13 +630,17 @@ first rebuild. A failed nightly rebuild leaves the previous table in place.
 2. It reads the media server's film list, by GET only, when a media server is
    set. With none it runs on the labels alone.
 3. It refreshes the TMDB record of every film the shipped labels name and every
-   library film with a TMDB id: one GET per film, 0.15 seconds apart. A record
-   keeps the film's title, year, runtime, rating (TMDB's vote average), TMDB
+   library film with a TMDB id: one GET per film, at `TMDB_RATE` requests a
+   second (30 by default), with up to that many requests in flight at once (32
+   at most). The pace takes any positive number and carries no ceiling (TMDB's
+   own limit is about 40 a second); anything else is the default, logged. A
+   record keeps the film's title, year, runtime, rating (TMDB's vote average), TMDB
    genres, synopsis, vote count and US age rating, and its collection,
    keywords, original language and poster and backdrop paths. The US age rating
    is the film's US theatrical certification, else its first other non-empty US
-   certification, else none. It honours `Retry-After` on a 429. It stops after
-   5 network failures in a row, and at once when TMDB refuses the key (401).
+   certification, else none. A 429 holds every request for its `Retry-After`,
+   those already waiting for a turn included. It stops after 5 network failures
+   in a row, and at once when TMDB refuses the key (401).
 4. It reads the shipped genome scores (section 5.3).
 5. It builds and writes the table, replacing the previous one only once the new
    one is complete.
@@ -1809,6 +1813,7 @@ as written. A phone is a viewport 600 px wide or less.
 | `SEERR_URL` | server, optional | the base of the "More on Seerr ↗" action's address; unset or empty means "More on TMDB ↗" |
 | `DTDD_API_KEY` | server, optional | the DoesTheDogDie key; unset or empty means no list of topics and no check (section 8) |
 | `TMDB_TOKEN` | rebuild | the TMDB read token |
+| `TMDB_RATE` | rebuild, optional | TMDB requests a second, 30 by default; any positive number (section 5.1) |
 | `DOOR_WORD` | server, optional | the door word (section 7.2); unset or empty means no lock |
 | `DOOR_MATCH` | server, optional | `relaxed` (the default) or `strict` |
 | `DOOR_GREETING` | server, optional | `show` (the default), `gin`, or the operator's own greeting |

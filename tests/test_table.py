@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import sqlite3
 import urllib.error
+from collections.abc import Callable
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -19,7 +20,9 @@ from matinee.library.jellyfin import parse_film
 from matinee.table import TableError, build_table, load_table, write_table
 from matinee.tmdb import (
     KEY_REFUSED,
+    MAX_WORKERS,
     NOT_ANSWERING,
+    Pacer,
     Refreshed,
     TmdbFilm,
     TmdbRefused,
@@ -30,6 +33,7 @@ from matinee.tmdb import (
 )
 
 NOW = datetime(2026, 9, 25, tzinfo=UTC)
+FAST = Pacer(1e9)  # no wait between requests
 
 
 def film(item: str, tmdb: int | None, name: str, path_tmdb: int | None = None, genres: str = "Horror") -> LibraryFilm:
@@ -211,7 +215,7 @@ def test_refresh_appends_newest_and_stops_on_an_outage(tmp_path: Path, monkeypat
         calls.append(t)
         return TmdbFilm(t, NOW.isoformat(), None, None, ["k"], "en", "", "")
 
-    assert refresh([1, 2], cache, "tok", fetch=ok) == Refreshed(2, 0)
+    assert refresh([1, 2], cache, "tok", fetch=ok, rate=1) == Refreshed(2, 0)
     assert calls == [1, 2]
     assert load_cache(cache)[1].original_language == "en"
 
@@ -220,7 +224,7 @@ def test_refresh_appends_newest_and_stops_on_an_outage(tmp_path: Path, monkeypat
         raise urllib.error.URLError("down")
 
     calls.clear()
-    assert refresh(range(10, 20), cache, "tok", fetch=down) == Refreshed(0, 5, NOT_ANSWERING)
+    assert refresh(range(10, 20), cache, "tok", fetch=down, rate=1) == Refreshed(0, 5, NOT_ANSWERING)
     assert calls == [10, 11, 12, 13, 14]
 
 
@@ -241,7 +245,7 @@ def test_refresh_compacts_to_newest_and_drops_expired(tmp_path: Path, monkeypatc
     monkeypatch.setattr("matinee.tmdb.datetime", _Frozen)
     cache = tmp_path / "t.jsonl"
     cache.write_text("\n".join([_rec(1, 20), _rec(1, 5), _rec(2, 200)]) + "\n")
-    refresh([1], cache, "tok", fetch=lambda t, _: None)
+    refresh([1], cache, "tok", fetch=lambda t, _: None, rate=1)
     lines = cache.read_text().splitlines()
     assert len(lines) == 1 and json.loads(lines[0])["tmdb"] == 1
     assert load_cache(cache)[1].fetched == NOW - timedelta(days=5)
@@ -256,7 +260,7 @@ def test_refresh_interrupted_keeps_the_cache(tmp_path: Path, monkeypatch: pytest
         raise RuntimeError("killed")
 
     with pytest.raises(RuntimeError):
-        refresh([2], cache, "tok", fetch=crash)
+        refresh([2], cache, "tok", fetch=crash, rate=1)
     assert list(load_cache(cache)) == [1]
 
 
@@ -276,7 +280,7 @@ def test_unknown_to_tmdb_is_not_cached_and_not_an_outage(tmp_path: Path, monkeyp
         seen.append(t)
         return None if t < 16 else TmdbFilm(t, NOW.isoformat(), None, None, [], "en")
 
-    assert refresh(range(10, 17), cache, "tok", fetch=missing_then_ok) == Refreshed(1, 6)
+    assert refresh(range(10, 17), cache, "tok", fetch=missing_then_ok, rate=1) == Refreshed(1, 6)
     assert seen == list(range(10, 17))
     assert list(load_cache(cache)) == [16]
 
@@ -292,24 +296,24 @@ def test_outage_streak_resets_after_a_success(tmp_path: Path, monkeypatch: pytes
             return TmdbFilm(t, NOW.isoformat(), None, None, [], "en")
         raise urllib.error.URLError("down")
 
-    refresh([20, 21, 22, 23, 24, 25, 26], cache, "tok", fetch=flaky)
+    refresh([20, 21, 22, 23, 24, 25, 26], cache, "tok", fetch=flaky, rate=1)
     assert seen == [20, 21, 22, 23, 24, 25, 26]
 
 
 def test_fetch_film_maps_404_to_none_and_reads_fields(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr("matinee.tmdb.get_json", lambda url, token: None)
-    assert fetch_film(5, "tok") is None
+    monkeypatch.setattr("matinee.tmdb.get_json", lambda url, token, pacer: None)
+    assert fetch_film(5, "tok", FAST) is None
     body = {
         "belongs_to_collection": {"id": 7, "name": "Saga"},
         "keywords": {"keywords": [{"name": "gore"}]},
         "original_language": "ja",
     }
-    monkeypatch.setattr("matinee.tmdb.get_json", lambda url, token: body)
-    got = fetch_film(5, "tok")
+    monkeypatch.setattr("matinee.tmdb.get_json", lambda url, token, pacer: body)
+    got = fetch_film(5, "tok", FAST)
     assert got is not None
     assert (got.collection_id, got.keywords, got.original_language) == (7, ["gore"], "ja")
-    monkeypatch.setattr("matinee.tmdb.get_json", lambda url, token: {"keywords": {"keywords": []}})
-    bare = fetch_film(6, "tok")
+    monkeypatch.setattr("matinee.tmdb.get_json", lambda url, token, pacer: {"keywords": {"keywords": []}})
+    bare = fetch_film(6, "tok", FAST)
     assert bare is not None and bare.original_language == ""
     assert (bare.poster_path, bare.backdrop_path) == ("", "")
     assert not needs_fetch(bare, datetime.now(UTC))
@@ -321,12 +325,12 @@ def test_fetch_film_keeps_picture_paths_shaped_like_tmdb_paths(monkeypatch: pyte
         "poster_path": "/pB8BM7pdSp6B6Ih7QZ4DrQ3PmJK.jpg",
         "backdrop_path": None,
     }
-    monkeypatch.setattr("matinee.tmdb.get_json", lambda url, token: body)
-    got = fetch_film(5, "tok")
+    monkeypatch.setattr("matinee.tmdb.get_json", lambda url, token, pacer: body)
+    got = fetch_film(5, "tok", FAST)
     assert got is not None and (got.poster_path, got.backdrop_path) == ("/pB8BM7pdSp6B6Ih7QZ4DrQ3PmJK.jpg", "")
     for odd in ("//evil.example/x.jpg", "/a/../b.jpg", "/x.svg", 7, "https://image.tmdb.org/t/p/w92/x.jpg", "/x.jpg\n"):
-        monkeypatch.setattr("matinee.tmdb.get_json", lambda url, token, odd=odd: {**body, "poster_path": odd})
-        got = fetch_film(5, "tok")
+        monkeypatch.setattr("matinee.tmdb.get_json", lambda url, token, pacer, odd=odd: {**body, "poster_path": odd})
+        got = fetch_film(5, "tok", FAST)
         assert got is not None and got.poster_path == ""
 
 
@@ -404,12 +408,12 @@ def test_fetch_film_keeps_the_shown_facts_and_the_us_age_rating(monkeypatch: pyt
         },
     }
 
-    def answer(url: str, token: str) -> dict[str, object]:
+    def answer(url: str, token: str, pacer: Pacer) -> dict[str, object]:
         seen.append(url)
         return body
 
     monkeypatch.setattr("matinee.tmdb.get_json", answer)
-    got = fetch_film(578, "tok")
+    got = fetch_film(578, "tok", FAST)
     assert got is not None and "append_to_response=keywords,release_dates" in seen[0]
     assert (got.title, got.year, got.runtime_min, got.rating, got.vote_count) == ("Jaws", 1975, 124.0, 7.7, 10_500)
     assert got.genres == ["Horror", "Thriller"] and got.synopsis == "A shark." and got.certification == "PG"
@@ -418,11 +422,11 @@ def test_fetch_film_keeps_the_shown_facts_and_the_us_age_rating(monkeypatch: pyt
         **body,
         "release_dates": {"results": [{"iso_3166_1": "US", "release_dates": [{"certification": "TV-14", "type": 6}]}]},
     }
-    monkeypatch.setattr("matinee.tmdb.get_json", lambda url, token: us_only_tv)
-    assert (got2 := fetch_film(578, "tok")) is not None and got2.certification == "TV-14"
+    monkeypatch.setattr("matinee.tmdb.get_json", lambda url, token, pacer: us_only_tv)
+    assert (got2 := fetch_film(578, "tok", FAST)) is not None and got2.certification == "TV-14"
     bare = {"title": "Unknown", "release_date": "", "runtime": 0, "vote_average": 0, "genres": []}
-    monkeypatch.setattr("matinee.tmdb.get_json", lambda url, token: bare)
-    unrated = fetch_film(9, "tok")
+    monkeypatch.setattr("matinee.tmdb.get_json", lambda url, token, pacer: bare)
+    unrated = fetch_film(9, "tok", FAST)
     assert unrated is not None and unrated.certification == "" and unrated.year is None
     assert (unrated.runtime_min, unrated.rating, unrated.vote_count, unrated.synopsis) == (None, None, 0, "")
 
@@ -434,7 +438,7 @@ def test_a_refused_key_stops_the_refresh_at_once(tmp_path: Path) -> None:
         calls.append(t)
         raise TmdbRefused(KEY_REFUSED)
 
-    assert refresh([1, 2, 3], tmp_path / "t.jsonl", "bad", fetch=refused) == Refreshed(0, 0, KEY_REFUSED)
+    assert refresh([1, 2, 3], tmp_path / "t.jsonl", "bad", fetch=refused, rate=1) == Refreshed(0, 0, KEY_REFUSED)
     assert calls == [1]
 
 
@@ -445,7 +449,7 @@ def test_a_401_is_a_refused_key(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr("matinee.tmdb.urllib.request.urlopen", answer_401)
     monkeypatch.setattr("matinee.tmdb.time.sleep", lambda s: None)
     with pytest.raises(TmdbRefused):
-        fetch_film(1, "bad")
+        fetch_film(1, "bad", FAST)
 
 
 def test_a_dropped_connection_is_a_network_failure_not_a_crash(tmp_path: Path) -> None:
@@ -454,11 +458,124 @@ def test_a_dropped_connection_is_a_network_failure_not_a_crash(tmp_path: Path) -
     def dropped(t: int, _: str) -> TmdbFilm:
         raise http.client.RemoteDisconnected("gone")
 
-    assert refresh(range(10), tmp_path / "t.jsonl", "tok", fetch=dropped) == Refreshed(0, 5, NOT_ANSWERING)
+    assert refresh(range(10), tmp_path / "t.jsonl", "tok", fetch=dropped, rate=1) == Refreshed(0, 5, NOT_ANSWERING)
 
 
 def test_an_empty_theatrical_rating_never_wins_over_a_real_one(monkeypatch: pytest.MonkeyPatch) -> None:
     us = {"iso_3166_1": "US", "release_dates": [{"certification": "", "type": 3}, {"certification": "PG", "type": 4}]}
-    monkeypatch.setattr("matinee.tmdb.get_json", lambda url, token: {"title": "X", "release_dates": {"results": [us]}})
-    got = fetch_film(1, "tok")
+    monkeypatch.setattr(
+        "matinee.tmdb.get_json", lambda url, token, pacer: {"title": "X", "release_dates": {"results": [us]}}
+    )
+    got = fetch_film(1, "tok", FAST)
     assert got is not None and got.certification == "PG"
+
+
+def test_the_pacer_spaces_every_thread_at_the_rate_and_a_429_holds_them_all() -> None:
+    time_ = FakeTime()
+    pacer = Pacer(4.0, clock=time_.clock, sleep=time_.sleep)
+    for _ in range(3):
+        pacer.wait()
+    assert time_.slept == [0.25, 0.25]  # the first goes at once, then a quarter second apart
+    pacer.hold(10)
+    pacer.wait()
+    assert time_.slept[-1] == 10.0
+    with pytest.raises(ValueError):
+        Pacer(0)
+
+
+def test_several_requests_are_in_flight_at_once(tmp_path: Path) -> None:
+    import threading
+
+    active, peak = [0], [0]
+    guard = threading.Lock()
+
+    def slow(t: int, _: str) -> TmdbFilm:
+        with guard:
+            active[0] += 1
+            peak[0] = max(peak[0], active[0])
+        threading.Event().wait(0.02)
+        with guard:
+            active[0] -= 1
+        return TmdbFilm(t, NOW.isoformat(), None, None, [], "en", "", "", "T")
+
+    assert refresh(range(40), tmp_path / "t.jsonl", "tok", fetch=slow, rate=30).fetched == 40
+    assert peak[0] > 1
+    peak[0] = 0
+    assert refresh(range(100), tmp_path / "u.jsonl", "tok", fetch=slow, rate=1e6).fetched == 100
+    assert 1 < peak[0] <= MAX_WORKERS  # threads are capped however high the rate
+
+
+@pytest.mark.parametrize(
+    ("text", "rate"), [("", 30.0), ("45", 45.0), ("0.5", 0.5), ("0", 30.0), ("-3", 30.0), ("fast", 30.0), ("inf", 30.0)]
+)
+def test_tmdb_rate_takes_any_positive_number(text: str, rate: float) -> None:
+    from rebuild_table import tmdb_rate
+
+    assert tmdb_rate(text) == rate
+
+
+class FakeTime:
+    """A clock that sleeping moves forward."""
+
+    def __init__(self) -> None:
+        self.now = 0.0
+        self.slept: list[float] = []
+        self.during: list[Callable[[], None]] = []
+
+    def clock(self) -> float:
+        return self.now
+
+    def sleep(self, seconds: float) -> None:
+        self.slept.append(seconds)
+        for act in self.during:
+            act()
+        self.during.clear()
+        self.now += seconds
+
+
+def test_a_hold_that_lands_while_a_request_waits_sends_it_after_the_hold() -> None:
+    time_ = FakeTime()
+    pacer = Pacer(4.0, clock=time_.clock, sleep=time_.sleep)
+    pacer.wait()  # turn at 0
+    time_.during.append(lambda: pacer.hold(10))  # a 429 arrives while the next request sleeps to 0.25
+    pacer.wait()
+    assert time_.now >= 10
+    short = FakeTime()
+    quick = Pacer(4.0, clock=short.clock, sleep=short.sleep)
+    quick.wait()
+    short.during.append(lambda: quick.hold(0.1))  # ends before the reserved turn: no second sleep
+    quick.wait()
+    assert short.slept == [0.25]
+
+
+def test_a_429_through_get_json_waits_out_its_retry_after(monkeypatch: pytest.MonkeyPatch) -> None:
+    import io
+
+    time_ = FakeTime()
+    pacer = Pacer(1e6, clock=time_.clock, sleep=time_.sleep)
+    answers: list[object] = [
+        urllib.error.HTTPError("u", 429, "Too Many", {"Retry-After": "7"}, None),  # type: ignore[arg-type]
+        io.BytesIO(b'{"title": "Jaws"}'),
+    ]
+
+    def urlopen(req: object, timeout: float) -> object:
+        answer = answers.pop(0)
+        if isinstance(answer, Exception):
+            raise answer
+        return answer
+
+    monkeypatch.setattr("matinee.tmdb.urllib.request.urlopen", urlopen)
+    got = fetch_film(578, "tok", pacer)
+    assert got is not None and got.title == "Jaws" and time_.now >= 7
+
+
+def test_refresh_paces_every_thread_with_one_pacer_at_the_rate(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    seen: list[Pacer] = []
+
+    def recorded(tmdb: int, token: str, pacer: Pacer) -> TmdbFilm:
+        seen.append(pacer)
+        return TmdbFilm(tmdb, NOW.isoformat(), None, None, [], "en", "", "", "T")
+
+    monkeypatch.setattr("matinee.tmdb.fetch_film", recorded)
+    refresh(range(20), tmp_path / "t.jsonl", "tok", rate=45)
+    assert len(seen) == 20 and len({id(p) for p in seen}) == 1 and seen[0]._gap == pytest.approx(1 / 45)

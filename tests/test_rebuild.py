@@ -16,7 +16,7 @@ from matinee.library.choice import MediaServer
 from matinee.progress import RebuildStatus, read_status
 from matinee.tmdb import KEY_REFUSED, NO_KEY, Refreshed, load_cache
 
-SETTINGS = ("DATA_DIR", "JELLYFIN_URL", "JELLYFIN_API_KEY", "PLEX_URL", "PLEX_TOKEN", "TMDB_TOKEN")
+SETTINGS = ("DATA_DIR", "JELLYFIN_URL", "JELLYFIN_API_KEY", "PLEX_URL", "PLEX_TOKEN", "TMDB_TOKEN", "TMDB_RATE")
 
 
 def run(monkeypatch: pytest.MonkeyPatch, env: dict[str, str]) -> list[Any]:
@@ -39,7 +39,7 @@ def run(monkeypatch: pytest.MonkeyPatch, env: dict[str, str]) -> list[Any]:
 def test_the_rebuild_reads_whichever_server_is_set_or_none(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     base = {"DATA_DIR": str(tmp_path), "TMDB_TOKEN": "t"}
     [jf] = run(monkeypatch, {**base, "JELLYFIN_URL": "http://jf.invalid", "JELLYFIN_API_KEY": "k"})
-    assert jf == (MediaServer("jellyfin", "http://jf.invalid", "k"), tmp_path, "t")
+    assert jf == (MediaServer("jellyfin", "http://jf.invalid", "k"), tmp_path, "t", 30.0)
     [plex] = run(monkeypatch, {**base, "PLEX_URL": "http://plex.invalid", "PLEX_TOKEN": "p"})
     assert plex[0] == MediaServer("plex", "http://plex.invalid", "p")
     [none] = run(monkeypatch, {**base, "MATINEE_JELLYFIN_URL": "http://old.invalid", "JELLYFIN_API_KEY": ""})
@@ -72,7 +72,7 @@ def test_without_a_library_it_fetches_every_film_the_labels_name(
 ) -> None:
     asked: list[list[int]] = []
 
-    def refresh(ids: Any, cache: Path, token: str) -> Refreshed:
+    def refresh(ids: Any, cache: Path, token: str, rate: float = 30.0) -> Refreshed:
         asked.append(list(ids))
         assert read_status(tmp_path) is not None and read_status(tmp_path).state == "running"  # type: ignore[union-attr]
         return Refreshed(5, 0)
@@ -84,7 +84,7 @@ def test_without_a_library_it_fetches_every_film_the_labels_name(
     assert (status.state, status.done, status.total) == ("finished", len(asked[0]), len(asked[0]))
     assert (tmp_path / "films.sqlite").exists()
 
-    monkeypatch.setattr(rebuild_table, "refresh", lambda ids, cache, token: Refreshed(1, 0, KEY_REFUSED))
+    monkeypatch.setattr(rebuild_table, "refresh", lambda ids, cache, token, rate=30.0: Refreshed(1, 0, KEY_REFUSED))
     stopped = rebuild_table.rebuild(None, tmp_path, "bad")
     assert (stopped.state, stopped.reason, stopped.done) == ("stopped", KEY_REFUSED, 1)
     assert read_status(tmp_path) == stopped
@@ -101,7 +101,7 @@ def test_a_report_that_cannot_be_read_counts_as_absent(tmp_path: Path) -> None:
 def test_an_unexpected_failure_still_ends_the_report_and_is_raised(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr(rebuild_table, "refresh", lambda ids, cache, token: Refreshed(0, 0))
+    monkeypatch.setattr(rebuild_table, "refresh", lambda ids, cache, token, rate=30.0: Refreshed(0, 0))
 
     def broken(*args: Any) -> Any:
         raise ValueError("a code fault")
@@ -144,7 +144,7 @@ def test_the_rebuild_fetches_the_labels_and_the_library_once_each(
     asked: list[list[int]] = []
     monkeypatch.setattr(rebuild_table, "open_reader", lambda server: Reader())
 
-    def refresh(ids: Any, cache: Path, token: str) -> Refreshed:
+    def refresh(ids: Any, cache: Path, token: str, rate: float = 30.0) -> Refreshed:
         asked.append(list(ids))
         return Refreshed(0, 0)
 
@@ -180,10 +180,15 @@ def test_the_rebuild_writes_labelled_films_the_library_lacks_beside_the_library(
             return [LibraryFilm("c" * 32, owned, "Owned", 2003, frozenset({"Drama"}), "PG", 90.0, 7.0, None)]
 
     monkeypatch.setattr(rebuild_table, "open_reader", lambda server: Reader())
-    monkeypatch.setattr(rebuild_table, "refresh", lambda ids, cache_path, token: Refreshed(0, 0))
+    monkeypatch.setattr(rebuild_table, "refresh", lambda ids, cache_path, token, rate=30.0: Refreshed(0, 0))
     monkeypatch.setattr(rebuild_table, "load_cache", lambda path: cache)
     rebuild_table.rebuild(MediaServer("jellyfin", "http://jf.invalid", "k"), tmp_path, "t")
     films = load_table(tmp_path / "films.sqlite").films
     assert films.loc[owned, "item_id"] == "c" * 32 and films.loc[owned, "name"] == "Owned"
     assert films.loc[world, "item_id"] != films.loc[world, "item_id"]  # NaN: no media-server item
     assert films.loc[world, "name"] == f"Film {world}"
+
+
+def test_tmdb_rate_reaches_the_rebuild(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    [call] = run(monkeypatch, {"DATA_DIR": str(tmp_path), "TMDB_TOKEN": "t", "TMDB_RATE": "45"})
+    assert call[3] == 45.0

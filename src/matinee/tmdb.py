@@ -15,21 +15,26 @@ skipped with a warning and its film is fetched again.
 from __future__ import annotations
 
 import http.client
+import itertools
 import json
 import logging
+import math
 import os
 import re
+import threading
 import time
 import urllib.error
 import urllib.request
-from collections.abc import Callable, Iterable, Mapping
+from collections.abc import Callable, Iterable, Mapping, Sequence
+from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, TextIO
 
 API = "https://api.themoviedb.org/3"
-PAUSE_S = 0.15
+DEFAULT_RATE = 30.0  # requests a second, the TMDB_RATE default; TMDB's limit sits around 40
+MAX_WORKERS = 32  # requests in flight at most, however high the rate
 REFETCH_AFTER = timedelta(days=150)
 MAX_AGE = timedelta(days=183)
 MAX_CONSECUTIVE_ERRORS = 5
@@ -132,10 +137,50 @@ def needs_fetch(rec: TmdbFilm | None, now: datetime) -> bool:
     return rec.original_language is None or rec.poster_path is None or rec.backdrop_path is None or rec.title is None
 
 
-def get_json(url: str, token: str) -> dict[str, Any] | None:
+class Pacer:
+    """Spaces requests from every thread at most `rate` a second; a 429 holds every request for its Retry-After.
+
+    Any positive rate is accepted: the setting carries no ceiling (TMDB's own limit is about 40 a second).
+    """
+
+    def __init__(
+        self, rate: float, clock: Callable[[], float] = time.monotonic, sleep: Callable[[float], None] = time.sleep
+    ) -> None:
+        if not rate > 0:
+            raise ValueError("a pace is a positive number of requests a second")
+        self._gap = 1.0 / rate
+        self._clock = clock
+        self._sleep = sleep
+        self._lock = threading.Lock()
+        self._next = 0.0
+        self._held_until = 0.0
+
+    def wait(self) -> None:
+        """Wait for this request's turn; a hold that lands while it waits sends it back for a turn after the hold."""
+        while True:
+            with self._lock:
+                now = self._clock()
+                if now < self._held_until:
+                    self._next = max(self._next, self._held_until)
+                slot = max(now, self._next)
+                self._next = slot + self._gap
+            if slot > now:
+                self._sleep(slot - now)
+            with self._lock:
+                if self._clock() >= self._held_until:
+                    return
+
+    def hold(self, seconds: float) -> None:
+        """Hold every request, those already waiting included, for `seconds`: a 429's Retry-After."""
+        with self._lock:
+            self._held_until = max(self._held_until, self._clock() + seconds)
+            self._next = max(self._next, self._held_until)
+
+
+def get_json(url: str, token: str, pacer: Pacer) -> dict[str, Any] | None:
     """One paced GET. Honours Retry-After on 429; a 404 returns None."""
     while True:
-        time.sleep(PAUSE_S)
+        pacer.wait()
         req = urllib.request.Request(
             url, headers={"Authorization": f"Bearer {token}", "Accept": "application/json"}, method="GET"
         )
@@ -146,8 +191,8 @@ def get_json(url: str, token: str) -> dict[str, Any] | None:
         except urllib.error.HTTPError as exc:
             if exc.code == 429:
                 wait = int(exc.headers.get("Retry-After", 10))
-                log.warning("TMDB answered 429, waiting %ss", wait)
-                time.sleep(wait)
+                log.warning("TMDB answered 429, so every request waits %ss; consider a lower TMDB_RATE", wait)
+                pacer.hold(wait)
                 continue
             if exc.code == 404:
                 return None
@@ -221,9 +266,9 @@ def _number(value: object) -> float | None:
     return float(value) if isinstance(value, int | float) and not isinstance(value, bool) and value > 0 else None
 
 
-def fetch_film(tmdb: int, token: str) -> TmdbFilm | None:
+def fetch_film(tmdb: int, token: str, pacer: Pacer) -> TmdbFilm | None:
     """The film's TMDB facts, or None when TMDB does not know the id. Raises TmdbRefused when TMDB refuses the key."""
-    body = get_json(f"{API}/movie/{tmdb}?append_to_response=keywords,release_dates", token)
+    body = get_json(f"{API}/movie/{tmdb}?append_to_response=keywords,release_dates", token, pacer)
     if body is None:
         return None
     coll = body.get("belongs_to_collection") or {}
@@ -259,54 +304,88 @@ class Refreshed:
 
 
 def refresh(
-    ids: Iterable[int], cache: Path, token: str, fetch: Callable[[int, str], TmdbFilm | None] = fetch_film
+    ids: Iterable[int],
+    cache: Path,
+    token: str,
+    fetch: Callable[[int, str], TmdbFilm | None] | None = None,
+    rate: float = DEFAULT_RATE,
 ) -> Refreshed:
     """Fetch every id the cache lacks or holds stale, append them, then compact.
 
-    A film TMDB does not know counts as failed and is not cached. Stops after
-    MAX_CONSECUTIVE_ERRORS network failures in a row, since that is an outage
-    rather than a film, and at once when TMDB refuses the key. Compaction runs
-    after the loop however it ends, an unexpected error included.
+    Requests go out at `rate` a second, several in flight at once (`fetch` is the real fetch, paced, unless a
+    test gives its own). A film TMDB does not know counts as failed and is not cached. Stops after
+    MAX_CONSECUTIVE_ERRORS network failures in a row, since that is an outage rather than a film, and at once
+    when TMDB refuses the key. Compaction runs after the loop however it ends, an unexpected error included.
     """
     now = datetime.now(UTC)
     have = load_cache(cache)
     todo = [t for t in ids if needs_fetch(have.get(t), now)]
-    log.info("TMDB: %d films to fetch", len(todo))
+    log.info("TMDB: %d films to fetch at %g a second", len(todo), rate)
     cache.parent.mkdir(parents=True, exist_ok=True)
+    if fetch is None:
+        pacer = Pacer(rate)
+
+        def fetch(tmdb: int, key: str) -> TmdbFilm | None:
+            return fetch_film(tmdb, key, pacer)
+
+    workers = max(1, min(MAX_WORKERS, math.ceil(rate)))
     try:
         with cache.open("a", encoding="utf-8") as out:
-            fetched, failed, stopped = _fetch_all(todo, out, token, fetch)
+            fetched, failed, stopped = _fetch_all(todo, out, token, fetch, workers)
     finally:
         compact(cache, datetime.now(UTC))
     return Refreshed(fetched, failed, stopped)
 
 
 def _fetch_all(
-    todo: Iterable[int], out: TextIO, token: str, fetch: Callable[[int, str], TmdbFilm | None]
+    todo: Sequence[int], out: TextIO, token: str, fetch: Callable[[int, str], TmdbFilm | None], workers: int
 ) -> tuple[int, int, str | None]:
-    """Fetch and append each record; returns (fetched, failed, why it stopped early or None)."""
-    fetched = failed = streak = 0
+    """Fetch each record with `workers` requests in flight and append it from this thread; returns (fetched,
+    failed, why it stopped early or None). Results are counted as they finish, so a streak of failures is a streak
+    in time."""
+    tally = _Tally()
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        pending = iter(todo)
+        running = {pool.submit(fetch, t, token): t for t in itertools.islice(pending, workers)}
+        while running and tally.stopped is None:
+            done, _ = wait(running, return_when=FIRST_COMPLETED)
+            for future in done:
+                tmdb = running.pop(future)
+                if tally.stopped is None:  # once stopped, a result that finished alongside is not counted
+                    tally.add(tmdb, future, out)
+            if tally.stopped is None:
+                running |= {pool.submit(fetch, t, token): t for t in itertools.islice(pending, len(done))}
+        for future in running:
+            future.cancel()
+    return tally.fetched, tally.failed, tally.stopped
+
+
+@dataclass
+class _Tally:
+    fetched: int = 0
+    failed: int = 0
+    streak: int = 0
     stopped: str | None = None
-    for tmdb in todo:
+
+    def add(self, tmdb: int, future: Future[TmdbFilm | None], out: TextIO) -> None:
+        """Count one finished fetch and append its record."""
         try:
-            rec = fetch(tmdb, token)
+            rec = future.result()
         except TmdbRefused:
-            stopped = KEY_REFUSED
-            break
+            self.stopped = KEY_REFUSED
+            return
         except NETWORK_FAILURES as exc:
-            failed += 1
-            streak += 1
+            self.failed += 1
+            self.streak += 1
             log.warning("TMDB %s failed: %r", tmdb, exc)
-            if streak >= MAX_CONSECUTIVE_ERRORS:
-                stopped = NOT_ANSWERING
-                break
-            continue
-        streak = 0
+            if self.streak >= MAX_CONSECUTIVE_ERRORS:
+                self.stopped = NOT_ANSWERING
+            return
+        self.streak = 0
         if rec is None:
-            failed += 1
+            self.failed += 1
             log.warning("TMDB does not know film %s; it stays without TMDB facts", tmdb)
-            continue
-        fetched += 1
+            return
+        self.fetched += 1
         out.write(json.dumps(asdict(rec)) + "\n")
         out.flush()
-    return fetched, failed, stopped

@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import math
 import os
 import sys
 import time
@@ -33,7 +34,7 @@ from matinee.labels import LabelsError, load_labels, load_overrides
 from matinee.library.choice import MediaServer, ServerChoiceError, configured_server, open_reader
 from matinee.progress import RebuildStatus, write_status
 from matinee.table import build_table, write_table
-from matinee.tmdb import NO_KEY, compact, load_cache, refresh
+from matinee.tmdb import DEFAULT_RATE, NO_KEY, compact, load_cache, refresh
 
 log = logging.getLogger("rebuild_table")
 DEFAULT_STATE = Path.home() / ".local/share/matinee"
@@ -44,7 +45,7 @@ def _now() -> str:
     return datetime.now(UTC).isoformat()
 
 
-def rebuild(server: MediaServer | None, state: Path, token: str) -> RebuildStatus:
+def rebuild(server: MediaServer | None, state: Path, token: str, rate: float = DEFAULT_RATE) -> RebuildStatus:
     """One rebuild; returns, and leaves in `rebuild.json`, how it ended."""
     started = _now()
     cache = state / "tmdb" / "films.jsonl"
@@ -54,18 +55,20 @@ def rebuild(server: MediaServer | None, state: Path, token: str) -> RebuildStatu
         log.error("no TMDB key is set, so no film table can be built. Set TMDB_TOKEN and run the rebuild again.")
         return _report(state, RebuildStatus("stopped", started, _now(), reason=NO_KEY))
     try:
-        return _rebuild(server, state, cache, token, started)
+        return _rebuild(server, state, cache, token, started, rate)
     except Exception:
         _report(state, RebuildStatus("stopped", started, _now(), reason=FAILED))
         raise
 
 
-def _rebuild(server: MediaServer | None, state: Path, cache: Path, token: str, started: str) -> RebuildStatus:
+def _rebuild(
+    server: MediaServer | None, state: Path, cache: Path, token: str, started: str, rate: float
+) -> RebuildStatus:
     films = open_reader(server).films() if server is not None else []
     listed = load_labels().films() | household_films(state)
     ids = sorted(listed | {f.tmdb for f in films if f.tmdb is not None})
     write_status(state, RebuildStatus("running", started, _now(), total=len(ids)))
-    result = refresh(ids, cache, token)
+    result = refresh(ids, cache, token, rate=rate)
     log.info("TMDB: fetched %d, failed %d", result.fetched, result.failed)
     table, report = build_table(films, load_scores(), load_cache(cache), datetime.now(UTC), listed)
     write_table(table, state / "films.sqlite")
@@ -91,6 +94,22 @@ def household_films(state: Path) -> frozenset[int]:
 def _report(state: Path, status: RebuildStatus) -> RebuildStatus:
     write_status(state, status)
     return status
+
+
+def tmdb_rate(text: str) -> float:
+    """TMDB_RATE, requests a second: any positive number; unset, empty or anything else is the default (logged)."""
+    if not text.strip():
+        return DEFAULT_RATE
+    try:
+        rate = float(text)
+    except ValueError:
+        rate = 0.0
+    if rate > 0 and math.isfinite(rate):
+        return rate
+    log.warning(
+        "TMDB_RATE is %r, which is no positive number of requests a second, so the rebuild uses %g", text, DEFAULT_RATE
+    )
+    return DEFAULT_RATE
 
 
 def daily_time(text: str) -> tuple[int, int]:
@@ -121,6 +140,7 @@ def main() -> int:
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     token = os.environ.get("TMDB_TOKEN", "").strip()
+    rate = tmdb_rate(os.environ.get("TMDB_RATE", ""))
     try:
         server = configured_server(os.environ)
     except ServerChoiceError as exc:
@@ -129,10 +149,10 @@ def main() -> int:
     if not args.state.is_dir():
         parser.error(f"the state directory {args.state} does not exist")
     if not args.daily:
-        return 0 if rebuild(server, args.state, token).state == "finished" else 1
+        return 0 if rebuild(server, args.state, token, rate).state == "finished" else 1
     while True:
         try:
-            rebuild(server, args.state, token)
+            rebuild(server, args.state, token, rate)
         except Exception as exc:  # any failure waits for the next night, never a restart loop
             log.warning("rebuild failed; the previous table stays in place: %s", exc, exc_info=True)
         time.sleep(seconds_until(args.daily, datetime.now()))
