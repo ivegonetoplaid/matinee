@@ -29,13 +29,26 @@ contract is listed under [Known gaps](#known-gaps).
 
 ## 1. Boundaries
 
-1. **Read-only against every media server.** Matinee reads a Jellyfin library
-   and never writes to it. Every request the Jellyfin reader makes is an HTTP
-   GET. No module other than the library reader calls a media server.
+1. **Read-only against every media server.** Matinee reads a Jellyfin or a Plex
+   library and never writes to it. Every request either reader makes is an HTTP
+   GET. No module other than a library reader calls a media server.
 2. **One door to the library.** All media-server access passes through one
    library interface with three reads: the film list, one film's synopsis, and
-   one film's poster or backdrop. A second reader, such as Plex, would sit behind
-   the same interface. Only the Jellyfin reader exists.
+   one film's poster or backdrop. The Jellyfin reader and the Plex reader sit
+   behind it.
+   - The Plex reader reads every movie section. A film's TMDB id is its
+     `tmdb://` guid, or the id in a legacy "The Movie Database" agent guid
+     (`com.plexapp.agents.themoviedb://<id>`); a film with neither has no TMDB
+     id. Plex writes a US age rating bare and any other country's with its
+     prefix: a `us/` prefix is dropped and any other kept whole (`gb/15`), so a
+     rating from another country's system never passes the kids gate. The
+     runtime is Plex's duration in minutes, and the rating its audience rating,
+     else its rating. Pictures come through Plex's photo transcoder at the
+     asked width, the poster 2:3 and the backdrop 16:9, at quality 60 for an
+     image 160 px wide or narrower and 80 otherwise. The synopsis is the film's
+     `summary`. An item id is digits only before it is joined into a request.
+     The token travels only in the `X-Plex-Token` header, never in a URL or a
+     log, and never follows a redirect.
 3. **Library mode only.** Matinee offers only films the library holds at the
    moment of the request. A film gone from the library is never offered.
 4. **Matinee's own state is its own.** Profiles, device tokens, saved topics
@@ -1754,7 +1767,6 @@ Not part of this build, and not to be added until asked:
 - `Watch this`, or any hand-off to a player;
 - thumbs up and thumbs down;
 - personal modes learned from examples;
-- a Plex reader;
 - a TV layout;
 - notes shared or pooled between installations;
 - any administrative surface, including PIN reset;

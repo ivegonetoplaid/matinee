@@ -1,7 +1,7 @@
 """The one door to the media server. No other module calls a media server directly.
 
-A reader only ever reads. The first build has one implementation, Jellyfin; a
-Plex reader would sit behind the same `Library` protocol.
+A reader only ever reads. The Jellyfin reader and the Plex reader both implement
+the `Library` protocol.
 """
 
 from __future__ import annotations
