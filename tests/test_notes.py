@@ -79,7 +79,7 @@ def test_a_note_keeps_what_was_wrong_the_answers_and_why_and_changes_no_pool(sit
 
 def test_only_a_held_profile_may_note_and_only_answers_the_tree_has(site: Any, tmp_path: Path) -> None:
     client, store = site
-    them, _ = store.create("Them", None, [], [])
+    them, _ = store.create("Them", None, [])
     base = {"tmdb": 5, "tree": "west", "kind": "quality", "answers": [{"question": "era", "option": 0}]}
     assert client.post("/api/notes", json={**base, "profile_id": them.id}).status_code == 403
     me = client.post("/api/profiles", json={"name": "Me"}).json()["id"]

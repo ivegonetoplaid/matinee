@@ -16,8 +16,8 @@ from test_web_library import write_film_table
 def state(tmp_path: Path) -> Path:
     write_film_table(tmp_path / "films.sqlite")
     store = Store(tmp_path / "matinee.sqlite")
-    ada, ada_token = store.create("Ada", None, [], [])
-    gone, gone_token = store.create("Gone", None, [], [])
+    ada, ada_token = store.create("Ada", None, [])
+    gone, gone_token = store.create("Gone", None, [])
     store.note(
         Note(ada.id, 5, "horror", "genre", ("Scary.", "Slow."), True, "it is a thriller", ("thriller",)), [ada_token]
     )
@@ -83,8 +83,8 @@ def test_a_missing_store_is_never_created(tmp_path: Path, capsys: pytest.Capture
 
 def test_clear_pin_clears_one_profiles_pin_and_lockout(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
     store = Store(tmp_path / "matinee.sqlite")
-    locked, _ = store.create("Pat", "1234", [], [])
-    other, _ = store.create("Sam", "5678", [], [])
+    locked, _ = store.create("Pat", "1234", [])
+    other, _ = store.create("Sam", "5678", [])
     for _ in range(5):
         with pytest.raises(StoreError):
             store.open(locked.id, "0000", 1000.0)
@@ -118,7 +118,7 @@ def test_a_viewers_comment_cannot_forge_a_note_or_reach_the_terminal(
     tmp_path: Path, capsys: pytest.CaptureFixture[str]
 ) -> None:
     store = Store(tmp_path / "matinee.sqlite")
-    me, my_token = store.create("Me", None, [], [])
+    me, my_token = store.create("Me", None, [])
     store.note(
         Note(me.id, 5, "horror", "kind", (), False, "a\n#9  Forged\x1b[2K\u202e and caf\u00e9 \u2014 na\u00efve"),
         [my_token],
@@ -136,7 +136,7 @@ def test_the_tool_refuses_odd_numbers_names_and_stores_in_words(
     with pytest.raises(SystemExit):
         run(state, "reject", "99999999999999999999", "x")
     store = Store(state / "matinee.sqlite")
-    store.create("Mary Ann", "1234", [], [])
+    store.create("Mary Ann", "1234", [])
     assert run(state, "clear-pin", "mary   ANN") == 0
     with sqlite3.connect(state / "matinee.sqlite") as db:
         db.execute("PRAGMA user_version = 99")

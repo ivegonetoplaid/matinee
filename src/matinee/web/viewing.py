@@ -1,11 +1,9 @@
-"""Routes that walk the trees for a viewer, and the exclusions that shape every walk.
+"""Routes that walk the trees for a viewer, and the DoesTheDogDie topics a viewer steers around.
 
-A viewer is a profile this device holds a token for, and its saved exclusions
-apply. Walks and picks run only under a held profile. The first question's pool
-may be asked for without one, for the wall behind the front door, and then no
-exclusion applies. Matinee's own exclusions remove matching films from every
-tree and mode through the engine. DoesTheDogDie topics are checked at the pick;
-here they only decide whether the gore question is asked.
+A viewer is a profile this device holds a token for. Walks and picks run only
+under a held profile. The first question's pool may be asked for without one, for
+the wall behind the front door. DoesTheDogDie topics are checked at the pick; here
+they only decide whether the gore question is asked.
 """
 
 from __future__ import annotations
@@ -60,9 +58,8 @@ class FirstIn(BaseModel):
     viewer: ViewerIn = ViewerIn()
 
 
-class ExclusionsIn(BaseModel):
+class TopicsIn(BaseModel):
     topics: list[int] = Field(default=[], max_length=400)
-    exclusions: list[str] = Field(default=[], max_length=20)
 
 
 class OptionOut(BaseModel):
@@ -132,11 +129,6 @@ class NoteIn(BaseModel):
     belongs: list[str] = Field(default=[], max_length=32)  # "Not <genre> at all": where the film belongs
 
 
-class ExclusionOut(BaseModel):
-    id: str
-    say: str
-
-
 class FilmRef(BaseModel):
     tmdb: int
     title: str
@@ -190,18 +182,12 @@ def held_profile(request: Request, store: Store, profile_id: int) -> Profile:
     raise HTTPException(status_code=403, detail="refused")
 
 
-def check_exclusions(theatre: Theatre, names: Sequence[str]) -> None:
-    """Refuse an exclusion name Matinee does not define, before it is saved or walked with."""
-    if set(names) - set(theatre.showing().catalog.exclusion_names):
-        raise HTTPException(status_code=400, detail="refused")
-
-
 def resolve(request: Request, store: Store, v: ViewerIn) -> tuple[Viewer, Profile | None]:
-    """The engine's viewer: a held profile's saved exclusions, or none when no profile is named."""
+    """The engine's viewer: a held profile's saved topics, or none when no profile is named."""
     if v.profile_id is None:
         return Viewer(), None
     profile = held_profile(request, store, v.profile_id)
-    return Viewer(exclusions=profile.exclusions, topics=profile.topics), profile
+    return Viewer(topics=profile.topics), profile
 
 
 def resolve_held(request: Request, store: Store, v: ViewerIn) -> Viewer:
@@ -303,16 +289,10 @@ def add_viewing_routes(app: FastAPI, theatre: Theatre, store: Store, dtdd: Dtdd)
             link=DTDD_LINK,
         )
 
-    @app.get("/api/exclusions")
-    def exclusions() -> list[ExclusionOut]:
-        names = theatre.showing().catalog.exclusion_names
-        return [ExclusionOut(id=k, say=v) for k, v in names.items()]
-
-    @app.put("/api/profiles/{profile_id}/exclusions")
-    def save_exclusions(profile_id: int, body: ExclusionsIn, request: Request) -> Seat:
+    @app.put("/api/profiles/{profile_id}/topics")
+    def save_topics(profile_id: int, body: TopicsIn, request: Request) -> Seat:
         held_profile(request, store, profile_id)
-        check_exclusions(theatre, body.exclusions)
-        return seat(store.set_exclusions(profile_id, body.topics, body.exclusions, device_tokens(request)))
+        return seat(store.set_topics(profile_id, body.topics, device_tokens(request)))
 
     @app.post("/api/first")
     def first(body: FirstIn, request: Request) -> FirstOut:

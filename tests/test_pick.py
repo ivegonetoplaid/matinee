@@ -223,9 +223,7 @@ def test_a_walk_or_pick_without_a_held_profile_is_refused(site: Any) -> None:
     client, dtdd = site
     for path in ("/api/walk", "/api/pick"):
         assert client.post(path, json={"tree": "west"}).status_code == 403
-        assert (
-            client.post(path, json={"tree": "west", "viewer": {"topics": [153], "exclusions": []}}).status_code == 403
-        )
+        assert client.post(path, json={"tree": "west", "viewer": {"topics": [153]}}).status_code == 403
     assert dtdd.paths == []
 
 
@@ -389,10 +387,10 @@ def test_the_route_honours_the_rating_half(tmp_path: Path) -> None:
 def test_just_pick_one_before_any_answer_picks_from_the_viewers_whole_pool(tmp_path: Path) -> None:
     dtdd = ScriptedDtdd({})
     client = site_with(tmp_path, Picker(dtdd, DeviceCap(), random.Random(0)), dtdd)
-    heroes = seat_for(client, exclusions=["heroes"])
-    picked = {client.post("/api/pick", json={"viewer": heroes}).json()["film"]["tmdb"] for _ in range(30)}
-    assert picked <= {1, 2} and picked  # film 3 carries the "heroes" exclusion
-    refused = client.post("/api/pick", json={"answers": [{"question": "era", "option": 0}], "viewer": heroes})
+    viewer = seat_for(client)
+    picked = {client.post("/api/pick", json={"viewer": viewer}).json()["film"]["tmdb"] for _ in range(30)}
+    assert picked == {1, 2, 3}
+    refused = client.post("/api/pick", json={"answers": [{"question": "era", "option": 0}], "viewer": viewer})
     assert refused.status_code == 400
 
 

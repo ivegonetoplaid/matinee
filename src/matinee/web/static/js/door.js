@@ -144,7 +144,6 @@ export class Door {
     this.profiles = [];
     this.held = [];
     this.picked = new Set();
-    this.excluded = new Set();
     this.copy = null; // the name while it is away from the sign: flying, or landed at the wordmark's place
   }
 
@@ -366,7 +365,7 @@ export class Door {
     ]);
   }
 
-  // A profile as the door's list names it carries no exclusions: a held or PIN-less one opens without a PIN
+  // A profile as the door's list names it carries no topics: a held or PIN-less one opens without a PIN
   // to fetch them. `seat` is null when it could not be opened, and `message` says why.
   async seatOf(tile) {
     if (tile.topics) return { seat: tile, message: "" };
@@ -441,7 +440,6 @@ export class Door {
   async picker({ editing, fresh = false }) {
     this.fresh = fresh;
     this.picked = new Set(editing.topics);
-    this.excluded = new Set(editing.exclusions);
     this.marquee.classList.add("compact");
     this.dtddCredit.hidden = false; // the picker shows DoesTheDogDie's topics
     const heading = h(
@@ -485,30 +483,28 @@ export class Door {
 
   // Saves the list and moves on, or returns what to tell the viewer.
   async save(editing) {
-    const body = { topics: [...this.picked], exclusions: [...this.excluded] };
-    const res = await put(`/api/profiles/${editing.id}/exclusions`, body);
+    const res = await put(`/api/profiles/${editing.id}/topics`, { topics: [...this.picked] });
     if (!res.ok) return res.data.message;
     return this.fresh ? this.done(res.data) : this.enterAs(res.data);
   }
 
-  // Matinee's own exclusions first, then DoesTheDogDie's topics, fetched now and never kept.
+  // DoesTheDogDie's topics, fetched now and never kept.
   async fillTopics(box, editing) {
-    const [own, dtdd] = await Promise.all([get("/api/exclusions"), get("/api/topics")]);
+    const dtdd = await get("/api/topics");
     const search = field({ type: "text", placeholder: "Search, like spiders or needles", "aria-label": "Search topics" });
     const list = h("div", { class: "topic-list" });
     const tally = h("span", {});
     const nothing = h("p", { class: "note", hidden: true }, "Nothing by that name. Try another word.");
     const count = () => {
-      const n = this.picked.size + this.excluded.size;
+      const n = this.picked.size;
       tally.textContent = n ? `${n} chosen` : "Nothing chosen yet";
     };
-    const mine = own.ok ? own.data.map((x) => this.topic(sentenceCase(x.say), x.say, this.excluded, x.id, count)) : [];
     const theirs = dtdd.ok ? dtdd.data.topics.map((t) => this.topic(sentenceCase(t.short), `${t.name} ${t.keywords}`, this.picked, t.id, count)) : [];
-    list.append(...mine, ...theirs);
+    list.append(...theirs);
     search.addEventListener("input", () => {
       const needle = search.value.trim().toLowerCase();
       let shown = 0;
-      for (const p of [...mine, ...theirs]) {
+      for (const p of theirs) {
         p.hidden = !p.dataset.find.includes(needle);
         if (!p.hidden) shown += 1;
       }

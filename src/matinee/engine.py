@@ -5,8 +5,7 @@ tree checker are two callers of the same module, so they cannot disagree about a
 pool.
 
 A viewer's pool for a tree starts from the tree's pool (house pins already
-applied), then drops films the viewer's own exclusions match. Each answer
-narrows it. Questioning stops when
+applied). Each answer narrows it. Questioning stops when
 the tree has no more questions, or fewer than `STOP_UNDER` films remain. A
 question marked `only_if_pool_over` is skipped unless the pool is larger; one
 marked `skip_if_topics` is skipped for a viewer excluding any of those
@@ -41,7 +40,6 @@ import math
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
 
 import numpy as np
 import numpy.typing as npt
@@ -65,7 +63,6 @@ class EngineError(ValueError):
 
 @dataclass(frozen=True)
 class Viewer:
-    exclusions: frozenset[str] = frozenset()
     topics: frozenset[int] = frozenset()
 
 
@@ -118,8 +115,6 @@ class Catalog:
     reference: Reference
     trees: Mapping[str, Tree]
     house: House
-    exclusions: Mapping[str, Mask]
-    exclusion_names: Mapping[str, str]
     first_lines: tuple[str, ...]
     first_options: tuple[FirstOption, ...]
     labels: Labels = field(default_factory=Labels)
@@ -141,10 +136,6 @@ def _bool(series: pd.Series) -> Mask:
 def _passes(values: pd.Series, test: pd.Series) -> Mask:
     """True where the value is unknown or the test holds."""
     return _bool(values.isna() | test)
-
-
-def _keywords(table: FilmTable) -> pd.Series:
-    return table.films.keywords.map(lambda k: k or frozenset())
 
 
 def _any_genre(table: FilmTable, names: frozenset[str]) -> Mask:
@@ -281,18 +272,6 @@ def option_mask(cat: Catalog, tree: Tree, option: Option) -> Mask:
     return _plain_mask(cat.table, option.filter) & _scored_mask(cat, tree, option.filter)
 
 
-def _exclusion(table: FilmTable, spec: Mapping[str, Any]) -> Mask:
-    """A viewer exclusion matches when any of its tests holds; unknown data never matches."""
-    hit = np.zeros(len(table.films), dtype=bool)
-    for test in spec["any"]:
-        if "keywords_any" in test:
-            words = frozenset(test["keywords_any"])
-            hit |= np.array(_keywords(table).map(lambda k, w=words: bool(w & k)), dtype=bool)
-        else:
-            hit |= _bool(table.mean_of(test["tags"]) >= float(test["min"]))
-    return hit
-
-
 def _first_option(o: dict[str, str]) -> FirstOption:
     if not o.get("label"):
         raise EngineError(f"first question: '{o.get('say')}' has no label naming its tree")
@@ -358,14 +337,11 @@ def load_catalog(
     if stale:
         raise EngineError("the reference statistics do not cover the tree files: " + "; ".join(stale))
     first = json.loads((data / "first_question.json").read_text(encoding="utf-8"))
-    excl = json.loads((data / "exclusions.json").read_text(encoding="utf-8"))
     cat = Catalog(
         table=table,
         reference=ref,
         trees=load_trees((data / "trees", data / "modes")),
         house=load_house(data / "house_overrides.json"),
-        exclusions={name: _exclusion(table, spec) for name, spec in excl["exclusions"].items()},
-        exclusion_names={name: str(spec.get("say", name)) for name, spec in excl["exclusions"].items()},
         first_lines=tuple(first["lines"]),
         first_options=tuple(_first_option(o) for o in first["options"]),
         labels=labels or Labels(),
@@ -387,18 +363,13 @@ def load_catalog(
 def base_pool(cat: Catalog, tree_id: str, viewer: Viewer) -> Mask:
     """The tree's pool for this viewer before any answer.
 
-    The viewer's exclusions apply first. A question the viewer's DoesTheDogDie
-    topics skip applies its `treat_as` answer here, to the whole starting pool,
+    A question the viewer's DoesTheDogDie topics skip applies its `treat_as` answer here, to the whole starting pool,
     so every answer shown and every stop count already sees it.
     """
     tree = cat.trees.get(tree_id)
     if tree is None:
         raise EngineError(f"no tree '{tree_id}'")
     pool = cat.pools[tree.pool].copy()
-    for name in viewer.exclusions:
-        if name not in cat.exclusions:
-            raise EngineError(f"no exclusion '{name}'")
-        pool &= ~cat.exclusions[name]
     for q in tree.questions:
         if q.treat_as is not None and q.skip_if_topics & viewer.topics:
             pool &= cat.masks[(tree.id, q.id, q.treat_as)]

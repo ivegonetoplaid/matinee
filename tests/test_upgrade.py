@@ -150,7 +150,7 @@ def test_the_upgrade_keeps_a_copy_of_the_old_file_and_never_overwrites_it(tmp_pa
 
 def test_a_new_store_is_made_at_the_current_shape_with_no_copy(tmp_path: Path) -> None:
     path = tmp_path / "matinee.sqlite"
-    Store(path).create("Cy", None, [], [])
+    Store(path).create("Cy", None, [])
     assert rows(path, "PRAGMA user_version") == [(SHAPE,)]
     assert copies(path) == []
 

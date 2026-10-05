@@ -34,11 +34,9 @@ SECRET_KEY = "k" * 32
 _names = itertools.count(1)
 
 
-def seat_for(
-    client: TestClient, topics: list[int] | None = None, exclusions: list[str] | None = None
-) -> dict[str, int]:
-    """A new profile held by this client's device, with these topics and exclusions, as a request's viewer."""
-    body = {"name": f"Viewer {next(_names)}", "topics": topics or [], "exclusions": exclusions or []}
+def seat_for(client: TestClient, topics: list[int] | None = None) -> dict[str, int]:
+    """A new profile held by this client's device, with these topics, as a request's viewer."""
+    body = {"name": f"Viewer {next(_names)}", "topics": topics or []}
     made = client.post("/api/profiles", json=body)
     assert made.status_code == 200, made.text
     return {"profile_id": made.json()["id"]}
@@ -373,7 +371,7 @@ def test_the_page_and_its_static_files_revalidate_so_a_deploy_is_never_half_seen
 
 def test_no_api_reply_may_be_stored_since_the_door_depends_on_the_device(world: Any) -> None:
     client, _, _, _ = world
-    for path in ("/api/door", "/api/film/5", "/api/quips", "/api/exclusions", "/api/film/12345"):
+    for path in ("/api/door", "/api/film/5", "/api/quips", "/api/film/12345"):
         assert client.get(path).headers["cache-control"] == "no-store", path
 
 

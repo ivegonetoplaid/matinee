@@ -1,7 +1,9 @@
 """Matinee's own store: profiles, the device tokens that remember them, and the notes viewers file.
 
 A profile holds a display name, an optional four-digit PIN, an optional avatar
-(one of `AVATARS`; two profiles may share one) and the viewer's exclusions. An
+(one of `AVATARS`; two profiles may share one) and the DoesTheDogDie topics the
+viewer steers around. The store's `exclusions` column is no longer read or
+written; a new row takes its empty default. An
 avatar Matinee does not offer is refused when set and reads as none when found
 in the store. A note is a viewer's complaint about a pick, kept for whoever runs
 Matinee; it changes nothing any viewer is shown. A note outlives the profile
@@ -119,7 +121,6 @@ class Profile:
     name: str
     has_pin: bool
     topics: frozenset[int]
-    exclusions: frozenset[str]
     avatar: str | None = None
 
 
@@ -218,7 +219,6 @@ class Store:
             name=str(row["name"]),
             has_pin=row["pin_hash"] is not None,
             topics=frozenset(int(t) for t in json.loads(row["topics"])),
-            exclusions=frozenset(str(e) for e in json.loads(row["exclusions"])),
             avatar=row["avatar"] if row["avatar"] in AVATARS else None,
         )
 
@@ -231,7 +231,7 @@ class Store:
         return token
 
     def create(
-        self, name: str, pin: str | None, topics: Iterable[int], exclusions: Iterable[str], avatar: str | None = None
+        self, name: str, pin: str | None, topics: Iterable[int], avatar: str | None = None
     ) -> tuple[Profile, str]:
         """A new profile and a device token for it; refuses a taken name, a bad PIN or avatar, or a full store."""
         display, pin, avatar = clean_name(name), clean_pin(pin), clean_avatar(avatar)
@@ -242,15 +242,14 @@ class Store:
                 raise StoreError("full", f"Matinee holds at most {MAX_PROFILES} profiles")
             try:
                 cur = db.execute(
-                    "INSERT INTO profiles (name, name_key, pin_salt, pin_hash, topics, exclusions, created_at, avatar)"
-                    " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                    "INSERT INTO profiles (name, name_key, pin_salt, pin_hash, topics, created_at, avatar)"
+                    " VALUES (?, ?, ?, ?, ?, ?, ?)",
                     (
                         display,
                         name_key(display),
                         salt,
                         _pin_digest(pin, salt) if pin and salt else None,
                         json.dumps(sorted(set(topics))),
-                        json.dumps(sorted(set(exclusions))),
                         _now(),
                         avatar,
                     ),
@@ -296,16 +295,11 @@ class Store:
             raise StoreError("not_held", "this device holds no token for that profile")
         return held
 
-    def set_exclusions(
-        self, profile_id: int, topics: Iterable[int], exclusions: Iterable[str], by: Sequence[str]
-    ) -> Profile:
-        """Replace the saved exclusions of a profile one of the device tokens `by` is issued for."""
+    def set_topics(self, profile_id: int, topics: Iterable[int], by: Sequence[str]) -> Profile:
+        """Replace the saved DoesTheDogDie topics of a profile one of the device tokens `by` is issued for."""
         with closing(self._connect()) as db, db:
             self._held(db, profile_id, by)
-            db.execute(
-                "UPDATE profiles SET topics = ?, exclusions = ? WHERE id = ?",
-                (json.dumps(sorted(set(topics))), json.dumps(sorted(set(exclusions))), profile_id),
-            )
+            db.execute("UPDATE profiles SET topics = ? WHERE id = ?", (json.dumps(sorted(set(topics))), profile_id))
             row = db.execute("SELECT * FROM profiles WHERE id = ?", (profile_id,)).fetchone()
         return self._profile(row)
 
@@ -376,7 +370,7 @@ class Store:
         return _filed(row)
 
     def delete(self, profile_id: int, by: Sequence[str]) -> Profile:
-        """Delete a profile `by` holds, its exclusions and every device token issued for it; its notes stay."""
+        """Delete a profile `by` holds, its topics and every device token issued for it; its notes stay."""
         with closing(self._connect()) as db, db:
             row = self._held(db, profile_id, by)
             db.execute("DELETE FROM profiles WHERE id = ?", (profile_id,))

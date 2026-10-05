@@ -1,5 +1,5 @@
 ---
-purpose: The contract Matinee's first build holds to — the conversation model, the pools and scales, the offline film table, profiles and the store file, the door word, exclusions, the DoesTheDogDie check, viewers' notes, the web surface, the page, deployment and third-party terms — with a map of where each part lives.
+purpose: The contract Matinee's first build holds to — the conversation model, the pools and scales, the offline film table, profiles and the store file, the door word, the DoesTheDogDie topics and check, viewers' notes, the web surface, the page, deployment and third-party terms — with a map of where each part lives.
 updated: 2026-10-03
 governs:
   - src/matinee/
@@ -38,7 +38,7 @@ contract is listed under [Known gaps](#known-gaps).
    the same interface. Only the Jellyfin reader exists.
 3. **Library mode only.** Matinee offers only films the library holds at the
    moment of the request. A film gone from the library is never offered.
-4. **Matinee's own state is its own.** Profiles, device tokens, saved exclusions
+4. **Matinee's own state is its own.** Profiles, device tokens, saved topics
    and viewers' notes live in Matinee's store. None of it reaches a media server.
 5. **No public API and no viewer CLI.** The HTTP routes serve Matinee's own page
    only. The command-line tools are for whoever runs the installation: the
@@ -76,7 +76,7 @@ The answers, their order and the tree or mode each leads to are data in
 | Something to fall asleep to | `fall-asleep` (a mode) |
 
 - An answer is shown only when its tree or mode holds at least one film for this
-  viewer, after the viewer's exclusions.
+  viewer.
 - Every answer must carry a `label`. The engine refuses to load a first question
   whose answer lacks one. The label names the door where a short name is needed,
   such as the note panel. Each door's label is its name.
@@ -665,8 +665,7 @@ The server refuses to start, and logs why, when any of these holds:
 For each tree, the viewer's starting pool is built in this order:
 
 1. The tree's pool, with house pins already applied.
-2. Matinee's own exclusions the viewer holds remove every film they match.
-3. Every question the viewer's DoesTheDogDie topics skip applies its `treat_as`
+2. Every question the viewer's DoesTheDogDie topics skip applies its `treat_as`
    answer.
 
 A viewer's notes (section 10) never change a pool.
@@ -677,12 +676,12 @@ Answers narrow that pool from there (section 2.4).
 
 Matinee has no accounts and no login. Every viewing runs under a **profile**
 this device holds a token for. A device without one is shown the first
-question's pool behind the front door, with no exclusion applied, and walks or
+question's pool behind the front door, with no topic applied, and walks or
 picks nothing until it opens or makes a profile.
 
 | Rule | Value |
 |---|---|
-| A profile holds | a display name, an optional four-digit PIN, an optional avatar, DoesTheDogDie topics and Matinee's own exclusions |
+| A profile holds | a display name, an optional four-digit PIN, an optional avatar and DoesTheDogDie topics |
 | Avatar | one of fifteen: `3d-glasses`, `camera`, `candy`, `chair`, `clapperboard`, `comedy-tragedy`, `director-megaphone`, `film-reel`, `hotdog`, `nachos`, `popcorn`, `soda`, `theater-seat`, `ticket`, `vhs`; or none, for initials. Two profiles may share one |
 | Most profiles | **50**; creating a fifty-first is refused |
 | Name | 1 to 40 characters after NFKC normalisation, trimming and collapsing spaces; no character of Unicode category C (control, format, private-use, unassigned); unique ignoring case (NFKC, case-folded) |
@@ -699,7 +698,7 @@ picks nothing until it opens or makes a profile.
 - **The front door lists every profile** to an admitted device (section 7.2),
   sorted by name ignoring case: its id, name, avatar, whether it has a PIN, and
   whether this device holds it. It never carries a profile's topics or
-  exclusions, which can say what frightens a person; only a device holding the
+  topics, which can say what frightens a person; only a device holding the
   profile, or one that has given its PIN, receives them. There is no typed name
   lookup. A device that is not admitted gets no profiles.
 - A token for a deleted profile is ignored. The door's reply clears it from the
@@ -716,7 +715,7 @@ picks nothing until it opens or makes a profile.
   pail, and the thirty together stay under 1 MB. The source art is never in the
   repository, and the page never loads it.
 - **Deleting a profile.** A device holding a profile may delete it, with no
-  PIN asked, as it opens it with none. The profile, its exclusions and every
+  PIN asked, as it opens it with none. The profile, its topics and every
   device token issued for it go, on every device; its notes stay (section 10).
   The deleting device's cookie keeps its other tokens and drops this one. A
   device that does not hold the profile is refused with 403, so naming a
@@ -728,8 +727,8 @@ picks nothing until it opens or makes a profile.
   `clear-pin "<profile name>"` (section 10), which matches the name as a
   profile name is stored (case, and runs of spaces, ignored), clears the PIN and any lockout on it, and refuses a name no profile has.
 - A request naming a profile (the first question, a walk, a pick, saving
-  exclusions, setting its avatar, saving a note or deleting the profile) is
-  refused with 403 unless this device holds a token for it. Every write to a profile (its exclusions, its avatar, a
+  topics, setting its avatar, saving a note or deleting the profile) is
+  refused with 403 unless this device holds a token for it. Every write to a profile (its topics, its avatar, a
   note, its deletion) checks the device's token in the same store transaction as
   the write, so a profile deleted and its id given to a new profile between a
   device's check and its write never receives that write (`profile` error
@@ -810,19 +809,8 @@ usual headers. The protection is sized for a household film picker.
 
 ## 8. Exclusions
 
-A viewer may exclude two kinds of thing. A profile saves them.
-
-**Matinee's own exclusions** (`data/exclusions.json`) remove every film they
-match from every tree and mode, through the engine. A genome test matches when
-the mean relevance of its tags reaches its minimum. Unknown data never matches.
-
-| Exclusion | Matches when |
-|---|---|
-| Superheroes | superhero, superheroes, super hero at 0.80 or above; or the TMDB keyword `superhero` |
-| Sci-fi and magic | any one group at 0.50 or above: sci-fi, science fiction; mythology, magic; mindfuck, surreal, dreamlike, alternate reality |
-
-An exclusion name Matinee does not define is refused before it is saved or
-walked with.
+A viewer may exclude DoesTheDogDie topics: things they would rather not see
+happen on screen. A profile saves them. Matinee has no exclusions of its own.
 
 **DoesTheDogDie topics** are checked only at the pick (section 9). Before the
 pick, they only decide whether a question marked `skip_if_topics` is asked. A
@@ -833,12 +821,12 @@ than no.**
   opens and no list is kept. It is then kept in memory and fetched again once it
   is **29 days** old. While a refresh fails, the kept list serves until it is
   **30 days** old.
-- The trigger picker, which is also the preferences page, offers Matinee's own
-  exclusions and the DoesTheDogDie topics. It says the check is best effort from
+- The trigger picker, which is also the preferences page, offers the
+  DoesTheDogDie topics. It says the check is best effort from
   crowd votes beside the count of chosen topics, and its credit line carries
   "Powered by DoesTheDogDie.com", linked, in the foot band.
-- When the topic list cannot be fetched, the picker says so, still offers
-  Matinee's own exclusions, and offers "Try again". Its way out stays beside
+- When the topic list cannot be fetched, the picker says so and offers "Try
+  again". Its way out stays beside
   saving: "Never mind, keep my list" when editing a list, or "Never mind, show
   me everything" for a profile just made.
 
@@ -1047,11 +1035,10 @@ would hand one device's profiles to another.
 | GET | `/api/door` | the film count, every profile (marking those this device holds) and the avatars offered |
 | POST | `/api/profiles` | create a profile and issue this device a token |
 | POST | `/api/profiles/{id}/open` | open a profile by PIN, or at once when held or PIN-less |
-| PUT | `/api/profiles/{id}/exclusions` | replace a held profile's exclusions |
+| PUT | `/api/profiles/{id}/topics` | replace a held profile's DoesTheDogDie topics |
 | PUT | `/api/profiles/{id}/avatar` | set or clear a held profile's avatar |
-| DELETE | `/api/profiles/{id}` | delete a held profile, its exclusions and its tokens; answers its name |
+| DELETE | `/api/profiles/{id}` | delete a held profile, its topics and its tokens; answers its name |
 | GET | `/api/topics` | DoesTheDogDie's topic list, with its credit |
-| GET | `/api/exclusions` | Matinee's own exclusions |
 | GET | `/api/quips` | the pick's lines and their caps (section 2.7) |
 | POST | `/api/first` | the first question for this viewer, and the pool behind it |
 | POST | `/api/walk` | the next question and the pool, given a tree and answers |
@@ -1074,7 +1061,7 @@ would hand one device's profiles to another.
   device the door word has not admitted.
 - **An answer** as a question id and an option index, never as a filter.
 - **Request sizes** are capped: a profile name 80
-  and a PIN 8; an avatar 40; topics 400; exclusions 20; answers 12; tree names
+  and a PIN 8; an avatar 40; topics 400; answers 12; tree names
   40; option indexes 0 to 50; films already seen 200; a note's comment 500;
   trees a note says a film belongs in 32. A pick with no tree may carry no
   answers. A word given at the door over 200 characters is wrong
@@ -1101,7 +1088,7 @@ Every error leaves as `{"error": <code>, "message": <sentence>}`:
 | `not_found` | 404 | an unknown film, image or path |
 | `not_admitted` | 401 | a door word is set and this device has not given it (section 7.2) |
 | `wrong_word` | 401 | the word given at the door is not the door word; answered after 2 seconds |
-| `refused` | 400, 403 or other | answers that no longer fit, an unknown exclusion or tree, a profile this device does not hold, a malformed request |
+| `refused` | 400, 403 or other | answers that no longer fit, an unknown tree, a profile this device does not hold, a malformed request |
 | `profile` | 400, 401, 403, 404, 409 or 423 | a profile rule refused the request; the body adds `code` (`bad_name`, `bad_pin`, `bad_avatar`, `not_held`, `name_taken`, `full`, `no_profile`, `wrong_pin`, `locked`) |
 
 One error falls outside that shape. A request body that fails validation, such
@@ -1757,7 +1744,7 @@ as the code stood on 2026-10-03.
 **Short of the contract:**
 
 1. **A profile needs nothing chosen to save.** `POST /api/profiles` accepts
-   empty topics and exclusions, as the page's own picker does. Any admitted
+   empty topics, as the page's own picker does. Any admitted
    device (every device, with no door word set) may create profiles until the
    cap of 50 fills. (`src/matinee/web/app.py::add_door_routes`,
    `src/matinee/store.py::Store.create`)
@@ -1873,7 +1860,7 @@ symbol when one does not match.
 | `src/matinee/engine.py::load_catalog` | `src/matinee/engine.py:352` | 2026-10-02 |
 | `src/matinee/engine.py::_first_option` (label required) | `src/matinee/engine.py:296` | 2026-10-02 |
 | `src/matinee/engine.py::first_question` | `src/matinee/engine.py:519` | 2026-10-02 |
-| `src/matinee/engine.py::base_pool` (order of exclusions, topic skip) | `src/matinee/engine.py:387` | 2026-10-02 |
+| `src/matinee/engine.py::base_pool` (topic skip) | `src/matinee/engine.py:387` | 2026-10-02 |
 | `src/matinee/engine.py::walk` | `src/matinee/engine.py:467` | 2026-10-02 |
 | `src/matinee/engine.py::_gate` (`only_if_pool_over`, `skip_if_topics`) | `src/matinee/engine.py:450` | 2026-10-02 |
 | `src/matinee/engine.py::_shown` (empty answers hidden, `not_after`, small kinds hidden) | `src/matinee/engine.py:427` | 2026-10-02 |
@@ -1999,7 +1986,7 @@ symbol when one does not match.
 | `src/matinee/store.py::Store.holding` | `src/matinee/store.py:265` | 2026-10-02 |
 | `src/matinee/store.py::Store.everyone` (every profile, sorted by name) | `src/matinee/store.py:278` | 2026-10-02 |
 | `src/matinee/store.py::Store._held` (the token check inside the write's transaction) | `src/matinee/store.py:285` | 2026-10-02 |
-| `src/matinee/store.py::Store.set_exclusions` / `set_avatar` | `src/matinee/store.py:299` | 2026-10-02 |
+| `src/matinee/store.py::Store.set_topics` / `set_avatar` | `src/matinee/store.py:299` | 2026-10-02 |
 | `src/matinee/store.py::Store.delete` (notes stay) | `src/matinee/store.py:378` | 2026-10-02 |
 | `src/matinee/store.py::Store.clear_pin` | `src/matinee/store.py:385` | 2026-10-02 |
 | `src/matinee/store.py::Store.open` / `_check_pin` (lockout) | `src/matinee/store.py:398` | 2026-10-02 |
@@ -2067,13 +2054,10 @@ symbol when one does not match.
 | `tools/notes.py::note_id` / `parser` / `main` (exit statuses) | `tools/notes.py:125` | 2026-10-02 |
 | `tests/test_notes.py`, `tests/test_review.py`, `tests/test_notes_tool.py` | `tests/test_notes.py:56` | 2026-10-02 |
 
-### Exclusions and the DoesTheDogDie check
+### Topics and the DoesTheDogDie check
 
 | Handle | Where | Verified |
 |---|---|---|
-| `data/exclusions.json` | `data/exclusions.json:4` | 2026-09-26 |
-| `src/matinee/engine.py::_exclusion` | `src/matinee/engine.py:284` | 2026-10-02 |
-| `src/matinee/web/viewing.py::check_exclusions` | `src/matinee/web/viewing.py:193` | 2026-10-03 |
 | `src/matinee/dtdd.py::Dtdd.get` / `_pace` (`BURST`, `RATE_PER_S`) | `src/matinee/dtdd.py:106` | 2026-09-26 |
 | `src/matinee/dtdd.py::Dtdd._check_holds` / `_refused` / `_note_remaining` (`REQUESTS_PER_HOUR`, `MONTH_RESERVE`, `RESERVE_HOLD_S`, `BACKOFF_S`) | `src/matinee/dtdd.py:123` | 2026-09-26 |
 | `src/matinee/dtdd.py::Dtdd.topics` (`TOPICS_REFRESH_S`, `TOPICS_KEEP_S`) | `src/matinee/dtdd.py:178` | 2026-09-26 |

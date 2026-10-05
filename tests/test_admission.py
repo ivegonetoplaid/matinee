@@ -69,7 +69,6 @@ STRANGER_REFUSED = [
     ("POST", "/api/profiles"),
     ("GET", "/api/quips"),
     ("GET", "/api/topics"),
-    ("GET", "/api/exclusions"),
     ("GET", "/api/film/5"),
     ("GET", "/api/pictures"),
     ("GET", "/img/poster/5/m"),

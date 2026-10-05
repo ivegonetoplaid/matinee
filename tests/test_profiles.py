@@ -29,9 +29,9 @@ def store(tmp_path: Path) -> Store:
 
 
 def test_pin_and_token_are_never_stored_as_typed(store: Store, tmp_path: Path) -> None:
-    profile, token = store.create("Pat", "1234", [188], ["superheroes"])
-    store.create("Pam", "1234", [], [])
-    assert profile.has_pin and profile.topics == frozenset({188}) and profile.exclusions == frozenset({"superheroes"})
+    profile, token = store.create("Pat", "1234", [188])
+    store.create("Pam", "1234", [])
+    assert profile.has_pin and profile.topics == frozenset({188})
     with sqlite3.connect(tmp_path / "matinee.sqlite") as db:
         rows = db.execute("SELECT pin_salt, pin_hash FROM profiles ORDER BY id").fetchall()
         digests = [r[0] for r in db.execute("SELECT token_hash FROM tokens").fetchall()]
@@ -44,31 +44,31 @@ def test_pin_and_token_are_never_stored_as_typed(store: Store, tmp_path: Path) -
 
 
 def test_names_are_unique_ignoring_case_and_validated(store: Store) -> None:
-    store.create("Sam", None, [], [])
+    store.create("Sam", None, [])
     with pytest.raises(StoreError) as taken:
-        store.create(" sam ", None, [], [])
+        store.create(" sam ", None, [])
     assert taken.value.code == "name_taken"
     for bad in ("", "   ", "x" * 41, "bell\x07"):
         with pytest.raises(StoreError) as err:
-            store.create(bad, None, [], [])
+            store.create(bad, None, [])
         assert err.value.code == "bad_name"
     for pin in ("123", "12345", "abcd", "１２３４"):
         with pytest.raises(StoreError) as err:
-            store.create("Pin Test", pin, [], [])
+            store.create("Pin Test", pin, [])
         assert err.value.code == "bad_pin"
 
 
 def test_the_store_holds_at_most_fifty(store: Store) -> None:
     for i in range(MAX_PROFILES):
-        store.create(f"Viewer {i}", None, [], [])
+        store.create(f"Viewer {i}", None, [])
     with pytest.raises(StoreError) as err:
-        store.create("One too many", None, [], [])
+        store.create("One too many", None, [])
     assert err.value.code == "full"
 
 
 def test_opening_needs_the_pin_and_five_misses_lock_the_profile(store: Store) -> None:
-    profile, _ = store.create("Lee", "4321", [], [])
-    other, _ = store.create("Kim", "1111", [], [])
+    profile, _ = store.create("Lee", "4321", [])
+    other, _ = store.create("Kim", "1111", [])
     with pytest.raises(StoreError) as err:
         store.open(profile.id, None, 1000.0)
     assert err.value.code == "wrong_pin"
@@ -86,7 +86,7 @@ def test_opening_needs_the_pin_and_five_misses_lock_the_profile(store: Store) ->
 
 
 def test_a_lock_clears_the_count_when_it_ends(store: Store) -> None:
-    profile, _ = store.create("Ivy", "8642", [], [])
+    profile, _ = store.create("Ivy", "8642", [])
     for _ in range(4):
         with pytest.raises(StoreError):
             store.open(profile.id, "0000", 0.0)
@@ -98,7 +98,7 @@ def test_a_lock_clears_the_count_when_it_ends(store: Store) -> None:
 
 
 def test_a_right_pin_resets_the_count(store: Store) -> None:
-    profile, _ = store.create("Ray", "2468", [], [])
+    profile, _ = store.create("Ray", "2468", [])
     for _ in range(4):
         with pytest.raises(StoreError):
             store.open(profile.id, "0000", 0.0)
@@ -110,12 +110,12 @@ def test_a_right_pin_resets_the_count(store: Store) -> None:
 
 
 def test_a_profile_without_a_pin_opens_by_name(store: Store) -> None:
-    profile, _ = store.create("Jo", None, [], [])
+    profile, _ = store.create("Jo", None, [])
     assert store.open(profile.id, None, 0.0)[0].name == "Jo"
 
 
 def test_a_token_for_a_deleted_profile_is_ignored(store: Store, tmp_path: Path) -> None:
-    profile, token = store.create("Gone", None, [], [])
+    profile, token = store.create("Gone", None, [])
     with sqlite3.connect(tmp_path / "matinee.sqlite") as db:
         db.execute("PRAGMA foreign_keys = ON")
         db.execute("DELETE FROM profiles WHERE id = ?", (profile.id,))
@@ -150,7 +150,7 @@ def held_names(client: TestClient) -> list[str]:
 
 def test_a_new_device_holds_nothing(door: Any) -> None:
     client, store = door
-    store.create("Somebody", None, [188], [])
+    store.create("Somebody", None, [188])
     door = client.get("/api/door").json()
     assert door["now_showing"] == 40 and door["avatars"] == list(AVATARS)
     assert [(p["name"], p["held"]) for p in door["profiles"]] == [("Somebody", False)]
@@ -169,25 +169,25 @@ def test_saving_a_profile_sets_a_token_cookie_without_name_or_pin(door: Any) -> 
     assert held_names(client) == ["Robin"]
 
 
-def test_the_front_door_lists_every_profile_by_name_and_never_an_exclusion(door: Any) -> None:
+def test_the_front_door_lists_every_profile_by_name_and_never_its_topics(door: Any) -> None:
     client, store = door
-    store.create("zed", "1111", [153], ["superheroes"], "vhs")
-    store.create("Elsewhere", None, [188], ["heroes"])
-    here = client.post("/api/profiles", json={"name": "Here", "topics": [153], "exclusions": ["superheroes"]}).json()
+    store.create("zed", "1111", [153], "vhs")
+    store.create("Elsewhere", None, [188])
+    here = client.post("/api/profiles", json={"name": "Here", "topics": [153]}).json()
     reply = client.get("/api/door")
     assert reply.json()["profiles"] == [
         {"id": 2, "name": "Elsewhere", "avatar": None, "has_pin": False, "held": False},
         {"id": here["id"], "name": "Here", "avatar": None, "has_pin": False, "held": True},
         {"id": 1, "name": "zed", "avatar": "vhs", "has_pin": True, "held": False},
     ]
-    for leak in ("superheroes", "heroes", "153", "188", "topics", "exclusions"):
+    for leak in ("153", "188", "topics"):
         assert leak not in reply.text
     assert client.post("/api/names", json={"typed": "else"}).status_code in (404, 405)
 
 
 def test_a_device_may_hold_several_and_opens_by_pin(door: Any) -> None:
     client, store = door
-    other, _ = store.create("Quinn", "1357", [], [])
+    other, _ = store.create("Quinn", "1357", [])
     client.post("/api/profiles", json={"name": "First"})
     wrong = client.post(f"/api/profiles/{other.id}/open", json={"pin": "0000"})
     assert wrong.status_code == 401 and wrong.json()["code"] == "wrong_pin"
@@ -198,7 +198,7 @@ def test_a_device_may_hold_several_and_opens_by_pin(door: Any) -> None:
 
 def test_locked_profile_says_how_long(door: Any) -> None:
     client, store = door
-    other, _ = store.create("Max", "2222", [], [])
+    other, _ = store.create("Max", "2222", [])
     for _ in range(4):
         client.post(f"/api/profiles/{other.id}/open", json={"pin": "0000"})
     resp = client.post(f"/api/profiles/{other.id}/open", json={"pin": "0000"})
@@ -252,7 +252,7 @@ def test_request_fields_are_bounded(door: Any) -> None:
 def test_a_device_holding_a_profile_deletes_it_everywhere_and_its_notes_stay(door: Any, tmp_path: Path) -> None:
     client, store = door
     other_device = TestClient(client.app, base_url="https://testserver")
-    gone = client.post("/api/profiles", json={"name": "Leaving", "pin": "4321", "exclusions": ["superheroes"]}).json()
+    gone = client.post("/api/profiles", json={"name": "Leaving", "pin": "4321", "topics": [153]}).json()
     client.post("/api/profiles", json={"name": "Staying"})
     assert other_device.post(f"/api/profiles/{gone['id']}/open", json={"pin": "4321"}).status_code == 200
     store.note(
@@ -274,13 +274,13 @@ def test_a_device_holding_a_profile_deletes_it_everywhere_and_its_notes_stay(doo
 
 def test_a_device_that_does_not_hold_a_profile_cannot_delete_it(door: Any, tmp_path: Path) -> None:
     client, store = door
-    guarded, _ = store.create("Guarded", "1111", [], ["superheroes"])
+    guarded, _ = store.create("Guarded", "1111", [153])
     client.post("/api/profiles", json={"name": "Mine"})
     for target in (guarded.id, 999):
         assert client.delete(f"/api/profiles/{target}").status_code == 403
     with sqlite3.connect(tmp_path / "matinee.sqlite") as db:
-        assert db.execute("SELECT name, exclusions FROM profiles ORDER BY id").fetchall() == [
-            ("Guarded", '["superheroes"]'),
+        assert db.execute("SELECT name, topics FROM profiles ORDER BY id").fetchall() == [
+            ("Guarded", "[153]"),
             ("Mine", "[]"),
         ]
 
@@ -309,7 +309,7 @@ def test_the_holding_device_sets_and_clears_its_avatar(door: Any) -> None:
 
 def test_a_device_that_does_not_hold_the_profile_cannot_change_its_avatar(door: Any) -> None:
     client, store = door
-    other, token = store.create("Other", None, [], [], "candy")
+    other, token = store.create("Other", None, [], "candy")
     elsewhere = TestClient(client.app, base_url="https://testserver")
     assert elsewhere.put(f"/api/profiles/{other.id}/avatar", json={"avatar": "vhs"}).status_code == 403
     assert store.holding([token])[token].avatar == "candy"
@@ -317,15 +317,15 @@ def test_a_device_that_does_not_hold_the_profile_cannot_change_its_avatar(door: 
 
 def test_a_write_never_lands_on_a_new_profile_that_reuses_a_deleted_ones_id(tmp_path: Path) -> None:
     store = Store(tmp_path / "matinee.sqlite")
-    _, other_device = store.create("Elsewhere", None, [], [])
-    gone, stale = store.create("Gone", None, [], [])  # the newest profile, whose id SQLite hands out again
+    _, other_device = store.create("Elsewhere", None, [])
+    gone, stale = store.create("Gone", None, [])  # the newest profile, whose id SQLite hands out again
     store.delete(gone.id, [stale])
-    victim, _ = store.create("Newcomer", None, [153], ["superheroes"], "vhs")
+    victim, _ = store.create("Newcomer", None, [153], "vhs")
     assert victim.id == gone.id
     attempts: list[Callable[[], object]] = [
         lambda: store.delete(gone.id, [stale]),
         lambda: store.set_avatar(gone.id, "popcorn", [stale]),
-        lambda: store.set_exclusions(gone.id, [], [], [stale]),
+        lambda: store.set_topics(gone.id, [], [stale]),
         lambda: store.note(Note(gone.id, 5, "west", "kind", (), False, "not mine"), [stale]),
         lambda: store.delete(gone.id, [other_device]),  # a live token, for another profile
     ]
@@ -334,5 +334,5 @@ def test_a_write_never_lands_on_a_new_profile_that_reuses_a_deleted_ones_id(tmp_
             attempt()
         assert refused.value.code == "not_held"
     [left] = [p for p in store.everyone() if p.id == victim.id]
-    assert (left.name, left.avatar, left.exclusions) == (victim.name, victim.avatar, victim.exclusions)
+    assert (left.name, left.avatar, left.topics) == (victim.name, victim.avatar, victim.topics)
     assert store.notes() == []

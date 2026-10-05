@@ -55,7 +55,6 @@ from matinee.web.viewing import (
     add_note_routes,
     add_pick_routes,
     add_viewing_routes,
-    check_exclusions,
 )
 
 log = logging.getLogger("matinee.web")
@@ -199,7 +198,7 @@ def add_door_routes(app: FastAPI, theatre: Theatre, store: Store, clock: Callabl
     def door(request: Request, response: Response) -> Door:
         """What the front door shows an admitted device: the film count, every profile by name, and the avatars.
 
-        Each profile says whether this device holds it; none carries its exclusions. A token for a profile that
+        Each profile says whether this device holds it; none carries its topics. A token for a profile that
         is gone is cleared from the cookie.
         """
         tokens = device_tokens(request)
@@ -214,8 +213,7 @@ def add_door_routes(app: FastAPI, theatre: Theatre, store: Store, clock: Callabl
 
     @app.post("/api/profiles")
     def create_profile(body: NewProfile, request: Request, response: Response) -> Seat:
-        check_exclusions(theatre, body.exclusions)
-        profile, token = store.create(body.name, body.pin, body.topics, body.exclusions, body.avatar)
+        profile, token = store.create(body.name, body.pin, body.topics, body.avatar)
         with_token(request, response, token)
         return seat(profile)
 

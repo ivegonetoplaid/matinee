@@ -155,22 +155,11 @@ def test_the_page_is_given_the_pick_lines_and_caps(site: Any) -> None:
     assert "How about this one?" in body["categories"]["universal"]["reveal"]
 
 
-def test_matinee_exclusions_are_listed(site: Any) -> None:
-    client, _, _ = site
-    assert client.get("/api/exclusions").json() == [
-        {"id": "superheroes", "say": "Superheroes"},
-        {"id": "heroes", "say": "heroes"},
-    ]
-
-
-def test_a_saved_exclusion_applies_to_every_walk(site: Any) -> None:
+def test_saved_topics_apply_to_every_walk(site: Any) -> None:
     client, _, _ = site
     me = client.post("/api/profiles", json={"name": "Nell"}).json()
-    assert 7 in client.post("/api/walk", json={"tree": "west", "viewer": {"profile_id": me["id"]}}).json()["pool"]
-    saved = client.put(f"/api/profiles/{me['id']}/exclusions", json={"topics": [188], "exclusions": ["superheroes"]})
-    assert saved.status_code == 200 and saved.json()["exclusions"] == ["superheroes"]
-    step = client.post("/api/walk", json={"tree": "west", "viewer": {"profile_id": me["id"]}}).json()
-    assert 7 not in step["pool"]
+    saved = client.put(f"/api/profiles/{me['id']}/topics", json={"topics": [188]})
+    assert saved.status_code == 200 and saved.json()["topics"] == [188] and "exclusions" not in saved.json()
     after = client.post(
         "/api/walk",
         json={"tree": "west", "answers": [{"question": "era", "option": 1}], "viewer": {"profile_id": me["id"]}},
@@ -182,7 +171,7 @@ def test_without_a_profile_only_the_first_questions_pool_is_given(site: Any, tmp
     client, store, _ = site
     first = client.post("/api/first", json={})
     assert first.status_code == 200 and first.json()["pool"] == list(range(1, 40)) + [99]
-    sneaking = {"tree": "west", "viewer": {"exclusions": ["heroes"], "topics": [188]}}
+    sneaking = {"tree": "west", "viewer": {"topics": [188]}}
     assert client.post("/api/walk", json=sneaking).status_code == 403
     assert client.post("/api/walk", json={"tree": "west"}).status_code == 403
     assert client.cookies.get("matinee_tokens") is None
@@ -198,15 +187,15 @@ def test_a_profiles_topics_skip_the_gore_question(site: Any) -> None:
 
 def test_only_the_device_holding_a_profile_may_use_or_change_it(site: Any) -> None:
     client, store, _ = site
-    other, owner_token = store.create("Owner", None, [153], ["superheroes"])
+    other, owner_token = store.create("Owner", None, [153])
     walk = client.post("/api/walk", json={"tree": "west", "viewer": {"profile_id": other.id}})
-    assert walk.status_code == 403 and "superheroes" not in walk.text
-    change = client.put(f"/api/profiles/{other.id}/exclusions", json={"topics": [], "exclusions": []})
+    assert walk.status_code == 403
+    change = client.put(f"/api/profiles/{other.id}/topics", json={"topics": []})
     assert change.status_code == 403
-    assert store.holding([owner_token])[owner_token].exclusions == frozenset({"superheroes"})
+    assert store.holding([owner_token])[owner_token].topics == frozenset({153})
 
 
-def test_unknown_exclusions_and_misfit_answers_are_refused(site: Any) -> None:
+def test_misfit_answers_are_refused(site: Any) -> None:
     client, _, _ = site
     me = seat_for(client)
     misfit = client.post(
@@ -294,39 +283,10 @@ def test_dropped_connections_are_one_error(answer: Exception) -> None:
 
 def test_saving_one_profile_leaves_the_others(site: Any) -> None:
     client, store, _ = site
-    other, token = store.create("Other", None, [153], ["superheroes"])
+    other, token = store.create("Other", None, [153])
     me = client.post("/api/profiles", json={"name": "Me"}).json()
-    client.put(f"/api/profiles/{me['id']}/exclusions", json={"topics": [188], "exclusions": []})
+    client.put(f"/api/profiles/{me['id']}/topics", json={"topics": [188]})
     assert store.holding([token])[token].topics == frozenset({153})
-    assert store.holding([token])[token].exclusions == frozenset({"superheroes"})
-
-
-def test_unknown_exclusion_names_are_never_saved(site: Any) -> None:
-    client, _, _ = site
-    assert client.post("/api/profiles", json={"name": "Typo", "exclusions": ["superhero"]}).status_code == 400
-    me = client.post("/api/profiles", json={"name": "Fine"}).json()
-    put = client.put(f"/api/profiles/{me['id']}/exclusions", json={"topics": [], "exclusions": ["cats"]})
-    assert put.status_code == 400
-
-
-def test_first_question_hides_a_tree_the_viewer_excluded_empty(tmp_path: Path) -> None:
-    data = write_data(tmp_path / "data")
-    write_film_table(tmp_path / "films.sqlite")
-
-    def catalog_of(table: FilmTable) -> Any:
-        return load_catalog(table, data, reference())
-
-    theatre = Theatre(FakeLibrary(held=[3, 7]), tmp_path / "films.sqlite", catalog_of=catalog_of)
-    config = Config(SECRET_URL, SECRET_KEY, tmp_path, "https://seerr.invalid", "d" * 16)
-    client = TestClient(
-        create_app(config, theatre, Store(tmp_path / "s.sqlite"), FakeDtdd()), base_url="https://testserver"
-    )
-    assert client.post("/api/first", json={}).json()["options"] == [
-        {"say": "Cowboys.", "tree": "west", "label": "Western"}
-    ]
-    both = {"viewer": seat_for(client, exclusions=["heroes", "superheroes"])}
-    assert client.post("/api/first", json=both).json()["options"] == []
-    assert client.post("/api/first", json=both).json()["pool"] == []
 
 
 def test_the_allowance_holds_after_idle_hours_and_slow_answers() -> None:

@@ -155,16 +155,6 @@ def write_data(root: Path, tree: dict[str, Any] | None = None) -> Path:
             }
         )
     )
-    (root / "exclusions.json").write_text(
-        json.dumps(
-            {
-                "exclusions": {
-                    "superheroes": {"say": "Superheroes", "any": [{"keywords_any": ["superhero"]}]},
-                    "heroes": {"any": [{"tags": ["hero"], "min": 0.6}]},
-                }
-            }
-        )
-    )
     (root / "house_overrides.json").write_text(
         json.dumps(
             {
@@ -262,16 +252,6 @@ def test_misfit_and_leftover_answers_are_refused(cat: Catalog) -> None:
         walk(cat, "nope", Viewer(), [])
 
 
-def test_exclusions(cat: Catalog) -> None:
-    pool = walk(cat, "west", Viewer(exclusions=frozenset({"superheroes"})), []).pool
-    assert 7 not in pool and len(pool) == N - 1
-    assert walk(cat, "west", Viewer(exclusions=frozenset({"heroes"})), []).pool == tuple(
-        t for t in range(1, N + 1) if t != 3
-    )
-    with pytest.raises(EngineError):
-        walk(cat, "west", Viewer(exclusions=frozenset({"nope"})), [])
-
-
 def test_not_after_hides_an_option(cat: Catalog) -> None:
     step = walk(cat, "west", Viewer(), [Answer("era", 0), Answer("gore", 0)])
     assert step.question is not None and step.question.id == "kind"
@@ -282,8 +262,8 @@ def test_not_after_hides_an_option(cat: Catalog) -> None:
 
 def test_first_question_hides_missing_and_empty_trees(cat: Catalog, tmp_path: Path) -> None:
     assert [o.tree for o in first_question(cat, Viewer())] == ["west"]
-    two = load_catalog(without(make_table(), set(range(1, N + 1)) - {3, 7}), write_data(tmp_path / "d"), reference())
-    assert first_question(two, Viewer(exclusions=frozenset({"heroes", "superheroes"}))) == ()
+    empty = load_catalog(without(make_table(), range(1, N + 1)), write_data(tmp_path / "d"), reference())
+    assert first_question(empty, Viewer()) == ()
 
 
 def test_stale_reference_refuses_to_load(tmp_path: Path) -> None:

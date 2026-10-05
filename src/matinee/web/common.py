@@ -43,12 +43,11 @@ class Seat(BaseModel):
     name: str
     has_pin: bool
     topics: list[int]
-    exclusions: list[str]
     avatar: str | None
 
 
 class Tile(BaseModel):
-    """A profile on the front door: never its exclusions, which say what frightens a person and only its holder sees."""
+    """A profile on the front door: never its topics, which say what frightens a person and only its holder sees."""
 
     id: int
     name: str
@@ -74,7 +73,6 @@ class NewProfile(BaseModel):
     pin: str | None = Field(default=None, max_length=8)
     avatar: str | None = Field(default=None, max_length=40)
     topics: list[int] = Field(default=[], max_length=400)
-    exclusions: list[str] = Field(default=[], max_length=20)
 
 
 class AvatarChoice(BaseModel):
@@ -93,7 +91,6 @@ def seat(profile: Profile) -> Seat:
         name=profile.name,
         has_pin=profile.has_pin,
         topics=sorted(profile.topics),
-        exclusions=sorted(profile.exclusions),
         avatar=profile.avatar,
     )
 
