@@ -66,6 +66,7 @@ class Door(BaseModel):
     now_showing: int
     profiles: list[Tile]
     avatars: list[str]
+    dtdd: bool  # the installation has a DoesTheDogDie key, so it offers the list of topics to steer around
 
 
 class NewProfile(BaseModel):

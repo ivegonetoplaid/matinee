@@ -6,6 +6,7 @@
 // Opened from the door, the marquee's name flies to the wordmark's place first and flies back on closing.
 
 import { h } from "./dom.js";
+import { offers } from "./offers.js";
 
 const stage = document.getElementById("stage");
 
@@ -60,7 +61,8 @@ function copy(back) {
         "Harper and Konstan (2015), The MovieLens Datasets: History and Context. Vig, Sen and Riedl (2012), The Tag Genome: Encoding Community Knowledge to Support Novel Interaction.",
       ),
     ),
-    section(
+    // Without a DoesTheDogDie key nothing steers around anything, so the section and its credit are left out.
+    !offers.dtdd ? null : section(
       "How it steers around things",
       h(
         "p",

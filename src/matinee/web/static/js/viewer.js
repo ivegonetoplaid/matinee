@@ -1,5 +1,6 @@
 // The viewer at the right of the theatre's top bar: their mark and name, which open the profile menu.
-// The menu holds "Edit my list", "Change avatar", "Switch profiles" and "Delete profile", in that order.
+// The menu holds "Edit my list" (only where the installation offers DoesTheDogDie's topics), "Change avatar",
+// "Switch profiles" and "Delete profile", in that order.
 // It opens on click, tap or keyboard, and closes on Escape, on a tap elsewhere, or when an item is chosen.
 // "Change avatar" opens a panel beneath it; a tap saves the choice and the bar shows it at once. "Delete
 // profile" asks in a panel, never a browser dialog; "No, keep it" changes nothing.
@@ -20,7 +21,8 @@ function panel(label, ...children) {
   return h("div", { class: "viewer-panel", role: "dialog", "aria-label": label }, children);
 }
 
-// `viewer` is { name, avatar }; `avatars` are the ones offered. `actions` holds editList and switchProfiles,
+// `viewer` is { name, avatar }; `avatars` are the ones offered. `actions` holds editList (null where no list
+// is offered) and switchProfiles,
 // and saveAvatar(avatar) and deleteProfile(), which resolve to the page's { ok, data } answer; a profile
 // deleted, deleteProfile leaves the theatre itself.
 export function viewerTag(viewer, avatars, actions) {
@@ -41,7 +43,7 @@ export function viewerTag(viewer, avatars, actions) {
   const menu = h(
     "div",
     { class: "viewer-menu", role: "menu", "aria-label": "Profile", hidden: true },
-    item("Edit my list", choose(actions.editList)),
+    actions.editList ? item("Edit my list", choose(actions.editList)) : null,
     item("Change avatar", choose(() => openPanel(changeAvatar()))),
     item("Switch profiles", choose(actions.switchProfiles)),
     item("Delete profile", choose(() => openPanel(confirmDelete())), true),

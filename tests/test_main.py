@@ -10,6 +10,7 @@ from typing import Any
 import pytest
 
 from matinee.labels import load_labels
+from matinee.store import Store
 from matinee.web import main
 
 
@@ -18,13 +19,14 @@ class Recorded:
 
     def __init__(self) -> None:
         self.catalog_of: Any = None
+        self.on_reload: Any = None
 
 
-def run_build(monkeypatch: pytest.MonkeyPatch, state: Path) -> Recorded:
+def run_build(monkeypatch: pytest.MonkeyPatch, state: Path, dtdd_key: str = "d") -> Recorded:
     seen = Recorded()
 
-    def theatre(_library: object, _table: object, catalog_of: Any) -> object:
-        seen.catalog_of = catalog_of
+    def theatre(_library: object, _table: object, catalog_of: Any, on_reload: Any) -> object:
+        seen.catalog_of, seen.on_reload = catalog_of, on_reload
         return object()
 
     monkeypatch.setattr(main, "Theatre", theatre)
@@ -34,7 +36,7 @@ def run_build(monkeypatch: pytest.MonkeyPatch, state: Path) -> Recorded:
         "MATINEE_JELLYFIN_URL": "http://127.0.0.1:1",
         "JELLYFIN_API_KEY": "k",
         "MATINEE_SEERR_URL": "http://127.0.0.1:2",
-        "DTDD_API_KEY": "d",
+        "DTDD_API_KEY": dtdd_key,
     }
     for name, value in env.items():
         monkeypatch.setenv(name, value)
@@ -60,3 +62,16 @@ def test_no_word_about_a_labels_file_the_state_directory_does_not_hold(
         seen = run_build(monkeypatch, tmp_path)
     assert len(seen.catalog_of.keywords["labels"].films()) >= 10_272
     assert not caplog.records
+
+
+def test_without_a_key_kept_topics_are_warned_of_at_start_and_on_every_reload(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    Store(tmp_path / "matinee.sqlite").create("Ada", None, [188])
+    with caplog.at_level(logging.WARNING, logger="matinee.web"):
+        seen = run_build(monkeypatch, tmp_path, dtdd_key="")
+    assert ["now missing" in r.getMessage() for r in caplog.records] == [True]
+    caplog.clear()
+    with caplog.at_level(logging.WARNING, logger="matinee.web"):
+        seen.on_reload()
+    assert ["now missing" in r.getMessage() for r in caplog.records] == [True]

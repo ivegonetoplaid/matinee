@@ -54,6 +54,7 @@ from matinee.web.theatre import LibraryUnavailable, Theatre
 from matinee.web.viewing import (
     add_note_routes,
     add_pick_routes,
+    add_topic_routes,
     add_viewing_routes,
 )
 
@@ -193,7 +194,7 @@ def add_film_routes(app: FastAPI, theatre: Theatre, seerr: str, images: ImageSou
         )
 
 
-def add_door_routes(app: FastAPI, theatre: Theatre, store: Store, clock: Callable[[], float]) -> None:
+def add_door_routes(app: FastAPI, theatre: Theatre, store: Store, clock: Callable[[], float], topics_on: bool) -> None:
     @app.get("/api/door")
     def door(request: Request, response: Response) -> Door:
         """What the front door shows an admitted device: the film count, every profile by name, and the avatars.
@@ -209,7 +210,8 @@ def add_door_routes(app: FastAPI, theatre: Theatre, store: Store, clock: Callabl
         tiles = [
             Tile(id=p.id, name=p.name, avatar=p.avatar, has_pin=p.has_pin, held=p.id in held) for p in store.everyone()
         ]
-        return Door(now_showing=theatre.showing().now_showing, profiles=tiles, avatars=list(AVATARS))
+        now = theatre.showing().now_showing
+        return Door(now_showing=now, profiles=tiles, avatars=list(AVATARS), dtdd=topics_on)
 
     @app.post("/api/profiles")
     def create_profile(body: NewProfile, request: Request, response: Response) -> Seat:
@@ -373,7 +375,7 @@ def create_app(
     config: Config,
     theatre: Theatre,
     store: Store,
-    dtdd: Dtdd,
+    dtdd: Dtdd | None,
     clock: Callable[[], float] = time.time,
     picker: Picker | None = None,
     quips: Quips | None = None,
@@ -392,11 +394,17 @@ def create_app(
     add_admission(app, admission, config.door_greeting, clock, wrong_word_delay_s)
     add_film_routes(app, theatre, config.seerr_url, config.images)
     add_page(app, config.images)
-    add_door_routes(app, theatre, store, clock)
+    add_door_routes(app, theatre, store, clock, dtdd is not None)
     add_delete_route(app, store)
     add_avatar_route(app, store)
-    add_viewing_routes(app, theatre, store, dtdd)
-    add_pick_routes(app, theatre, store, picker or Picker(dtdd, DeviceCap()))
+    topics_on = dtdd is not None
+    picker = picker or Picker(dtdd, DeviceCap())
+    if (picker.dtdd is None) != (dtdd is None):
+        raise ValueError("the picker and the app must agree on whether a DoesTheDogDie key is set")
+    if dtdd is not None:
+        add_topic_routes(app, store, dtdd)
+    add_viewing_routes(app, theatre, store, topics_on)
+    add_pick_routes(app, theatre, store, picker, topics_on)
     add_note_routes(app, theatre, store)
     add_quip_routes(app, quips or load_quips())
     app.state.config = config

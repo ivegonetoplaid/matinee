@@ -35,7 +35,7 @@ class Config:
     jellyfin_key: str = field(repr=False)
     state: Path
     seerr_url: str
-    dtdd_key: str = field(repr=False)
+    dtdd_key: str | None = field(repr=False)
     door_word: str | None = field(default=None, repr=False)
     door_match: Mode = "relaxed"
     door_greeting: str = GREETINGS["show"]
@@ -96,7 +96,7 @@ def from_env(env: Mapping[str, str] = os.environ) -> Config:
         jellyfin_key=_required(env, "JELLYFIN_API_KEY"),
         state=state,
         seerr_url=_required(env, "MATINEE_SEERR_URL").rstrip("/"),
-        dtdd_key=_required(env, "DTDD_API_KEY"),
+        dtdd_key=env.get("DTDD_API_KEY", "").strip() or None,
         door_word=word,
         door_match=mode,
         door_greeting=greeting,

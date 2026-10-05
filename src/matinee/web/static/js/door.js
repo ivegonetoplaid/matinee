@@ -9,6 +9,7 @@ import { clear, h, isPhone, prefersLessMotion, sentenceCase, wait } from "./dom.
 import { FLIGHT_MS, copyAt, fly, nameAt, riseOf, wordmarkAt } from "./flight.js";
 import { doorLines, findTaken, opensAtOnce, twoParts } from "./door-rules.js";
 import { avatarChoices, mark } from "./mark.js";
+import { offers } from "./offers.js";
 import { typeLine } from "./type.js";
 
 // Bulbs round the sign and the gap between them, as on the design boards. Two dark bulbs chase clockwise,
@@ -157,7 +158,7 @@ export class Door {
     this.build(door.now_showing, marquee);
     if (screen === "new") return this.first();
     const tile = this.held.find((p) => p.id === profileId);
-    const profile = screen === "list" && tile ? (await this.seatOf(tile)).seat : null;
+    const profile = screen === "list" && tile && offers.dtdd ? (await this.seatOf(tile)).seat : null;
     if (profile) return this.picker({ editing: profile });
     return this.greet(said);
   }
@@ -318,7 +319,9 @@ export class Door {
     return holder ? this.taken(holder) : this.askName("Pull up a chair.", "What should I call you?", message);
   }
 
+  // Without a DoesTheDogDie key there is no list to pick from, so the step is skipped.
   askList(seat) {
+    if (!offers.dtdd) return this.done(seat);
     const detail = "Things like spiders or needles. Pick them and I'll skip any film that has them.";
     return this.talk(
       "One more question.",
@@ -377,7 +380,7 @@ export class Door {
     this.lock();
     const { seat, message } = await this.seatOf(profile);
     if (!seat) return this.refused(message);
-    const profileTopics = seat.topics.length > 0;
+    const profileTopics = offers.dtdd && seat.topics.length > 0;
     return this.enter({ viewer: { profile_id: seat.id }, name: seat.name, avatar: seat.avatar, profileTopics });
   }
 

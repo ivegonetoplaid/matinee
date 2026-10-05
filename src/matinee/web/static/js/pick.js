@@ -11,6 +11,7 @@ import { get } from "./api.js";
 import { twoParts } from "./door-rules.js";
 import { h, isPhone, prefersLessMotion, sentenceCase, wait } from "./dom.js";
 import { backdropUrl, corsImage } from "./pictures.js";
+import { offers } from "./offers.js";
 import { typeLine } from "./type.js";
 
 const BEAT_MS = 500; // the grown poster holds for one beat before it moves to rest
@@ -94,6 +95,7 @@ function lookUp(result) {
 // DoesTheDogDie's credit in the foot band: shown before a line built on its data starts to type, so it is on
 // screen for as long as that line is, and for the rest of the pick.
 function showCredit(frame) {
+  if (!offers.dtdd) return; // no DoesTheDogDie key: none of its data shows, so neither does its credit
   frame.credit.hidden = false;
 }
 

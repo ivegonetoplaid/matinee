@@ -26,6 +26,20 @@ from matinee.web.theatre import Theatre
 log = logging.getLogger("matinee.web")
 
 
+TOPICS_KEPT = (
+    "A DoesTheDogDie key was set before and is now missing, and %d %s still hold DoesTheDogDie topics. "
+    "Meanwhile those topics change nothing: no pick is checked against them and no question is skipped for them. "
+    "Set DTDD_API_KEY again, or clear the topics with: python tools/notes.py clear-topics"
+)
+
+
+def warn_kept_topics(store: Store) -> None:
+    """Warn while profiles hold DoesTheDogDie topics that no key lets Matinee check."""
+    held = sum(1 for p in store.everyone() if p.topics)
+    if held:
+        log.warning(TOPICS_KEPT, held, "profile" if held == 1 else "profiles")
+
+
 def build() -> FastAPI:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
     config = from_env()
@@ -37,5 +51,14 @@ def build() -> FastAPI:
             LABELS,
         )
     library = JellyfinReader(config.jellyfin_url, config.jellyfin_key)
-    theatre = Theatre(library, config.table_path, catalog_of=partial(load_catalog, labels=load_labels()))
-    return create_app(config, theatre, Store(config.store_path), Dtdd(config.dtdd_key), quips=load_quips())
+    store = Store(config.store_path)
+    dtdd = Dtdd(config.dtdd_key) if config.dtdd_key else None
+
+    def on_reload() -> None:
+        if dtdd is None:
+            warn_kept_topics(store)
+
+    on_reload()
+    catalog_of = partial(load_catalog, labels=load_labels())
+    theatre = Theatre(library, config.table_path, catalog_of=catalog_of, on_reload=on_reload)
+    return create_app(config, theatre, store, dtdd, quips=load_quips())

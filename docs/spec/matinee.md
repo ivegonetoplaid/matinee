@@ -820,6 +820,20 @@ usual headers. The protection is sized for a household film picker.
 A viewer may exclude DoesTheDogDie topics: things they would rather not see
 happen on screen. A profile saves them. Matinee has no exclusions of its own.
 
+**DoesTheDogDie is optional.** It needs the installation's `DTDD_API_KEY`.
+Without one, Matinee offers nothing that needs DoesTheDogDie: no profile is
+asked for topics, "Edit my list" is not offered, `GET /api/topics` and
+`PUT /api/profiles/{id}/topics` do not exist (404), no pick is looked up, and
+no DoesTheDogDie credit shows anywhere, the About page's section on steering
+included. A profile's stored topics stay in the store unchanged and have no
+effect on any walk or pick: no question is skipped for them. While any profile
+holds topics and no key is set, the server logs a warning at start and each
+time it loads a rebuilt film table. It says a DoesTheDogDie key was set before
+and is now missing, how many profiles still hold topics, and that the household
+either sets `DTDD_API_KEY` again or clears the topics with the notes tool's
+`clear-topics`, which ends the warning. `GET /api/door` says whether the key is
+set (`dtdd`). With a key, everything below holds.
+
 **DoesTheDogDie topics** are checked only at the pick (section 9). Before the
 pick, they only decide whether a question marked `skip_if_topics` is asked. A
 film fails a topic when the topic has **at least 5 votes and more yes votes
@@ -1014,6 +1028,8 @@ changes nothing any viewer is shown.
     the ruling.
     Where the note was already ruled, the tool prints the ruling it replaced.
   - `clear-pin "<profile name>"` clears one profile's PIN (section 7).
+  - `clear-topics` clears every profile's DoesTheDogDie topics and says how
+    many profiles held any (section 8).
   - A note that does not exist, an empty or multi-line reason, or an accept
     without its label ruling is refused, and nothing is written. A store the
     code cannot bring to its shape is refused in words, as at the server's
@@ -1040,15 +1056,15 @@ would hand one device's profiles to another.
 | GET | `/img/{kind}/{tmdb}/{size}` | a poster or backdrop, read from the media server |
 | GET | `/api/pictures` | the image source, and under `tmdb` the TMDB poster path of every live film that has one (section 11.5) |
 | GET | `/api/film/{tmdb}` | title, year, runtime, synopsis and the Seerr link for one film, and under `tmdb` its TMDB backdrop path |
-| GET | `/api/door` | the film count, every profile (marking those this device holds) and the avatars offered |
+| GET | `/api/door` | the film count, every profile (marking those this device holds), the avatars offered, and whether a DoesTheDogDie key is set |
 | POST | `/api/profiles` | create a profile and issue this device a token |
 | POST | `/api/profiles/{id}/open` | open a profile by PIN, or at once when held or PIN-less |
-| PUT | `/api/profiles/{id}/topics` | replace a held profile's DoesTheDogDie topics |
+| PUT | `/api/profiles/{id}/topics` | replace a held profile's DoesTheDogDie topics; only with a DoesTheDogDie key |
 | PUT | `/api/profiles/{id}/avatar` | set or clear a held profile's avatar |
 | DELETE | `/api/profiles/{id}` | delete a held profile, its topics and its tokens; answers its name |
-| GET | `/api/topics` | DoesTheDogDie's topic list, with its credit |
+| GET | `/api/topics` | DoesTheDogDie's topic list, with its credit; only with a DoesTheDogDie key |
 | GET | `/api/quips` | the pick's lines and their caps (section 2.7) |
-| POST | `/api/first` | the first question for this viewer, and the pool behind it |
+| POST | `/api/first` | the first question for this viewer, the pool behind it, and whether this viewer's picks are checked against DoesTheDogDie (`checked`) |
 | POST | `/api/walk` | the next question and the pool, given a tree and answers |
 | POST | `/api/pick` | one checked film from the pool the answers leave |
 | POST | `/api/notes` | keep one note on a pick for a held profile |
@@ -1313,7 +1329,8 @@ as written. A phone is a viewport 600 px wide or less.
     "Never mind, show me everything", each leading on to the last step), and
     "No, show me everything", which goes to the last step with no list. Last, "You're all set, <name>." over a centred
     "Find me something to watch" action, which goes in
-    to the first question.
+    to the first question. Without a DoesTheDogDie key (section 8) the "One more
+    question." step is skipped: the PIN choice goes straight to the last step.
 - **Going in.** Every answer at the door that leads into the theatre asks for
   the first question at the tap, and a door is entered once: a second tap or
   Enter changes nothing. The door's words and the corner credit line fade out
@@ -1421,7 +1438,8 @@ as written. A phone is a viewport 600 px wide or less.
   What should I steer around?", whose "Save my list" and "Never mind, keep my
   list" both go back in), "Change avatar", "Switch profiles" (back to the front
   door's tiles, the marquee already in place and lit) and "Delete profile" in
-  red, in that order. Escape (wherever the focus is), a tap elsewhere, focus
+  red, in that order; without a DoesTheDogDie key "Edit my list" is not in it.
+  Escape (wherever the focus is), a tap elsewhere, focus
   leaving the viewer, or choosing an item closes it; the arrow keys walk its
   items, round from the last to the first. The same closes either panel
   below. On a phone the bar is one row: a name of 10
@@ -1682,7 +1700,7 @@ as written. A phone is a viewport 600 px wide or less.
 | `MATINEE_JELLYFIN_URL` | server, rebuild | the media server's address |
 | `JELLYFIN_API_KEY` | server, rebuild | the media server's key |
 | `MATINEE_SEERR_URL` | server | the base of the "More on Seerr ↗" action's address |
-| `DTDD_API_KEY` | server | the DoesTheDogDie key |
+| `DTDD_API_KEY` | server, optional | the DoesTheDogDie key; unset or empty means no list of topics and no check (section 8) |
 | `TMDB_READ_TOKEN` | rebuild | the TMDB read token |
 | `MATINEE_DOOR_WORD` | server, optional | the door word (section 7.2); unset or empty means no lock |
 | `MATINEE_DOOR_MATCH` | server, optional | `relaxed` (the default) or `strict` |

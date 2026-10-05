@@ -46,11 +46,13 @@ class Theatre:
         table_path: Path,
         clock: Callable[[], float] = time.monotonic,
         catalog_of: Callable[[FilmTable], Catalog] = load_catalog,
+        on_reload: Callable[[], None] = lambda: None,
     ) -> None:
         self._library = library
         self._table_path = table_path
         self._clock = clock
         self._catalog_of = catalog_of
+        self._on_reload = on_reload
         self._lock = threading.Lock()
         self._table = load_table(table_path)
         self._table_mtime = table_path.stat().st_mtime
@@ -65,6 +67,7 @@ class Theatre:
             self._table_mtime = mtime
             self._showing = None
             log.info("film table reloaded: %d films", len(self._table.films))
+            self._on_reload()
 
     def showing(self) -> Showing:
         """The current catalog, rebuilt from a fresh film list when the last read is older than LIVE_TTL."""

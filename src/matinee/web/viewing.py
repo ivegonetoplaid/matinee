@@ -96,6 +96,7 @@ class FirstOut(BaseModel):
     name: str | None
     options: list[FirstOptionOut]
     pool: list[int]
+    checked: bool  # this viewer's picks are checked against DoesTheDogDie: a key is set and they hold topics
 
 
 class TopicOut(BaseModel):
@@ -182,17 +183,20 @@ def held_profile(request: Request, store: Store, profile_id: int) -> Profile:
     raise HTTPException(status_code=403, detail="refused")
 
 
-def resolve(request: Request, store: Store, v: ViewerIn) -> tuple[Viewer, Profile | None]:
-    """The engine's viewer: a held profile's saved topics, or none when no profile is named."""
+def resolve(request: Request, store: Store, v: ViewerIn, topics_on: bool) -> tuple[Viewer, Profile | None]:
+    """The engine's viewer: a held profile's saved topics, or none when no profile is named.
+
+    Without a DoesTheDogDie key (`topics_on` false) a profile's stored topics stay in the store and have no effect.
+    """
     if v.profile_id is None:
         return Viewer(), None
     profile = held_profile(request, store, v.profile_id)
-    return Viewer(topics=profile.topics), profile
+    return Viewer(topics=profile.topics if topics_on else frozenset()), profile
 
 
-def resolve_held(request: Request, store: Store, v: ViewerIn) -> Viewer:
+def resolve_held(request: Request, store: Store, v: ViewerIn, topics_on: bool) -> Viewer:
     """The engine's viewer for a walk or a pick, which runs only under a profile this device holds; 403 otherwise."""
-    viewer, profile = resolve(request, store, v)
+    viewer, profile = resolve(request, store, v, topics_on)
     if profile is None:
         raise HTTPException(status_code=403, detail="refused")
     return viewer
@@ -271,7 +275,8 @@ def pick_out(films: Any, result: Pick) -> PickOut:
     )
 
 
-def add_viewing_routes(app: FastAPI, theatre: Theatre, store: Store, dtdd: Dtdd) -> None:
+def add_topic_routes(app: FastAPI, store: Store, dtdd: Dtdd) -> None:
+    """DoesTheDogDie's topic list and a profile's saved topics; an installation with no key has neither route."""
 
     @app.get("/api/topics", response_model=None)
     def topics() -> TopicsOut | JSONResponse:
@@ -294,22 +299,25 @@ def add_viewing_routes(app: FastAPI, theatre: Theatre, store: Store, dtdd: Dtdd)
         held_profile(request, store, profile_id)
         return seat(store.set_topics(profile_id, body.topics, device_tokens(request)))
 
+
+def add_viewing_routes(app: FastAPI, theatre: Theatre, store: Store, topics_on: bool) -> None:
     @app.post("/api/first")
     def first(body: FirstIn, request: Request) -> FirstOut:
         cat = theatre.showing().catalog
-        viewer, profile = resolve(request, store, body.viewer)
+        viewer, profile = resolve(request, store, body.viewer, topics_on)
         options = [FirstOptionOut(say=o.say, tree=o.tree, label=o.label) for o in first_question(cat, viewer)]
         return FirstOut(
             lines=list(cat.first_lines),
             name=profile.name if profile else None,
             options=options,
             pool=everything(cat, viewer),
+            checked=bool(viewer.topics),
         )
 
     @app.post("/api/walk")
     def walk_tree(body: WalkIn, request: Request) -> StepOut:
         cat = theatre.showing().catalog
-        viewer = resolve_held(request, store, body.viewer)
+        viewer = resolve_held(request, store, body.viewer, topics_on)
         step = walk(cat, body.tree, viewer, [Answer(a.question, a.option) for a in body.answers])
         question = None
         if step.question is not None:
@@ -378,12 +386,12 @@ def pick_pool(cat: Catalog, viewer: Viewer, body: PickIn) -> tuple[list[int], st
     return list(step.pool), step.prefer
 
 
-def add_pick_routes(app: FastAPI, theatre: Theatre, store: Store, picker: Picker) -> None:
+def add_pick_routes(app: FastAPI, theatre: Theatre, store: Store, picker: Picker, topics_on: bool) -> None:
     @app.post("/api/pick")
     def pick(body: PickIn, request: Request, response: Response) -> PickOut:
         """One film from the pool the answers leave, checked against the viewer's topics before it is shown."""
         cat = theatre.showing().catalog
-        viewer = resolve_held(request, store, body.viewer)
+        viewer = resolve_held(request, store, body.viewer, topics_on)
         left, prefer = pick_pool(cat, viewer, body)
         films = cat.table.films
         ratings = dict(zip(films.index.tolist(), films.rating.fillna(0.0).tolist(), strict=True))

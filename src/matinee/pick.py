@@ -251,7 +251,7 @@ def candidates(pool: Sequence[int], seen: Sequence[int], ratings: Mapping[int, f
 
 @dataclass
 class Picker:
-    dtdd: Dtdd
+    dtdd: Dtdd | None  # None without a DoesTheDogDie key: no viewer then carries topics, so nothing is looked up
     cap: DeviceCap
     rng: random.Random = field(default_factory=random.SystemRandom)
     ids: ItemIds = field(default_factory=ItemIds)
@@ -270,21 +270,27 @@ class Picker:
         self, films: Sequence[int], topics: frozenset[int], device: str, first: frozenset[int] = frozenset()
     ) -> Pick:
         """Draw, check and replace until one film is clear or cannot be checked, PICK_TRIES fail, or none is left."""
+        draws = self._draws(films, first)
+        if not topics or self.dtdd is None:
+            film = next(draws, None)
+            return Pick(None, exhausted=True) if film is None else Pick(film)
+        return self._checked(draws, len(films), topics, device, self.dtdd)
+
+    def _checked(self, draws: Iterator[int], size: int, topics: frozenset[int], device: str, dtdd: Dtdd) -> Pick:
+        """Look each drawn film up until one is clear or cannot be checked, PICK_TRIES fail, or none is left."""
         swapped: int | None = None
         swapped_hits: tuple[Hit, ...] = ()
         turned: list[int] = []
-        for film in self._draws(films, first):
-            if not topics:
-                return Pick(film)
+        for film in draws:
             if not self.cap.take(device):
                 return Pick(film, swapped, swapped_hits, unchecked="cap", turned=tuple(turned), item=self._item(film))
-            verdict = look_up(self.dtdd, film, topics, self.ids)
+            verdict = look_up(dtdd, film, topics, self.ids)
             if not verdict.hits:
                 item = self._item(film) if verdict.unchecked else None
                 return Pick(film, swapped, swapped_hits, unchecked=verdict.unchecked, turned=tuple(turned), item=item)
             if swapped is None:
                 swapped, swapped_hits = film, verdict.hits
             turned.append(film)
-            if len(turned) >= PICK_TRIES and len(turned) < len(films):
+            if len(turned) >= PICK_TRIES and len(turned) < size:
                 return Pick(None, swapped, swapped_hits, turned=tuple(turned), last=film, last_hits=verdict.hits)
         return Pick(None, swapped, swapped_hits, exhausted=True, turned=tuple(turned))

@@ -13,6 +13,7 @@ import { lightFuse } from "./fuse.js";
 import { typeLine } from "./type.js";
 import { Wall } from "./wall.js";
 import { viewerTag } from "./viewer.js";
+import { learnOffers, offers } from "./offers.js";
 
 const stage = document.getElementById("stage");
 const wall = new Wall(document.getElementById("wall"));
@@ -104,7 +105,7 @@ function nameTag() {
   const leave = (opts) => leaveTo(() => boot(opts));
   const id = visit.viewer.profile_id;
   return viewerTag({ name: visit.name, avatar: visit.avatar }, avatarsOffered, {
-    editList: () => leave({ screen: "list", profileId: id }),
+    editList: offers.dtdd ? () => leave({ screen: "list", profileId: id }) : null,
     switchProfiles: () => leave({}),
     deleteProfile: async () => {
       const res = await del(`/api/profiles/${id}`);
@@ -245,6 +246,7 @@ async function boot(opts = {}) {
 async function frontDoor(door, opts) {
   if (!door.ok) return problem(door.data, () => boot(opts));
   avatarsOffered = door.data.avatars;
+  learnOffers(door.data);
   stage.classList.remove("revealed");
   stage.classList.add("at-door");
   return new Door({ stage, onEnter: enter }).open({ door: door.data, ...opts });
@@ -299,6 +301,7 @@ async function start({ request = null, keep = false } = {}) {
     seen: [],
     pool: res.data.pool,
     trees: res.data.options,
+    profileTopics: res.data.checked, // the server's word on whether picks are checked, read afresh every start
   });
   stage.classList.remove("revealed");
   wall.show(visit.pool);

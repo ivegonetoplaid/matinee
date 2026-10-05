@@ -414,3 +414,9 @@ def test_a_question_footnote_reaches_the_page(site: Any, tmp_path: Path) -> None
         client.post("/api/walk", json={"tree": "west", "viewer": seat_for(client)}).json()["question"]["footnote"]
         == tree["questions"][0]["footnote"]
     )
+
+
+def test_the_first_question_says_whether_this_viewers_picks_are_checked(site: Any) -> None:
+    client, _, _ = site
+    assert client.post("/api/first", json={"viewer": seat_for(client, [188])}).json()["checked"] is True
+    assert client.post("/api/first", json={"viewer": seat_for(client)}).json()["checked"] is False

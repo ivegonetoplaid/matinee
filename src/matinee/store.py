@@ -303,6 +303,11 @@ class Store:
             row = db.execute("SELECT * FROM profiles WHERE id = ?", (profile_id,)).fetchone()
         return self._profile(row)
 
+    def clear_topics(self) -> int:
+        """Clear every profile's DoesTheDogDie topics; returns how many profiles held any."""
+        with closing(self._connect()) as db, db:
+            return db.execute("UPDATE profiles SET topics = '[]' WHERE topics != '[]'").rowcount
+
     def set_avatar(self, profile_id: int, avatar: str | None, by: Sequence[str]) -> Profile:
         """Set the avatar of a profile `by` holds, or clear it for initials; refuses an avatar not offered."""
         avatar = clean_avatar(avatar)
