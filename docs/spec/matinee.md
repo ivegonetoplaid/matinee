@@ -669,9 +669,10 @@ first rebuild. A failed nightly rebuild leaves the previous table in place.
 3. It writes the table from the library and the records already held, before
    any fetch, so the library can be picked at once on a first start.
 4. It refreshes the TMDB record of every film the shipped labels name and every
-   library film with a TMDB id, most-voted first. With no record held (a first
-   start) the order is TMDB's list of films by vote count (its 500 pages, read
-   then and never stored); otherwise it is the vote counts in the records held.
+   library film with a TMDB id, most-voted first. With no vote count held (a
+   first start, or records kept before vote counts were) the order is TMDB's
+   list of films by vote count (its 500 pages, read then and never stored);
+   otherwise it is the vote counts in the records held.
    Films outside the order come last; when the order cannot be read the rebuild
    fetches by TMDB id and logs why. One GET per film, at `TMDB_RATE` requests a
    second (30 by default), with up to that many requests in flight at once (32

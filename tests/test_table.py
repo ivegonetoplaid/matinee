@@ -618,6 +618,8 @@ def test_a_first_start_fetches_in_tmdbs_order_by_votes_and_films_outside_it_last
     held = {1: voted_record(1, 10), 2: voted_record(2, 50), 4: voted_record(4, 0)}
     assert fetch_order([3, 1, 2, 4], held, never) == [2, 1, 4, 3]
     assert fetch_order([], {}, never) == []
+    old = {1: voted_record(1, 0), 2: replace(voted_record(2, 0), vote_count=None)}  # kept before vote counts
+    assert fetch_order([1, 2, 3], old, lambda: [3, 2]) == [3, 2, 1]  # an upgrade reads TMDB's order too
 
 
 def test_the_vote_list_reads_its_pages_in_order_and_keeps_those_before_one_that_fails(

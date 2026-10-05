@@ -359,13 +359,14 @@ def most_voted(
 
 
 def fetch_order(ids: Iterable[int], have: Mapping[int, TmdbFilm], voted: Callable[[], list[int]]) -> list[int]:
-    """`ids` most-voted first. Held records give their vote counts; with none held (a first start) the order is
-    TMDB's list by vote count, which `voted` reads. Films outside the order come last, by id."""
+    """`ids` most-voted first. Held records give their vote counts; with no vote count held (a first start, or
+    records kept before vote counts were) the order is TMDB's list by vote count, which `voted` reads. Films
+    outside the order come last, by id."""
     ids = list(ids)
     if not ids:
         return []
     rank: dict[int, int] = {}
-    if have:
+    if any(r.vote_count for r in have.values()):
         rank = {t: -(have[t].vote_count or 0) for t in ids if t in have}
     else:
         for i, t in enumerate(voted()):
