@@ -210,19 +210,36 @@ Source: TMDB API Terms of Use, https://www.themoviedb.org/api-terms-of-use
 
 ### DoesTheDogDie
 
-<!-- TODO: cite DoesTheDogDie's published terms. https://www.doesthedogdie.com/terms
-refused automated fetches (HTTP 403) on 2026-10-05, so no term below is quoted from it. -->
+Source: DoesTheDogDie API Terms of Service, https://www.doesthedogdie.com/api/terms
+(version 1.0, effective 2026-08-07), which incorporate its Terms of Use,
+https://www.doesthedogdie.com/terms (last modified 2026-08-07).
 
-DoesTheDogDie's terms govern its API and its data. The rules below are the ones
-Matinee holds itself to; they are not a quotation of those terms.
-
-- **One film at a time.** Look a film up only when it has been drawn for a pick.
-  Never fetch ahead, never fetch in bulk, never build a score from its data.
-- **Keep no votes.** Matinee remembers a film's item id (or that it has none)
-  and the topic list for at most 30 days, and nothing else.
-- **Credit it.** "Powered by DoesTheDogDie.com", linked to
-  `https://www.doesthedogdie.com`, appears wherever its data does.
-- **Its free tier is non-commercial.**
+- **One film at a time.** The terms forbid systematically downloading,
+  harvesting or extracting the data, or reconstructing any substantial part of
+  it (section 3). Look a film up only when it has been drawn for a pick. Never
+  fetch ahead and never fetch in bulk.
+- **Cache only for speed, and for at most 30 days.** Data may be cached locally
+  only to improve the application's performance, must be refreshed at least
+  every 30 days, and must never stand in for querying the API (section 3).
+  Matinee keeps a film's item id (or that it has none) and the topic list in
+  memory for at most 30 days, and nothing else. A restart clears both.
+- **Build nothing from it.** The terms forbid using the API to train or improve
+  any model, classifier or automated detection system (section 3). Never build
+  a score from its data and never keep its votes.
+- **Never claim it is complete.** The data must not be presented as complete,
+  verified or guaranteed (section 13.3). Matinee's About page says the check is
+  best effort and a film nobody has voted on cannot be checked.
+- **Credit it.** "Powered by DoesTheDogDie.com", visible and linked to
+  `https://www.doesthedogdie.com`, wherever its data is shown (section 6).
+- **One key per installation.** Each household uses its own key; the terms
+  forbid letting anyone else use your credentials (section 3). Matinee stays
+  under the free tier's published rate.
+- **Its free tier is non-commercial.** It may not serve anything that charges
+  its users, earns from advertising, sponsorship or data, or runs for a
+  for-profit business (section 9.1).
+- **The key's holder carries the terms.** Whoever sets `DTDD_API_KEY` has
+  accepted these terms for their installation, including keeping a privacy
+  policy for it (section 2.4(b)).
 
 ### MovieLens tag genome
 

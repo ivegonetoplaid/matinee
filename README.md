@@ -177,7 +177,7 @@ until a rebuild catches up.
 
 Matinee is opinionated about one thing: where films belong. Each film sits
 behind the doors it truly fits, and no more. When every film may belong
-everywhere, as with TMDB's keywords, a horror search turns up a cartoon. We
+everywhere, as with TMDB's keywords, a horror search turns up a cartoon. I
 would rather be wrong now and then than vague all the time.
 
 Disagree with a call? Override it on your own install: your Matinee will sort

@@ -134,7 +134,7 @@ class ItemIds:
     """Which DoesTheDogDie item each looked-up TMDB film is (None: it has none), each kept ID_KEEP_S.
 
     NOTE: held in memory, so a restart forgets it and each film's next lookup searches
-    again. Bounded by the films in the library; move it into the store if restarts
+    again. Bounded by the films Matinee offers; move it into the store if restarts
     become frequent.
     """
 
