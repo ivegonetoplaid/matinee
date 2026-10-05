@@ -105,7 +105,9 @@ def world(tmp_path: Path) -> tuple[TestClient, FakeLibrary, Clock, Theatre]:
     return make_world(tmp_path)
 
 
-def make_world(tmp_path: Path, images: ImageSource = "jellyfin") -> tuple[TestClient, FakeLibrary, Clock, Theatre]:
+def make_world(
+    tmp_path: Path, images: ImageSource = "jellyfin", seerr: str | None = "https://seerr.invalid"
+) -> tuple[TestClient, FakeLibrary, Clock, Theatre]:
     data = write_data(tmp_path / "data")
     write_film_table(tmp_path / "films.sqlite")
     library, clock = FakeLibrary(), Clock()
@@ -114,7 +116,7 @@ def make_world(tmp_path: Path, images: ImageSource = "jellyfin") -> tuple[TestCl
         return load_catalog(table, data, reference())
 
     theatre = Theatre(library, tmp_path / "films.sqlite", clock=clock, catalog_of=catalog_of)
-    config = Config(SECRET_URL, SECRET_KEY, tmp_path, "https://seerr.invalid", "d" * 16, images=images)
+    config = Config(SECRET_URL, SECRET_KEY, tmp_path, seerr, "d" * 16, images=images)
     return TestClient(create_app(config, theatre, Store(tmp_path / "store.sqlite"), Dtdd("k"))), library, clock, theatre
 
 
@@ -147,7 +149,8 @@ def test_film_card_reads_the_synopsis_live(world: Any) -> None:
         "year": 1975,
         "runtime_min": 85,
         "synopsis": "A stranger rides into town.",
-        "seerr": "https://seerr.invalid/movie/5",
+        "link": "https://seerr.invalid/movie/5",
+        "link_to": "seerr",
         "backdrop_path": None,  # the media server is the image source
     }
     assert ("synopsis", "f" * 32) in library.calls
@@ -380,3 +383,9 @@ def test_the_install_manifest_names_icons_that_exist() -> None:
     assert manifest["start_url"] == "/" and manifest["icons"]
     for icon in manifest["icons"]:
         assert (STATIC / icon["src"].removeprefix("/static/")).is_file(), icon["src"]
+
+
+def test_without_seerr_every_pick_links_to_its_tmdb_page(tmp_path: Path) -> None:
+    client, _, _, _ = make_world(tmp_path, seerr=None)
+    card = client.get("/api/film/5").json()
+    assert (card["link"], card["link_to"]) == ("https://www.themoviedb.org/movie/5", "tmdb")

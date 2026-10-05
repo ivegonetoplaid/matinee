@@ -147,6 +147,14 @@ async function showNoFilm(result, frame, actions) {
   );
 }
 
+// The pick's link reads by where it goes: the configured Seerr, or TMDB without one.
+function moreOn(info) {
+  if (info.link_to === "seerr") {
+    return h("a", { class: "action petrol", href: info.link, target: "_blank", rel: "noopener noreferrer" }, "More on Seerr ↗");
+  }
+  return h("a", { class: "action petrol", href: info.link, target: "_blank", rel: "noopener noreferrer" }, "More on TMDB ↗");
+}
+
 // What sits under the line on the resting page. The actions come straight after the line, which keeps
 // four lines of room whatever its words, so "Not that one" sits in the same place for every film. The
 // swap reason's credit, `note`, moves beneath them. The answers so far are in the trail at the foot of
@@ -156,7 +164,7 @@ function choices(info, film, result, actions, note) {
     "div",
     { class: "choices" },
     h("button", { class: "action rose", type: "button", onclick: actions.notThatOne }, "Not that one"),
-    info.seerr ? h("a", { class: "action petrol", href: info.seerr, target: "_blank", rel: "noopener noreferrer" }, "More on Seerr ↗") : null,
+    info.link ? moreOn(info) : null,
     h("button", { class: "action cream start-over", type: "button", onclick: actions.startOver }, "Start over"),
   );
   return [buttons, note ? firstPickReveal(result, note) : null, actions.noteLink(film)].filter(Boolean);

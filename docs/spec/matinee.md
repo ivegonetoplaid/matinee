@@ -1055,7 +1055,7 @@ would hand one device's profiles to another.
 | GET | `/static/…` | scripts, styles, self-hosted fonts, icons, pails, avatars, the locked door's art, manifest (`Cache-Control: no-cache`, so a deploy is never seen half-applied) |
 | GET | `/img/{kind}/{tmdb}/{size}` | a poster or backdrop, read from the media server |
 | GET | `/api/pictures` | the image source, and under `tmdb` the TMDB poster path of every live film that has one (section 11.5) |
-| GET | `/api/film/{tmdb}` | title, year, runtime, synopsis and the Seerr link for one film, and under `tmdb` its TMDB backdrop path |
+| GET | `/api/film/{tmdb}` | title, year, runtime, synopsis and the pick's link for one film (`link`, and `link_to`: `seerr` or `tmdb`), and under `tmdb` its TMDB backdrop path |
 | GET | `/api/door` | the film count, every profile (marking those this device holds), the avatars offered, and whether a DoesTheDogDie key is set |
 | POST | `/api/profiles` | create a profile and issue this device a token |
 | POST | `/api/profiles/{id}/open` | open a profile by PIN, or at once when held or PIN-less |
@@ -1518,7 +1518,9 @@ as written. A phone is a viewport 600 px wide or less.
   160 px), while the backdrop rises on the right, fading into the title, year
   and synopsis, shown without a tap. The left column hangs from the top of the
   screen: the line, then `Not that one`, "More on Seerr ↗" (a link to the
-  film's page on the configured Seerr, opening a new tab) and `Start over`,
+  film's page on the configured Seerr, opening a new tab; without a Seerr it
+  reads "More on TMDB ↗" and opens `https://www.themoviedb.org/movie/<tmdb>`,
+  for every pick) and `Start over`,
   actions in one row where the column is wide enough (from about 1,320 px of
   window), wrapping beneath one another below that, then the
   note action. The left column takes a third of the row, widened toward
@@ -1529,7 +1531,7 @@ as written. A phone is a viewport 600 px wide or less.
   On a phone Matinee's words keep the foot of the pick screen, which is about a
   third of the screen (36 per cent of its height, never under 270 px, and
   32 px more for its fades) and holds,
-  from its top, the line, `Not that one` and "More on Seerr ↗", the note
+  from its top, the line, `Not that one` and "More on Seerr ↗" (or TMDB), the note
   action, then the trail on one line, each crumb cut to 16 characters, and the
   credits. The foot band stands behind the trail and the credits and rises
   48 px behind Matinee's words.
@@ -1699,7 +1701,7 @@ as written. A phone is a viewport 600 px wide or less.
 | `MATINEE_STATE` | server, rebuild | the state directory |
 | `MATINEE_JELLYFIN_URL` | server, rebuild | the media server's address |
 | `JELLYFIN_API_KEY` | server, rebuild | the media server's key |
-| `MATINEE_SEERR_URL` | server | the base of the "More on Seerr ↗" action's address |
+| `MATINEE_SEERR_URL` | server, optional | the base of the "More on Seerr ↗" action's address; unset or empty means "More on TMDB ↗" |
 | `DTDD_API_KEY` | server, optional | the DoesTheDogDie key; unset or empty means no list of topics and no check (section 8) |
 | `TMDB_READ_TOKEN` | rebuild | the TMDB read token |
 | `MATINEE_DOOR_WORD` | server, optional | the door word (section 7.2); unset or empty means no lock |

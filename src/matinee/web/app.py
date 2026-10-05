@@ -15,7 +15,7 @@ import time
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.responses import FileResponse, JSONResponse
@@ -67,6 +67,7 @@ IMAGE_WIDTHS: dict[ImageKind, dict[str, int]] = {
 # own browser may keep one: a shared cache would hand it to a device the locked door has not admitted.
 IMAGE_CACHE = f"private, max-age={30 * 24 * 3600}"
 TMDB_IMAGES = "https://image.tmdb.org"
+TMDB_FILM = "https://www.themoviedb.org/movie"
 UNREACHABLE = "I can't reach the film library right now."
 NOT_READY = "Matinee isn't ready: its film data needs rebuilding."
 NOT_FOUND = "I don't have that one."
@@ -78,7 +79,8 @@ class FilmCard(BaseModel):
     year: int | None
     runtime_min: int | None
     synopsis: str | None
-    seerr: str
+    link: str  # the film's page on the configured Seerr, or on TMDB without one
+    link_to: Literal["seerr", "tmdb"]
     backdrop_path: str | None  # TMDB's path for the backdrop, given only when TMDB is the image source
 
 
@@ -152,7 +154,14 @@ def add_error_handlers(app: FastAPI, clock: Callable[[], float]) -> None:
         return JSONResponse(status_code=status, content=body)
 
 
-def add_film_routes(app: FastAPI, theatre: Theatre, seerr: str, images: ImageSource) -> None:
+def film_link(seerr: str | None, tmdb: int) -> tuple[str, Literal["seerr", "tmdb"]]:
+    """The pick's "More on" link: the film's Seerr page where Seerr is configured, else its TMDB page."""
+    if seerr:
+        return f"{seerr}/movie/{tmdb}", "seerr"
+    return f"{TMDB_FILM}/{tmdb}", "tmdb"
+
+
+def add_film_routes(app: FastAPI, theatre: Theatre, seerr: str | None, images: ImageSource) -> None:
     @app.get("/img/{kind}/{tmdb}/{size}")
     def image(kind: str, tmdb: int, size: str) -> Response:
         image_kind: ImageKind = "backdrop" if kind == "backdrop" else "poster"
@@ -183,13 +192,15 @@ def add_film_routes(app: FastAPI, theatre: Theatre, seerr: str, images: ImageSou
         except LibraryError as exc:
             log.warning("synopsis for tmdb %s: %s", tmdb, exc)
             raise LibraryUnavailable("the library cannot be reached") from exc
+        link, link_to = film_link(seerr, tmdb)
         return FilmCard(
             tmdb=tmdb,
             title=film.title,
             year=film.year,
             runtime_min=film.runtime_min,
             synopsis=synopsis,
-            seerr=f"{seerr}/movie/{tmdb}",
+            link=link,
+            link_to=link_to,
             backdrop_path=film.backdrop_path if images == "tmdb" else None,
         )
 
