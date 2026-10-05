@@ -116,6 +116,22 @@ def test_while_the_library_cannot_be_used_no_source_is_asked_or_obeyed(tmp_path:
     assert first["source"] is None and set(first["pool"]) == {40}  # the films the labels name
     walked = client.post("/api/walk", json={"tree": "west", "viewer": viewer, "source": "held"})
     assert walked.status_code == 200 and set(walked.json()["pool"]) == {40}  # "held" would leave nothing
+    notice = "I can't reach your Jellyfin right now, so I'm picking from every film I know"
+    assert walked.json()["fallback"].startswith(notice)  # never silent: the page shows it in the strip
+    doors = client.post("/api/first", json={"viewer": viewer, "source": "new"}).json()
+    picked = client.post("/api/pick", json={"viewer": viewer, "source": "held"}).json()
+    assert doors["fallback"].startswith(notice) and picked["fallback"].startswith(notice)
+    assert first["fallback"] is None  # no source answer yet: the setup note says it
+    every = client.post("/api/walk", json={"tree": "west", "viewer": viewer, "source": "all"}).json()
+    assert every["fallback"] is None  # "all" loses nothing
+
+
+def test_a_walk_says_nothing_of_a_fallback_while_the_library_answers(tmp_path: Path) -> None:
+    client, _ = site(tmp_path, FakeLibrary(held=list(HELD)))
+    viewer = seat_for(client)
+    walked = client.post("/api/walk", json={"tree": "west", "viewer": viewer, "source": "held"}).json()
+    picked = client.post("/api/pick", json={"viewer": viewer, "source": "new"}).json()
+    assert walked["fallback"] is None and picked["fallback"] is None
 
 
 def test_with_no_library_the_source_question_is_never_asked(tmp_path: Path) -> None:

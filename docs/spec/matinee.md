@@ -105,6 +105,15 @@ none, so the question is not asked. Matinee types "Right this way, <name>." and
   asked and a sent `source` is ignored: the walk starts at the doors and draws
   from every film offered (the films the labels name, while the library cannot
   be used).
+- When the library stops answering after a walk was given `held` or `new`, the
+  walk goes on among every film offered, and never silently: `POST /api/first`,
+  `POST /api/walk` and `POST /api/pick` carry `fallback`, "I can't reach your
+  <server> right now, so I'm picking from every film I know, in your library or
+  not, until it's back.", with `Jellyfin` or `Plex` for <server>. The page shows
+  it in the warning strip (section 12). An answer of `all` loses nothing and
+  carries none, and neither does a walk the source question was not asked of,
+  whose setup note said so. A response without it takes it down, so the strip
+  clears when the library answers again or a new walk starts.
 - The wording is data in `data/first_question.json` (`source`). A file whose
   answer names no source is refused.
 
@@ -1284,9 +1293,9 @@ would hand one device's profiles to another.
 | DELETE | `/api/profiles/{id}` | delete a held profile, its topics and its tokens; answers its name |
 | GET | `/api/topics` | DoesTheDogDie's topic list, with its credit; only with a DoesTheDogDie key |
 | GET | `/api/quips` | the pick's lines and their caps (section 2.7) |
-| POST | `/api/first` | the source question while it is asked and no `source` is sent (`source`), the first question for this viewer within the source, the pool behind it, and whether this viewer's picks are checked against DoesTheDogDie (`checked`) |
-| POST | `/api/walk` | the next question and the pool, given a tree and answers |
-| POST | `/api/pick` | one checked film from the pool the answers leave |
+| POST | `/api/first` | the source question while it is asked and no `source` is sent (`source`), the first question for this viewer within the source, the pool behind it, and whether this viewer's picks are checked against DoesTheDogDie (`checked`); `fallback` while a `held` or `new` answer cannot be kept (section 2.0) |
+| POST | `/api/walk` | the next question and the pool, given a tree and answers; `fallback` as for `/api/first` |
+| POST | `/api/pick` | one checked film from the pool the answers leave; `fallback` as for `/api/first` |
 | POST | `/api/notes` | keep one note on a pick for a held profile |
 
 ### 11.2 What the browser may name
@@ -1702,6 +1711,11 @@ as written. A phone is a viewport 600 px wide or less.
   page loads or returns to the door. Before the door word is given, the page
   asks for neither.
   (`src/matinee/web/static/js/main.js::showWarning`)
+- **The fallback notice** (section 2.0) stands in the same strip, after the
+  stale-data warning when both stand. Each walk response sets it: one carrying
+  `fallback` shows it, one without takes it down and leaves the stale-data
+  warning as it was.
+  (`src/matinee/web/static/js/main.js::showFallback`)
 - **The viewer.** Inside the theatre the top bar holds the wordmark at the left
   and the viewer at the right: the profile's mark in a 40 px rounded square and
   its name in the wordmark's face, smaller, in cream, on a dark backing so it
@@ -2218,11 +2232,13 @@ symbol when one does not match.
 | `src/matinee/engine.py::opening_pool` | `src/matinee/engine.py:438` | 2026-10-05 |
 | `src/matinee/engine.py::_served` (apart films stay out until their answer) | `src/matinee/engine.py:446` | 2026-10-05 |
 | `src/matinee/engine.py::_asked` / `Asked.footnote` (footnote and asterisks dropped with the apart answer) | `src/matinee/engine.py:467` | 2026-10-05 |
-| `src/matinee/web/viewing.py::asks_source` (asked while the library can be used and both pools hold a film) | `src/matinee/web/viewing.py:201` | 2026-10-05 |
-| `src/matinee/web/viewing.py::source_for` (before an answer, the library's films; unasked, every film) | `src/matinee/web/viewing.py:208` | 2026-10-05 |
-| `src/matinee/web/viewing.py::SourceQuestionOut` / `SourceOptionOut` | `src/matinee/web/viewing.py:103` | 2026-10-05 |
-| `src/matinee/web/viewing.py::everything` (the first question's pool) | `src/matinee/web/viewing.py:182` | 2026-10-05 |
-| `src/matinee/web/viewing.py::QuestionOut.footnote` | `src/matinee/web/viewing.py:79` | 2026-10-05 |
+| `src/matinee/web/viewing.py::asks_source` (asked while the library can be used and both pools hold a film) | `src/matinee/web/viewing.py:205` | 2026-10-05 |
+| `src/matinee/web/viewing.py::source_for` (before an answer, the library's films; unasked, every film) | `src/matinee/web/viewing.py:212` | 2026-10-05 |
+| `src/matinee/web/viewing.py::fallback_for` (`held` or `new` while the library does not answer) | `src/matinee/web/viewing.py:220` | 2026-10-05 |
+| `src/matinee/web/setup.py::fallback_line` (the fallback notice's wording) | `src/matinee/web/setup.py:63` | 2026-10-05 |
+| `src/matinee/web/viewing.py::SourceQuestionOut` / `SourceOptionOut` | `src/matinee/web/viewing.py:105` | 2026-10-05 |
+| `src/matinee/web/viewing.py::everything` (the first question's pool) | `src/matinee/web/viewing.py:186` | 2026-10-05 |
+| `src/matinee/web/viewing.py::QuestionOut.footnote` | `src/matinee/web/viewing.py:80` | 2026-10-05 |
 | `src/matinee/engine.py::_plain_mask` / `_range_mask` (unknown values pass) | `src/matinee/engine.py:251` | 2026-10-05 |
 | `src/matinee/engine.py::walk_ends` / `reachable` | `src/matinee/engine.py:523` | 2026-10-05 |
 | `data/trees/comedy.json` room question (ceilings) | `data/trees/comedy.json:7` | 2026-10-05 |
@@ -2441,9 +2457,9 @@ symbol when one does not match.
 | `src/matinee/store.py::NOTE_SELECT` / `FiledNote` / `one_line` / `MAX_REASON` | `src/matinee/store.py:67` | 2026-10-05 |
 | `src/matinee/store.py::Store.note` | `src/matinee/store.py:320` | 2026-10-05 |
 | `src/matinee/store.py::Store.notes` / `filed` / `rule` | `src/matinee/store.py:340` | 2026-10-05 |
-| `src/matinee/web/viewing.py::NoteOut` / `NoteIn` (request caps) | `src/matinee/web/viewing.py:131` | 2026-10-05 |
-| `src/matinee/web/viewing.py::NOTED` / `answer_says` / `check_belongs` | `src/matinee/web/viewing.py:386` | 2026-10-05 |
-| `src/matinee/web/viewing.py::add_note_routes` (`POST /api/notes`; a film Matinee does not offer now is refused) | `src/matinee/web/viewing.py:409` | 2026-10-05 |
+| `src/matinee/web/viewing.py::NoteOut` / `NoteIn` (request caps) | `src/matinee/web/viewing.py:134` | 2026-10-05 |
+| `src/matinee/web/viewing.py::NOTED` / `answer_says` / `check_belongs` | `src/matinee/web/viewing.py:402` | 2026-10-05 |
+| `src/matinee/web/viewing.py::add_note_routes` (`POST /api/notes`; a film Matinee does not offer now is refused) | `src/matinee/web/viewing.py:425` | 2026-10-05 |
 | `tools/notes.py::Names` / `load_names` (titles and door labels) | `tools/notes.py:39` | 2026-10-05 |
 | `tools/notes.py::printable` | `tools/notes.py:65` | 2026-10-05 |
 | `tools/notes.py::what_was_wrong` / `describe` | `tools/notes.py:71` | 2026-10-05 |
@@ -2479,12 +2495,12 @@ symbol when one does not match.
 | `src/matinee/pick.py::Picker.pick` (`PICK_TRIES`) | `src/matinee/pick.py:289` | 2026-10-05 |
 | `src/matinee/pick.py::Pick` (`last` / `last_hits`: the third film of three in a row; `item`: an unchecked film's item) | `src/matinee/pick.py:61` | 2026-10-05 |
 | `src/matinee/pick.py::Picker._item` (the item as held after any lookup) | `src/matinee/pick.py:279` | 2026-10-05 |
-| `src/matinee/web/viewing.py::device_id` / `DEVICE_COOKIE` | `src/matinee/web/viewing.py:260` | 2026-10-05 |
-| `src/matinee/web/viewing.py::SWAP_LINE` / `UNCHECKED_LINES` / `EXHAUSTED` / `TIRED` / `PICKED` | `src/matinee/web/viewing.py:238` | 2026-10-05 |
-| `src/matinee/web/viewing.py::LastOut` / `PickOut` (`last`, `dtdd_item`) | `src/matinee/web/viewing.py:161` | 2026-10-05 |
-| `src/matinee/web/viewing.py::_swap_out` / `_last_out` / `pick_out` | `src/matinee/web/viewing.py:278` | 2026-10-05 |
-| `src/matinee/web/viewing.py::pick_pool` | `src/matinee/web/viewing.py:426` | 2026-10-05 |
-| `src/matinee/web/viewing.py::add_pick_routes` | `src/matinee/web/viewing.py:436` | 2026-10-05 |
+| `src/matinee/web/viewing.py::device_id` / `DEVICE_COOKIE` | `src/matinee/web/viewing.py:273` | 2026-10-05 |
+| `src/matinee/web/viewing.py::SWAP_LINE` / `UNCHECKED_LINES` / `EXHAUSTED` / `TIRED` / `PICKED` | `src/matinee/web/viewing.py:251` | 2026-10-05 |
+| `src/matinee/web/viewing.py::LastOut` / `PickOut` (`last`, `dtdd_item`) | `src/matinee/web/viewing.py:164` | 2026-10-05 |
+| `src/matinee/web/viewing.py::_swap_out` / `_last_out` / `pick_out` | `src/matinee/web/viewing.py:291` | 2026-10-05 |
+| `src/matinee/web/viewing.py::pick_pool` | `src/matinee/web/viewing.py:442` | 2026-10-05 |
+| `src/matinee/web/viewing.py::add_pick_routes` | `src/matinee/web/viewing.py:452` | 2026-10-05 |
 | `tests/test_pick.py::test_three_in_a_row_hold_the_third_film_with_its_own_topic` / `test_a_pick_that_asks_to_skip_the_check_is_still_checked` | `tests/test_pick.py:555` | 2026-10-05 |
 | `tests/test_without_dtdd.py::test_stored_topics_stay_in_the_store_and_change_no_walk_or_pick` | `tests/test_without_dtdd.py:59` | 2026-10-05 |
 
@@ -2497,7 +2513,7 @@ symbol when one does not match.
 | `src/matinee/web/config.py::_server` / `_seerr` / `_images` | `src/matinee/web/config.py:103` | 2026-10-05 |
 | `src/matinee/web/config.py::ImageSource` (`POSTERS_FROM`: `server` or `tmdb`) | `src/matinee/web/config.py:29` | 2026-10-05 |
 | `src/matinee/web/setup.py::SetupNote` (`warning` while the data is stale) | `src/matinee/web/setup.py:49` | 2026-10-05 |
-| `src/matinee/web/setup.py::note` / `unreachable` / `rebuild_lines` / `stalled` | `src/matinee/web/setup.py:89` | 2026-10-05 |
+| `src/matinee/web/setup.py::note` / `unreachable` / `rebuild_lines` / `stalled` | `src/matinee/web/setup.py:97` | 2026-10-05 |
 | `src/matinee/web/setup.py::HEADING` / `MEANWHILE` / `STOPPED` / `STALE` / `STALLED_AFTER` (every line's words) | `src/matinee/web/setup.py:20` | 2026-10-05 |
 | `src/matinee/web/app.py::setup_faults` (the configured, start-up and run-time faults) | `src/matinee/web/app.py:452` | 2026-10-05 |
 | `src/matinee/web/app.py::add_setup_route` (`GET /api/setup`) | `src/matinee/web/app.py:466` | 2026-10-05 |
@@ -2538,29 +2554,30 @@ symbol when one does not match.
 
 | Handle | Where | Verified |
 |---|---|---|
-| `src/matinee/web/static/js/main.js::boot` / `frontDoor` / `lockedDoor` (`GET /api/admission` first, then the setup note) | `src/matinee/web/static/js/main.js:301` | 2026-10-05 |
-| `src/matinee/web/static/js/main.js::saidSetup` / `setupNote` (once per page load with a way in; every time without) | `src/matinee/web/static/js/main.js:271` | 2026-10-05 |
-| `src/matinee/web/static/js/main.js::showWarning` (the stale-data strip; the stage starts beneath it) | `src/matinee/web/static/js/main.js:254` | 2026-10-05 |
-| `src/matinee/web/static/js/main.js::start` (the source question, or the doors; nothing carried from the last walk) | `src/matinee/web/static/js/main.js:361` | 2026-10-05 |
-| `src/matinee/web/static/js/main.js::chooseSource` / `doors` / `showFirst` | `src/matinee/web/static/js/main.js:392` | 2026-10-05 |
+| `src/matinee/web/static/js/main.js::boot` / `frontDoor` / `lockedDoor` (`GET /api/admission` first, then the setup note) | `src/matinee/web/static/js/main.js:309` | 2026-10-05 |
+| `src/matinee/web/static/js/main.js::saidSetup` / `setupNote` (once per page load with a way in; every time without) | `src/matinee/web/static/js/main.js:278` | 2026-10-05 |
+| `src/matinee/web/static/js/main.js::showWarning` (the stale-data strip; the stage starts beneath it) | `src/matinee/web/static/js/main.js:255` | 2026-10-05 |
+| `src/matinee/web/static/js/main.js::showFallback` (the fallback notice after the stale-data warning) | `src/matinee/web/static/js/main.js:272` | 2026-10-05 |
+| `src/matinee/web/static/js/main.js::start` (the source question, or the doors; nothing carried from the last walk) | `src/matinee/web/static/js/main.js:369` | 2026-10-05 |
+| `src/matinee/web/static/js/main.js::chooseSource` / `doors` / `showFirst` | `src/matinee/web/static/js/main.js:401` | 2026-10-05 |
 | `src/matinee/web/static/js/main.js::crumbs` / `trail` / `lastCrumb` | `src/matinee/web/static/js/main.js:127` | 2026-10-05 |
-| `src/matinee/web/static/js/main.js::goTo` / `step` (`Start` asks again; the source answer shows the doors) | `src/matinee/web/static/js/main.js:415` | 2026-10-05 |
+| `src/matinee/web/static/js/main.js::goTo` / `step` (`Start` asks again; the source answer shows the doors) | `src/matinee/web/static/js/main.js:424` | 2026-10-05 |
 | `src/matinee/web/static/js/main.js::lockStage` / `leaveTo` | `src/matinee/web/static/js/main.js:73` | 2026-10-05 |
 | `src/matinee/web/static/js/main.js::frame` / `ask` (the footnote) | `src/matinee/web/static/js/main.js:156` | 2026-10-05 |
-| `src/matinee/web/static/js/main.js::checking` / `fadeTalk` (`READ_MS`) | `src/matinee/web/static/js/main.js:469` | 2026-10-05 |
-| `src/matinee/web/static/js/main.js::pickLines` | `src/matinee/web/static/js/main.js:500` | 2026-10-05 |
-| `src/matinee/web/static/js/main.js::clearForPick` / `requestPick` / `openPick` | `src/matinee/web/static/js/main.js:521` | 2026-10-05 |
-| `src/matinee/web/static/js/main.js::pickNow` | `src/matinee/web/static/js/main.js:566` | 2026-10-05 |
-| `src/matinee/web/static/js/main.js::pickActions` (`notThatOne`, `rollAgain`, `showPicked`) | `src/matinee/web/static/js/main.js:594` | 2026-10-05 |
-| `src/matinee/web/static/js/main.js::showPicked` ("Just show me what you picked", from the reply held) | `src/matinee/web/static/js/main.js:618` | 2026-10-05 |
-| `src/matinee/web/static/js/main.js::enter` (the start asked at the tap, the first screen after the landing) | `src/matinee/web/static/js/main.js:350` | 2026-10-05 |
+| `src/matinee/web/static/js/main.js::checking` / `fadeTalk` (`READ_MS`) | `src/matinee/web/static/js/main.js:479` | 2026-10-05 |
+| `src/matinee/web/static/js/main.js::pickLines` | `src/matinee/web/static/js/main.js:510` | 2026-10-05 |
+| `src/matinee/web/static/js/main.js::clearForPick` / `requestPick` / `openPick` | `src/matinee/web/static/js/main.js:531` | 2026-10-05 |
+| `src/matinee/web/static/js/main.js::pickNow` | `src/matinee/web/static/js/main.js:576` | 2026-10-05 |
+| `src/matinee/web/static/js/main.js::pickActions` (`notThatOne`, `rollAgain`, `showPicked`) | `src/matinee/web/static/js/main.js:605` | 2026-10-05 |
+| `src/matinee/web/static/js/main.js::showPicked` ("Just show me what you picked", from the reply held) | `src/matinee/web/static/js/main.js:629` | 2026-10-05 |
+| `src/matinee/web/static/js/main.js::enter` (the start asked at the tap, the first screen after the landing) | `src/matinee/web/static/js/main.js:358` | 2026-10-05 |
 | `src/matinee/web/static/js/main.js::topbar` (settles a landed name) | `src/matinee/web/static/js/main.js:97` | 2026-10-05 |
 | `src/matinee/web/static/js/main.js::problem` (`keep`: the failed start's posters; "About Matinee" at the foot) | `src/matinee/web/static/js/main.js:211` | 2026-10-05 |
 | `src/matinee/web/static/js/main.js::countText` (the films left, beside "Just pick one!") | `src/matinee/web/static/js/main.js:43` | 2026-10-05 |
 | `src/matinee/web/static/js/main.js::loadQuips` (asked once admitted) | `src/matinee/web/static/js/main.js:52` | 2026-10-05 |
 | `src/matinee/web/static/js/main.js::wordmark` (a link doing `Start over`) | `src/matinee/web/static/js/main.js:87` | 2026-10-05 |
 | `src/matinee/web/static/js/main.js::nameTag` (the viewer and its menu's actions; no "Edit my list" without a key) | `src/matinee/web/static/js/main.js:106` | 2026-10-05 |
-| `src/matinee/web/static/js/main.js::askPictures` (once per visit) | `src/matinee/web/static/js/main.js:287` | 2026-10-05 |
+| `src/matinee/web/static/js/main.js::askPictures` (once per visit) | `src/matinee/web/static/js/main.js:295` | 2026-10-05 |
 | `src/matinee/web/static/js/offers.js::offers` / `learnOffers` (whether a DoesTheDogDie key is set, from `/api/door`) | `src/matinee/web/static/js/offers.js:4` | 2026-10-05 |
 | `src/matinee/web/static/js/door.js::Door` | `src/matinee/web/static/js/door.js:141` | 2026-10-05 |
 | `src/matinee/web/static/js/door.js::Door.open` (the tiles, a viewer's list, or a new profile) | `src/matinee/web/static/js/door.js:154` | 2026-10-05 |

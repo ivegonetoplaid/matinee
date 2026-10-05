@@ -24,6 +24,7 @@ from matinee.pick import Pick, Picker, candidates
 from matinee.store import Note, Profile, Store
 from matinee.trees import Tree
 from matinee.web.common import COOKIE_AGE_S, Seat, device_tokens, optional_int, problem, seat
+from matinee.web.setup import fallback_line
 from matinee.web.theatre import Showing, Theatre
 
 log = logging.getLogger("matinee.web")
@@ -86,6 +87,7 @@ class StepOut(BaseModel):
     pool: list[int]
     prefer: str | None
     self_destruct: int | None = None
+    fallback: str | None = None  # the walk's source answer cannot be kept: the library stopped answering
 
 
 class FirstOptionOut(BaseModel):
@@ -112,6 +114,7 @@ class FirstOut(BaseModel):
     pool: list[int]
     checked: bool  # this viewer's picks are checked against DoesTheDogDie: a key is set and they hold topics
     source: SourceQuestionOut | None = None  # asked first, before the doors; None when it is not asked
+    fallback: str | None = None
 
 
 class TopicOut(BaseModel):
@@ -177,6 +180,7 @@ class PickOut(BaseModel):
     turned_away: list[int]
     credit: str
     link: str
+    fallback: str | None = None
 
 
 def everything(cat: Catalog, viewer: Viewer) -> list[int]:
@@ -211,6 +215,15 @@ def source_for(answer: Source | None, showing: Showing) -> Source:
     if not asks_source(showing):
         return "all"
     return answer or "held"
+
+
+def fallback_for(answer: Source | None, showing: Showing, server: str | None) -> str | None:
+    """What the page says when a walk's answer of "held" or "new" cannot be kept because the media server stopped
+    answering mid-walk, so the walk goes on among every film offered; None otherwise. An answer of "all" loses
+    nothing, and a walk that never asked the source question was told by the setup note."""
+    if answer not in ("held", "new") or server is None or showing.library != "unreachable":
+        return None
+    return fallback_line(server)
 
 
 def resolve(
@@ -292,7 +305,7 @@ def _last_out(films: Any, result: Pick) -> LastOut | None:
     return LastOut(film=film_ref(films, result.last), topics=names, lines=[gold, cream.format(topic=names[0])])
 
 
-def pick_out(films: Any, result: Pick) -> PickOut:
+def pick_out(films: Any, result: Pick, fallback: str | None = None) -> PickOut:
     return PickOut(
         film=None if result.film is None else film_ref(films, result.film),
         swapped=_swap_out(films, result),
@@ -304,6 +317,7 @@ def pick_out(films: Any, result: Pick) -> PickOut:
         turned_away=list(result.turned),
         credit=DTDD_CREDIT,
         link=DTDD_LINK,
+        fallback=fallback,
     )
 
 
@@ -336,7 +350,7 @@ def add_topic_routes(app: FastAPI, store: Store, dtdd: Dtdd) -> None:
         return seat(store.set_topics(profile_id, body.topics, device_tokens(request)))
 
 
-def add_viewing_routes(app: FastAPI, theatre: Theatre, store: Store, topics_on: bool) -> None:
+def add_viewing_routes(app: FastAPI, theatre: Theatre, store: Store, topics_on: bool, server: str | None) -> None:
     @app.post("/api/first")
     def first(body: FirstIn, request: Request) -> FirstOut:
         """The first screen of a walk: the source question until it is answered (while it is asked), then the doors
@@ -358,6 +372,7 @@ def add_viewing_routes(app: FastAPI, theatre: Theatre, store: Store, topics_on: 
             pool=everything(cat, viewer),
             checked=bool(viewer.topics),
             source=question,
+            fallback=fallback_for(body.source, showing, server),
         )
 
     @app.post("/api/walk")
@@ -380,6 +395,7 @@ def add_viewing_routes(app: FastAPI, theatre: Theatre, store: Store, topics_on: 
             pool=list(step.pool),
             prefer=step.prefer,
             self_destruct=step.self_destruct,
+            fallback=fallback_for(body.source, showing, server),
         )
 
 
@@ -433,7 +449,9 @@ def pick_pool(cat: Catalog, viewer: Viewer, body: PickIn) -> tuple[list[int], st
     return list(step.pool), step.prefer
 
 
-def add_pick_routes(app: FastAPI, theatre: Theatre, store: Store, picker: Picker, topics_on: bool) -> None:
+def add_pick_routes(
+    app: FastAPI, theatre: Theatre, store: Store, picker: Picker, topics_on: bool, server: str | None
+) -> None:
     @app.post("/api/pick")
     def pick(body: PickIn, request: Request, response: Response) -> PickOut:
         """One film from the pool the answers leave, checked against the viewer's topics before it is shown."""
@@ -444,7 +462,8 @@ def add_pick_routes(app: FastAPI, theatre: Theatre, store: Store, picker: Picker
         films = cat.table.films
         ratings = dict(zip(films.index.tolist(), films.rating.fillna(0.0).tolist(), strict=True))
         pool = candidates(left, body.seen, ratings, prefer)
+        note = fallback_for(body.source, showing, server)
         if left and not pool:
-            return pick_out(films, Pick(None, used_up=True))
+            return pick_out(films, Pick(None, used_up=True), note)
         device = device_id(request, response) if viewer.topics else ""
-        return pick_out(films, picker.pick(pool, viewer.topics, device, gentlest(cat, viewer, pool)))
+        return pick_out(films, picker.pick(pool, viewer.topics, device, gentlest(cat, viewer, pool)), note)

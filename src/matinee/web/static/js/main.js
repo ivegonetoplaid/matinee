@@ -251,6 +251,7 @@ async function setupNote(note, onGo) {
 
 // The warning the server gives while the film data breaks TMDB's terms: a strip across the top of every
 // screen, the stage starting beneath it. None given, the strip goes.
+let staleWarning = null;
 function showWarning(text) {
   let strip = document.getElementById("warning");
   if (!text) {
@@ -266,6 +267,12 @@ function showWarning(text) {
   strip.textContent = text;
 }
 
+// The strip during a walk: the stale-data warning, then the walk's own notice when the library stopped
+// answering and its source answer can no longer be kept. A response with no notice takes it down again.
+function showFallback(fallback) {
+  showWarning([staleWarning, fallback].filter(Boolean).join(" "));
+}
+
 // The setup note, when there is something to say and it has not been said this visit; a note with no way in
 // is said every time, since there is nowhere else to go. Resolves to true when the note took the screen.
 async function saidSetup(again) {
@@ -274,7 +281,8 @@ async function saidSetup(again) {
     console.warn("the setup note could not be read; going on without it", res.data);
     return false;
   }
-  showWarning(res.data.warning);
+  staleWarning = res.data.warning;
+  showWarning(staleWarning);
   if (!res.data.lines.length || (setupSeen && res.data.go_on)) return false;
   await setupNote(res.data, again);
   return true;
@@ -384,6 +392,7 @@ async function start({ request = null, keep = false } = {}) {
 
 // The wall and the doors' films behind a walk's first screens.
 function showFirst(res) {
+  showFallback(res.data.fallback);
   Object.assign(visit, { pool: res.data.pool, trees: res.data.options });
   stage.classList.remove("revealed");
   wall.show(visit.pool);
@@ -426,6 +435,7 @@ async function step() {
   const body = { tree: visit.tree, answers: visit.answers, viewer: visit.viewer, source: visit.source };
   const res = await post("/api/walk", body);
   if (!res.ok) return problem(res.data, start);
+  showFallback(res.data.fallback);
   visit.pool = res.data.pool;
   const q = res.data.question;
   // The last answer brings the posters to the size they keep through the pick.
@@ -577,6 +587,7 @@ async function pickNow(opening = "", again = false, destruct = null, posterBack 
   // The viewer took a way back out while the pick was fetched.
   if (!frame.showing.isConnected || wall.round !== round) return undefined;
   if (!res.ok) return problem(res.data, start);
+  showFallback(res.data.fallback);
   markSeen(res.data);
   return showPick({
     stage,

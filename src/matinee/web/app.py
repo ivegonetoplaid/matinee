@@ -531,8 +531,11 @@ def create_app(
         raise ValueError("the picker and the app must agree on whether a DoesTheDogDie key is set")
     if dtdd is not None:
         add_topic_routes(app, store, dtdd)
-    add_viewing_routes(app, theatre, store, topics_on)
-    add_pick_routes(app, theatre, store, picker, topics_on)
+    server = None
+    if config.server is not None:
+        server = SERVER_NAMES[config.server.kind]
+    add_viewing_routes(app, theatre, store, topics_on, server)
+    add_pick_routes(app, theatre, store, picker, topics_on, server)
     add_note_routes(app, theatre, store)
     add_quip_routes(app, lines)
     app.state.config = config

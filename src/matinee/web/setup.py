@@ -60,6 +60,14 @@ def unreachable(server: str) -> str:
     return f"I can't reach your {server} right now. {MEANWHILE}"
 
 
+def fallback_line(server: str) -> str:
+    """The strip a walk shows when its source answer can no longer be kept: the library stopped answering."""
+    return (
+        f"I can't reach your {server} right now, so I'm picking from every film I know, in your library or not,"
+        " until it's back."
+    )
+
+
 def stalled(status: RebuildStatus, now: datetime) -> bool:
     """Whether a running report has stood still past STALLED_AFTER (or names no time), so the rebuild has died."""
     try:
