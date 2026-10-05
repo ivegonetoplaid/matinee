@@ -35,6 +35,9 @@ promises is written down in `docs/spec/matinee.md`.
 
 ## Running
 
+Every setting lives in one file: copy `example.env` to `.env`, uncomment the
+lines you need and fill them in; the file explains each one.
+
 ```sh
 DATA_DIR=... JELLYFIN_URL=... JELLYFIN_API_KEY=... \
 uvicorn --factory matinee.web.main:build --workers 1

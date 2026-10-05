@@ -1882,6 +1882,12 @@ as written. A phone is a viewport 600 px wide or less.
 | `DOOR_GREETING` | server, optional | `show` (the default), `gin`, or the operator's own greeting |
 | `POSTERS_FROM` | server, optional | `server` (the default) or `tmdb`: where the page's pictures come from (section 11.5) |
 
+The repository's `example.env` lists every setting above, each commented out,
+grouped and explained, under a box that tells the installer to copy it to `.env`,
+uncomment what they need, write each value straight after `=` with no spaces or
+quotes, and fill in Jellyfin or Plex but not both. It carries no value for any key,
+token or door word.
+
 No setting carries a `MATINEE_` prefix, and the old names are not read. An
 installation reads one media server: Jellyfin when `JELLYFIN_URL` and
 `JELLYFIN_API_KEY` are set, Plex when `PLEX_URL` and `PLEX_TOKEN` are. No setting
