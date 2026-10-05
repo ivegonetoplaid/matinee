@@ -25,7 +25,7 @@ from matinee.store import Note, Profile, Store
 from matinee.trees import Tree
 from matinee.web.common import COOKIE_AGE_S, Seat, device_tokens, optional_int, problem, seat
 from matinee.web.setup import fallback_line
-from matinee.web.theatre import Showing, Theatre
+from matinee.web.theatre import UNUSABLE, Showing, Theatre
 
 log = logging.getLogger("matinee.web")
 DTDD_CREDIT = "Powered by DoesTheDogDie.com"
@@ -219,11 +219,11 @@ def source_for(answer: Source | None, showing: Showing) -> Source:
 
 def fallback_for(answer: Source | None, showing: Showing, server: str | None) -> str | None:
     """What the page says when a walk's answer of "held" or "new" cannot be kept because the media server stopped
-    answering mid-walk, so the walk goes on among every film offered; None otherwise. An answer of "all" loses
-    nothing, and a walk that never asked the source question was told by the setup note."""
-    if answer not in ("held", "new") or server is None or showing.library != "unreachable":
+    answering or turned down the key mid-walk, so the walk goes on among every film offered; None otherwise. An
+    answer of "all" loses nothing, and a walk that never asked the source question was told by the setup note."""
+    if answer not in ("held", "new") or server is None or showing.library not in UNUSABLE:
         return None
-    return fallback_line(server)
+    return fallback_line(server, showing.library == "refused")
 
 
 def resolve(

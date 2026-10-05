@@ -16,6 +16,13 @@ class LibraryError(RuntimeError):
     """The media server could not be read, or answered in a shape this reader does not understand."""
 
 
+class LibraryRefused(LibraryError):
+    """The media server answered, and turned down Matinee's key (HTTP 401 or 403)."""
+
+
+REFUSED_CODES = (401, 403)
+
+
 @dataclass(frozen=True)
 class LibraryFilm:
     """One film file the media server holds, as far as Matinee needs it.

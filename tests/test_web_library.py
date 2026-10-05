@@ -22,7 +22,7 @@ from fastapi.testclient import TestClient
 
 from matinee.dtdd import Dtdd
 from matinee.engine import load_catalog
-from matinee.library import Image, LibraryError, LibraryFilm
+from matinee.library import Image, LibraryError, LibraryFilm, LibraryRefused
 from matinee.library.choice import MediaServer
 from matinee.library.jellyfin import JellyfinReader
 from matinee.store import Store
@@ -57,6 +57,7 @@ def item(tmdb: int) -> str:
 class FakeLibrary:
     held: list[int] = field(default_factory=lambda: [*range(1, 40), 99])
     down: bool = False
+    refused: bool = False
     broken: bool = False
     no_synopsis: bool = False
     calls: list[tuple[str, Any]] = field(default_factory=list)
@@ -65,6 +66,8 @@ class FakeLibrary:
         self.calls.append(("films", None))
         if self.down:
             raise LibraryError(f"Jellyfin could not be reached at {SECRET_URL}")
+        if self.refused:
+            raise LibraryRefused("Jellyfin answered HTTP 401 to GET /Items")
         return [
             LibraryFilm(self.item_of(t), t, f"Film {t}", 2000, frozenset({"Western"}), "PG", 90.0, 6.0, None)
             for t in self.held
@@ -187,6 +190,22 @@ def test_a_film_new_to_the_library_is_offered_by_its_tags(world: Any) -> None:
     assert 99 in films.films.index and 40 not in films.films.index
     assert np.isnan(films.tag("p_fast")[99])
     assert client.get("/api/film/99").json()["title"] == "Film 99"
+
+
+def test_a_library_that_turns_down_the_key_is_named_as_such_with_the_setting_to_check(
+    world: Any, caplog: pytest.LogCaptureFixture
+) -> None:
+    client, library, clock, _ = world
+    library.refused = True
+    clock.now += LIVE_TTL + 1
+    with caplog.at_level("WARNING", logger="matinee.theatre"):
+        note = client.get("/api/setup").json()
+    assert note["lines"][0].startswith("Your Jellyfin turned down the key in JELLYFIN_API_KEY, so I can't see")
+    assert "check the key in its settings" in caplog.text and "HTTP 401" in caplog.text
+    assert "is running" not in caplog.text  # the server answered; its address is not in question
+    library.refused, library.down = False, True
+    clock.now += LIVE_TTL + 1
+    assert client.get("/api/setup").json()["lines"][0].startswith("I can't reach your Jellyfin right now.")
 
 
 def test_an_unreachable_library_holds_no_film_and_says_so(world: Any) -> None:

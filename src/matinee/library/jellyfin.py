@@ -16,7 +16,7 @@ from collections.abc import Mapping
 from typing import Any
 
 from matinee import USER_AGENT
-from matinee.library import Image, ImageKind, LibraryError, LibraryFilm
+from matinee.library import REFUSED_CODES, Image, ImageKind, LibraryError, LibraryFilm, LibraryRefused
 
 FIELDS = "Genres,ProviderIds,ProductionYear,OfficialRating,RunTimeTicks,CommunityRating,Path"
 TICKS_PER_MINUTE = 600_000_000
@@ -80,7 +80,8 @@ class JellyfinReader:
             with urllib.request.urlopen(req, timeout=TIMEOUT_S) as resp:
                 return json.load(resp)
         except urllib.error.HTTPError as exc:
-            raise LibraryError(f"Jellyfin answered HTTP {exc.code} to GET {path.split('?')[0]}") from exc
+            error = LibraryRefused if exc.code in REFUSED_CODES else LibraryError
+            raise error(f"Jellyfin answered HTTP {exc.code} to GET {path.split('?')[0]}") from exc
         except (urllib.error.URLError, TimeoutError) as exc:
             raise LibraryError(f"Jellyfin could not be reached: {exc}") from exc
         except json.JSONDecodeError as exc:

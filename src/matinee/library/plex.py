@@ -20,7 +20,7 @@ from collections.abc import Iterator, Mapping
 from typing import Any
 
 from matinee import USER_AGENT
-from matinee.library import Image, ImageKind, LibraryError, LibraryFilm
+from matinee.library import REFUSED_CODES, Image, ImageKind, LibraryError, LibraryFilm, LibraryRefused
 
 TIMEOUT_S = 60
 IMAGE_TIMEOUT_S = 10
@@ -121,7 +121,8 @@ class PlexReader:
             with urllib.request.urlopen(req, timeout=timeout) as resp:
                 return resp.headers.get("Content-Type", ""), resp.read(limit)
         except urllib.error.HTTPError as exc:
-            raise LibraryError(f"Plex answered HTTP {exc.code} to GET {where}") from exc
+            error = LibraryRefused if exc.code in REFUSED_CODES else LibraryError
+            raise error(f"Plex answered HTTP {exc.code} to GET {where}") from exc
         except (urllib.error.URLError, TimeoutError, OSError) as exc:
             raise LibraryError(f"Plex could not be reached for GET {where}: {type(exc).__name__}") from exc
 

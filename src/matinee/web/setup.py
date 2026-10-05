@@ -56,12 +56,24 @@ class SetupNote(BaseModel):
     warning: str | None = None
 
 
-def unreachable(server: str) -> str:
+KEY_SETTINGS = {"Jellyfin": "JELLYFIN_API_KEY", "Plex": "PLEX_TOKEN"}
+
+
+def library_away(server: str, refused: bool) -> str:
+    """The setup note's line while the media server cannot be read: a turned-down key names the setting to check."""
+    if refused:
+        return f"Your {server} turned down the key in {KEY_SETTINGS[server]}, so I can't see your library. {MEANWHILE}"
     return f"I can't reach your {server} right now. {MEANWHILE}"
 
 
-def fallback_line(server: str) -> str:
-    """The strip a walk shows when its source answer can no longer be kept: the library stopped answering."""
+def fallback_line(server: str, refused: bool) -> str:
+    """The strip a walk shows when its source answer can no longer be kept: the library stopped answering, or
+    turned down the key."""
+    if refused:
+        return (
+            f"Your {server} turned down my key, so I'm picking from every film I know, in your library or not,"
+            " until that's sorted."
+        )
     return (
         f"I can't reach your {server} right now, so I'm picking from every film I know, in your library or not,"
         " until it's back."

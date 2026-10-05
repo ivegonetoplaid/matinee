@@ -126,6 +126,16 @@ def test_while_the_library_cannot_be_used_no_source_is_asked_or_obeyed(tmp_path:
     assert every["fallback"] is None  # "all" loses nothing
 
 
+def test_a_walk_whose_library_turned_down_the_key_says_so_in_the_strip(tmp_path: Path) -> None:
+    library = FakeLibrary(held=list(HELD))
+    client, clock = site(tmp_path, library)
+    viewer = seat_for(client)
+    library.refused = True
+    clock.now += LIVE_TTL + 1
+    walked = client.post("/api/walk", json={"tree": "west", "viewer": viewer, "source": "held"}).json()
+    assert walked["fallback"].startswith("Your Jellyfin turned down my key, so I'm picking from every film I know")
+
+
 def test_a_walk_says_nothing_of_a_fallback_while_the_library_answers(tmp_path: Path) -> None:
     client, _ = site(tmp_path, FakeLibrary(held=list(HELD)))
     viewer = seat_for(client)

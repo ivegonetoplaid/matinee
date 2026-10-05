@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import io
 import json
+import urllib.error
 import urllib.request
 from typing import Any
 
@@ -42,6 +43,27 @@ def test_every_outbound_request_names_matinee(monkeypatch: pytest.MonkeyPatch) -
     JellyfinReader("http://jellyfin.invalid", "jf-key").films()
     assert len(sent) >= 4
     assert all(req.get_header("User-agent") == USER_AGENT for req in sent)
+
+
+@pytest.mark.parametrize(("code", "refused"), [(401, True), (403, True), (500, False)])
+def test_a_media_server_that_turns_down_the_key_is_told_apart(
+    monkeypatch: pytest.MonkeyPatch, code: int, refused: bool
+) -> None:
+    from matinee.library import LibraryError, LibraryRefused
+    from matinee.library.plex import PlexReader
+
+    def answer(req: urllib.request.Request, timeout: float) -> Resp:
+        raise urllib.error.HTTPError(req.full_url, code, "no", {}, None)  # type: ignore[arg-type]
+
+    readers: list[tuple[str, JellyfinReader | PlexReader]] = [
+        ("jellyfin", JellyfinReader("http://jellyfin.invalid", "jf-key")),
+        ("plex", PlexReader("http://plex.invalid", "px-token")),
+    ]
+    for module, reader in readers:
+        monkeypatch.setattr(f"matinee.library.{module}.urllib.request.urlopen", answer)
+        with pytest.raises(LibraryError) as caught:
+            reader.films()
+        assert isinstance(caught.value, LibraryRefused) is refused and str(code) in str(caught.value)
 
 
 def test_the_jellyfin_key_is_never_carried_to_another_host(monkeypatch: pytest.MonkeyPatch) -> None:

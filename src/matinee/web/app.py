@@ -54,8 +54,8 @@ from matinee.web.common import (
 from matinee.web.config import Config, ImageSource
 from matinee.web.logbook import SERVER_NAMES, Quiet, StateLog
 from matinee.web.seerr import SeerrCheck
-from matinee.web.setup import BROKEN, SEERR_AWAY, SetupNote, note, rebuild_lines, unreachable
-from matinee.web.theatre import NothingToShow, Theatre
+from matinee.web.setup import BROKEN, SEERR_AWAY, SetupNote, library_away, note, rebuild_lines
+from matinee.web.theatre import UNUSABLE, NothingToShow, Theatre
 from matinee.web.viewing import (
     add_note_routes,
     add_pick_routes,
@@ -498,8 +498,8 @@ def setup_faults(theatre: Theatre, config: Config, seerr: SeerrCheck, faults: Se
         showing = theatre.showing()
     except NothingToShow as exc:
         return [*found, BROKEN.format(detail=exc)], 0
-    if showing.library == "unreachable" and config.server is not None:
-        found.append(unreachable(SERVER_NAMES[config.server.kind]))
+    if showing.library in UNUSABLE and config.server is not None:
+        found.append(library_away(SERVER_NAMES[config.server.kind], showing.library == "refused"))
     if config.seerr_url is not None and not seerr.answers():
         found.append(SEERR_AWAY)
     return [*found, *rebuild_lines(read_status(config.state), theatre.table_films)], showing.now_showing

@@ -110,7 +110,10 @@ none, so the question is not asked. Matinee types "Right this way, <name>." and
   walk goes on among every film offered, and never silently: `POST /api/first`,
   `POST /api/walk` and `POST /api/pick` carry `fallback`, "I can't reach your
   <server> right now, so I'm picking from every film I know, in your library or
-  not, until it's back.", with `Jellyfin` or `Plex` for <server>. The page shows
+  not, until it's back.", with `Jellyfin` or `Plex` for <server>. When the
+  library answered and turned down the key (HTTP 401 or 403), it reads "Your
+  <server> turned down my key, so I'm picking from every film I know, in your
+  library or not, until that's sorted." instead. The page shows
   it in the warning strip (section 12). An answer of `all` loses nothing and
   carries none, and neither does a walk the source question was not asked of,
   whose setup note said so. A response without it takes it down, so the strip
@@ -820,7 +823,10 @@ finished.
 - While the media server cannot be read, or with no media server configured,
   no film is held: Matinee offers the films the labels name alone, with their
   TMDB facts. The last list read stands until a read fails. For **15 seconds**
-  after a failed read no new read is attempted.
+  after a failed read no new read is attempted. A read the server answers with
+  HTTP 401 or 403 is a turned-down key, told apart from a server that gives no
+  usable answer: its warning says to check the key, the other's to check that
+  the server runs and its address.
 - The table file is reloaded when the nightly rebuild replaces it.
 - The sign's "Now showing N films" counts every film Matinee offers: the
   library's and the films the labels name.
@@ -829,7 +835,7 @@ finished.
 
 At start, and whenever its state changes (looked at, on a request, at most every
 15 seconds), the server logs one line naming its whole state: the media server it
-reads and whether it answers, whether Seerr and DoesTheDogDie are set and Seerr
+reads and whether it answers, does not answer or turned down the key, whether Seerr and DoesTheDogDie are set and Seerr
 answers, the film table's size and the age of its TMDB facts, how many films are
 offered, and the rebuild's last report with its progress. The rebuild logs the
 same way: a line as it starts (the library, the films the labels name, the records
@@ -878,7 +884,11 @@ show." and says, one paragraph each, what Matinee sees:
 
 While the library cannot be used, because both servers are set, its settings
 cannot be used or it does not answer, the note also says Matinee is picking from
-TMDB's most popular films (the films the labels name) instead. The note offers
+TMDB's most popular films (the films the labels name) instead. A server that
+does not answer reads "I can't reach your <server> right now."; one that
+answered and turned down the key (HTTP 401 or 403) reads "Your <server> turned
+down the key in <setting>, so I can't see your library.", naming
+`JELLYFIN_API_KEY` or `PLEX_TOKEN`. The note offers
 "Show me the films", which goes on to the front door, and never a way into an
 empty pool: with no film to recommend it offers only "Try again". A note with a
 way in is shown once per page visit; one without is shown every time. A fault
@@ -2225,14 +2235,14 @@ symbol when one does not match.
 
 | Handle | Where | Verified |
 |---|---|---|
-| `src/matinee/library/__init__.py::Library` | `src/matinee/library/__init__.py:44` | 2026-10-05 |
-| `src/matinee/library/__init__.py::LibraryFilm` | `src/matinee/library/__init__.py:20` | 2026-10-05 |
-| `src/matinee/library/jellyfin.py::JellyfinReader` | `src/matinee/library/jellyfin.py:64` | 2026-10-05 |
-| `src/matinee/library/jellyfin.py::JellyfinReader.films` | `src/matinee/library/jellyfin.py:119` | 2026-10-05 |
-| `src/matinee/library/jellyfin.py::JellyfinReader._get_json` (the key in an unredirected header) | `src/matinee/library/jellyfin.py:73` | 2026-10-05 |
-| `src/matinee/library/jellyfin.py::JellyfinReader.image` (no key, size and type caps) | `src/matinee/library/jellyfin.py:100` | 2026-10-05 |
-| `src/matinee/library/jellyfin.py::ITEM_ID` | `src/matinee/library/jellyfin.py:25` | 2026-10-05 |
-| `src/matinee/library/jellyfin.py::parse_film` (`{tmdb-N}` folder tag) | `src/matinee/library/jellyfin.py:44` | 2026-10-05 |
+| `src/matinee/library/__init__.py::Library` | `src/matinee/library/__init__.py:51` | 2026-10-05 |
+| `src/matinee/library/__init__.py::LibraryFilm` | `src/matinee/library/__init__.py:27` | 2026-10-05 |
+| `src/matinee/library/jellyfin.py::JellyfinReader` | `src/matinee/library/jellyfin.py:66` | 2026-10-05 |
+| `src/matinee/library/jellyfin.py::JellyfinReader.films` | `src/matinee/library/jellyfin.py:123` | 2026-10-05 |
+| `src/matinee/library/jellyfin.py::JellyfinReader._get_json` (the key in an unredirected header) | `src/matinee/library/jellyfin.py:75` | 2026-10-05 |
+| `src/matinee/library/jellyfin.py::JellyfinReader.image` (no key, size and type caps) | `src/matinee/library/jellyfin.py:104` | 2026-10-05 |
+| `src/matinee/library/jellyfin.py::ITEM_ID` | `src/matinee/library/jellyfin.py:27` | 2026-10-05 |
+| `src/matinee/library/jellyfin.py::parse_film` (`{tmdb-N}` folder tag) | `src/matinee/library/jellyfin.py:46` | 2026-10-05 |
 | `src/matinee/library/plex.py::PlexReader` (every movie section) | `src/matinee/library/plex.py:101` | 2026-10-05 |
 | `src/matinee/library/plex.py::PlexReader._get` (GET only; the token in an unredirected header) | `src/matinee/library/plex.py:112` | 2026-10-05 |
 | `src/matinee/library/plex.py::parse_film` / `_tmdb` / `certificate` (runtime, rating, folder tag) | `src/matinee/library/plex.py:80` | 2026-10-05 |
@@ -2276,8 +2286,8 @@ symbol when one does not match.
 | `src/matinee/engine.py::_asked` / `Asked.footnote` (footnote and asterisks dropped with the apart answer) | `src/matinee/engine.py:467` | 2026-10-05 |
 | `src/matinee/web/viewing.py::asks_source` (asked while the library can be used and both pools hold a film) | `src/matinee/web/viewing.py:205` | 2026-10-05 |
 | `src/matinee/web/viewing.py::source_for` (before an answer, the library's films; unasked, every film) | `src/matinee/web/viewing.py:212` | 2026-10-05 |
-| `src/matinee/web/viewing.py::fallback_for` (`held` or `new` while the library does not answer) | `src/matinee/web/viewing.py:220` | 2026-10-05 |
-| `src/matinee/web/setup.py::fallback_line` (the fallback notice's wording) | `src/matinee/web/setup.py:63` | 2026-10-05 |
+| `src/matinee/web/viewing.py::fallback_for` (`held` or `new` while the library does not answer or turned down the key) | `src/matinee/web/viewing.py:220` | 2026-10-05 |
+| `src/matinee/web/setup.py::fallback_line` (the fallback notice's wording) | `src/matinee/web/setup.py:69` | 2026-10-05 |
 | `src/matinee/web/viewing.py::SourceQuestionOut` / `SourceOptionOut` | `src/matinee/web/viewing.py:105` | 2026-10-05 |
 | `src/matinee/web/viewing.py::everything` (the first question's pool) | `src/matinee/web/viewing.py:186` | 2026-10-05 |
 | `src/matinee/web/viewing.py::QuestionOut.footnote` | `src/matinee/web/viewing.py:80` | 2026-10-05 |
@@ -2428,8 +2438,8 @@ symbol when one does not match.
 | `src/matinee/table.py::is_stale` (the oldest TMDB fact 183 days old or more) | `src/matinee/table.py:419` | 2026-10-05 |
 | `src/matinee/table.py::with_live` / `_offered` / `_aligned` (held from the live list; the films the labels name) | `src/matinee/table.py:343` | 2026-10-05 |
 | `src/matinee/table.py::library_films` | `src/matinee/table.py:298` | 2026-10-05 |
-| `src/matinee/web/theatre.py::Theatre.showing` / `_read_library` / `_ttl` (`LIVE_TTL`, `RETRY_AFTER`) | `src/matinee/web/theatre.py:154` | 2026-10-05 |
-| `src/matinee/web/theatre.py::Theatre` (`listed`, `on_reload`; an absent or unreadable table counts as empty) | `src/matinee/web/theatre.py:59` | 2026-10-05 |
+| `src/matinee/web/theatre.py::Theatre.showing` / `_read_library` / `_ttl` (`LIVE_TTL`, `RETRY_AFTER`) | `src/matinee/web/theatre.py:164` | 2026-10-05 |
+| `src/matinee/web/theatre.py::Theatre` (`listed`, `on_reload`; an absent or unreadable table counts as empty) | `src/matinee/web/theatre.py:73` | 2026-10-05 |
 
 ### Profiles and devices
 
@@ -2558,17 +2568,17 @@ symbol when one does not match.
 | `src/matinee/web/config.py::_server` / `_seerr` / `_images` | `src/matinee/web/config.py:107` | 2026-10-05 |
 | `src/matinee/web/config.py::ImageSource` (`POSTERS_FROM`: `server` or `tmdb`) | `src/matinee/web/config.py:29` | 2026-10-05 |
 | `src/matinee/web/setup.py::SetupNote` (`warning` while the data is stale) | `src/matinee/web/setup.py:49` | 2026-10-05 |
-| `src/matinee/web/setup.py::note` / `unreachable` / `rebuild_lines` / `stalled` | `src/matinee/web/setup.py:97` | 2026-10-05 |
+| `src/matinee/web/setup.py::note` / `library_away` / `rebuild_lines` / `stalled` | `src/matinee/web/setup.py:109` | 2026-10-05 |
 | `src/matinee/web/setup.py::HEADING` / `MEANWHILE` / `STOPPED` / `STALE` / `STALLED_AFTER` (every line's words) | `src/matinee/web/setup.py:20` | 2026-10-05 |
 | `src/matinee/web/app.py::setup_faults` (the configured, start-up and run-time faults) | `src/matinee/web/app.py:494` | 2026-10-05 |
 | `src/matinee/web/app.py::add_setup_route` (`GET /api/setup`) | `src/matinee/web/app.py:508` | 2026-10-05 |
-| `src/matinee/web/theatre.py::NothingToShow` (shipped data that cannot make a catalog) | `src/matinee/web/theatre.py:47` | 2026-10-05 |
-| `src/matinee/web/theatre.py::Theatre._catalog` | `src/matinee/web/theatre.py:140` | 2026-10-05 |
-| `src/matinee/web/theatre.py::Showing.library` (`none`, `usable`, `unreachable`) | `src/matinee/web/theatre.py:56` | 2026-10-05 |
-| `src/matinee/web/theatre.py::Theatre.table_films` / `stale` / `oldest_tmdb` | `src/matinee/web/theatre.py:191` | 2026-10-05 |
+| `src/matinee/web/theatre.py::NothingToShow` (shipped data that cannot make a catalog) | `src/matinee/web/theatre.py:61` | 2026-10-05 |
+| `src/matinee/web/theatre.py::Theatre._catalog` | `src/matinee/web/theatre.py:150` | 2026-10-05 |
+| `src/matinee/web/theatre.py::Showing.library` / `UNUSABLE` / `warn_library` (`none`, `usable`, `unreachable`, `refused`) | `src/matinee/web/theatre.py:70` | 2026-10-05 |
+| `src/matinee/web/theatre.py::Theatre.table_films` / `stale` / `oldest_tmdb` | `src/matinee/web/theatre.py:201` | 2026-10-05 |
 | `src/matinee/web/seerr.py::SeerrCheck` (`CHECK_EVERY`; picks link to TMDB while it does not answer) | `src/matinee/web/seerr.py:25` | 2026-10-05 |
-| `src/matinee/web/logbook.py::describe` / `StateLog` / `state_log` / `CHECK_EVERY` (the state line) | `src/matinee/web/logbook.py:71` | 2026-10-05 |
-| `src/matinee/web/logbook.py::Quiet` / `QUIET_FOR` / `SERVER_NAMES` (a repeating warning once a minute, with a count) | `src/matinee/web/logbook.py:115` | 2026-10-05 |
+| `src/matinee/web/logbook.py::describe` / `StateLog` / `state_log` / `CHECK_EVERY` (the state line) | `src/matinee/web/logbook.py:72` | 2026-10-05 |
+| `src/matinee/web/logbook.py::Quiet` / `QUIET_FOR` / `SERVER_NAMES` (a repeating warning once a minute, with a count) | `src/matinee/web/logbook.py:116` | 2026-10-05 |
 | `src/matinee/web/app.py::add_state_log` / `QUIET` | `src/matinee/web/app.py:516` | 2026-10-05 |
 | `tests/test_setup.py::test_only_a_wrong_lock_and_a_missing_data_directory_refuse_to_start` | `tests/test_setup.py:109` | 2026-10-05 |
 | `tests/test_logbook.py::test_the_state_line_names_every_part_and_no_secret` | `tests/test_logbook.py:30` | 2026-10-05 |
@@ -2595,7 +2605,7 @@ symbol when one does not match.
 | `src/matinee/web/common.py::Problem` | `src/matinee/web/common.py:125` | 2026-10-05 |
 | `src/matinee/web/viewing.py::add_viewing_routes` (`POST /api/first` with the source question, `POST /api/walk`) | `src/matinee/web/viewing.py:353` | 2026-10-05 |
 | `src/matinee/web/viewing.py::WalkIn` / `PickIn` / `FirstIn` (request caps; no field skips the check) | `src/matinee/web/viewing.py:45` | 2026-10-05 |
-| `tests/test_user_agent.py::test_every_outbound_request_names_matinee` | `tests/test_user_agent.py:35` | 2026-10-05 |
+| `tests/test_user_agent.py::test_every_outbound_request_names_matinee` | `tests/test_user_agent.py:36` | 2026-10-05 |
 
 ### The page
 

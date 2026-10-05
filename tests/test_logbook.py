@@ -47,6 +47,11 @@ def test_the_state_line_names_every_part_and_no_secret(tmp_path: Path) -> None:
     theatre._failed_at = None
     changed, line = describe(theatre, config, SeerrCheck(config.seerr_url, opener=answers), False, datetime.now(UTC))
     assert changed != key and "Jellyfin does not answer" in line
+    library.down, library.refused = False, True
+    theatre._showing = None
+    theatre._failed_at = None
+    _, line = describe(theatre, config, SeerrCheck(config.seerr_url, opener=answers), False, datetime.now(UTC))
+    assert "Jellyfin turned down the key" in line
 
 
 def test_a_repeating_warning_is_said_once_a_minute_with_a_count(caplog: pytest.LogCaptureFixture) -> None:

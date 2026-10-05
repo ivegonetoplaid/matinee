@@ -39,7 +39,8 @@ def _library(theatre: Theatre, config: Config) -> tuple[str, int]:
     if config.server is None:
         return "no media server set", showing.now_showing
     name = SERVER_NAMES[config.server.kind]
-    return (f"{name} answers" if showing.library == "usable" else f"{name} does not answer"), showing.now_showing
+    words = {"usable": "answers", "refused": "turned down the key"}.get(showing.library, "does not answer")
+    return f"{name} {words}", showing.now_showing
 
 
 def _rebuild(status: RebuildStatus | None) -> str:
