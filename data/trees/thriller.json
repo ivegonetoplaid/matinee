@@ -2,7 +2,7 @@
   "genre": "Thriller",
   "pool": "thriller",
   "opening": "good. I was getting far too comfortable.",
-  "note": "Decisions 80 and 86, and the Thriller and Crime build's decision 3: the door runs on the model labels (the labels file in Matinee's state directory). One question, its kinds, then \"anything\". A film sits under every kind it is labelled with; a film labelled behind the door with no kind, or not yet labelled, is reached through \"anything\" and \"Just pick one!\". The spies reply self-destructs, and no other answer may. A kind under 30 films in the library is not offered (erotic, in the operator's library).",
+  "note": "Decisions 80 and 86, and the Thriller and Crime build's decision 3: the door runs on the model labels (the labels file, data/labels.json). One question, its kinds, then \"anything\". A film sits under every kind it is labelled with; a film labelled behind the door with no kind, or not yet labelled, is reached through \"anything\" and \"Just pick one!\". The spies reply self-destructs, and no other answer may. A kind under 30 films in the library is not offered (erotic, in the operator's library).",
   "questions": [
     {
       "id": "kind",

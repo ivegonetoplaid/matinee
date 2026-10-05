@@ -48,7 +48,7 @@
     {
       "id": "kind",
       "ask": "so, what manner of foolishness are we watching?",
-      "note": "Each answer holds the films the labels place in it (the labels file in Matinee's state directory, one rule per answer quoting its words). Horror comedy is the horror tree's comedy kind. Stand-up specials are held apart: only the stand-up answer offers them, and no other answer or \"Just pick one!\" in this tree picks one. A film no answer clearly fits, or not yet labelled, is reached through \"anything\" and \"Just pick one!\".",
+      "note": "Each answer holds the films the labels place in it (the labels file, data/labels.json, one rule per answer quoting its words). Horror comedy is the horror tree's comedy kind. Stand-up specials are held apart: only the stand-up answer offers them, and no other answer or \"Just pick one!\" in this tree picks one. A film no answer clearly fits, or not yet labelled, is reached through \"anything\" and \"Just pick one!\".",
       "options": [
         {
           "say": "slapstick, spoofs, and complete nonsense.",

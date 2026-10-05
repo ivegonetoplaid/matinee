@@ -1,7 +1,8 @@
-"""Which doors and kinds each film belongs to, as labelled outside Matinee and kept in its state directory.
+"""Which doors and kinds each film belongs to, as labelled outside Matinee and shipped in `data/labels.json`.
 
-The labels file lives beside the film table, never in this repository, because it
-lists the films one library holds. Its shape (format 2):
+The labels file is Matinee's own judgement, keyed by TMDB id: every film of TMDB's
+most-voted ten thousand, and every film of the first library it sorted. Its shape
+(format 2):
 
     {"format": 2,
      "trees": {"action": {"kinds": {"1891": ["scifi_action", "quests"]}},
@@ -23,7 +24,10 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from matinee.reference import DATA
+
 FORMAT = 2
+LABELS = DATA / "labels.json"
 BANDS = ("little", "family", "older")  # youngest first
 
 
@@ -72,10 +76,10 @@ def _tree(name: str, raw: object) -> TreeLabels:
     return TreeLabels(kinds=parsed_kinds, bands=bands)
 
 
-def load_labels(path: Path) -> Labels:
+def load_labels(path: Path = LABELS) -> Labels:
     """Read the labels file; raises LabelsError naming the path when it is absent or malformed."""
     if not path.exists():
-        raise LabelsError(f"no labels file at {path}; the labelling pass must write one before Matinee starts")
+        raise LabelsError(f"no labels file at {path}; it ships with Matinee, so the checkout is incomplete")
     try:
         doc = json.loads(path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:

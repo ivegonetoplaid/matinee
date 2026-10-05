@@ -77,7 +77,7 @@
     {
       "id": "flavour",
       "ask": "what kind of nightmare are we screening?",
-      "note": "Each kind holds the films the labels place in it (the labels file in Matinee's state directory, one written rule per kind, the operator's calls applied over a model's labels). A film may sit in two kinds when it clearly fits both. A film played mainly for laughs sits only under the comedy answer unless its horror is played straight; \"anything scary\" leaves out films that are comedy and nothing else. A film no kind clearly fits, or not yet labelled, is reached through \"anything scary\" and \"Just pick one!\".",
+      "note": "Each kind holds the films the labels place in it (the labels file, data/labels.json, one written rule per kind, the operator's calls applied over a model's labels). A film may sit in two kinds when it clearly fits both. A film played mainly for laughs sits only under the comedy answer unless its horror is played straight; \"anything scary\" leaves out films that are comedy and nothing else. A film no kind clearly fits, or not yet labelled, is reached through \"anything scary\" and \"Just pick one!\".",
       "options": [
         {
           "say": "ghosts, demons, curses. invite something in.",

@@ -56,7 +56,7 @@ from matinee.engine import (
     scale_members,
     walk_ends,
 )
-from matinee.labels import LabelsError, load_labels
+from matinee.labels import LABELS, LabelsError, load_labels
 from matinee.pools import GENRE_DOORS, House, waiting
 from matinee.quips import QuipsError, load_quips, quip_problems
 from matinee.reference import DATA
@@ -498,13 +498,13 @@ def check_data(table: FilmTable, report: Report) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--table", type=Path, default=DEFAULT_TABLE, help="film table written by rebuild_table.py")
-    parser.add_argument("--labels", type=Path, help="labels file; default: labels.json beside the table")
+    parser.add_argument("--labels", type=Path, help="labels file; default: the shipped data/labels.json")
     args = parser.parse_args()
     key = json.loads((DATA / "answer_key.json").read_text())
     table = load_table(args.table)
     report = Report()
     try:
-        cat = load_catalog(table, labels=load_labels(args.labels or args.table.with_name("labels.json")))
+        cat = load_catalog(table, labels=load_labels(args.labels or LABELS))
     except LabelsError as exc:
         print(f"FAIL {exc}")
         return 1

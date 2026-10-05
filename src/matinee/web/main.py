@@ -15,7 +15,7 @@ from fastapi import FastAPI
 
 from matinee.dtdd import Dtdd
 from matinee.engine import load_catalog
-from matinee.labels import load_labels
+from matinee.labels import LABELS, load_labels
 from matinee.library.jellyfin import JellyfinReader
 from matinee.quips import load_quips
 from matinee.store import Store
@@ -23,12 +23,19 @@ from matinee.web.app import create_app
 from matinee.web.config import from_env
 from matinee.web.theatre import Theatre
 
+log = logging.getLogger("matinee.web")
+
 
 def build() -> FastAPI:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
     config = from_env()
+    if (config.state / "labels.json").exists():
+        log.warning(
+            "%s is not read: the labels ship with Matinee in %s. Remove it; household placements belong in the "
+            "override file.",
+            config.state / "labels.json",
+            LABELS,
+        )
     library = JellyfinReader(config.jellyfin_url, config.jellyfin_key)
-    theatre = Theatre(
-        library, config.table_path, catalog_of=partial(load_catalog, labels=load_labels(config.labels_path))
-    )
+    theatre = Theatre(library, config.table_path, catalog_of=partial(load_catalog, labels=load_labels()))
     return create_app(config, theatre, Store(config.store_path), Dtdd(config.dtdd_key), quips=load_quips())

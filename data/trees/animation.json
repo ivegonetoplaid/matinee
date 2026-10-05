@@ -2,7 +2,7 @@
   "genre": "Animation",
   "pool": "animation",
   "opening": "animation. anything can happen in a cartoon.",
-  "note": "Decision 88: the door runs on the labels (the labels file in Matinee's state directory). One question, its kinds, then \"anything\". A film sits under every kind it is labelled with, at most two; a film not yet labelled waits behind the door under \"anything\" and \"Just pick one!\" only. A kind under 30 films in the library is not offered.",
+  "note": "Decision 88: the door runs on the labels (the labels file, data/labels.json). One question, its kinds, then \"anything\". A film sits under every kind it is labelled with, at most two; a film not yet labelled waits behind the door under \"anything\" and \"Just pick one!\" only. A kind under 30 films in the library is not offered.",
   "questions": [
     {
       "id": "kind",

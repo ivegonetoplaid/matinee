@@ -332,8 +332,8 @@ non-zero exit, on any of these:
 
 Separately, the engine refuses to prepare when the shipped reference statistics
 do not cover the tree files (section 3). The checker reports that as a failure.
-The checker reads the labels file beside the film table unless `--labels` names
-another. It lists by title the films in the waiting room (section 3.1) with the
+The checker reads the shipped labels file, `data/labels.json`, unless `--labels`
+names another. It lists by title the films in the waiting room (section 3.1) with the
 doors their genres place them behind, the films each door holds under no kind
 (by a house pin, the waiting room or the standup rule), the labelled films no
 kind of their door fits (reached through "anything" and `Just pick one!` only;
@@ -345,9 +345,11 @@ when the kinds the bar hides differ from the answer key's `hidden` list of
 ### 2.6 Labels
 
 The labels alone decide which genre doors and kinds a film belongs to (section
-3.1). The file is `labels.json` in the state directory. It is written outside
-Matinee, by a labelling pass, and never committed, because it lists the films
-one library holds. Its shape (format 2):
+3.1). The file is `data/labels.json`, shipped in the repository under the
+repository's own licence. It is written outside Matinee, by a labelling pass,
+and names films by TMDB id only: TMDB's most-voted ten thousand films and every
+film of the first library it sorted. No label was derived from the MovieLens
+genome. Its shape (format 2):
 
 ```json
 {"format": 2,
@@ -365,12 +367,12 @@ one library holds. Its shape (format 2):
   suits: `little`, `family` or `older` (section 3.2).
 - A film the file lists under no door at all is unlabelled and waits behind the
   doors its genres name (section 3.1).
-- An absent file stops the server at start-up with the path named; the labelling
-  pass must write one first. A file in any format but 2 is refused at start-up
+- An absent file stops the server at start-up with the path named. A file in any format but 2 is refused at start-up
   with its format named. A malformed file, a band outside the three, a tree no
   file defines, or a kind the tree does not label stops the server at start-up
   too.
-- The server reads the file once at start-up. Replacing it takes a restart.
+- The server reads the file once at start-up. Replacing it takes a restart, and
+  updating Matinee replaces it.
 
 Each labelled flavour's `note` in its tree file states the rule its kind
 follows. The labels were written by a language model against those rules, with
@@ -1675,7 +1677,7 @@ as written. A phone is a viewport 600 px wide or less.
 - **State** is one directory mounted at `/state` (`MATINEE_STATE`). It holds
   the film table (`films.sqlite`), Matinee's store (`matinee.sqlite`), the
   door's secret (`door.key`, made at the first start with a door word), the
-  labels (`labels.json`, section 2.6), the TMDB cache (`tmdb/films.jsonl`) and
+  TMDB cache (`tmdb/films.jsonl`) and
   the MovieLens genome (`ml-latest/`, or `MATINEE_ML`). None of it is in the
   image.
 - **Settings and keys arrive as environment**, never committed, logged or sent

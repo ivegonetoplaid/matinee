@@ -32,7 +32,7 @@ from check_trees import (
     report_waiting,
 )
 from matinee.engine import load_catalog
-from matinee.labels import Labels, TreeLabels
+from matinee.labels import LABELS, Labels, LabelsError, TreeLabels
 from matinee.pools import House
 from matinee.reference import Cuts, Reference
 from matinee.table import FilmTable
@@ -306,3 +306,21 @@ def test_the_hidden_kinds_must_be_the_ones_the_key_expects(tmp_path: Path) -> No
     report = Report()
     check_hidden(cat, {"hidden": [["west", "ghost"], ["west", "heroic"]]}, report)
     assert report.failures == ["hidden: west kind heroic shows, and the answer key expects it hidden"]
+
+
+def test_the_checker_reads_the_shipped_labels_unless_told_otherwise(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    import check_trees
+
+    read: list[Path] = []
+
+    def labels_at(path: Path) -> Labels:
+        read.append(path)
+        raise LabelsError("stop here")
+
+    monkeypatch.setattr(check_trees, "load_table", lambda _path: _table())
+    monkeypatch.setattr(check_trees, "load_labels", labels_at)
+    monkeypatch.setattr("sys.argv", ["check_trees.py", "--table", str(tmp_path / "films.sqlite")])
+    assert check_trees.main() == 1
+    assert read == [LABELS]

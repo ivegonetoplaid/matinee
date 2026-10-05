@@ -234,3 +234,12 @@ def test_a_small_kind_another_answer_leaves_out_still_shows(tmp_path: Path) -> N
     tree["questions"][0]["options"] = [o for o in tree["questions"][0]["options"] if o["say"] != "anything."]
     cat = load_catalog(make_table(), write_data(tmp_path, tree), reference(), lab)
     assert "laughs." in shown_says(cat)  # hiding it would leave films 1-4 no answer
+
+
+def test_the_shipped_labels_load_by_default_and_name_only_doors_and_kinds_the_trees_label() -> None:
+    shipped = load_labels()
+    assert len(shipped.films()) >= 10_272  # every film labelled on 2026-10-04 ships
+    trees = load_trees()
+    for tree_id, tree_labels in shipped.trees.items():
+        labelled = {name for name, spec in trees[tree_id].flavours.items() if spec.get("labelled")}
+        assert set().union(*tree_labels.kinds.values()) <= labelled, tree_id
