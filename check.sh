@@ -34,5 +34,6 @@ node --test "tests/js/*.test.mjs"
 
 "$PYTHON_BIN" -m mypy
 if [[ -d tests ]]; then
-    "$PYTHON_BIN" -m pytest -q
+    # A runaway test fails here instead of taking the host's memory: the suite peaks near 200 MB and 15 s
+    (ulimit -v 4000000 && timeout 300 "$PYTHON_BIN" -m pytest -q)
 fi
