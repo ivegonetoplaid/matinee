@@ -9,6 +9,7 @@ never logged.
 from __future__ import annotations
 
 import json
+import logging
 import re
 import urllib.error
 import urllib.request
@@ -29,6 +30,8 @@ IMAGE_PATHS = {"poster": "Primary", "backdrop": "Backdrop/0"}
 SMALL_IMAGE_PX = 160  # an image this wide or narrower is a wall tile, shown dimmed, so it is fetched lighter
 SMALL_IMAGE_QUALITY = 60
 IMAGE_QUALITY = 80
+
+log = logging.getLogger("matinee.library")
 
 
 def _int_or_none(value: object) -> int | None:
@@ -121,8 +124,20 @@ class JellyfinReader:
         return Image(body, content_type)
 
     def films(self) -> list[LibraryFilm]:
-        body = self._get_json(f"/Items?IncludeItemTypes=Movie&Recursive=true&Fields={FIELDS}")
+        """Every movie item, each film inside a collection included: Jellyfin 12 folds a collection's films into
+        one collection item unless asked not to. An item that is not a movie is left out and counted in a warning,
+        since its TMDB id names something other than a film."""
+        query = f"IncludeItemTypes=Movie&Recursive=true&CollapseBoxSetItems=false&Fields={FIELDS}"
+        body = self._get_json(f"/Items?{query}")
         items = body.get("Items") if isinstance(body, dict) else None
         if not isinstance(items, list):
             raise LibraryError("Jellyfin's film list has no Items array")
-        return [parse_film(it) for it in items]
+        movies = [it for it in items if it.get("Type", "Movie") == "Movie"]
+        if len(movies) < len(items):
+            kinds = sorted({str(it.get("Type")) for it in items} - {"Movie"})
+            log.warning(
+                "Jellyfin's film list held %d items that are not movies (%s); they are left out of the library",
+                len(items) - len(movies),
+                ", ".join(kinds),
+            )
+        return [parse_film(it) for it in movies]

@@ -36,6 +36,10 @@ contract is listed under [Known gaps](#known-gaps).
    library interface with three reads: the film list, one film's synopsis, and
    one film's poster or backdrop. The Jellyfin reader and the Plex reader sit
    behind it. Section 13 says which one an installation reads.
+   - The Jellyfin reader asks for every movie item with collections unfolded
+     (`CollapseBoxSetItems=false`), so a film inside a collection is listed as
+     itself; an item that is not a movie (a collection) is left out and
+     counted in a warning.
    - The Jellyfin reader's key travels only in the `Authorization` header, as
      `MediaBrowser Token="<key>"` (the one form Jellyfin 12 accepts), never
      in a URL or a log, and never follows a redirect. An item id is 32
@@ -2237,12 +2241,12 @@ symbol when one does not match.
 |---|---|---|
 | `src/matinee/library/__init__.py::Library` | `src/matinee/library/__init__.py:51` | 2026-10-05 |
 | `src/matinee/library/__init__.py::LibraryFilm` | `src/matinee/library/__init__.py:27` | 2026-10-05 |
-| `src/matinee/library/jellyfin.py::JellyfinReader` | `src/matinee/library/jellyfin.py:66` | 2026-10-05 |
-| `src/matinee/library/jellyfin.py::JellyfinReader.films` | `src/matinee/library/jellyfin.py:123` | 2026-10-05 |
-| `src/matinee/library/jellyfin.py::JellyfinReader._get_json` (the key in an unredirected header) | `src/matinee/library/jellyfin.py:75` | 2026-10-05 |
-| `src/matinee/library/jellyfin.py::JellyfinReader.image` (no key, size and type caps) | `src/matinee/library/jellyfin.py:104` | 2026-10-05 |
-| `src/matinee/library/jellyfin.py::ITEM_ID` | `src/matinee/library/jellyfin.py:27` | 2026-10-05 |
-| `src/matinee/library/jellyfin.py::parse_film` (`{tmdb-N}` folder tag) | `src/matinee/library/jellyfin.py:46` | 2026-10-05 |
+| `src/matinee/library/jellyfin.py::JellyfinReader` | `src/matinee/library/jellyfin.py:69` | 2026-10-05 |
+| `src/matinee/library/jellyfin.py::JellyfinReader.films` | `src/matinee/library/jellyfin.py:126` | 2026-10-05 |
+| `src/matinee/library/jellyfin.py::JellyfinReader._get_json` (the key in an unredirected header) | `src/matinee/library/jellyfin.py:78` | 2026-10-05 |
+| `src/matinee/library/jellyfin.py::JellyfinReader.image` (no key, size and type caps) | `src/matinee/library/jellyfin.py:107` | 2026-10-05 |
+| `src/matinee/library/jellyfin.py::ITEM_ID` | `src/matinee/library/jellyfin.py:28` | 2026-10-05 |
+| `src/matinee/library/jellyfin.py::parse_film` (`{tmdb-N}` folder tag) | `src/matinee/library/jellyfin.py:49` | 2026-10-05 |
 | `src/matinee/library/plex.py::PlexReader` (every movie section) | `src/matinee/library/plex.py:101` | 2026-10-05 |
 | `src/matinee/library/plex.py::PlexReader._get` (GET only; the token in an unredirected header) | `src/matinee/library/plex.py:112` | 2026-10-05 |
 | `src/matinee/library/plex.py::parse_film` / `_tmdb` / `certificate` (runtime, rating, folder tag) | `src/matinee/library/plex.py:80` | 2026-10-05 |
