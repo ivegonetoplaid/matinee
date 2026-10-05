@@ -267,7 +267,9 @@ def add_film_routes(app: FastAPI, theatre: Theatre, seerr: SeerrCheck, images: I
         )
 
 
-def add_door_routes(app: FastAPI, theatre: Theatre, store: Store, clock: Callable[[], float], topics_on: bool) -> None:
+def add_door_routes(
+    app: FastAPI, theatre: Theatre, store: Store, clock: Callable[[], float], topics_on: bool, images: ImageSource
+) -> None:
     @app.get("/api/door")
     def door(request: Request, response: Response) -> Door:
         """What the front door shows an admitted device: the film count, every profile by name, and the avatars.
@@ -284,7 +286,7 @@ def add_door_routes(app: FastAPI, theatre: Theatre, store: Store, clock: Callabl
             Tile(id=p.id, name=p.name, avatar=p.avatar, has_pin=p.has_pin, held=p.id in held) for p in store.everyone()
         ]
         now = theatre.showing().now_showing
-        return Door(now_showing=now, profiles=tiles, avatars=list(AVATARS), dtdd=topics_on)
+        return Door(now_showing=now, profiles=tiles, avatars=list(AVATARS), dtdd=topics_on, posters_from=images)
 
     @app.post("/api/profiles")
     def create_profile(body: NewProfile, request: Request, response: Response) -> Seat:
@@ -522,7 +524,7 @@ def create_app(
     add_film_routes(app, theatre, seerr, config.images)
     add_setup_route(app, theatre, config, seerr, faults)
     add_page(app, config.images)
-    add_door_routes(app, theatre, store, clock, dtdd is not None)
+    add_door_routes(app, theatre, store, clock, dtdd is not None, config.images)
     add_delete_route(app, store)
     add_avatar_route(app, store)
     topics_on = dtdd is not None

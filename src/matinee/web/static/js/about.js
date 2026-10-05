@@ -86,7 +86,50 @@ function copy(back) {
       ),
       h("p", { class: "about-cite" }, "This product uses the TMDB API but is not endorsed or certified by TMDB."),
     ),
+    keeps(),
   ];
+}
+
+// The privacy statement. It names only what this installation does: the DoesTheDogDie lines need its key,
+// and the TMDB line shows only when each browser loads pictures straight from TMDB.
+function keeps() {
+  const profile = offers.dtdd
+    ? "each profile's name, picture, PIN (stored scrambled, never as typed) and list of things to steer around"
+    : "each profile's name, picture and PIN (stored scrambled, never as typed)";
+  return section(
+    "What Matinee keeps",
+    h(
+      "p",
+      {},
+      "Matinee runs on its owner's own computer. Nothing you do here is sent to Matinee's maker or anyone else, and there are no accounts, no ads and no tracking.",
+    ),
+    h(
+      "p",
+      {},
+      "It's built to know as little about you as it can. It never asks for your email or your real name, a profile's name can be anything you like, and it doesn't log your address.",
+    ),
+    h(
+      "p",
+      {},
+      `Kept on this computer: ${profile}; any note you leave about a pick, for whoever runs this Matinee; and cookies in your browser that remember which profiles this device has opened and that it gave the door word, for up to 400 days.`,
+    ),
+    h(
+      "p",
+      {},
+      offers.dtdd
+        ? "To check a pick, Matinee asks DoesTheDogDie about that one film. Your list never leaves this computer, because the check happens here, and the answer is forgotten within 30 days. "
+        : "",
+      "Film details come from TMDB, fetched overnight, with nothing about you. ",
+      offers.postersFromTmdb ? "Your browser loads posters straight from TMDB, so TMDB sees you as any website you visit does. " : "",
+      "Matinee only ever reads a Jellyfin or Plex library; it never changes it.",
+    ),
+    h(
+      "p",
+      {},
+      offers.dtdd ? "A PIN stops other devices opening your profile or seeing your list. " : "A PIN stops other devices opening your profile. ",
+      "Deleting a profile removes its name, PIN and everything it keeps; notes it left stay. Ask whoever runs this Matinee to remove anything else.",
+    ),
+  );
 }
 
 let shown = null; // { layer, opener, around } while About is open

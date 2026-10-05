@@ -66,6 +66,7 @@ class Door(BaseModel):
     profiles: list[Tile]
     avatars: list[str]
     dtdd: bool  # the installation has a DoesTheDogDie key, so it offers the list of topics to steer around
+    posters_from: Literal["server", "tmdb"]  # with tmdb, each browser loads pictures straight from TMDB
 
 
 class NewProfile(BaseModel):

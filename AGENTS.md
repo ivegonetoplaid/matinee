@@ -157,7 +157,7 @@ The steps:
 
 Without Docker, install the package into a virtualenv (`pip install -e .`),
 load the file into the shell (`set -a; . ./.env; set +a`) and run
-`uvicorn --factory matinee.web.main:build --workers 1` and
+`uvicorn --factory matinee.web.main:build --workers 1 --no-access-log` and
 `python tools/rebuild_table.py --daily HH:MM` from the repository root, each in
 a shell that loaded the file.
 

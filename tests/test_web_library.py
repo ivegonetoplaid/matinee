@@ -526,6 +526,12 @@ def test_under_tmdb_the_page_reads_paths_for_films_the_library_does_not_hold(tmp
     assert client.get("/api/film/5").json()["backdrop_path"] == "/b5.jpg"
 
 
+def test_the_door_says_where_pictures_come_from_for_the_privacy_statement(tmp_path: Path) -> None:
+    for images in ("server", "tmdb"):
+        client, _, _, _ = make_world(tmp_path / images, images=images)
+        assert client.get("/api/door").json()["posters_from"] == images
+
+
 def test_a_tmdb_picture_is_fetched_by_a_get_at_the_mapped_size_and_checked() -> None:
     from matinee.tmdb import TmdbImageError, fetch_picture
 

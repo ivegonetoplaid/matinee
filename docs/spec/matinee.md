@@ -1285,7 +1285,7 @@ would hand one device's profiles to another.
 | GET | `/img/{kind}/{tmdb}/{size}` | a poster or backdrop: from the media server for a film the library holds, else from TMDB's image server through Matinee |
 | GET | `/api/pictures` | the image source, and under `tmdb` the TMDB poster path of every live film that has one (section 11.5) |
 | GET | `/api/film/{tmdb}` | title, year, runtime, synopsis and the pick's link for one film (`link`, and `link_to`: `seerr` or `tmdb`), and under `tmdb` its TMDB backdrop path |
-| GET | `/api/door` | the film count, every profile (marking those this device holds), the avatars offered, and whether a DoesTheDogDie key is set |
+| GET | `/api/door` | the film count, every profile (marking those this device holds), the avatars offered, whether a DoesTheDogDie key is set, and `posters_from` (`server` or `tmdb`) |
 | POST | `/api/profiles` | create a profile and issue this device a token |
 | POST | `/api/profiles/{id}/open` | open a profile by PIN, or at once when held or PIN-less |
 | PUT | `/api/profiles/{id}/topics` | replace a held profile's DoesTheDogDie topics; only with a DoesTheDogDie key |
@@ -1953,8 +1953,9 @@ as written. A phone is a viewport 600 px wide or less.
   knows what a film feels like", with links to MovieLens and the tag genome
   dataset and the two MovieLens citations; "How it steers around things", with
   "Powered by DoesTheDogDie.com", linked, only with a DoesTheDogDie key
-  (section 8); and "Posters and film data", with the
-  TMDB logo (14 px tall), linked, and TMDB's notice. It states no count that
+  (section 8); "Posters and film data", with the
+  TMDB logo (14 px tall), linked, and TMDB's notice; and "What Matinee keeps",
+  the installation's privacy statement (section 14). It states no count that
   changes over time. Opened from inside, About moves nothing. Opened from the
   door, the name flies to the wordmark's place and the rest of the marquee lifts
   and fades, as on going in; the screen underneath is hidden once the name has
@@ -1981,7 +1982,7 @@ as written. A phone is a viewport 600 px wide or less.
 - **The image** (`Dockerfile`) runs on `python:3.13-slim`. It installs the
   package editable, so it finds `data/` beside `src/` as a checkout does. It
   runs as an unprivileged user (uid 1000), with `uvicorn --factory
-  matinee.web.main:build --workers 1` on port 8000 and no server header. It
+  matinee.web.main:build --workers 1` on port 8000, no server header and no access log, so no visitor's address is logged. It
   trusts forwarded headers from any address, so it must sit behind a reverse
   proxy. The image carries `tools/`, so the same image can run the nightly
   rebuild with `--daily`.
@@ -2038,6 +2039,23 @@ The terms of each source are part of the design.
   image server, so TMDB sees that browser's requests. The page sends them with
   no referrer (`Referrer-Policy: same-origin`).
 - **MovieLens tag genome.** Credited on the About page to F. Maxwell Harper and
+- **The privacy statement.** DoesTheDogDie's API terms bind whoever holds a key
+  to keep a privacy policy for the application (section 2.4(b)). The About
+  page's last section, "What Matinee keeps", is that policy for every
+  installation. It says, in order: Matinee runs on its owner's computer and
+  sends nothing to its maker or anyone else, with no accounts, ads or tracking;
+  it asks for no email or real name and does not log a visitor's address (the
+  image runs uvicorn with no access log); what the store and the cookies keep
+  (each profile's name, avatar, scrambled PIN, and its topics only with a
+  DoesTheDogDie key; notes; the two cookies, up to 400 days); what leaves the
+  computer (the DoesTheDogDie lookup of the picked film only, with a key, the
+  topics never leaving and the answer kept at most 30 days; TMDB's records,
+  fetched with nothing about a viewer; under `tmdb`, the browser's own picture
+  requests); that the library is only read; and that a PIN guards a profile,
+  deleting a profile removes it and its topics while its notes stay, and
+  whoever runs the installation removes anything else. Each sentence states
+  only what the code does, and a change to what Matinee keeps or sends amends
+  it.
   Joseph A. Konstan (2015), *The MovieLens Datasets: History and Context*, and
   Jesse Vig, Shilad Sen and John Riedl (2012), *The Tag Genome: Encoding
   Community Knowledge to Support Novel Interaction*. The raw dataset is never
@@ -2406,15 +2424,15 @@ symbol when one does not match.
 | `src/matinee/web/common.py::TOKENS_COOKIE` / `MAX_TOKENS` | `src/matinee/web/common.py:22` | 2026-10-05 |
 | `src/matinee/web/common.py::PROFILE_LINES` (each refusal's words) | `src/matinee/web/common.py:25` | 2026-10-05 |
 | `src/matinee/web/common.py::Seat` / `Tile` / `Deleted` / `Door` (what the page is told of a profile) | `src/matinee/web/common.py:38` | 2026-10-05 |
-| `src/matinee/web/common.py::NewProfile` / `AvatarChoice` / `PinEntry` (request caps) | `src/matinee/web/common.py:71` | 2026-10-05 |
-| `src/matinee/web/common.py::set_tokens` / `with_token` | `src/matinee/web/common.py:103` | 2026-10-05 |
+| `src/matinee/web/common.py::NewProfile` / `AvatarChoice` / `PinEntry` (request caps) | `src/matinee/web/common.py:72` | 2026-10-05 |
+| `src/matinee/web/common.py::set_tokens` / `with_token` | `src/matinee/web/common.py:104` | 2026-10-05 |
 | `src/matinee/web/app.py::add_door_routes` (`GET /api/door`, create, open) | `src/matinee/web/app.py:270` | 2026-10-05 |
-| `src/matinee/web/app.py::add_avatar_route` (`PUT /api/profiles/{id}/avatar`) | `src/matinee/web/app.py:307` | 2026-10-05 |
-| `src/matinee/web/app.py::add_delete_route` (`DELETE /api/profiles/{id}`) | `src/matinee/web/app.py:316` | 2026-10-05 |
-| `src/matinee/web/viewing.py::ViewerIn` (a profile id only) | `src/matinee/web/viewing.py:35` | 2026-10-05 |
-| `src/matinee/web/viewing.py::held_profile` | `src/matinee/web/viewing.py:193` | 2026-10-05 |
-| `src/matinee/web/viewing.py::resolve` (no profile: the front door's pool; no key: stored topics ignored) | `src/matinee/web/viewing.py:216` | 2026-10-05 |
-| `src/matinee/web/viewing.py::resolve_held` (walks and picks need a held profile) | `src/matinee/web/viewing.py:229` | 2026-10-05 |
+| `src/matinee/web/app.py::add_avatar_route` (`PUT /api/profiles/{id}/avatar`) | `src/matinee/web/app.py:309` | 2026-10-05 |
+| `src/matinee/web/app.py::add_delete_route` (`DELETE /api/profiles/{id}`) | `src/matinee/web/app.py:318` | 2026-10-05 |
+| `src/matinee/web/viewing.py::ViewerIn` (a profile id only) | `src/matinee/web/viewing.py:36` | 2026-10-05 |
+| `src/matinee/web/viewing.py::held_profile` | `src/matinee/web/viewing.py:197` | 2026-10-05 |
+| `src/matinee/web/viewing.py::resolve` (no profile: the front door's pool; no key: stored topics ignored) | `src/matinee/web/viewing.py:229` | 2026-10-05 |
+| `src/matinee/web/viewing.py::resolve_held` (walks and picks need a held profile) | `src/matinee/web/viewing.py:242` | 2026-10-05 |
 | `tests/test_profiles.py::test_a_write_never_lands_on_a_new_profile_that_reuses_a_deleted_ones_id` | `tests/test_profiles.py:318` | 2026-10-05 |
 | `tests/test_avatar_images.py` (two square sizes each; the size budget) | `tests/test_avatar_images.py:24` | 2026-10-05 |
 | `src/matinee/web/static/avatars/` (`<avatar>-256.webp` and `<avatar>-80.webp`) | `src/matinee/web/static/avatars` | 2026-10-05 |
@@ -2444,9 +2462,9 @@ symbol when one does not match.
 | `src/matinee/web/admission.py::Admission` (`issue`, `admits`, `matches`) | `src/matinee/web/admission.py:88` | 2026-10-05 |
 | `src/matinee/web/config.py::GREETINGS` | `src/matinee/web/config.py:24` | 2026-10-05 |
 | `src/matinee/web/config.py::_door` (a wrong lock refuses the start; with no word, a bad mode is a fault) | `src/matinee/web/config.py:68` | 2026-10-05 |
-| `src/matinee/web/app.py::AdmissionOut` / `WordIn` | `src/matinee/web/app.py:335` | 2026-10-05 |
-| `src/matinee/web/app.py::open_before_admission` | `src/matinee/web/app.py:347` | 2026-10-05 |
-| `src/matinee/web/app.py::add_admission` (the gate, `GET`/`POST /api/admission`, the 2-second wait) | `src/matinee/web/app.py:352` | 2026-10-05 |
+| `src/matinee/web/app.py::AdmissionOut` / `WordIn` | `src/matinee/web/app.py:337` | 2026-10-05 |
+| `src/matinee/web/app.py::open_before_admission` | `src/matinee/web/app.py:349` | 2026-10-05 |
+| `src/matinee/web/app.py::add_admission` (the gate, `GET`/`POST /api/admission`, the 2-second wait) | `src/matinee/web/app.py:354` | 2026-10-05 |
 | `tests/test_admission.py` | `tests/test_admission.py:83` | 2026-10-05 |
 
 ### Notes and the notes tool
@@ -2473,10 +2491,10 @@ symbol when one does not match.
 | Handle | Where | Verified |
 |---|---|---|
 | `src/matinee/web/config.py::Config.dtdd_key` (optional) | `src/matinee/web/config.py:44` | 2026-10-05 |
-| `src/matinee/web/app.py::create_app` (one `topics_on`; a picker that disagrees is refused) | `src/matinee/web/app.py:485` | 2026-10-05 |
-| `src/matinee/web/viewing.py::add_topic_routes` (`GET /api/topics`, `PUT /api/profiles/{id}/topics`, only with a key) | `src/matinee/web/viewing.py:310` | 2026-10-05 |
-| `src/matinee/web/viewing.py::save_topics` | `src/matinee/web/viewing.py:334` | 2026-10-05 |
-| `src/matinee/web/viewing.py::FirstOut.checked` (whether this viewer's picks are checked) | `src/matinee/web/viewing.py:113` | 2026-10-05 |
+| `src/matinee/web/app.py::create_app` (one `topics_on`; a picker that disagrees is refused) | `src/matinee/web/app.py:487` | 2026-10-05 |
+| `src/matinee/web/viewing.py::add_topic_routes` (`GET /api/topics`, `PUT /api/profiles/{id}/topics`, only with a key) | `src/matinee/web/viewing.py:324` | 2026-10-05 |
+| `src/matinee/web/viewing.py::save_topics` | `src/matinee/web/viewing.py:348` | 2026-10-05 |
+| `src/matinee/web/viewing.py::FirstOut.checked` (whether this viewer's picks are checked) | `src/matinee/web/viewing.py:115` | 2026-10-05 |
 | `src/matinee/web/common.py::Door.dtdd` (`GET /api/door` says whether a key is set) | `src/matinee/web/common.py:68` | 2026-10-05 |
 | `src/matinee/web/main.py::warn_kept_topics` / `TOPICS_KEPT` / `WARN_EVERY` (kept topics without a key) | `src/matinee/web/main.py:41` | 2026-10-05 |
 | `src/matinee/pick.py::Picker.dtdd` / `_checked` (none without a key) | `src/matinee/pick.py:274` | 2026-10-05 |
@@ -2515,8 +2533,8 @@ symbol when one does not match.
 | `src/matinee/web/setup.py::SetupNote` (`warning` while the data is stale) | `src/matinee/web/setup.py:49` | 2026-10-05 |
 | `src/matinee/web/setup.py::note` / `unreachable` / `rebuild_lines` / `stalled` | `src/matinee/web/setup.py:97` | 2026-10-05 |
 | `src/matinee/web/setup.py::HEADING` / `MEANWHILE` / `STOPPED` / `STALE` / `STALLED_AFTER` (every line's words) | `src/matinee/web/setup.py:20` | 2026-10-05 |
-| `src/matinee/web/app.py::setup_faults` (the configured, start-up and run-time faults) | `src/matinee/web/app.py:452` | 2026-10-05 |
-| `src/matinee/web/app.py::add_setup_route` (`GET /api/setup`) | `src/matinee/web/app.py:466` | 2026-10-05 |
+| `src/matinee/web/app.py::setup_faults` (the configured, start-up and run-time faults) | `src/matinee/web/app.py:454` | 2026-10-05 |
+| `src/matinee/web/app.py::add_setup_route` (`GET /api/setup`) | `src/matinee/web/app.py:468` | 2026-10-05 |
 | `src/matinee/web/theatre.py::NothingToShow` (shipped data that cannot make a catalog) | `src/matinee/web/theatre.py:47` | 2026-10-05 |
 | `src/matinee/web/theatre.py::Theatre._catalog` | `src/matinee/web/theatre.py:140` | 2026-10-05 |
 | `src/matinee/web/theatre.py::Showing.library` (`none`, `usable`, `unreachable`) | `src/matinee/web/theatre.py:56` | 2026-10-05 |
@@ -2524,7 +2542,7 @@ symbol when one does not match.
 | `src/matinee/web/seerr.py::SeerrCheck` (`CHECK_EVERY`; picks link to TMDB while it does not answer) | `src/matinee/web/seerr.py:25` | 2026-10-05 |
 | `src/matinee/web/logbook.py::describe` / `StateLog` / `state_log` / `CHECK_EVERY` (the state line) | `src/matinee/web/logbook.py:62` | 2026-10-05 |
 | `src/matinee/web/logbook.py::Quiet` / `QUIET_FOR` / `SERVER_NAMES` (a repeating warning once a minute, with a count) | `src/matinee/web/logbook.py:106` | 2026-10-05 |
-| `src/matinee/web/app.py::add_state_log` / `QUIET` | `src/matinee/web/app.py:474` | 2026-10-05 |
+| `src/matinee/web/app.py::add_state_log` / `QUIET` | `src/matinee/web/app.py:476` | 2026-10-05 |
 | `tests/test_setup.py::test_only_a_wrong_lock_and_a_missing_data_directory_refuse_to_start` | `tests/test_setup.py:107` | 2026-10-05 |
 | `tests/test_logbook.py::test_the_state_line_names_every_part_and_no_secret` | `tests/test_logbook.py:30` | 2026-10-05 |
 
@@ -2533,10 +2551,10 @@ symbol when one does not match.
 | Handle | Where | Verified |
 |---|---|---|
 | `src/matinee/web/main.py::build` (reads the labels and the household file; faults go on the note) | `src/matinee/web/main.py:82` | 2026-10-05 |
-| `src/matinee/web/app.py::create_app` (docs disabled) | `src/matinee/web/app.py:485` | 2026-10-05 |
-| `src/matinee/web/app.py::security_headers` / `CONTENT_SECURITY_POLICY` | `src/matinee/web/app.py:408` | 2026-10-05 |
-| `src/matinee/web/app.py::add_page` | `src/matinee/web/app.py:414` | 2026-10-05 |
-| `src/matinee/web/app.py::add_quip_routes` (`GET /api/quips`; 503 when the lines cannot be read) | `src/matinee/web/app.py:440` | 2026-10-05 |
+| `src/matinee/web/app.py::create_app` (docs disabled) | `src/matinee/web/app.py:487` | 2026-10-05 |
+| `src/matinee/web/app.py::security_headers` / `CONTENT_SECURITY_POLICY` | `src/matinee/web/app.py:410` | 2026-10-05 |
+| `src/matinee/web/app.py::add_page` | `src/matinee/web/app.py:416` | 2026-10-05 |
+| `src/matinee/web/app.py::add_quip_routes` (`GET /api/quips`; 503 when the lines cannot be read) | `src/matinee/web/app.py:442` | 2026-10-05 |
 | `src/matinee/web/app.py::add_film_routes` / `IMAGE_WIDTHS` / `IMAGE_CACHE` (`GET /api/pictures`) | `src/matinee/web/app.py:235` | 2026-10-05 |
 | `src/matinee/web/app.py::film_link` / `FilmCard` (Seerr, else TMDB) | `src/matinee/web/app.py:178` | 2026-10-05 |
 | `src/matinee/web/app.py::Held` / `held` / `stored_path` | `src/matinee/web/app.py:102` | 2026-10-05 |
@@ -2545,9 +2563,9 @@ symbol when one does not match.
 | `src/matinee/tmdb.py::fetch_picture` / `IMAGES` / `IMAGE_SIZES` / `TmdbImageError` | `src/matinee/tmdb.py:286` | 2026-10-05 |
 | `src/matinee/tmdb.py::ImageGate` / `IMAGE_GATE` / `IMAGE_RATE` (50 a second, 20,000 an hour, a hold after a 429 or 503) | `src/matinee/tmdb.py:240` | 2026-10-05 |
 | `src/matinee/web/app.py::add_error_handlers` | `src/matinee/web/app.py:137` | 2026-10-05 |
-| `src/matinee/web/common.py::Problem` | `src/matinee/web/common.py:124` | 2026-10-05 |
-| `src/matinee/web/viewing.py::add_viewing_routes` (`POST /api/first` with the source question, `POST /api/walk`) | `src/matinee/web/viewing.py:339` | 2026-10-05 |
-| `src/matinee/web/viewing.py::WalkIn` / `PickIn` / `FirstIn` (request caps; no field skips the check) | `src/matinee/web/viewing.py:44` | 2026-10-05 |
+| `src/matinee/web/common.py::Problem` | `src/matinee/web/common.py:125` | 2026-10-05 |
+| `src/matinee/web/viewing.py::add_viewing_routes` (`POST /api/first` with the source question, `POST /api/walk`) | `src/matinee/web/viewing.py:353` | 2026-10-05 |
+| `src/matinee/web/viewing.py::WalkIn` / `PickIn` / `FirstIn` (request caps; no field skips the check) | `src/matinee/web/viewing.py:45` | 2026-10-05 |
 | `tests/test_user_agent.py::test_every_outbound_request_names_matinee` | `tests/test_user_agent.py:35` | 2026-10-05 |
 
 ### The page
@@ -2616,8 +2634,9 @@ symbol when one does not match.
 | `tests/js/door-rules.test.mjs`, `tests/js/locked.test.mjs`, `tests/js/mark.test.mjs` | `tests/js/door-rules.test.mjs:6` | 2026-10-05 |
 | `src/matinee/web/static/js/flight.js::fly` (`FLIGHT_MS`, the fail-open) | `src/matinee/web/static/js/flight.js:63` | 2026-10-05 |
 | `src/matinee/web/static/js/flight.js::nameAt` / `wordmarkAt` / `riseOf` / `copyAt` | `src/matinee/web/static/js/flight.js:14` | 2026-10-05 |
-| `src/matinee/web/static/js/about.js::openAbout` (the focus returns to what opened it) | `src/matinee/web/static/js/about.js:113` | 2026-10-05 |
-| `src/matinee/web/static/js/about.js::close` (popstate; Escape steps back) | `src/matinee/web/static/js/about.js:96` | 2026-10-05 |
+| `src/matinee/web/static/js/about.js::openAbout` (the focus returns to what opened it) | `src/matinee/web/static/js/about.js:156` | 2026-10-05 |
+| `src/matinee/web/static/js/about.js::close` (popstate; Escape steps back) | `src/matinee/web/static/js/about.js:139` | 2026-10-05 |
+| `src/matinee/web/static/js/about.js::keeps` (the privacy statement, "What Matinee keeps") | `src/matinee/web/static/js/about.js:95` | 2026-10-05 |
 | `src/matinee/web/static/js/about.js::copy` (the About page's words and links; no steering section without a key) | `src/matinee/web/static/js/about.js:22` | 2026-10-05 |
 | `src/matinee/web/static/js/wall-grid.js::posterAcross` / `ACROSS` / `GAP` | `src/matinee/web/static/js/wall-grid.js:27` | 2026-10-05 |
 | `src/matinee/web/static/js/wall-grid.js::wallLayout` | `src/matinee/web/static/js/wall-grid.js:37` | 2026-10-05 |

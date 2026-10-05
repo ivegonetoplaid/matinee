@@ -123,7 +123,7 @@ roughly 10,000 of the films TMDB's users have voted on most.
    python3 -m venv .venv && .venv/bin/pip install -e .
    set -a; . ./.env; set +a           # Matinee reads its environment, not the file
    .venv/bin/python tools/rebuild_table.py --daily 04:30 &
-   .venv/bin/uvicorn --factory matinee.web.main:build --workers 1 --port 8000
+   .venv/bin/uvicorn --factory matinee.web.main:build --workers 1 --port 8000 --no-access-log
    ```
 
 ## The first few minutes

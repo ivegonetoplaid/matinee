@@ -18,4 +18,4 @@ RUN pip install --no-cache-dir -e . \
 USER matinee
 EXPOSE 8000
 CMD ["uvicorn", "--factory", "matinee.web.main:build", "--host", "0.0.0.0", "--port", "8000", \
-     "--workers", "1", "--proxy-headers", "--forwarded-allow-ips", "*", "--no-server-header"]
+     "--workers", "1", "--proxy-headers", "--forwarded-allow-ips", "*", "--no-server-header", "--no-access-log"]
