@@ -44,7 +44,8 @@ contract is listed under [Known gaps](#known-gaps).
      `MediaBrowser Token="<key>"` (the one form Jellyfin 12 accepts), never
      in a URL or a log, and never follows a redirect. An item id is 32
      hexadecimal characters before it is joined into a request.
-   - The Plex reader reads every movie section. A film's TMDB id is its
+   - The Plex reader reads every movie section. An item a section lists that
+     is not a movie (a collection) is left out and counted in a warning. A film's TMDB id is its
      `tmdb://` guid, or the id in a legacy "The Movie Database" agent guid
      (`com.plexapp.agents.themoviedb://<id>`); a film with neither has no TMDB
      id. Plex writes a US age rating bare and any other country's with its
@@ -2247,10 +2248,10 @@ symbol when one does not match.
 | `src/matinee/library/jellyfin.py::JellyfinReader.image` (no key, size and type caps) | `src/matinee/library/jellyfin.py:107` | 2026-10-05 |
 | `src/matinee/library/jellyfin.py::ITEM_ID` | `src/matinee/library/jellyfin.py:28` | 2026-10-05 |
 | `src/matinee/library/jellyfin.py::parse_film` (`{tmdb-N}` folder tag) | `src/matinee/library/jellyfin.py:49` | 2026-10-05 |
-| `src/matinee/library/plex.py::PlexReader` (every movie section) | `src/matinee/library/plex.py:101` | 2026-10-05 |
-| `src/matinee/library/plex.py::PlexReader._get` (GET only; the token in an unredirected header) | `src/matinee/library/plex.py:112` | 2026-10-05 |
-| `src/matinee/library/plex.py::parse_film` / `_tmdb` / `certificate` (runtime, rating, folder tag) | `src/matinee/library/plex.py:80` | 2026-10-05 |
-| `src/matinee/library/plex.py::ITEM_ID` / `TMDB_GUID` / `LEGACY_TMDB_GUID` / `US_PREFIX` | `src/matinee/library/plex.py:28` | 2026-10-05 |
+| `src/matinee/library/plex.py::PlexReader` (every movie section) | `src/matinee/library/plex.py:105` | 2026-10-05 |
+| `src/matinee/library/plex.py::PlexReader._get` (GET only; the token in an unredirected header) | `src/matinee/library/plex.py:116` | 2026-10-05 |
+| `src/matinee/library/plex.py::parse_film` / `_tmdb` / `certificate` (runtime, rating, folder tag) | `src/matinee/library/plex.py:84` | 2026-10-05 |
+| `src/matinee/library/plex.py::ITEM_ID` / `TMDB_GUID` / `LEGACY_TMDB_GUID` / `US_PREFIX` | `src/matinee/library/plex.py:29` | 2026-10-05 |
 | `src/matinee/library/choice.py::configured_server` (the server whose settings are filled in; none, or refused for both) | `src/matinee/library/choice.py:49` | 2026-10-05 |
 | `src/matinee/library/choice.py::MediaServer` / `ServerChoiceError` / `open_reader` | `src/matinee/library/choice.py:31` | 2026-10-05 |
 | `src/matinee/__init__.py::USER_AGENT` (every outbound request names Matinee) | `src/matinee/__init__.py:5` | 2026-10-05 |

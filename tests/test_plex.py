@@ -139,6 +139,23 @@ def test_films_come_from_every_movie_section_by_get_with_the_token_in_a_header(m
         assert req.get_header("User-agent") == USER_AGENT
 
 
+def test_a_collection_listed_among_a_sections_films_is_left_out_with_a_warning(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    collection = {"ratingKey": "9001", "type": "collection", "title": "The Naked Gun Collection"}
+    answers = {
+        "/library/sections": {"MediaContainer": {"Directory": [{"key": "1", "type": "movie"}]}},
+        "/library/sections/1/all?type=1&includeGuids=1": {
+            "MediaContainer": {"Metadata": [{**ITEM, "type": "movie"}, collection]}
+        },
+    }
+    plex_reader, _ = reader(monkeypatch, answers)
+    with caplog.at_level("WARNING", logger="matinee.library"):
+        films = plex_reader.films()
+    assert [f.item_id for f in films] == ["390193"]
+    assert "1 items that are not movies (collection)" in caplog.text
+
+
 def test_synopsis_and_pictures(monkeypatch: pytest.MonkeyPatch) -> None:
     answers = {
         "/library/metadata/390193": {"MediaContainer": {"Metadata": [{"summary": "Drebin again."}]}},

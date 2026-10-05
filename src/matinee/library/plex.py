@@ -13,6 +13,7 @@ with a US one.
 from __future__ import annotations
 
 import json
+import logging
 import re
 import urllib.error
 import urllib.request
@@ -36,6 +37,9 @@ IMAGE_SHAPES = {"poster": 1.5, "backdrop": 0.5625}  # height over width
 SMALL_IMAGE_PX = 160  # an image this wide or narrower is a wall tile, shown dimmed, so it is fetched lighter
 SMALL_IMAGE_QUALITY = 60
 IMAGE_QUALITY = 80
+
+
+log = logging.getLogger("matinee.library")
 
 
 def _int_or_none(value: object) -> int | None:
@@ -147,6 +151,8 @@ class PlexReader:
         return item_id
 
     def films(self) -> list[LibraryFilm]:
+        """Every movie in every movie section. An item that is not a movie (a collection, which a section set to
+        show collections lists among its films) is left out and counted in a warning."""
         sections = [d for d in self._container("/library/sections", "Directory") if d.get("type") == "movie"]
         films: list[LibraryFilm] = []
         for section in sections:
@@ -154,7 +160,16 @@ class PlexReader:
             if not key.isdigit():
                 raise LibraryError("a Plex movie section has no usable key")
             items = self._container(f"/library/sections/{key}/all?type=1&includeGuids=1", "Metadata")
-            films.extend(parse_film(it) for it in items)
+            movies = [it for it in items if it.get("type", "movie") == "movie"]
+            if len(movies) < len(items):
+                kinds = sorted({str(it.get("type")) for it in items} - {"movie"})
+                log.warning(
+                    "Plex section %s listed %d items that are not movies (%s); they are left out of the library",
+                    key,
+                    len(items) - len(movies),
+                    ", ".join(kinds),
+                )
+            films.extend(parse_film(it) for it in movies)
         return films
 
     def synopsis(self, item_id: str) -> str | None:
