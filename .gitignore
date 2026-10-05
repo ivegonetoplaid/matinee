@@ -16,6 +16,7 @@ build/
 /STYLE.md
 
 # Third-party data is fetched, never committed (MovieLens, TMDB, DoesTheDogDie terms)
+/state/
 /cache/
 ml-latest/
 *.jsonl

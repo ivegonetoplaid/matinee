@@ -35,7 +35,7 @@ Where the films come from:
   films the library holds and the labelled films it does not.
 - **The offline film table.** `tools/rebuild_table.py` builds one SQLite file in
   the data directory from the library, TMDB and the shipped tag-genome scores.
-  It runs nightly with `--daily HH:MM`. The server reads that table and never
+  It runs nightly at `REBUILD_TIME` (`--daily`). The server reads that table and never
   queries TMDB or the genome while a viewer waits.
 - **DoesTheDogDie**, optionally. A viewer may name topics they would rather not
   see (a dog dying, say). When a pick is drawn, Matinee looks that one film up
@@ -119,8 +119,8 @@ what Matinee does.
 5. **Where should the data directory live?** It holds the film table, every
    profile, the TMDB cache and the door's secret. It must survive restarts and
    upgrades, and it is the thing to back up.
-6. **When should the nightly rebuild run?** Any quiet time, as `HH:MM` local
-   time.
+6. **When should the nightly rebuild run?** Any quiet time, as `HH:MM` in
+   `REBUILD_TIME`, in the time zone `TZ` names (04:30 when unset).
 
 The keys and settings:
 
@@ -131,7 +131,7 @@ The keys and settings:
   image already sets it to `/state`; mount the data directory there.
 - Optional: `JELLYFIN_URL` with `JELLYFIN_API_KEY`, or `PLEX_URL` with
   `PLEX_TOKEN`; `SEERR_URL`; `DTDD_API_KEY`; `DOOR_WORD`, `DOOR_MATCH`,
-  `DOOR_GREETING`; `POSTERS_FROM`; `TMDB_RATE`; `TZ`. Section 13 of the spec lists
+  `DOOR_GREETING`; `POSTERS_FROM`; `TMDB_RATE`; `REBUILD_TIME`; `TZ`. Section 13 of the spec lists
   every setting and what it takes. An optional service is on when its setting
   is filled in and off when it is empty.
 
@@ -141,17 +141,15 @@ The steps:
    for, and write each value straight after the `=`, with no spaces and no
    quotes. Matinee reads its settings from its environment and never opens
    `.env` itself, so the file must be handed to each process that runs.
-2. Build the image: `docker build -t matinee .`
-3. Make the data directory, writable by uid 1000 (the image's user), and run
-   the server with it mounted at `/state`:
-   `docker run -d --env-file .env -v <data dir>:/state -p 8000:8000 matinee`
-4. Run the nightly rebuild from the same image, with the same file and the same
-   directory:
-   `docker run -d --env-file .env -v <data dir>:/state matinee python tools/rebuild_table.py --daily HH:MM`
-   It rebuilds at once, then every night. The first fetch takes a while; it
-   saves the film table as it goes, so the site starts picking as films
-   arrive, and the site's setup note says what it sees meanwhile.
-5. Put the server behind a reverse proxy that serves it over HTTPS. The image
+2. From the repository's folder, make `./state` writable by uid 1000 (the
+   image's user) and start both processes with the shipped `compose.yaml`:
+   `mkdir -p state && sudo chown 1000:1000 state && docker compose up -d --build`
+   It runs the server on port 8000 and the rebuild, which rebuilds at once and
+   then every night at `REBUILD_TIME`. For a data directory elsewhere, change
+   `./state` in both `volumes` lines. The first fetch takes a while; it saves
+   the film table as it goes, so the site starts picking as films arrive, and
+   the site's setup note says what it sees meanwhile.
+3. Put the server behind a reverse proxy that serves it over HTTPS. The image
    trusts forwarded headers from any address, and the door word's cookie is
    only sent over HTTPS.
 
@@ -160,7 +158,7 @@ load the file into the shell with the README's line, which takes each value
 as written, the way Docker does (`. ./.env` breaks on a value with a space),
 and run
 `uvicorn --factory matinee.web.main:build --workers 1 --no-access-log` and
-`python tools/rebuild_table.py --daily HH:MM` from the repository root, each in
+`python tools/rebuild_table.py --daily` from the repository root, each in
 a shell that loaded the file.
 
 Run exactly one server worker. Every DoesTheDogDie limit and hold lives in the

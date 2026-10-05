@@ -7,16 +7,18 @@ any fetch, every SAVE_EVERY new records while it fetches, most-voted first, and 
 the end. Each write replaces the previous table whole. Prints what it saw, including every file whose `{tmdb-N}` folder
 tag differs from the server's TMDB id; it uses the server's id and changes
 nothing. With `--daily HH:MM` it rebuilds now and then every day at that local
-time, which is how the deployed stack runs it every night. It reports itself in
+time, which is how the deployed stack runs it every night; `--daily` alone takes
+the time from REBUILD_TIME, 04:30 when unset. It reports itself in
 `rebuild.json` (`matinee.progress`): running, with its progress at least every few
 seconds while it fetches, finished, or stopped with the reason, such as no TMDB
 key, a refused key, or TMDB not answering. Without a key it
 fetches nothing and writes no table.
 
 Settings come from the environment: DATA_DIR (or `--state`), the media server
-(JELLYFIN_URL and JELLYFIN_API_KEY, or PLEX_URL and PLEX_TOKEN) and TMDB_TOKEN.
+(JELLYFIN_URL and JELLYFIN_API_KEY, or PLEX_URL and PLEX_TOKEN), TMDB_TOKEN,
+TMDB_RATE and REBUILD_TIME.
 
-Usage: python3 tools/rebuild_table.py [--state DIR] [--daily HH:MM]
+Usage: python3 tools/rebuild_table.py [--state DIR] [--daily [HH:MM]]
 """
 
 from __future__ import annotations
@@ -60,6 +62,8 @@ log = logging.getLogger("rebuild_table")
 DEFAULT_STATE = Path.home() / ".local/share/matinee"
 FAILED = "the rebuild failed; its log says why"
 SAVE_EVERY = 500  # new records between saves of the film table while the rebuild fetches
+DEFAULT_DAILY = "04:30"  # the nightly rebuild's time when REBUILD_TIME is unset
+FROM_SETTING = "REBUILD_TIME"  # what `--daily` given alone stands for
 
 
 def _now() -> str:
@@ -229,6 +233,27 @@ def daily_time(text: str) -> tuple[int, int]:
     return hour, minute
 
 
+def daily_arg(text: str) -> tuple[int, int] | str:
+    """`--daily`'s value: an HH:MM time, or FROM_SETTING when the flag stands alone."""
+    return text if text == FROM_SETTING else daily_time(text)
+
+
+def rebuild_time(text: str) -> tuple[int, int]:
+    """REBUILD_TIME, HH:MM: the nightly rebuild's time; unset, empty or anything else is DEFAULT_DAILY (logged)."""
+    if not text.strip():
+        return daily_time(DEFAULT_DAILY)
+    try:
+        return daily_time(text.strip())
+    except argparse.ArgumentTypeError:
+        log.warning(
+            "REBUILD_TIME is %r, which is no HH:MM time of day. Meanwhile the rebuild runs nightly at %s; set"
+            " REBUILD_TIME to a time such as 04:30, or remove it.",
+            text,
+            DEFAULT_DAILY,
+        )
+        return daily_time(DEFAULT_DAILY)
+
+
 def seconds_until(at: tuple[int, int], now: datetime) -> float:
     hour, minute = at
     target = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
@@ -241,10 +266,17 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--state", type=Path, default=Path(os.environ.get("DATA_DIR", DEFAULT_STATE)))
     parser.add_argument(
-        "--daily", type=daily_time, metavar="HH:MM", help="rebuild now, then every day at this local time"
+        "--daily",
+        type=daily_arg,
+        nargs="?",
+        const=FROM_SETTING,
+        metavar="HH:MM",
+        help="rebuild now, then every day at this local time; alone, at REBUILD_TIME",
     )
     args = parser.parse_args()
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+    if args.daily == FROM_SETTING:
+        args.daily = rebuild_time(os.environ.get("REBUILD_TIME", ""))
     token = os.environ.get("TMDB_TOKEN", "").strip()
     rate = tmdb_rate(os.environ.get("TMDB_RATE", ""))
     try:

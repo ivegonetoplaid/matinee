@@ -75,32 +75,9 @@ roughly 10,000 of the films TMDB's users have voted on most.
 
 3. **Start it.** Matinee is two processes from one image: the **server** (the
    site) and the **rebuild** (which fetches film details and builds the film
-   table, then again every night). Both read the same `.env` and the same data
-   folder. With Docker Compose, save this as `compose.yaml` beside `.env`:
-
-   ```yaml
-   services:
-     matinee:
-       build: .
-       image: matinee
-       env_file: .env
-       environment:
-         DATA_DIR: /state
-       volumes:
-         - ./state:/state
-       ports:
-         - "8000:8000"
-       restart: unless-stopped
-     rebuild:
-       image: matinee
-       env_file: .env
-       environment:
-         DATA_DIR: /state
-       volumes:
-         - ./state:/state
-       command: python tools/rebuild_table.py --daily 04:30
-       restart: unless-stopped
-   ```
+   table, then again every night at `REBUILD_TIME`). Both read the same `.env`
+   and the same data folder. The repository's `compose.yaml` runs both, and
+   needs no editing:
 
    ```sh
    mkdir -p state && sudo chown 1000:1000 state   # the image runs as uid 1000
@@ -117,13 +94,16 @@ roughly 10,000 of the films TMDB's users have voted on most.
    over HTTPS, and set a `DOOR_WORD`. The door's cookie is only ever sent over
    HTTPS.
 
-   **Without Docker:**
+   **Without Docker:** Docker is the easy path, and the one this README
+   supports. Anyone running Matinee as a service of their own already knows how
+   to keep two processes running; these are the two, from the repository's
+   folder:
 
    ```sh
    python3 -m venv .venv && .venv/bin/pip install -e .
    # Matinee reads its environment, not the file. This loads each line as written, the way Docker does:
    while IFS= read -r line || [ -n "$line" ]; do case $line in ""|"#"*) ;; *) export "$line" ;; esac; done < .env
-   .venv/bin/python tools/rebuild_table.py --daily 04:30 &
+   .venv/bin/python tools/rebuild_table.py --daily &
    .venv/bin/uvicorn --factory matinee.web.main:build --workers 1 --port 8000 --no-access-log
    ```
 
@@ -211,9 +191,8 @@ personal.
   `docker compose exec matinee python tools/notes.py list`.
 - To change a setting, edit `.env` and run `docker compose up -d`: it recreates
   each service whose settings changed. (A plain `restart` keeps the old ones.)
-- To change when the nightly rebuild runs, change the time after `--daily` in
-  the compose file (24-hour, in the time zone `TZ` names in `.env`), then
-  `docker compose up -d`.
+- To change when the nightly rebuild runs, set `REBUILD_TIME` in `.env`
+  (24-hour, in the time zone `TZ` names), then `docker compose up -d`.
 - To update, `git pull`, then `docker compose up -d --build`. Your data folder
   and `overrides.json` are untouched.
 - Everything Matinee promises is written down in

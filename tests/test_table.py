@@ -369,6 +369,15 @@ def test_daily_time_is_checked() -> None:
             daily_time(bad)
 
 
+def test_rebuild_time_reads_the_setting_and_falls_back_to_half_past_four(caplog: pytest.LogCaptureFixture) -> None:
+    from rebuild_table import rebuild_time
+
+    assert rebuild_time("02:15") == (2, 15)
+    assert rebuild_time(" ") == (4, 30)
+    assert rebuild_time("3am") == (4, 30)
+    assert "REBUILD_TIME is '3am'" in caplog.text
+
+
 def test_empty_tag_list_is_refused() -> None:
     table, _ = build_table(LIBRARY, genome(), CACHE, NOW)
     with pytest.raises(TableError):

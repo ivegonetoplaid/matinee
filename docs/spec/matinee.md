@@ -686,8 +686,10 @@ its vote count in their own columns.
 ### 5.1 The nightly rebuild
 
 `tools/rebuild_table.py` writes the table. With `--daily HH:MM` it rebuilds at
-once and then every day at that local time. The time is validated before the
-first rebuild. A rebuild that fails on an unexpected error puts back the table it
+once and then every day at that local time; `--daily` alone takes the time from
+`REBUILD_TIME`, 04:30 when unset. A time given to `--daily` is validated before
+the first rebuild; a `REBUILD_TIME` that is no `HH:MM` time is logged and the
+rebuild runs at 04:30. A rebuild that fails on an unexpected error puts back the table it
 started with, which it keeps under a second name (`films.sqlite.kept`) while it
 runs; one that stops on TMDB (no key, a refused key, TMDB not answering) keeps
 what it saved.
@@ -1986,6 +1988,10 @@ as written. A phone is a viewport 600 px wide or less.
   trusts forwarded headers from any address, so it must sit behind a reverse
   proxy. The image carries `tools/`, so the same image can run the nightly
   rebuild with `--daily`.
+- **`compose.yaml`** runs the image twice from the repository's folder: the
+  server, built there, on port 8000, and the rebuild (`--daily`, never pulled),
+  both reading `.env` and mounting `./state` at `/state`. It needs no editing;
+  `./state` is ignored by git and kept out of the build context.
 - **State** is one directory mounted at `/state` (`DATA_DIR`). It holds
   the film table (`films.sqlite`, and `films.sqlite.kept` while a rebuild
   runs), Matinee's store (`matinee.sqlite`), the door's secret (`door.key`,
@@ -2009,6 +2015,7 @@ as written. A phone is a viewport 600 px wide or less.
 | `DOOR_MATCH` | server, optional | `relaxed` (the default) or `strict` |
 | `DOOR_GREETING` | server, optional | `show` (the default), `gin`, or the operator's own greeting |
 | `POSTERS_FROM` | server, optional | `server` (the default) or `tmdb`: where the page's pictures come from (section 11.5) |
+| `REBUILD_TIME` | rebuild, optional | the nightly rebuild's time for `--daily` alone, `HH:MM`, 04:30 when unset or not a time (section 5.1) |
 | `TZ` | server, rebuild, optional | a tz database name; the clock `--daily` and the logs follow, UTC in the image when unset |
 
 The repository's `example.env` lists every setting above, each commented out,
@@ -2320,7 +2327,7 @@ symbol when one does not match.
 | `src/matinee/engine.py::_check_labels` (the engine refuses to prepare) | `src/matinee/engine.py:332` | 2026-10-05 |
 | `src/matinee/web/main.py::household` / `OVERRIDES_BROKEN` (the file laid over, or a fault) | `src/matinee/web/main.py:54` | 2026-10-05 |
 | `src/matinee/web/main.py::build` (the shipped labels, an unread `labels.json` in the data directory warned of) | `src/matinee/web/main.py:82` | 2026-10-05 |
-| `tools/rebuild_table.py::household_films` (the rebuild fetches the films the household names) | `tools/rebuild_table.py:182` | 2026-10-05 |
+| `tools/rebuild_table.py::household_films` (the rebuild fetches the films the household names) | `tools/rebuild_table.py:186` | 2026-10-05 |
 | `tests/test_overrides.py::test_a_film_the_household_names_takes_its_whole_placement_from_the_file` | `tests/test_overrides.py:24` | 2026-10-05 |
 
 ### Pools and reference statistics
@@ -2362,13 +2369,15 @@ symbol when one does not match.
 
 | Handle | Where | Verified |
 |---|---|---|
-| `tools/rebuild_table.py::main` (`TMDB_TOKEN`, `TMDB_RATE`, the server whose settings are filled in) | `tools/rebuild_table.py:240` | 2026-10-05 |
-| `tools/rebuild_table.py::rebuild` (no key: compact and stop; an unexpected failure puts the kept table back) | `tools/rebuild_table.py:69` | 2026-10-05 |
-| `tools/rebuild_table.py::_keep` / `_compact_without_key` (`films.sqlite.kept`) | `tools/rebuild_table.py:107` | 2026-10-05 |
-| `tools/rebuild_table.py::_rebuild` (the start line; save before any fetch; most-voted order) | `tools/rebuild_table.py:121` | 2026-10-05 |
-| `tools/rebuild_table.py::_Run` / `save` / `tick` (a save every `SAVE_EVERY` records) | `tools/rebuild_table.py:154` | 2026-10-05 |
-| `tools/rebuild_table.py::SAVE_EVERY` / `FAILED` | `tools/rebuild_table.py:62` | 2026-10-05 |
-| `tools/rebuild_table.py::tmdb_rate` (any positive number; anything else the default, logged) | `tools/rebuild_table.py:202` | 2026-10-05 |
+| `tools/rebuild_table.py::main` (`TMDB_TOKEN`, `TMDB_RATE`, the server whose settings are filled in) | `tools/rebuild_table.py:265` | 2026-10-05 |
+| `tools/rebuild_table.py::daily_time` / `daily_arg` / `seconds_until` (`--daily HH:MM`, validated before the first rebuild) | `tools/rebuild_table.py:225` | 2026-10-05 |
+| `tools/rebuild_table.py::rebuild_time` / `DEFAULT_DAILY` (`REBUILD_TIME` for `--daily` alone; 04:30 when unset or not a time, logged) | `tools/rebuild_table.py:241` | 2026-10-05 |
+| `tools/rebuild_table.py::rebuild` (no key: compact and stop; an unexpected failure puts the kept table back) | `tools/rebuild_table.py:73` | 2026-10-05 |
+| `tools/rebuild_table.py::_keep` / `_compact_without_key` (`films.sqlite.kept`) | `tools/rebuild_table.py:111` | 2026-10-05 |
+| `tools/rebuild_table.py::_rebuild` (the start line; save before any fetch; most-voted order) | `tools/rebuild_table.py:125` | 2026-10-05 |
+| `tools/rebuild_table.py::_Run` / `save` / `tick` (a save every `SAVE_EVERY` records) | `tools/rebuild_table.py:158` | 2026-10-05 |
+| `tools/rebuild_table.py::SAVE_EVERY` / `FAILED` | `tools/rebuild_table.py:64` | 2026-10-05 |
+| `tools/rebuild_table.py::tmdb_rate` (any positive number; anything else the default, logged) | `tools/rebuild_table.py:206` | 2026-10-05 |
 | `src/matinee/progress.py::RebuildStatus` / `STATUS_FILE` (`rebuild.json`) | `src/matinee/progress.py:24` | 2026-10-05 |
 | `src/matinee/progress.py::write_status` / `read_status` / `_well_formed` | `src/matinee/progress.py:33` | 2026-10-05 |
 | `src/matinee/tmdb.py::refresh` (one shared pacer; compaction in `finally`) | `src/matinee/tmdb.py:449` | 2026-10-05 |

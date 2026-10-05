@@ -1,0 +1,31 @@
+# Matinee: the site and its nightly rebuild, two containers from one image.
+# Every setting lives in .env (copy example.env), so this file needs no editing.
+#
+# Start:  mkdir -p state && sudo chown 1000:1000 state && docker compose up -d --build
+# Update: git pull && docker compose up -d --build
+# Your data lives in ./state beside this file: the one thing to back up.
+
+services:
+  matinee:
+    build: .
+    image: matinee
+    env_file: .env
+    environment:
+      DATA_DIR: /state # the folder inside the container; ./state is mounted there
+    volumes:
+      - ./state:/state
+    ports:
+      - "8000:8000" # to serve on another port, change the first number, e.g. "8080:8000"
+    restart: unless-stopped
+
+  # Fetches film details now, then every night at REBUILD_TIME (set in .env).
+  rebuild:
+    image: matinee
+    pull_policy: never # built by the service above; there is nothing to pull
+    env_file: .env
+    environment:
+      DATA_DIR: /state
+    volumes:
+      - ./state:/state
+    command: ["python", "tools/rebuild_table.py", "--daily"]
+    restart: unless-stopped
