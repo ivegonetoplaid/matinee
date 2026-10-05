@@ -86,6 +86,26 @@ function copy(back) {
       ),
       h("p", { class: "about-cite" }, "This product uses the TMDB API but is not endorsed or certified by TMDB."),
     ),
+    // Shown on every installation, whichever media server and request service it uses, or none.
+    section(
+      "Good company",
+      h(
+        "p",
+        {},
+        "Matinee only picks the film. Two projects I've relied on for years take care of the rest of the evening, and both are worth your time.",
+      ),
+      h(
+        "p",
+        {},
+        "Jellyfin is a free, open-source media server: your own films, kept on your own computer, ready on the screens around the house.",
+      ),
+      h(
+        "p",
+        {},
+        "Seerr is where a film you don't have yet becomes one you can ask for. Matinee can open any pick there, and in my house that's the very next step after a pick we don't own. It's free and open source too, from the team behind Overseerr and Jellyseerr.",
+      ),
+      h("p", {}, link("https://jellyfin.org", "Visit Jellyfin"), " · ", link("https://seerr.dev", "Visit Seerr")),
+    ),
     keeps(),
   ];
 }

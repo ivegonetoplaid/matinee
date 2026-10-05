@@ -1968,7 +1968,9 @@ as written. A phone is a viewport 600 px wide or less.
   dataset and the two MovieLens citations; "How it steers around things", with
   "Powered by DoesTheDogDie.com", linked, only with a DoesTheDogDie key
   (section 8); "Posters and film data", with the
-  TMDB logo (14 px tall), linked, and TMDB's notice; and "What Matinee keeps",
+  TMDB logo (14 px tall), linked, and TMDB's notice; "Good company", naming
+  Jellyfin and Seerr with a link to each, on every installation whichever
+  media server and request service it uses, or none; and "What Matinee keeps",
   the installation's privacy statement (section 14). It states no count that
   changes over time. Opened from inside, About moves nothing. Opened from the
   door, the name flies to the wordmark's place and the rest of the marquee lifts
@@ -2663,7 +2665,7 @@ symbol when one does not match.
 | `src/matinee/web/static/js/about.js::openAbout` (the focus returns to what opened it) | `src/matinee/web/static/js/about.js:156` | 2026-10-05 |
 | `src/matinee/web/static/js/about.js::close` (popstate; Escape steps back) | `src/matinee/web/static/js/about.js:139` | 2026-10-05 |
 | `src/matinee/web/static/js/about.js::keeps` (the privacy statement, "What Matinee keeps") | `src/matinee/web/static/js/about.js:95` | 2026-10-05 |
-| `src/matinee/web/static/js/about.js::copy` (the About page's words and links; no steering section without a key) | `src/matinee/web/static/js/about.js:22` | 2026-10-05 |
+| `src/matinee/web/static/js/about.js::copy` (the About page's words and links; no steering section without a key; "Good company" always) | `src/matinee/web/static/js/about.js:22` | 2026-10-05 |
 | `src/matinee/web/static/js/wall-grid.js::posterAcross` / `ACROSS` / `GAP` | `src/matinee/web/static/js/wall-grid.js:27` | 2026-10-05 |
 | `src/matinee/web/static/js/wall-grid.js::wallLayout` | `src/matinee/web/static/js/wall-grid.js:37` | 2026-10-05 |
 | `src/matinee/web/static/js/wall-grid.js::bestStride` / `repeatDistance` | `src/matinee/web/static/js/wall-grid.js:61` | 2026-10-05 |
