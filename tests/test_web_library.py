@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import contextlib
+import io
 import itertools
 import json
 import os
 import time
+import urllib.error
 import urllib.request
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime, timedelta
@@ -24,7 +26,7 @@ from matinee.library.choice import MediaServer
 from matinee.library.jellyfin import JellyfinReader
 from matinee.store import Store
 from matinee.table import FilmTable, write_table
-from matinee.web.app import STATIC, create_app
+from matinee.web.app import IMAGE_CACHE, STATIC, TMDB_IMAGE_CACHE, create_app
 from matinee.web.config import Config, ConfigError, ImageSource, from_env
 from matinee.web.seerr import SeerrCheck
 from matinee.web.theatre import LIVE_TTL, RETRY_AFTER, Theatre
@@ -55,6 +57,7 @@ class FakeLibrary:
     held: list[int] = field(default_factory=lambda: [*range(1, 40), 99])
     down: bool = False
     broken: bool = False
+    no_synopsis: bool = False
     calls: list[tuple[str, Any]] = field(default_factory=list)
 
     def films(self) -> list[LibraryFilm]:
@@ -72,6 +75,8 @@ class FakeLibrary:
 
     def synopsis(self, item_id: str) -> str | None:
         self.calls.append(("synopsis", item_id))
+        if self.no_synopsis:
+            return None
         if self.broken:
             raise LibraryError(f"Jellyfin at {SECRET_URL} answered HTTP 500 for /media/Movies/x.mkv")
         return "A stranger rides into town."
@@ -110,16 +115,22 @@ def world(tmp_path: Path) -> tuple[TestClient, FakeLibrary, Clock, Theatre]:
 
 
 def make_world(
-    tmp_path: Path, images: ImageSource = "server", seerr: str | None = "https://seerr.invalid"
+    tmp_path: Path,
+    images: ImageSource = "server",
+    seerr: str | None = "https://seerr.invalid",
+    listed: frozenset[int] = frozenset(),
 ) -> tuple[TestClient, FakeLibrary, Clock, Theatre]:
     data = write_data(tmp_path / "data")
-    write_film_table(tmp_path / "films.sqlite")
+    stored = film_table()
+    stored.films["tmdb_title"] = [f"TMDB {t}" for t in stored.films.index]  # every film has a TMDB record
+    stored.films["synopsis"] = [f"TMDB says {t}." for t in stored.films.index]
+    write_table(stored, tmp_path / "films.sqlite")
     library, clock = FakeLibrary(), Clock()
 
     def catalog_of(table: FilmTable) -> Any:
         return load_catalog(table, data, reference())
 
-    theatre = Theatre(library, tmp_path / "films.sqlite", clock=clock, catalog_of=catalog_of)
+    theatre = Theatre(library, tmp_path / "films.sqlite", clock=clock, catalog_of=catalog_of, listed=listed)
     config = Config(SERVER, tmp_path, seerr, "d" * 16, images=images)
     app = create_app(
         config, theatre, Store(tmp_path / "store.sqlite"), Dtdd("k"), seerr=SeerrCheck(seerr, opener=answers)
@@ -337,7 +348,7 @@ def test_media_server_errors_never_reach_the_browser(world: Any) -> None:
     assert img.status_code == 404
     assert img.json() == {"error": "not_found", "message": "I don't have that one."}
     card = client.get("/api/film/6")
-    assert card.status_code == 200 and card.json()["synopsis"] is None  # TMDB's synopsis, which this film lacks
+    assert card.status_code == 200 and card.json()["synopsis"] == "TMDB says 6."  # TMDB's, when the server fails
     for resp in (img, card):
         assert "media.invalid" not in resp.text and "/media/" not in resp.text and "500" not in resp.text
 
@@ -457,3 +468,162 @@ def test_a_reloaded_table_does_not_rush_a_library_that_just_failed(world: Any, t
     os.utime(tmp_path / "films.sqlite", (later, later))  # the rebuild replaced the table meanwhile
     client.get("/api/door")
     assert len([c for c in library.calls if c[0] == "films"]) == reads  # still inside the hold-off
+
+
+def test_a_film_the_library_does_not_hold_shows_tmdb_pictures_through_matinee(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    fetched: list[tuple[str, str, int]] = []
+
+    def tmdb_picture(path: str, kind: str, width: int) -> tuple[bytes, str]:
+        fetched.append((path, kind, width))
+        return b"tmdb-jpeg", "image/jpeg"
+
+    monkeypatch.setattr("matinee.web.app.fetch_picture", tmdb_picture)
+    client, library, clock, _ = make_world(tmp_path, listed=frozenset({5}))
+    library.held = [t for t in library.held if t != 5]  # sold since the rebuild; the labels still name it
+    poster = client.get("/img/poster/5/m")
+    assert poster.status_code == 200 and poster.content == b"tmdb-jpeg"
+    assert poster.headers["cache-control"] == TMDB_IMAGE_CACHE and fetched == [("/p5.jpg", "poster", 320)]
+    assert TMDB_IMAGE_CACHE.startswith("private, max-age=") and TMDB_IMAGE_CACHE != IMAGE_CACHE
+    assert client.get("/img/backdrop/5/l").status_code == 200 and fetched[-1] == ("/b5.jpg", "backdrop", 1600)
+    assert not [c for c in library.calls if c[0] == "image"]
+    card = client.get("/api/film/5").json()
+    assert card["synopsis"] == "TMDB says 5." and card["title"] == "TMDB 5"
+    assert client.get("/img/poster/6/m").status_code == 200 and ("image", (item(6), "poster", 320)) in library.calls
+
+
+def test_while_the_library_cannot_be_used_every_picture_and_synopsis_comes_from_tmdb(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr("matinee.web.app.fetch_picture", lambda path, kind, width: (b"tmdb-jpeg", "image/jpeg"))
+    client, library, clock, _ = make_world(tmp_path, listed=frozenset({5, 6}))
+    library.down = True
+    clock.now += LIVE_TTL + 1
+    assert client.get("/img/poster/5/m").content == b"tmdb-jpeg"
+    assert client.get("/img/poster/6/m").status_code == 404  # TMDB has no poster for film 6
+    card = client.get("/api/film/6")
+    assert card.status_code == 200 and card.json()["synopsis"] == "TMDB says 6."
+    library.down = False
+    clock.now += RETRY_AFTER + 1
+    assert client.get("/api/film/6").json()["synopsis"] == "A stranger rides into town."  # the library's again
+
+
+def test_under_tmdb_the_page_reads_paths_for_films_the_library_does_not_hold(tmp_path: Path) -> None:
+    client, library, _, _ = make_world(tmp_path, images="tmdb", listed=frozenset({5}))
+    library.held = [t for t in library.held if t != 5]
+    assert client.get("/api/pictures").json()["posters"] == {"5": "/p5.jpg"}
+    assert client.get("/api/film/5").json()["backdrop_path"] == "/b5.jpg"
+
+
+def test_a_tmdb_picture_is_fetched_by_a_get_at_the_mapped_size_and_checked() -> None:
+    from matinee.tmdb import TmdbImageError, fetch_picture
+
+    sent: list[urllib.request.Request] = []
+
+    class Answer(io.BytesIO):
+        def __init__(self, body: bytes, kind: str) -> None:
+            super().__init__(body)
+            self.headers = {"Content-Type": kind}
+
+        def __enter__(self) -> Answer:
+            return self
+
+        def __exit__(self, *_: object) -> None:
+            return None
+
+    def jpeg(req: urllib.request.Request, timeout: float) -> Answer:
+        sent.append(req)
+        return Answer(b"jpeg", "image/jpeg")
+
+    assert fetch_picture("/p5.jpg", "poster", 160, opener=jpeg) == (b"jpeg", "image/jpeg")
+    assert sent[0].full_url == "https://image.tmdb.org/t/p/w154/p5.jpg" and sent[0].get_method() == "GET"
+    for bad in ("../x.jpg", "/p5.jpg?x=1", "http://elsewhere/p.jpg"):
+        with pytest.raises(TmdbImageError):
+            fetch_picture(bad, "poster", 160, opener=jpeg)
+    assert len(sent) == 1
+    with pytest.raises(TmdbImageError):
+        fetch_picture("/p5.jpg", "poster", 160, opener=lambda req, timeout: Answer(b"<html>", "text/html"))
+
+
+def test_a_picture_or_synopsis_the_media_server_cannot_give_comes_from_tmdb(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from matinee.tmdb import TmdbImageError
+
+    fetched: list[str] = []
+
+    def tmdb_picture(path: str, kind: str, width: int) -> tuple[bytes, str]:
+        fetched.append(path)
+        return b"tmdb-jpeg", "image/jpeg"
+
+    monkeypatch.setattr("matinee.web.app.fetch_picture", tmdb_picture)
+    client, library, _, _ = make_world(tmp_path)
+    ok = client.get("/img/poster/5/m")
+    assert ok.content == b"\xff\xd8jpeg" and ok.headers["cache-control"] == IMAGE_CACHE and fetched == []
+    library.broken = True
+    stand_in = client.get("/img/poster/5/m")
+    assert stand_in.content == b"tmdb-jpeg" and stand_in.headers["cache-control"] == TMDB_IMAGE_CACHE
+    assert client.get("/img/poster/6/m").status_code == 404  # no TMDB path either
+    library.broken = False
+    library.no_synopsis = True
+    assert client.get("/api/film/6").json()["synopsis"] == "TMDB says 6."
+
+    def tmdb_down(path: str, kind: str, width: int) -> tuple[bytes, str]:
+        raise TmdbImageError("no answer")
+
+    monkeypatch.setattr("matinee.web.app.fetch_picture", tmdb_down)
+    library.broken = True
+    assert client.get("/img/poster/5/m").status_code == 404
+
+
+@pytest.mark.parametrize(
+    ("kind", "width", "size"),
+    [("poster", 100, "w92"), ("poster", 160, "w154"), ("poster", 320, "w342"), ("poster", 640, "w780"),
+     ("backdrop", 960, "w780"), ("backdrop", 1600, "w1280")],
+)  # fmt: skip
+def test_each_width_asks_tmdb_for_its_size(kind: str, width: int, size: str) -> None:
+    from matinee.tmdb import fetch_picture
+
+    sent: list[str] = []
+
+    def jpeg(req: urllib.request.Request, timeout: float) -> Any:
+        sent.append(req.full_url)
+        return _Picture(b"jpeg", "image/jpeg")
+
+    fetch_picture("/p.jpg", kind, width, opener=jpeg)
+    assert sent == [f"https://image.tmdb.org/t/p/{size}/p.jpg"]
+
+
+class _Picture(io.BytesIO):
+    def __init__(self, body: bytes, kind: str) -> None:
+        super().__init__(body)
+        self.headers = {"Content-Type": kind}
+
+    def __enter__(self) -> _Picture:
+        return self
+
+    def __exit__(self, *_: object) -> None:
+        return None
+
+
+def test_a_tmdb_picture_that_fails_or_runs_too_large_is_refused() -> None:
+    from matinee.tmdb import MAX_IMAGE_BYTES, TmdbImageError, fetch_picture
+
+    def failing(error: Exception) -> Any:
+        def opener(req: urllib.request.Request, timeout: float) -> Any:
+            raise error
+
+        return opener
+
+    for error in (urllib.error.URLError("no route"), TimeoutError()):
+        with pytest.raises(TmdbImageError):
+            fetch_picture("/p.jpg", "poster", 160, opener=failing(error))
+    fits = fetch_picture(
+        "/p.jpg", "poster", 160, opener=lambda r, timeout: _Picture(b"x" * MAX_IMAGE_BYTES, "image/jpeg")
+    )
+    assert len(fits[0]) == MAX_IMAGE_BYTES
+    with pytest.raises(TmdbImageError):
+        fetch_picture(
+            "/p.jpg", "poster", 160, opener=lambda r, timeout: _Picture(b"x" * (MAX_IMAGE_BYTES + 1), "image/jpeg")
+        )

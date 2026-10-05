@@ -1148,7 +1148,7 @@ would hand one device's profiles to another.
 | GET | `/api/setup` | the setup note: its heading, its lines (none when all is well), the films Matinee can offer, and whether it offers a way in (section 5.5) |
 | POST | `/api/admission` | give the door word; the right one sets the admission cookie |
 | GET | `/static/…` | scripts, styles, self-hosted fonts, icons, pails, avatars, the locked door's art, manifest (`Cache-Control: no-cache`, so a deploy is never seen half-applied) |
-| GET | `/img/{kind}/{tmdb}/{size}` | a poster or backdrop, read from the media server |
+| GET | `/img/{kind}/{tmdb}/{size}` | a poster or backdrop: from the media server for a film the library holds, else from TMDB's image server through Matinee |
 | GET | `/api/pictures` | the image source, and under `tmdb` the TMDB poster path of every live film that has one (section 11.5) |
 | GET | `/api/film/{tmdb}` | title, year, runtime, synopsis and the pick's link for one film (`link`, and `link_to`: `seerr` or `tmdb`), and under `tmdb` its TMDB backdrop path |
 | GET | `/api/door` | the film count, every profile (marking those this device holds), the avatars offered, and whether a DoesTheDogDie key is set |
@@ -1191,7 +1191,10 @@ would hand one device's profiles to another.
 
 No response carries the media server's address or key, a file path, a disk
 location or an exception's text. The media server's key travels only in the
-header of Matinee's own requests to it and is never logged. Synopses always
+header of Matinee's own requests to it and is never logged. A film card's synopsis is the media server's for a film the library holds, and
+TMDB's, from the film table, for any other film, while the library cannot be
+used, and when the media server gives none or fails to answer: the card never
+answers 503 for that. Synopses always
 reach the browser through Matinee's server, and so do posters and backdrops
 under the default image source. Under `tmdb`, a picture with a TMDB path is
 loaded by the browser from TMDB's image server (section 11.5). The media server
@@ -1237,7 +1240,15 @@ the server can never become part of the page's HTML.
 the picked poster and the pick's backdrop.
 
 - **`server`**, the default, or unset or empty. Every picture comes from the
-  image route, read from the media server. The page asks for exactly the
+  image route: read from the media server for a film the library holds, and
+  fetched by the server from TMDB's image server, at the TMDB size the table
+  below gives, for a film it does not hold, while the library cannot be used,
+  and when the media server gives none, so a viewer's browser talks only to
+  Matinee. A TMDB picture served this way is kept by the browser one day
+  (`Cache-Control: private, max-age=86400`), so the library's own art returns
+  soon after the library does. A film with no TMDB picture path
+  has no picture (404). The server checks a path's shape before joining it into
+  an address, and takes an answer only when it is `image/*` and at most 8 MiB. The page asks for exactly the
   addresses it asked for before the setting existed.
 - **`tmdb`.** The browser loads a picture with a TMDB path from
   `https://image.tmdb.org/t/p/<width><path>`. A picture with no TMDB path (TMDB

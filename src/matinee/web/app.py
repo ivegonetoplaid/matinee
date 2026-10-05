@@ -31,6 +31,7 @@ from matinee.progress import read_status
 from matinee.quips import Quips, QuipsError, load_quips
 from matinee.store import AVATARS, Locked, Store, StoreError
 from matinee.table import TableError
+from matinee.tmdb import TmdbImageError, fetch_picture
 from matinee.web.admission import COOKIE as ADMISSION_COOKIE
 from matinee.web.admission import LIFE_S as ADMISSION_LIFE_S
 from matinee.web.admission import Admission, load_secret
@@ -69,6 +70,9 @@ IMAGE_WIDTHS: dict[ImageKind, dict[str, int]] = {
 # A film's poster seldom changes; a month spares every return visit the wall's downloads. Only the viewer's
 # own browser may keep one: a shared cache would hand it to a device the locked door has not admitted.
 IMAGE_CACHE = f"private, max-age={30 * 24 * 3600}"
+# A TMDB picture may stand in for the library's while it cannot answer; kept one day, the library's art returns soon
+# after the library does.
+TMDB_IMAGE_CACHE = f"private, max-age={24 * 3600}"
 TMDB_IMAGES = "https://image.tmdb.org"
 TMDB_FILM = "https://www.themoviedb.org/movie"
 NOT_READY = "Matinee isn't ready: its film data needs rebuilding."
@@ -104,6 +108,7 @@ class Held:
     runtime_min: int | None
     backdrop_path: str | None
     synopsis: str | None
+    poster_path: str | None
 
 
 def held(theatre: Theatre, tmdb: int) -> Held:
@@ -119,6 +124,7 @@ def held(theatre: Theatre, tmdb: int) -> Held:
         optional_int(row.runtime_min),
         stored_path(row.backdrop_path),
         stored_path(row.synopsis),
+        stored_path(row.poster_path),
     )
 
 
@@ -167,23 +173,37 @@ def film_link(seerr: str | None, tmdb: int) -> tuple[str, Literal["seerr", "tmdb
     return f"{TMDB_FILM}/{tmdb}", "tmdb"
 
 
-def film_image(theatre: Theatre, film: Held, tmdb: int, kind: ImageKind, width: int) -> Image:
-    """The film's picture from the media server; 404 when the library does not hold it or the server fails."""
-    if film.item_id is None or theatre.library is None:
+def film_image(theatre: Theatre, film: Held, tmdb: int, kind: ImageKind, width: int) -> tuple[Image, str]:
+    """The film's picture and how long a browser keeps it: from the media server for a film it holds; from TMDB's
+    image server, through Matinee, for any other film, while the library cannot be used, and when the media server
+    gives none. 404 when neither gives one."""
+    if film.item_id is not None and theatre.library is not None:
+        try:
+            return theatre.library.image(film.item_id, kind, width), IMAGE_CACHE
+        except LibraryError as exc:
+            log.warning("the media server gave no %s for tmdb %s, so it comes from TMDB: %s", kind, tmdb, exc)
+    return tmdb_image(film, tmdb, kind, width), TMDB_IMAGE_CACHE
+
+
+def tmdb_image(film: Held, tmdb: int, kind: ImageKind, width: int) -> Image:
+    """The film's TMDB picture, fetched by the server so the viewer's browser talks only to Matinee."""
+    path = film.poster_path if kind == "poster" else film.backdrop_path
+    if path is None:
         raise HTTPException(status_code=404, detail="not_found")
     try:
-        return theatre.library.image(film.item_id, kind, width)
-    except LibraryError as exc:
-        log.warning("image %s for tmdb %s: %s", kind, tmdb, exc)
+        body, content_type = fetch_picture(path, kind, width)
+    except TmdbImageError as exc:
+        log.warning("image %s for tmdb %s from TMDB: %s", kind, tmdb, exc)
         raise HTTPException(status_code=404, detail="not_found") from exc
+    return Image(body, content_type)
 
 
 def film_synopsis(theatre: Theatre, film: Held, tmdb: int) -> str | None:
-    """The media server's synopsis for a film it holds, else TMDB's; TMDB's too when the server fails to answer."""
+    """The media server's synopsis for a film it holds, else TMDB's; TMDB's too when the server has none or fails."""
     if film.item_id is None or theatre.library is None:
         return film.synopsis
     try:
-        return theatre.library.synopsis(film.item_id)
+        return theatre.library.synopsis(film.item_id) or film.synopsis
     except LibraryError as exc:
         log.warning("the media server gave no synopsis for tmdb %s, so the card shows TMDB's: %s", tmdb, exc)
         return film.synopsis
@@ -195,8 +215,8 @@ def add_film_routes(app: FastAPI, theatre: Theatre, seerr: SeerrCheck, images: I
         image_kind: ImageKind = "backdrop" if kind == "backdrop" else "poster"
         if kind != image_kind or size not in IMAGE_WIDTHS[image_kind]:
             raise HTTPException(status_code=404, detail="not_found")
-        img = film_image(theatre, held(theatre, tmdb), tmdb, image_kind, IMAGE_WIDTHS[image_kind][size])
-        return Response(img.body, media_type=img.content_type, headers={"Cache-Control": IMAGE_CACHE})
+        img, kept = film_image(theatre, held(theatre, tmdb), tmdb, image_kind, IMAGE_WIDTHS[image_kind][size])
+        return Response(img.body, media_type=img.content_type, headers={"Cache-Control": kept})
 
     @app.get("/api/pictures")
     def pictures() -> Pictures:

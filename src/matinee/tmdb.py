@@ -156,6 +156,40 @@ def get_json(url: str, token: str) -> dict[str, Any] | None:
             raise
 
 
+IMAGES = "https://image.tmdb.org/t/p/"
+IMAGE_TIMEOUT_S = 10
+MAX_IMAGE_BYTES = 8 * 1024 * 1024
+# Matinee's picture widths as TMDB's sizes: the nearest TMDB width, as the page maps them under `tmdb`.
+IMAGE_SIZES: dict[str, dict[int, str]] = {
+    "poster": {100: "w92", 160: "w154", 320: "w342", 640: "w780"},
+    "backdrop": {960: "w780", 1600: "w1280"},
+}
+
+
+class TmdbImageError(RuntimeError):
+    """TMDB's image server gave no usable picture."""
+
+
+def fetch_picture(
+    path: str, kind: str, width: int, opener: Callable[..., Any] = urllib.request.urlopen
+) -> tuple[bytes, str]:
+    """One TMDB picture at the TMDB size nearest `width`, as (body, content type). Needs no key; a path not shaped
+    like a TMDB picture path is refused before any request."""
+    if not PICTURE_PATH.fullmatch(path):
+        raise TmdbImageError(f"not a TMDB picture path: {path!r}")
+    size = IMAGE_SIZES[kind][width]
+    req = urllib.request.Request(f"{IMAGES}{size}{path}", headers={"Accept": "image/*"}, method="GET")
+    try:
+        with opener(req, timeout=IMAGE_TIMEOUT_S) as resp:
+            content_type = resp.headers.get("Content-Type", "")
+            body = resp.read(MAX_IMAGE_BYTES + 1)
+    except (urllib.error.URLError, OSError, http.client.HTTPException) as exc:
+        raise TmdbImageError(f"TMDB's image server gave no {kind}: {exc}") from exc
+    if not content_type.startswith("image/") or len(body) > MAX_IMAGE_BYTES:
+        raise TmdbImageError(f"TMDB's image server answered a {kind} with {content_type or 'no type'}")
+    return body, content_type
+
+
 def picture_path(tmdb: int, field: str, value: object) -> str:
     """TMDB's path for one picture, or "" when it gives none. A value not shaped like a TMDB image path is
     logged and kept as none, so nothing else is ever joined into a picture's address."""
