@@ -1,4 +1,5 @@
-// The corner credit line: "Posters and film data from TMDB [logo]", in the foot band. TMDB's notice and the
+// The corner credit line: "Posters and film data from TMDB [logo]", in the foot band; a phone shows only its
+// DoesTheDogDie part, since the About page carries TMDB's logo and notice. TMDB's notice and the
 // MovieLens citations are on the About page, which "About Matinee" opens: at the foot's middle on a screen with
 // no profile menu, and as the profile menu's last item inside the theatre. On a screen that shows DoesTheDogDie's data the line
 // carries "Powered by DoesTheDogDie.com" too. The TMDB logo is always smaller than Matinee's own mark.
@@ -33,5 +34,10 @@ function dtddCredit() {
 
 // `dtdd` makes room for DoesTheDogDie's credit, on a screen that may show its data.
 export function credits({ dtdd = false } = {}) {
-  return h("p", { class: "credits" }, "Posters and film data from TMDB ", tmdbLogo(), dtdd ? dtddCredit() : null);
+  return h(
+    "p",
+    { class: "credits" },
+    h("span", { class: "tmdb-credit" }, "Posters and film data from TMDB ", tmdbLogo()),
+    dtdd ? dtddCredit() : null,
+  );
 }

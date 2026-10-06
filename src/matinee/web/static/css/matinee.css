@@ -238,6 +238,38 @@ a.wordmark:focus-visible {
   }
 }
 
+/* A phone's way back, "Back" and "Start over", stands where a desktop shows the trail. */
+.way-back,
+.aside .choices > .back {
+  display: none;
+}
+
+/* On a phone the trail and the TMDB credit line leave every screen: "Back" and "Start over" take the trail's
+   place, and the About page carries TMDB's logo and notice. DoesTheDogDie's credit stays where its data shows. */
+@media (max-width: 600px) {
+  .bottombar > .trail,
+  .tmdb-credit {
+    display: none;
+  }
+
+  .way-back {
+    display: flex;
+    flex-basis: 100%;
+    justify-content: center;
+    gap: 12px;
+  }
+
+  .aside .choices > .back {
+    display: inline-flex;
+  }
+
+  /* After three films trip the list, "Start over" stands beside "Roll again" and the longer action takes a
+     row of its own, so the three fit the pick's foot. */
+  .aside .choices > .show-picked {
+    order: 1;
+  }
+}
+
 /* The way here, bottom centre in the pinned bar: small, gold, one crumb per step. */
 .trail ol {
   display: flex;
@@ -963,13 +995,13 @@ a.wordmark:focus-visible {
   }
 }
 
-/* On a phone Matinee's words keep the foot of the pick, about a third of the screen: the line, the
-   buttons and the correction link, then the trail on one line and the credits; its top never moves from
-   the first word of a pick to the last. Above it the showing scrolls on its own and ends at the foot, so
+/* On a phone Matinee's words keep the foot of the pick: the line, two rows of buttons and the correction
+   link, then DoesTheDogDie's credit line where it has a key; its top never moves from the first word of a
+   pick to the last. Above it the showing scrolls on its own and ends at the foot, so
    nothing passes behind the words: the poster fills it first, and the details follow beneath. */
 @media (max-width: 600px) {
   .stage:has(> .showing) {
-    --pick-talk: calc(max(270px, 36svh) - 46px); /* with room for the foot's fades and its second credit line */
+    --pick-talk: 316px; /* the line's four lines, two rows of actions and the correction, without scrolling */
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto minmax(0, 1fr) var(--pick-talk) auto;
@@ -1039,11 +1071,6 @@ a.wordmark:focus-visible {
     flex-shrink: 0;
   }
 
-  /* "Start over" is the trail's "Start", just beneath; the foot keeps the room for the correction. */
-  .aside .choices > .start-over {
-    display: none;
-  }
-
   /* Nothing scrolls under the phone pick's foot, so its band lies behind Matinee's words, rising from the bar. */
   .stage:has(> .showing) > .bottombar {
     position: relative;
@@ -1069,15 +1096,6 @@ a.wordmark:focus-visible {
 
   .stage:has(> .showing) .dtdd-credit::before {
     content: none;
-  }
-
-  /* One line of crumbs, each shortened, so the foot keeps its height on every pick. */
-  .stage:has(> .showing) .trail ol {
-    flex-wrap: nowrap;
-  }
-
-  .stage:has(> .showing) .crumb {
-    max-width: 16ch;
   }
 }
 

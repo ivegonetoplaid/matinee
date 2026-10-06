@@ -2,7 +2,7 @@
 title: Matinee — Design Standards
 purpose: The visual and copy laws every Matinee surface holds to — colour, type, the two control families, the scrim and the bands, where Matinee speaks, and the copy.
 status: Binding for every surface under `src/matinee/web/static/`. Section 1 says what to do when the code disagrees with a rule here.
-updated: 2026-10-03
+updated: 2026-10-05
 ---
 
 # Matinee — Design Standards
@@ -209,6 +209,7 @@ Every action and its accent:
 | "Read about these on DoesTheDogDie ↗" | petrol |
 | "Look it up on DoesTheDogDie ↗" | petrol |
 | "Start over" | cream |
+| "Back" (a phone's way back, in the trail's place) | cream |
 | "Never mind", "Never mind, show me everything", "Never mind, keep my list", "That's not me" | cream |
 | "Try again" (a problem screen and the topic list) | cream |
 | "Something wrong with this pick?" | cream |
@@ -224,6 +225,13 @@ Everything a viewer uses over the poster wall is a letterbox or an action. A bar
 text link stands only in the foot band: the credit line, its "About",
 DoesTheDogDie's credit and the trail's crumbs. About's own prose keeps its
 links, and the wordmark is the brand's link.
+
+On a phone the trail and the TMDB credit line show on no screen; the About page
+carries TMDB's logo and notice. A question screen past the first shows "Back"
+and "Start over", actions at the standard size, centred in the foot band where a
+desktop shows the trail; where "Back" would lead to the walk's first screen,
+only "Start over" shows. The pick shows "Back" before "Start over" among its
+actions.
 
 "Powered by DoesTheDogDie.com" stands in the foot band of every screen that
 shows DoesTheDogDie's data.
@@ -262,7 +270,8 @@ from 11 to 15 px, stands only inside a band.
 
 Every screen over the poster wall has a dark band at the top and at the foot.
 Each is the page base at 92 per cent behind its bar, the top bar with the
-wordmark and the viewer, the foot with the credit line, and feathers to nothing
+wordmark and the viewer, the foot with the credit line (on a phone, its way back
+and DoesTheDogDie's credit), and feathers to nothing
 into the wall over 96 px on a desktop and 48 px on a phone, with no visible
 edge. On the door's screens, the dark fade behind the marquee is the top band,
 at its own depth. The locked door stands on subway tile and has no bands. About
@@ -282,7 +291,7 @@ page spec (`docs/spec/matinee.md`, section 12) gives the measurements.
 | The front door and making a profile | A centred column under the marquee, the line left-aligned at its top, tiles or letterboxes beneath | The line under the marquee; letterboxes at the foot of the screen |
 | The trigger picker | The left column's top, its explanation and the save actions beneath; the topics in the right column, with the DoesTheDogDie action under them | Stacked under the marquee's lit strip: the line, the explanation, the topics, the actions |
 | The questions | The line hangs from the top, three lines reserved, letterboxes beneath it | The line hangs from the top; letterboxes at the foot of the screen |
-| The pick | The left column's top: the line, then the actions in one row, then the note | The foot of the screen: the line, the actions, the note, the trail, the credits |
+| The pick | The left column's top: the line, then the actions in one row, then the note | The foot of the screen, which never scrolls: the line, `Not that one` and "More on Seerr ↗", then "Back" and `Start over`, then the note, then DoesTheDogDie's credit line where it has a key |
 
 ---
 

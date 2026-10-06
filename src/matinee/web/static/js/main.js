@@ -145,6 +145,27 @@ function trail(here) {
   return h("nav", { class: "trail", "aria-label": "The way here" }, h("ol", {}, items));
 }
 
+// Where "Back" leads, as a crumb: the screen before the one showing, whose crumb is `here` (null on a pick
+// "Just pick one!" ended early, which leads back to the question it left). None where that is the walk's
+// first screen, which "Start over" reaches.
+function backTo(here) {
+  const target = here === null ? crumbs().length - 1 : here - 1;
+  return target > 0 ? target : null;
+}
+
+// A phone's way back from a question screen, in the trail's place: "Back", where there is a screen before
+// this one other than the first, and "Start over". None on the walk's first screen.
+function wayBack(here) {
+  if (!visit.tree && !visit.sourceSay) return null;
+  const target = backTo(here);
+  const back =
+    target === null
+      ? null
+      : h("button", { class: "action cream", type: "button", onclick: () => leaveTo(() => goTo(target)) }, "Back");
+  const again = h("button", { class: "action cream", type: "button", onclick: () => leaveTo(start) }, "Start over");
+  return h("nav", { class: "way-back", "aria-label": "Way back" }, back, again);
+}
+
 // The trail's last crumb, which led to the screen showing now; on a pick "Just pick one!" ended early,
 // the last crumb led to a question, so none.
 function lastCrumb(onPick) {
@@ -174,7 +195,7 @@ function frame({ count, footnote }) {
   clear(stage).append(
     topbar(nameTag()),
     h("section", { class: "talk" }, line, answers, note, row),
-    h("div", { class: "bottombar" }, trail(lastCrumb(false)), h("span"), credits()),
+    h("div", { class: "bottombar" }, trail(lastCrumb(false)), wayBack(lastCrumb(false)), h("span"), credits()),
   );
   return { line, answers, note, pick: row };
 }
@@ -465,7 +486,7 @@ function pickFrame() {
   const phone = isPhone();
   const left = h("div", { class: "pick-left" }, phone ? null : aside);
   const showing = h("section", { class: "showing" }, left);
-  const foot = h("footer", { class: "bottombar" }, trail(lastCrumb(true)), h("span"), credits({ dtdd: true }));
+  const foot = h("footer", { class: "bottombar" }, trail(lastCrumb(true)), h("span"), credits({ dtdd: offers.dtdd }));
   clear(stage).append(topbar(nameTag() || h("span")), showing, ...(phone ? [aside] : []), foot);
   return { line, aside, left, showing, credit: foot.querySelector(".dtdd-credit") };
 }
@@ -601,6 +622,13 @@ async function pickNow(opening = "", again = false, destruct = null, posterBack 
   });
 }
 
+// A phone pick's "Back", to the question the last answer was given on; null where that is the walk's first
+// screen.
+function backAction() {
+  const target = backTo(lastCrumb(true));
+  return target === null ? null : () => leaveTo(() => goTo(target));
+}
+
 // What the pick screen's controls do.
 function pickActions() {
   return {
@@ -617,6 +645,7 @@ function pickActions() {
       showPicked(held);
     },
     startOver: () => leaveTo(start),
+    back: backAction(),
     failed: (data) => problem(data, start),
     noteLink: (film) => noteLink({ visit, film, trees: visit.trees }),
   };

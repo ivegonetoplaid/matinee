@@ -131,19 +131,24 @@ async function showNoFilm(result, frame, actions) {
   showCredit(frame);
   const [said, more] = twoParts(result.tired || result.exhausted); // first sentence gold, the rest cream
   await typeLine(line, said, more);
-  const startOver = h("button", { class: "action cream", type: "button", onclick: actions.startOver }, "Start over");
+  const startOver = h("button", { class: "action cream start-over", type: "button", onclick: actions.startOver }, "Start over");
   if (!result.tired) {
     aside.append(startOver);
     return;
   }
+  // A phone sets "Start over" beside "Roll again", so all three fit its foot.
   aside.append(
     h(
       "div",
       { class: "choices" },
       h("button", { class: "action gold", type: "button", onclick: actions.rollAgain }, "Roll again"),
-      h("button", { class: "action gold", type: "button", onclick: () => actions.showPicked(result) }, "Just show me what you picked"),
+      h(
+        "button",
+        { class: "action gold show-picked", type: "button", onclick: () => actions.showPicked(result) },
+        "Just show me what you picked",
+      ),
+      startOver,
     ),
-    startOver,
   );
 }
 
@@ -158,13 +163,14 @@ function moreOn(info) {
 // What sits under the line on the resting page. The actions come straight after the line, which keeps
 // four lines of room whatever its words, so "Not that one" sits in the same place for every film. The
 // swap reason's credit, `note`, moves beneath them. The answers so far are in the trail at the foot of
-// the screen.
+// the screen; a phone, which shows no trail, shows "Back" before "Start over" instead.
 function choices(info, film, result, actions, note) {
   const buttons = h(
     "div",
     { class: "choices" },
     h("button", { class: "action rose", type: "button", onclick: actions.notThatOne }, "Not that one"),
     info.link ? moreOn(info) : null,
+    actions.back ? h("button", { class: "action cream back", type: "button", onclick: actions.back }, "Back") : null,
     h("button", { class: "action cream start-over", type: "button", onclick: actions.startOver }, "Start over"),
   );
   return [buttons, note ? firstPickReveal(result, note) : null, actions.noteLink(film)].filter(Boolean);
@@ -266,8 +272,8 @@ async function bringOut({ wall, frame, pause, posterReady, left, lines, gold, fu
   return { shown, sharp, typing };
 }
 
-// The page's pick screen. `actions` holds notThatOne, rollAgain, showPicked, startOver, failed and the note link
-// panel's builder. `readUntil` (a performance.now() time) holds the hunt until the line on screen has
+// The page's pick screen. `actions` holds notThatOne, rollAgain, showPicked, startOver, back (null without a
+// way back), failed and the note link panel's builder. `readUntil` (a performance.now() time) holds the hunt until the line on screen has
 // been read. After every wait the pick checks that its screen is still showing and that the pick was
 // not ended on the wall: a trail answer or the name tag can end it at any moment, and a pick the viewer
 // has left changes nothing further.

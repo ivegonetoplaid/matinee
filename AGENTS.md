@@ -202,8 +202,8 @@ Source: TMDB API Terms of Use, https://www.themoviedb.org/api-terms-of-use
   and the TMDB APIs but is not endorsed, certified or otherwise approved by
   TMDB, and the TMDB logo, less prominent than the application's own marks
   (section 3). Matinee shows "This product uses the TMDB API but is not
-  endorsed or certified by TMDB." on its About page and the logo in its credit
-  line.
+  endorsed or certified by TMDB." and the logo on its About page, and the logo
+  in its credit line on a desktop.
 - **No commercial use without TMDB's agreement.** Deriving revenue from TMDB
   content, directly or indirectly, needs a separate written agreement with TMDB
   (section 2.A).
