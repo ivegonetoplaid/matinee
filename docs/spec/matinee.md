@@ -2023,7 +2023,10 @@ colours as they are.
   keeps them too. A "Try again" that succeeds shows the viewer's own pool. Every
   other problem screen empties the wall.
 - **Installable.** A web app manifest (display fullscreen, falling back to
-  standalone; start URL `/`; icons at 192 and 512 px, the 512 also maskable)
+  standalone; start URL `/`; icons at 192 and 512 px, drawn from the marquee's crown on a dark rounded tile,
+  and a separate 512 px maskable icon whose crown sits inside the central 80 %;
+  the browser tab shows `static/icons/icon.svg`, and the iOS home screen the
+  maskable art at 180 px)
   lets the page install to a home screen. There is **no service worker.**
   Nothing is cached for offline use.
 

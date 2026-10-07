@@ -459,6 +459,8 @@ def test_the_install_manifest_names_icons_that_exist() -> None:
     assert manifest["start_url"] == "/" and manifest["icons"]
     for icon in manifest["icons"]:
         assert (STATIC / icon["src"].removeprefix("/static/")).is_file(), icon["src"]
+    by_purpose = {icon["purpose"]: icon["src"] for icon in manifest["icons"]}
+    assert by_purpose["maskable"] not in {i["src"] for i in manifest["icons"] if i["purpose"] == "any"}
 
 
 def test_without_seerr_every_pick_links_to_its_tmdb_page(tmp_path: Path) -> None:
