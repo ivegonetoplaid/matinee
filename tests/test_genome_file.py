@@ -13,7 +13,6 @@ import pytest
 
 from matinee.genome import Genome, GenomeError, Scores
 from matinee.genome_file import GENOME_FILE, load_scores, tags_read, write_scores
-from matinee.pools import scores
 from matinee.reference import DATA, REFERENCE_PATH, load_reference
 from matinee.table import FilmTable
 from matinee.trees import load_trees
@@ -36,7 +35,6 @@ def test_every_reader_finds_its_tags_in_a_table_built_from_the_shipped_scores() 
     films = pd.DataFrame(index=pd.Index(ids, name="tmdb"))
     relevance = shipped.relevance[[shipped.rows[t] for t in ids]]
     table = FilmTable(films, shipped.tags, relevance, datetime.now(UTC), None, shipped.release)
-    assert not scores(table).isna().all().any()  # the fall-asleep mode's scores
     for tree in load_trees().values():
         for tags in tree.scores.values():
             table.mean_of(list(tags))
@@ -47,14 +45,13 @@ def test_every_reader_finds_its_tags_in_a_table_built_from_the_shipped_scores() 
 def test_a_tag_a_tree_names_is_a_tag_read(tmp_path: Path) -> None:
     data = tmp_path / "data"
     shutil.copytree(DATA / "trees", data / "trees")
-    shutil.copytree(DATA / "modes", data / "modes")
     shutil.copy(DATA / "answer_key.json", data / "answer_key.json")
     assert "jump scares" not in tags_read(data)
     horror = json.loads((data / "trees" / "horror.json").read_text())
     horror["scores"]["fear"].append("jump scares")
     (data / "trees" / "horror.json").write_text(json.dumps(horror))
     assert "jump scares" in tags_read(data)
-    assert "afi 100" in tags_read(data) and "ench" not in tags_read(data)  # list tags, never score names
+    assert "afi 100" in tags_read(data) and "fear" not in tags_read(data)  # list tags, never score names
 
 
 def test_scores_read_back_as_the_same_float32_at_five_places(tmp_path: Path) -> None:

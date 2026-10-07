@@ -1,8 +1,8 @@
 """The genome scores Matinee ships, `data/genome.json`, so no installation downloads MovieLens.
 
 The file holds, for every film the ml-latest genome covers that has a TMDB id,
-the relevance of every genome tag a reader names (`tags_read`): the fall-asleep
-mode's scores, every tree's and mode's `scores`, and the answer key's list tags.
+the relevance of every genome tag a reader names (`tags_read`): every tree's
+`scores` and the answer key's list tags.
 It is derived from the MovieLens tag genome and carries that dataset's licence
 conditions in its `licence` field, as `data/reference.json` does. Values are
 written to five decimal places, which is the precision the genome publishes, so
@@ -20,7 +20,6 @@ from pathlib import Path
 import numpy as np
 
 from matinee.genome import GenomeError, Scores
-from matinee.pools import SCORES
 from matinee.reference import DATA
 from matinee.trees import load_trees
 
@@ -29,9 +28,9 @@ PLACES = 5
 
 
 def tags_read(data: Path = DATA) -> tuple[str, ...]:
-    """Every genome tag a reader names, sorted: the fall-asleep scores, each tree's scores, and the list tags."""
-    named: set[str] = {tag for tags in SCORES.values() for tag in tags}
-    for tree in load_trees((data / "trees", data / "modes")).values():
+    """Every genome tag a reader names, sorted: each tree's scores and the list tags."""
+    named: set[str] = set()
+    for tree in load_trees((data / "trees",)).values():
         named.update(tag for tags in tree.scores.values() for tag in tags)
     key = json.loads((data / "answer_key.json").read_text(encoding="utf-8"))
     named.update(key["list_tags"]["tags"])

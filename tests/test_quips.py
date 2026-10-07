@@ -9,7 +9,7 @@ from matinee.quips import Caps, Quips, QuipSet, load_quips, quip_problems
 from matinee.reference import DATA
 from matinee.trees import load_trees
 
-CATEGORIES = {p.stem for p in (DATA / "trees").glob("*.json")} | {p.stem for p in (DATA / "modes").glob("*.json")}
+CATEGORIES = {p.stem for p in (DATA / "trees").glob("*.json")}
 
 
 def _with(line: str = "This one should do nicely.", **extra: object) -> Quips:

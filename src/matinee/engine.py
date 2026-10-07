@@ -388,7 +388,7 @@ def load_catalog(
     cat = Catalog(
         table=table,
         reference=ref,
-        trees=load_trees((data / "trees", data / "modes")),
+        trees=load_trees((data / "trees",)),
         house=load_house(data / "house_overrides.json").without((labels or Labels()).overridden),
         first_lines=tuple(first["lines"]),
         first_options=tuple(_first_option(o) for o in first["options"]),

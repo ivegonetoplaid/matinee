@@ -5,8 +5,7 @@ door's pool is the library's films the labels list under it, plus the films the
 house pins there. Nothing here reads genre tags or genome scores to place a film
 behind a genre door. Documentaries keep their own rule (every film tagged
 Documentary, less the standup specials), the standup specials join the comedy
-door, where only its stand-up answer offers them, and the fall-asleep mode keeps
-its genome rule. House pins add single films to a tree or a kids band, or count a
+door, where only its stand-up answer offers them. House pins add single films to a tree or a kids band, or count a
 film as a standup special.
 
 The waiting room is the one place genres are read: a library film the labels file
@@ -37,15 +36,10 @@ Mask = pd.Series
 
 STANDUP_KEYWORD = "stand-up comedy"
 CONCERT_KEYWORDS = {"concert", "concert film"}
-SLEEP_ENCHANTMENT, SLEEP_EDGE = 0.55, 0.40
 CERTIFICATE_BANDS = {  # the youngest kids band a certificate allows; any other certificate never passes
     **dict.fromkeys(("G", "TV-Y", "TV-Y7", "TV-G", "E"), "little"),
     **dict.fromkeys(("PG", "TV-PG"), "family"),
     **dict.fromkeys(("PG-13", "TV-14"), "older"),
-}
-SCORES = {
-    "ench": ["fairy tale", "childhood", "fantasy", "whimsical", "magic", "fantasy world", "fairy tales"],
-    "edge": ["violent", "gore", "disturbing", "tense", "brutal"],
 }
 WAITING_ROOM = {
     "Action": "action",
@@ -121,11 +115,6 @@ def load_house(path: Path = DATA / "house_overrides.json") -> House:
         flavour_pins=flavours,
         specials=frozenset(int(p["tmdb"]) for p in doc.get("specials", [])),
     )
-
-
-def scores(table: FilmTable) -> pd.DataFrame:
-    """The fall-asleep mode's scores, NaN where the genome does not cover a film."""
-    return pd.DataFrame({name: table.mean_of(tags) for name, tags in SCORES.items()})
 
 
 def _genre(table: FilmTable, name: str) -> Mask:
@@ -227,6 +216,4 @@ def build_pools(table: FilmTable, house: House, labels: Labels) -> dict[str, Mas
     }
     for tree, ids in house.tree_pins.items():
         pools[tree] = pools[tree] | _ids(table, ids)
-    s = scores(table)
-    pools["sleep"] = (s["ench"].ge(SLEEP_ENCHANTMENT) & s["edge"].lt(SLEEP_EDGE)).fillna(False).astype(bool)
     return pools

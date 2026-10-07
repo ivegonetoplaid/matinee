@@ -51,7 +51,7 @@ function copy(back) {
       h(
         "p",
         {},
-        "Genre labels are blunt. The tag genome is the opposite. It comes from MovieLens, a research project at the University of Minnesota, and it scores thousands of films against more than a thousand tags like atmospheric, dark humor, slow paced and twist ending, learned from the tags and ratings of MovieLens users. Matinee leans on it to judge how much gore a horror film carries, and to find something quiet enough to fall asleep to.",
+        "Genre labels are blunt. The tag genome is the opposite. It comes from MovieLens, a research project at the University of Minnesota, and it scores thousands of films against more than a thousand tags like atmospheric, dark humor, slow paced and twist ending, learned from the tags and ratings of MovieLens users. Matinee leans on it to judge how much gore a horror film carries.",
       ),
       h("p", {}, "It's a genuinely fascinating piece of work, and worth a look."),
       h("p", {}, link("https://movielens.org", "Visit MovieLens"), " · ", link("https://grouplens.org/datasets/movielens/", "The tag genome dataset")),

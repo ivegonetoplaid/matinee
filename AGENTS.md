@@ -18,8 +18,8 @@ How a viewing goes:
    tonight?": only what the library holds, only films it lacks, or both. That
    answer bounds the whole walk and is asked again at every start.
 3. Matinee asks "So, what are we in the mood for?" and offers its doors: Comedy,
-   Drama, Horror, For the kids, Something to fall asleep to, and the rest.
-4. Each door leads to a question tree (or a mode), which asks a question or two
+   Drama, Horror, For the kids, Documentaries, and the rest.
+4. Each door leads to a question tree, which asks a question or two
    more about that mood.
 5. Matinee draws one film from what is left. The pick screen offers
    `Not that one` (draw again), "More on Seerr ↗" or "More on TMDB ↗" (the film's
@@ -50,7 +50,7 @@ the disagreement.
 - `src/matinee/`: the engine, the film table, profiles, the DoesTheDogDie check
   and the web server. `src/matinee/web/static/` is the page; it has no build
   step.
-- `data/trees/` and `data/modes/`: the question trees and modes, as data.
+- `data/trees/`: the question trees, as data.
 - `data/labels.json`, `data/house_overrides.json`, `data/answer_key.json`,
   `data/fixtures/`: the labels, the hand-set pins, and what the trees are
   checked against.

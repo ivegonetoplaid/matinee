@@ -8,10 +8,10 @@ import numpy as np
 import pandas as pd
 
 from matinee.labels import Labels, TreeLabels
-from matinee.pools import SCORES, House, build_pools, kids_band, waiting
+from matinee.pools import House, build_pools, kids_band, waiting
 from matinee.table import FilmTable
 
-TAGS = tuple(sorted({t for tags in SCORES.values() for t in tags}))
+TAGS = ("gore",)  # no pool rule reads a genome tag; the table needs one column
 NO_PINS = House(kids_pins={}, tree_pins={}, scale_pins={})
 
 

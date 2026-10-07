@@ -250,13 +250,13 @@ def parse_tree(tree: str, doc: Mapping[str, Any]) -> Tree:
     )
 
 
-def load_trees(dirs: Sequence[Path] = (DATA / "trees", DATA / "modes")) -> dict[str, Tree]:
-    """Every tree and mode file, keyed by file name without extension."""
+def load_trees(dirs: Sequence[Path] = (DATA / "trees",)) -> dict[str, Tree]:
+    """Every tree file, keyed by file name without extension."""
     trees = {}
     for d in dirs:
         for path in sorted(d.glob("*.json")):
             if path.stem in trees:
-                raise TreeError(f"two tree or mode files are named '{path.stem}'")
+                raise TreeError(f"two tree files are named '{path.stem}'")
             trees[path.stem] = parse_tree(path.stem, json.loads(path.read_text(encoding="utf-8")))
     _one_self_destruct(trees)
     return trees

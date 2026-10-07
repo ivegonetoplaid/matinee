@@ -1,6 +1,6 @@
 """Matinee's lines for a pick, read from data/quips.json, and the rules every line keeps.
 
-Each category (universal, or a tree or mode by its file name) may hold reveal lines, nope lines and rush
+Each category (universal, or a tree by its file name) may hold reveal lines, nope lines and rush
 lines.
 The caps are character counts: no single line may exceed
 `line`, and a nope line and a reveal line shown together may not exceed `pair`.
@@ -90,7 +90,7 @@ def line_problems(line: str, cap: int) -> list[str]:
 
 
 def quip_problems(quips: Quips, categories: set[str]) -> list[str]:
-    """Every rule the file breaks, each naming what breaks it. `categories` are the trees and modes
+    """Every rule the file breaks, each naming what breaks it. `categories` are the trees
     that exist, by file name."""
     known = categories | {UNIVERSAL}
     problems = [f"category {name!r} is not a tree or mode" for name in quips.categories if name not in known]

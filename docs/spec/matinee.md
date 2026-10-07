@@ -132,7 +132,7 @@ mood for?". Every viewing runs under a profile, so the first line carries its
 name: "Right this way, <name>.". After the source question the doors type the
 source answer's reply in gold, then "So, what are we in the mood for?"; a return
 to the doors through the trail types the same reply. Each answer is a door, offered by its plain name.
-The answers, their order and the tree or mode each leads to are data in
+The answers, their order and the tree each leads to are data in
 `data/first_question.json`:
 
 | Answer | Leads to |
@@ -151,23 +151,19 @@ The answers, their order and the tree or mode each leads to are data in
 | War | `war` |
 | For the kids | `kids` |
 | Documentaries | `nonfiction` |
-| Something to fall asleep to | `fall-asleep` (a mode) |
 
-- An answer is shown only when its tree or mode holds at least one film for this
+- An answer is shown only when its tree holds at least one film for this
   viewer in the chosen source.
 - Every answer must carry a `label`. The engine refuses to load a first question
   whose answer lacks one. The label names the door where a short name is needed,
   such as the note panel. Each door's label is its name.
-- Matinee's reply to a door is the opening line of the tree or mode it leads to.
+- Matinee's reply to a door is the opening line of the tree it leads to.
 - Stand-up specials are not a door. They are an answer under Comedy (section
   2.3).
-- A mode is what the viewer is doing rather than a genre. The viewer is never
-  asked to know whether they chose a genre or a mode.
 
-### 2.2 Trees and modes are data
+### 2.2 Trees are data
 
-Each genre's questions live in their own file under `data/trees/`. Each mode
-lives under `data/modes/`. A file carries the content: its opening line, its
+Each door's questions live in their own file under `data/trees/`. A file carries the content: its opening line, its
 questions, each answer's wording and reply, and the rule each answer filters
 on. The engine carries the behaviour. Adding a genre means adding a file.
 
@@ -187,14 +183,13 @@ on. The engine carries the behaviour. Adding a genre means adding a file.
 | `trees/war.json` | war | kind (labels; section 2.3) |
 | `trees/kids.json` | kids | age (labelled bands under certificate ceilings; section 3.2); kind (labels) |
 | `trees/nonfiction.json` | nonfiction | none; it rolls from the whole pool |
-| `modes/fall-asleep.json` | sleep | none; it rolls from the whole pool |
 
 Loading is strict:
 
 - Question, answer, filter and flavour keys are checked against
   the set the engine reads. A misspelt key fails at load. It never reads as
   absent and silently widens a pool.
-- Two tree or mode files with the same name are refused.
+- Two tree files with the same name are refused.
 - A tree file must name its `pool` and its `opening` line.
 - A tree naming a pool no pool rule builds is refused.
 - `sequel` may only be `false`. `sort` may only be `rating`. `kids_band` must be
@@ -204,7 +199,7 @@ Loading is strict:
   and takes nothing else. Only a labelled flavour may be marked
   `always_shown`, and only as `true`.
 - An answer may carry `self_destruct`, a whole number of seconds from 1 to 9. Any
-  other value is refused. Every answer carrying it, across the trees and modes,
+  other value is refused. Every answer carrying it, across the trees,
   must speak the same reply, or the trees refuse to load: the self-destructing
   reply is one joke, told by the spies answer behind Thriller and behind Action
   and nowhere else.
@@ -376,7 +371,7 @@ offered after "the little ones. nothing scary.".
 ### 2.5 Every film stays reachable
 
 Every film in the library must be reachable through at least one complete path
-of answers in some tree or mode a first-question answer leads to. A tree no
+of answers in some tree a first-question answer leads to. A tree no
 door leads to is no film's home.
 `tools/check_trees.py` holds the trees to this. It reads the film table the
 nightly rebuild writes and checks the films of the library that table was built
@@ -385,7 +380,7 @@ through the engine, and fails, with a non-zero exit, on any of these:
 
 1. **Data.** A library film has no usable TMDB facts. The standup rule cannot
    see such a film.
-2. **First question.** An answer leads to no tree or mode file.
+2. **First question.** An answer leads to no tree file.
 3. **Answer coverage.** A film in a tree's pool is reached by no complete path
    of that tree's answers, or a path ends on no film. It also reports how many
    questions each tree asks.
@@ -504,11 +499,11 @@ page reads it through `GET /api/quips`, which returns the file as loaded
                 "comedy": {"reveal": ["…"], "nope": ["…"]}}}
 ```
 
-- A category is `universal`, or a tree or mode by its file name. It may hold
+- A category is `universal`, or a tree by its file name. It may hold
   `reveal` lines, said as a film arrives, `nope` lines, said after
   `Not that one` and "Roll again", and `rush` lines, said after "Just pick
   one!". The shipped file holds universal (16 reveal, 22 nope, 8 rush),
-  horror (18, 19), comedy (22, 29) and action (16, 19). A tree or mode with no category of its
+  horror (18, 19), comedy (22, 29) and action (16, 19). A tree with no category of its
   own, such as thriller or crime, draws universal's lines. No category draws
   another tree's lines.
 - `caps.line` is the most characters one line may hold. `caps.pair` is the
@@ -527,7 +522,7 @@ page reads it through `GET /api/quips`, which returns the file as loaded
   case. A line is in title case when it has at least two words after its
   first, not counting words in capitals for emphasis or "I" and its
   contractions, and every one of them is capitalised. They also refuse a
-  category that is neither universal nor a tree or mode.
+  category that is neither universal nor a tree.
 - The pair cap is held when the page deals lines (section 12), not by the
   checker.
 
@@ -544,7 +539,6 @@ door.
 | comedy, action, drama, thriller, crime, horror, scifi, fantasy, romance, animation, western, war | the films the labels list under it, plus the waiting films its genres name, plus house tree pins; comedy also holds every standup special |
 | kids | the films the labels list under For the kids whose certificate passes (section 3.2), plus house kids pins |
 | nonfiction | every film tagged Documentary, less the standup specials, plus house tree pins |
-| sleep | enchantment at 0.55 or above and edge under 0.40; a film with no genome entry is never in it |
 
 - **The waiting room.** A library film the labels file lists under no door
   waits behind the doors its TMDB genres name: Action or Adventure behind
@@ -554,9 +548,6 @@ door.
   labelling pass places it. A documentary or a standup special does not wait,
   since its own rule gives it a home. This is the only place genres place a
   film behind a genre door.
-- **Scores** for the fall-asleep mode are mean genome relevance of fixed tag
-  lists. Enchantment: fairy tale, childhood, fantasy, whimsical, magic, fantasy
-  world, fairy tales. Edge: violent, gore, disturbing, tense, brutal.
 - **Standup specials.** A title is a standup special when it carries the TMDB
   keyword `stand-up comedy`, or when it is tagged Comedy and either is a TV Movie
   carrying `comedian`, `concert` or `concert film`, or carries `comedian` and a
@@ -801,9 +792,9 @@ finished.
 
 - The rebuild reads the genome scores Matinee ships, `data/genome.json`, and no
   installation downloads MovieLens. The file holds the relevance of every tag a
-  reader names (the fall-asleep scores, every tree's and mode's `scores`, and
+  reader names (every tree's `scores` and
   the answer key's list tags; `src/matinee/genome_file.py::tags_read`) for
-  every genome film with a TMDB id: 35 tags and 16,353 films from the shipped
+  every genome film with a TMDB id: 24 tags and 16,353 films from the shipped
   release. Values are kept to five decimal places, the genome's own precision,
   so each reads back as exactly the value the full genome holds. A test in
   `./check.sh` fails when a reader names a tag the file lacks.
@@ -2306,7 +2297,6 @@ symbol when one does not match.
 | `data/trees/action.json`, `drama.json`, `scifi.json`, `fantasy.json`, `romance.json`, `animation.json`, `war.json` kind questions; `western.json` (no question) | `data/trees/action.json:8` | 2026-10-05 |
 | `data/trees/kids.json` age and kind questions (labelled, always shown) | `data/trees/kids.json:8` | 2026-10-05 |
 | `data/trees/crime.json` kind question | `data/trees/crime.json:8` | 2026-10-05 |
-| `data/modes/fall-asleep.json` | `data/modes/fall-asleep.json:3` | 2026-10-05 |
 | `tests/test_source.py::test_the_source_question_is_asked_first_in_its_order_and_bounds_every_later_answer` | `tests/test_source.py:92` | 2026-10-05 |
 
 ### The checker
@@ -2368,7 +2358,6 @@ symbol when one does not match.
 | Handle | Where | Verified |
 |---|---|---|
 | `src/matinee/pools.py::build_pools` (labelled films, the waiting room and pins; comedy holds the specials) | `src/matinee/pools.py:209` | 2026-10-05 |
-| `src/matinee/pools.py::SCORES` (the fall-asleep mode) | `src/matinee/pools.py:46` | 2026-10-05 |
 | `src/matinee/pools.py::kids_bands` / `kids_band` / `CERTIFICATE_BANDS` (a pin applies to a film not held only on a passing certificate) | `src/matinee/pools.py:154` | 2026-10-05 |
 | `src/matinee/pools.py::waiting` / `WAITING_ROOM` / `GENRE_DOORS` | `src/matinee/pools.py:202` | 2026-10-05 |
 | `src/matinee/pools.py::standup_specials` | `src/matinee/pools.py:180` | 2026-10-05 |

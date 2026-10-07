@@ -75,11 +75,11 @@ def test_the_shipped_thriller_door_offers_its_kinds_in_order_and_only_spies_self
     assert all(thriller.flavours[f]["labelled"] for f in flavours if f)
 
 
-def test_the_first_question_offers_fifteen_doors_in_decision_86s_order() -> None:
+def test_the_first_question_offers_fourteen_doors_in_decision_86s_order() -> None:
     first = json.loads((DATA / "first_question.json").read_text(encoding="utf-8"))
     assert [o["tree"] for o in first["options"]] == [
         *("comedy", "action", "drama", "thriller", "crime", "horror", "scifi", "fantasy", "romance", "animation"),
-        *("western", "war", "kids", "nonfiction", "fall-asleep"),
+        *("western", "war", "kids", "nonfiction"),
     ]
     trees = load_trees()
     assert all(o["tree"] in trees for o in first["options"])

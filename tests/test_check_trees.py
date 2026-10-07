@@ -204,7 +204,7 @@ def test_first_question_answers_must_name_a_tree(tmp_path: Path) -> None:
     cat = load_catalog(make_table(), write_data(tmp_path), reference())
     report = Report()
     check_first_question(cat, report)
-    assert report.failures == ["first question: 'No.' leads to 'none', which names no tree or mode file"]
+    assert report.failures == ["first question: 'No.' leads to 'none', which names no tree file"]
 
 
 def test_a_film_held_only_by_a_tree_no_door_leads_to_has_no_home(tmp_path: Path) -> None:

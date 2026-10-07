@@ -212,7 +212,7 @@ The layout, briefly:
 
 - `src/matinee/`: the engine, the film table, profiles, the DoesTheDogDie
   check and the web server; `src/matinee/web/static/` is the page.
-- `data/`: the question trees and modes, the labels, the shipped genome
+- `data/`: the question trees, the labels, the shipped genome
   scores, and what the trees are checked against.
 - `tools/`: the nightly rebuild, the tree checker, the notes tool and the
   builders for the shipped genome files.

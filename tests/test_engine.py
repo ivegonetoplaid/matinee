@@ -25,13 +25,12 @@ from matinee.engine import (
     walk,
 )
 from matinee.labels import Labels, TreeLabels
-from matinee.pools import SCORES
 from matinee.reference import Cuts, Reference, TreeReference
 from matinee.table import COLUMNS, FilmTable
 from matinee.trees import Bands, Filter, Option
 
 EXTRA = ("p_fast", "p_slow", "gore_a", "spook", "hero")
-TAGS = tuple(sorted({t for tags in SCORES.values() for t in tags} | set(EXTRA)))
+TAGS = tuple(sorted(EXTRA))
 N = 40  # films 1..40, all Western; enough to stay over the stop-under-12 line
 
 
@@ -142,7 +141,6 @@ TREE: dict[str, Any] = {
 
 def write_data(root: Path, tree: dict[str, Any] | None = None) -> Path:
     (root / "trees").mkdir(parents=True)
-    (root / "modes").mkdir()
     (root / "trees" / "west.json").write_text(json.dumps(tree or TREE))
     (root / "first_question.json").write_text(
         json.dumps(

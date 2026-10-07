@@ -91,7 +91,7 @@ def _label(table: FilmTable, tmdb: int) -> str:
 
 
 def homes_of(tmdb: int, pools: Pools) -> set[str]:
-    """Trees and modes holding the film; kids age bands are reported, not counted as homes."""
+    """Trees holding the film; kids age bands are reported, not counted as homes."""
     return {name for name, pool in pools.items() if ":" not in name and pool.get(tmdb, False)}
 
 
@@ -114,7 +114,7 @@ def check_reachability(table: FilmTable, pools: Pools, report: Report) -> None:
 
 
 def door_pools(cat: Catalog, pools: Pools) -> Pools:
-    """The homes among `pools`: the pools of trees and modes a first-question answer leads to, plus the kids bands."""
+    """The homes among `pools`: the pools of trees a first-question answer leads to, plus the kids bands."""
     doors = {cat.trees[o.tree].pool for o in cat.first_options if o.tree in cat.trees}
     return {name: pool for name, pool in pools.items() if ":" in name or name in doors}
 
@@ -469,10 +469,10 @@ def check_hidden(cat: Catalog, key: dict[str, Any], report: Report) -> None:
 
 
 def check_first_question(cat: Catalog, report: Report) -> None:
-    """Every answer of the first question must name a tree or mode file, or it would be silently hidden."""
+    """Every answer of the first question must name a tree file, or it would be silently hidden."""
     for option in cat.first_options:
         if option.tree not in cat.trees:
-            report.fail(f"first question: '{option.say}' leads to '{option.tree}', which names no tree or mode file")
+            report.fail(f"first question: '{option.say}' leads to '{option.tree}', which names no tree file")
 
 
 def check_quips(cat: Catalog, report: Report) -> None:

@@ -3,7 +3,7 @@
 Reads the MovieLens ml-latest genome and keeps the relevance of every tag a reader
 names (`matinee.genome_file.tags_read`) for every genome film with a TMDB id. The
 file carries the dataset's licence conditions, as data/reference.json does. Rerun
-it when a tree file, the fall-asleep scores or the answer key names a new tag;
+it when a tree file or the answer key names a new tag;
 tests/test_genome_file.py fails in ./check.sh until it is rerun. Running it twice
 on the same release writes an identical file.
 

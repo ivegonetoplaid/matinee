@@ -110,7 +110,7 @@ def _exact_keys(block: Mapping[str, Any], keys: set[str], what: str, optional: f
 
 
 def spec_of(tree: str, doc: Mapping[str, Any]) -> TreeSpec | None:
-    """The statistics section of a parsed tree file, or None for a tree with no reference (comedy, modes).
+    """The statistics section of a parsed tree file, or None for a tree with no reference (comedy).
 
     A tree with no floor writes `"floor_any": {}` explicitly.
     """
