@@ -1,6 +1,6 @@
 # Matinee
 
-Tonight's film, picked for you.
+Name the mood. We'll find the picture.
 
 Matinee is a film picker for a home media library. Instead of a grid of posters
 and twenty minutes of scrolling, it asks two or three questions in plain
