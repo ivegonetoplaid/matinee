@@ -234,7 +234,7 @@ async function ask({ ack, question, options, count, many = false, picture = fals
 // when `keep` is set: a start that fails after going in keeps the door's posters behind it.
 function problem(data, again, keep = false) {
   if (!keep) wall.clear();
-  const line = h("h1", { class: "line done" });
+  const line = h("h1", { class: "line" });
   line.append(h("span", { class: "ack" }, data.message || "Something went wrong."));
   clear(stage).append(
     topbar(),
