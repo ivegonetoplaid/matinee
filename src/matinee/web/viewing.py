@@ -248,7 +248,7 @@ def resolve_held(request: Request, store: Store, v: ViewerIn, topics_on: bool, s
 
 
 DEVICE_COOKIE = "matinee_device"
-SWAP_LINE = "Oh, I almost recommended a film where {topic}. Let's find you an alternative."
+SWAP_LINE = "I almost recommended a film where {topic}. Let's find you an alternative."
 REVEAL = "What were you going to show me?"
 UNCHECKED_LINES = {
     "slow": "I couldn't check this one against your list, so have a look before you press play.",
@@ -262,7 +262,7 @@ UNCHECKED_LINES = {
 EXHAUSTED = "Every film left here trips something on your list. Want to start over?"
 USED_UP = "That's every film I've got for those answers. Step back along the trail, or start over."
 TIRED = "Three in a row trip your list, starting with one where {topic}. Roll again, or I can show you what I picked."
-PICKED = ("Here's what I picked.", "Heads up: it's one where {topic}.")
+PICKED = ("Here's what I picked.", "You should know it's one where {topic}.")
 
 
 def film_ref(table_films: Any, tmdb: int) -> FilmRef:
@@ -399,7 +399,7 @@ def add_viewing_routes(app: FastAPI, theatre: Theatre, store: Store, topics_on: 
         )
 
 
-NOTED = ["Thanks. That's gone to whoever runs Matinee.", "If they agree, it moves for everyone."]
+NOTED = ["Thanks for that. It's gone to whoever runs Matinee.", "If they agree, it moves for everyone."]
 
 
 def answer_says(tree: Tree, answers: Sequence[AnswerIn]) -> list[str]:

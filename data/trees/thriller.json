@@ -1,30 +1,30 @@
 {
   "genre": "Thriller",
   "pool": "thriller",
-  "opening": "good. I was getting far too comfortable.",
+  "opening": "I was getting far too comfortable anyway.",
   "note": "Decisions 80 and 86, and the Thriller and Crime build's decision 3: the door runs on the model labels (the labels file, data/labels.json). One question, its kinds, then \"anything\". A film sits under every kind it is labelled with; a film labelled behind the door with no kind, or not yet labelled, is reached through \"anything\" and \"Just pick one!\". The spies reply self-destructs, and no other answer may. A kind under 30 films in the library is not offered (erotic, in the operator's library).",
   "questions": [
     {
       "id": "kind",
-      "ask": "so, what kind of trouble are we in?",
+      "ask": "what kind of trouble are we in?",
       "options": [
         {
           "say": "whodunits and conspiracies. give me a mystery that needs working out.",
-          "reply": "splendid. trust no one. including me.",
+          "reply": "trust no one. including me.",
           "filter": {
             "flavour": "keep_guessing"
           }
         },
         {
           "say": "trapped, hunted, or held hostage. no way out.",
-          "reply": "lovely. I'll lock the door behind you.",
+          "reply": "I'll lock the door behind you.",
           "filter": {
             "flavour": "trapped"
           }
         },
         {
           "say": "mind games, manipulation, and misdirection. don't let me see it coming.",
-          "reply": "good. let's see who gets inside whose head.",
+          "reply": "let's see who gets inside whose head.",
           "filter": {
             "flavour": "mind_games"
           }
@@ -39,7 +39,7 @@
         },
         {
           "say": "serial killers. the hunt, or the mind behind it.",
-          "reply": "careful. you may just forget which side of the glass you're on...",
+          "reply": "you may just forget which side of the glass you're on...",
           "filter": {
             "flavour": "serial_killers"
           }
@@ -53,7 +53,7 @@
         },
         {
           "say": "anything. just keep me on the edge of my seat.",
-          "reply": "very well. no relaxing until the credits.",
+          "reply": "no relaxing until the credits.",
           "filter": {}
         }
       ]

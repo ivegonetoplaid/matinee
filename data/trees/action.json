@@ -6,7 +6,7 @@
   "questions": [
     {
       "id": "kind",
-      "ask": "so, what are we up against?",
+      "ask": "what are we up against?",
       "options": [
         {
           "say": "superheroes. capes, powers, and saving the world before dinner.",
@@ -60,7 +60,7 @@
         },
         {
           "say": "put me on the front lines. I want the war up close.",
-          "reply": "war. war never changes.",
+          "reply": "war never changes.",
           "filter": {
             "flavour": "war_battle"
           }
@@ -81,7 +81,7 @@
         },
         {
           "say": "anything. big, loud, and exciting.",
-          "reply": "very well. stand back.",
+          "reply": "I'll find the loudest one I've got.",
           "filter": {}
         }
       ]

@@ -1,37 +1,37 @@
 {
   "genre": "Animation",
   "pool": "animation",
-  "opening": "animation. anything can happen in a cartoon.",
+  "opening": "anything can happen in a cartoon.",
   "note": "Decision 88: the door runs on the labels (the labels file, data/labels.json). One question, its kinds, then \"anything\". A film sits under every kind it is labelled with, at most two; a film not yet labelled waits behind the door under \"anything\" and \"Just pick one!\" only. A kind under 30 films in the library is not offered.",
   "questions": [
     {
       "id": "kind",
-      "ask": "so, what are we drawing tonight?",
+      "ask": "what are we drawing tonight?",
       "options": [
         {
           "say": "animated adventures for everyone. the journey's the thing.",
-          "reply": "lovely. grab the snacks.",
+          "reply": "pack the snacks. it's a long road.",
           "filter": {
             "flavour": "family_adventure"
           }
         },
         {
           "say": "cartoon comedies. silly, fast, and funny.",
-          "reply": "good. the anvils are on standby.",
+          "reply": "the anvils are on standby.",
           "filter": {
             "flavour": "cartoon_comedy"
           }
         },
         {
           "say": "anime. japanese animation.",
-          "reply": "excellent. subtitles or dub? I won't judge.",
+          "reply": "subtitles or dub? I won't judge.",
           "filter": {
             "flavour": "anime"
           }
         },
         {
           "say": "animated superheroes. capes in ink.",
-          "reply": "heroes, assemble. in two dimensions.",
+          "reply": "time to assemble. in two dimensions, mind.",
           "filter": {
             "flavour": "superheroes"
           }
@@ -45,7 +45,7 @@
         },
         {
           "say": "anything animated. surprise me.",
-          "reply": "very well. anything's possible.",
+          "reply": "let's see what the pencils come up with.",
           "filter": {}
         }
       ]

@@ -260,7 +260,7 @@ def test_an_exhausted_pool_says_so_in_words(site: Any) -> None:
     body = resp.json()
     assert body["film"] is None
     assert body["exhausted"] == "Every film left here trips something on your list. Want to start over?"
-    assert body["swapped"]["line"] == "Oh, I almost recommended a film where topic 153. Let's find you an alternative."
+    assert body["swapped"]["line"] == "I almost recommended a film where topic 153. Let's find you an alternative."
     assert body["swapped"]["reveal"] == "What were you going to show me?"
     assert body["credit"] == "Powered by DoesTheDogDie.com"
     assert "matinee_device" in resp.headers["set-cookie"] and "HttpOnly" in resp.headers["set-cookie"]
@@ -357,7 +357,7 @@ def test_the_swap_line_names_the_first_topic_hit(tmp_path: Path) -> None:
     client = site_with(tmp_path, Picker(dtdd, DeviceCap(), InOrder()), dtdd)
     body = client.post("/api/pick", json={"tree": "west", "viewer": seat_for(client, topics=[153, 188])}).json()
     assert body["swapped"]["topics"] == ["topic 153", "topic 188"]
-    assert body["swapped"]["line"].startswith("Oh, I almost recommended a film where topic 153.")
+    assert body["swapped"]["line"].startswith("I almost recommended a film where topic 153.")
 
 
 def test_the_route_honours_the_rating_half(tmp_path: Path) -> None:
@@ -562,7 +562,7 @@ def test_three_in_a_row_hold_the_third_film_with_its_own_topic(tmp_path: Path) -
     )
     assert body["last"]["film"]["tmdb"] == body["turned_away"][2] == dtdd.looked_up()[2]
     assert body["last"]["topics"] == ["topic 154"]
-    assert body["last"]["lines"] == ["Here's what I picked.", "Heads up: it's one where topic 154."]
+    assert body["last"]["lines"] == ["Here's what I picked.", "You should know it's one where topic 154."]
 
 
 def test_a_pick_that_asks_to_skip_the_check_is_still_checked(tmp_path: Path) -> None:

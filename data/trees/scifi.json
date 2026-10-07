@@ -1,16 +1,16 @@
 {
   "genre": "Science Fiction",
   "pool": "scifi",
-  "opening": "excellent. set a course for somewhere else.",
+  "opening": "set a course for somewhere else.",
   "note": "Decision 88: the door runs on the labels (the labels file, data/labels.json). One question, its kinds, then \"anything\". A film sits under every kind it is labelled with, at most two; a film not yet labelled waits behind the door under \"anything\" and \"Just pick one!\" only. A kind under 30 films in the library is not offered.",
   "questions": [
     {
       "id": "kind",
-      "ask": "so, where are we going?",
+      "ask": "where are we going?",
       "options": [
         {
           "say": "space and aliens. ships, planets, and first contact.",
-          "reply": "lovely. we come in peace. probably.",
+          "reply": "we come in peace. probably.",
           "filter": {
             "flavour": "space_aliens"
           }
@@ -38,14 +38,14 @@
         },
         {
           "say": "superheroes. powers, gadgets, and capes.",
-          "reply": "very good. somebody save the city.",
+          "reply": "somebody save the city. I'll hold the popcorn.",
           "filter": {
             "flavour": "superheroes"
           }
         },
         {
           "say": "anything. just make it the future.",
-          "reply": "very well. engage.",
+          "reply": "the future's waiting. engage.",
           "filter": {}
         }
       ]

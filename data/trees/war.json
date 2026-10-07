@@ -1,12 +1,12 @@
 {
   "genre": "War",
   "pool": "war",
-  "opening": "war. I'll keep my voice down.",
+  "opening": "I'll keep my voice down.",
   "note": "Decision 88: the door runs on the labels (the labels file, data/labels.json). One question, its kinds, then \"anything\". A film sits under every kind it is labelled with, at most two; a film not yet labelled waits behind the door under \"anything\" and \"Just pick one!\" only. A kind under 30 films in the library is not offered.",
   "questions": [
     {
       "id": "kind",
-      "ask": "so, what part of the war are we watching?",
+      "ask": "what part of the war are we watching?",
       "options": [
         {
           "say": "the battle. combat, up close.",
@@ -24,14 +24,14 @@
         },
         {
           "say": "behind the lines. spies, prisoners, and the resistance.",
-          "reply": "quietly, now. they're listening.",
+          "reply": "careful who you trust. they're listening.",
           "filter": {
             "flavour": "behind_lines"
           }
         },
         {
           "say": "anything. just tell me a war story.",
-          "reply": "very well. stand to.",
+          "reply": "every war has its stories. stand to.",
           "filter": {}
         }
       ]

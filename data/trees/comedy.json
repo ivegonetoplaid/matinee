@@ -1,7 +1,7 @@
 {
   "pool": "comedy",
   "genre": "Comedy",
-  "opening": "good. I was afraid we'd have to take this seriously.",
+  "opening": "I was afraid we'd have to take this seriously.",
   "questions": [
     {
       "id": "room",
@@ -10,7 +10,7 @@
       "options": [
         {
           "say": "children present. behave yourself.",
-          "reply": "right. we'll keep the naughty bits offstage.",
+          "reply": "we'll keep the naughty bits offstage.",
           "filter": {
             "certificate_in": [
               "G",
@@ -24,7 +24,7 @@
         },
         {
           "say": "grown-ups, technically. a little misbehavior is fine.",
-          "reply": "excellent. nothing that requires an inquiry.",
+          "reply": "nothing that requires an inquiry, then.",
           "filter": {
             "certificate_in": [
               "G",
@@ -40,33 +40,33 @@
         },
         {
           "say": "no witnesses. anything goes.",
-          "reply": "splendid. nothing's off the table.",
+          "reply": "nothing's off the table. I'll draw the curtains.",
           "filter": {}
         }
       ]
     },
     {
       "id": "kind",
-      "ask": "so, what manner of foolishness are we watching?",
+      "ask": "what manner of foolishness are we watching?",
       "note": "Each answer holds the films the labels place in it (the labels file, data/labels.json, one rule per answer quoting its words). Horror comedy is the horror tree's comedy kind. Stand-up specials are held apart: only the stand-up answer offers them, and no other answer or \"Just pick one!\" in this tree picks one. A film no answer clearly fits, or not yet labelled, is reached through \"anything\" and \"Just pick one!\".",
       "options": [
         {
           "say": "slapstick, spoofs, and complete nonsense.",
-          "reply": "excellent. dignity will not be required.",
+          "reply": "dignity will not be required.",
           "filter": {
             "flavour": "slapstick"
           }
         },
         {
           "say": "something sweet. a happy ending and a few laughs getting there.",
-          "reply": "lovely. tissues optional, smiles mandatory.",
+          "reply": "tissues optional, smiles mandatory.",
           "filter": {
             "flavour": "feelgood"
           }
         },
         {
           "say": "cartoons. drawn, animated, and gloriously unhinged.",
-          "reply": "excellent. reality is overrated.",
+          "reply": "reality is overrated anyway.",
           "filter": {
             "flavour": "cartoon_comedy"
           }
@@ -80,14 +80,14 @@
         },
         {
           "say": "wisecracks, explosions, and spectacularly bad decisions.",
-          "reply": "excellent. subtlety can stay home.",
+          "reply": "subtlety can stay home.",
           "filter": {
             "flavour": "action_comedy"
           }
         },
         {
           "say": "blood, monsters, and punchlines. make the nightmare funny.",
-          "reply": "excellent. let's find something that kills.",
+          "reply": "let's find something that kills.",
           "filter": {
             "flavour": "horror_comedy"
           }
@@ -101,7 +101,7 @@
         },
         {
           "say": "love, longing, and a frankly irresponsible amount of charm.",
-          "reply": "wonderful. let's get these idiots together.",
+          "reply": "let's get these idiots together.",
           "filter": {
             "flavour": "romcom"
           }
@@ -115,7 +115,7 @@
         },
         {
           "say": "anything. surprise me.*",
-          "reply": "very well. I shall fetch the wheel of nonsense.",
+          "reply": "I shall fetch the wheel of nonsense.",
           "filter": {}
         }
       ],

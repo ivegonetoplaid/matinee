@@ -17,7 +17,7 @@ How a viewing goes:
 2. While the library can be used, Matinee first asks "what are we choosing from
    tonight?": only what the library holds, only films it lacks, or both. That
    answer bounds the whole walk and is asked again at every start.
-3. Matinee asks "So, what are we in the mood for?" and offers its doors: Comedy,
+3. Matinee asks "What are we in the mood for?" and offers its doors: Comedy,
    Drama, Horror, For the kids, Documentaries, and the rest.
 4. Each door leads to a question tree, which asks a question or two
    more about that mood.

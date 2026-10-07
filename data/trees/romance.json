@@ -1,16 +1,16 @@
 {
   "genre": "Romance",
   "pool": "romance",
-  "opening": "romance. how lovely. I'll dim the lights.",
+  "opening": "I'll dim the lights.",
   "note": "Decision 88: the door runs on the labels (the labels file, data/labels.json). One question, its kinds, then \"anything\". A film sits under every kind it is labelled with, at most two; a film not yet labelled waits behind the door under \"anything\" and \"Just pick one!\" only. A kind under 30 films in the library is not offered.",
   "questions": [
     {
       "id": "kind",
-      "ask": "so, what kind of love story?",
+      "ask": "what kind of love story?",
       "options": [
         {
           "say": "romantic comedies. falling in love, badly, for laughs.",
-          "reply": "oh good. a meet-cute.",
+          "reply": "I do love a good meet-cute.",
           "filter": {
             "flavour": "romcom"
           }
@@ -24,21 +24,21 @@
         },
         {
           "say": "love in another century. costumes and manners.",
-          "reply": "splendid. try not to swoon.",
+          "reply": "try not to swoon.",
           "filter": {
             "flavour": "period_romance"
           }
         },
         {
           "say": "teen and first love.",
-          "reply": "ah. when everything felt like the end of the world.",
+          "reply": "back when everything felt like the end of the world.",
           "filter": {
             "flavour": "teen_love"
           }
         },
         {
           "say": "anything. just make me believe in love.",
-          "reply": "very well. hearts on standby.",
+          "reply": "hearts on standby.",
           "filter": {}
         }
       ]

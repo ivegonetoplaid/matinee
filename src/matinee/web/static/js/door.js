@@ -447,8 +447,8 @@ export class Door {
     this.dtddCredit.hidden = false; // the picker shows DoesTheDogDie's topics
     const heading = h(
       "p",
-      { class: "line door-line done" },
-      h("span", { class: "ack" }, fresh ? "No problem." : "Your list."),
+      { class: "line door-line" },
+      h("span", { class: "ack" }, fresh ? "Let's make your list." : "Your list."),
       h("span", { class: "ask" }, "What should I steer around?"),
     );
     this.status = h("p", { class: "note picker-status", role: "status" });

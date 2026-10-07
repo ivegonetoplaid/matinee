@@ -5,12 +5,12 @@ import { doorLines, findTaken, nameKey, opensAtOnce, twoParts } from "../../src/
 
 test("the door's line depends on whether profiles exist and whether this device holds one", () => {
   assert.deepEqual(doorLines([]), [
-    "Welcome.",
+    "Come on in.",
     "Nobody has a seat yet. Introduce yourself. One profile the whole house shares works fine too.",
   ]);
-  assert.deepEqual(doorLines([{ held: false }, { held: true }]), ["Welcome back.", "Who's watching?"]);
+  assert.deepEqual(doorLines([{ held: false }, { held: true }]), ["Good to see you again.", "Who's watching?"]);
   assert.deepEqual(doorLines([{ held: false }]), [
-    "Welcome.",
+    "Come on in.",
     "Pick your seat, or introduce yourself and I'll find you something to watch.",
   ]);
 });

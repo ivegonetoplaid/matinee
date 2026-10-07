@@ -69,7 +69,7 @@ def test_a_note_keeps_what_was_wrong_the_answers_and_why_and_changes_no_pool(sit
     resp = client.post("/api/notes", json=body)
     assert resp.status_code == 200
     assert resp.json()["lines"] == [
-        "Thanks. That's gone to whoever runs Matinee.",
+        "Thanks for that. It's gone to whoever runs Matinee.",
         "If they agree, it moves for everyone.",
     ]
     said = TREE["questions"][0]["options"][0]["say"]

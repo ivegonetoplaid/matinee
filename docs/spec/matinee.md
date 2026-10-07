@@ -80,6 +80,18 @@ contract is listed under [Known gaps](#known-gaps).
 
 ## 2. The conversation
 
+Every question and reply answers what the viewer just said: it picks up the
+matter of the answer rather than marking that an answer arrived. Across every
+line Matinee speaks (the trees' openings, questions and replies, the first
+question's lines and replies, the pick's lines, and every sentence the page or
+the server says to a viewer) at most two open with a stock interjection ("Very
+well.", "No problem.") or a lone word set off by a comma, full stop, colon or
+exclamation mark ("So, …", "Horror. …"). The two are "Hi, <name>." at the front
+door and "life, uh, finds a way." behind Sci-fi. A test in `./check.sh` counts
+them and fails at a third; a literal in the page or the server that takes the
+form but is not Matinee speaking, such as an answer a viewer taps, is named in
+that test.
+
 ### 2.0 The source question
 
 The source question opens every walk when three things hold. The library can be
@@ -92,7 +104,7 @@ none, so the question is not asked. Matinee types "Right this way, <name>." and
 | Answer | The walk draws from | Matinee's reply on the doors |
 |---|---|---|
 | only what we can watch right now. | the films the library holds now (`held`) | home turf. good, the popcorn's already made. |
-| something we don't have yet. something new! | the films the labels name that the library does not hold (`new`) | ooh, something new. let's go window shopping. |
+| something we don't have yet. something new! | the films the labels name that the library does not hold (`new`) | let's go window shopping. |
 | anything at all. ours or not. | both, a film in both once (`all`) | no borders tonight. I like it. |
 
 - The chosen source bounds every later question, count and pick of the walk,
@@ -127,10 +139,10 @@ none, so the question is not asked. Matinee types "Right this way, <name>." and
 
 ### 2.1 The first question
 
-The poster wall opens by typing "Right this way." and "So, what are we in the
+The poster wall opens by typing "Right this way." and "What are we in the
 mood for?". Every viewing runs under a profile, so the first line carries its
 name: "Right this way, <name>.". After the source question the doors type the
-source answer's reply in gold, then "So, what are we in the mood for?"; a return
+source answer's reply in gold, then "What are we in the mood for?"; a return
 to the doors through the trail types the same reply. Each answer is a door, offered by its plain name.
 The answers, their order and the tree each leads to are data in
 `data/first_question.json`:
@@ -1137,7 +1149,7 @@ never kept. No tree, scale or score is built from DoesTheDogDie data.
   cannot score is never in that third.
 - **A failing film** is replaced by another draw from the same pool. A film that
   failed in this pick is never looked up again in it. The page says why in
-  Matinee's voice: "Oh, I almost recommended a film where <topic>. Let's find you
+  Matinee's voice: "I almost recommended a film where <topic>. Let's find you
   an alternative." It offers "What were you going to show me?", which reveals
   the first film turned away and the topics it failed.
 - **Every film fails.** The page says "Every film left here trips something on
@@ -1155,7 +1167,7 @@ never kept. No tree, scale or score is built from DoesTheDogDie data.
   you picked" shows that film as a pick from the reply already held, asking
   no new pick and nothing of DoesTheDogDie (the film's details and pictures
   load as on any pick): "Here's what I picked." in gold
-  at the tap, and "Heads up: it's one where <topic>." in cream as its poster
+  at the tap, and "You should know it's one where <topic>." in cream as its poster
   grows, `<topic>` the first of the viewer's topics it trips, in the order
   DoesTheDogDie lists its votes. It then
   behaves as any pick: `Not that one`, the note and `Start over` work.
@@ -1243,8 +1255,8 @@ changes nothing any viewer is shown.
   at all" note, and only as trees the catalogue holds other than the one that
   offered the film; anything else is refused. Naming a tree changes nothing any
   viewer is shown.
-- Once the note is saved the panel says "Thanks. That's gone to whoever runs
-  Matinee." in gold and "If they agree, it moves for everyone." in cream. The
+- Once the note is saved the panel says "Thanks for that. It's gone to
+  whoever runs Matinee." in gold and "If they agree, it moves for everyone." in cream. The
   About page's paragraph on films in the wrong place says the same: a viewer
   can say where a film fits best through "Something wrong with this pick?",
   every note reaches whoever runs Matinee, and when they agree the film moves
@@ -1564,10 +1576,10 @@ colours as they are.
     never pass under it. A desktop window under 760 px tall shows 100 px marks
     and a 40 px line. The "+ New" tile's square is dashed and holds a "+",
     with "New" beneath it.
-  - A device holding a profile token sees "Welcome back." in gold and "Who's
-    watching?" in cream. A device holding none sees "Welcome." and "Pick your
+  - A device holding a profile token sees "Good to see you again." in gold and
+    "Who's watching?" in cream. A device holding none sees "Come on in." and "Pick your
     seat, or introduce yourself and I'll find you something to watch." When no
-    profile exists the line is "Welcome." and "Nobody has a seat yet. Introduce
+    profile exists the line is "Come on in." and "Nobody has a seat yet. Introduce
     yourself. One profile the whole house shares works fine too.", over the
     "+ New" tile alone.
   - A tile opens its profile at once, and goes straight to the first question,
@@ -1601,7 +1613,7 @@ colours as they are.
     happen on screen?" in cream, with a body-type line beneath it, "Things like
     spiders or needles. Pick them and I'll skip any film that has them.", over
     "Yes, let me pick from a list", which opens the trigger picker for the new
-    profile ("No problem. What should I steer around?", "Save and continue",
+    profile ("Let's make your list. What should I steer around?", "Save and continue",
     "Never mind, show me everything", each leading on to the last step), and
     "No, show me everything", which goes to the last step with no list. Last, "You're all set, <name>." over a centred
     "Find me something to watch" action, which goes in
@@ -1714,7 +1726,7 @@ colours as they are.
   (section 2.0) types "Right this way, <name>." in gold and its question in
   cream, over its three answers as letterboxes, one beneath another; its count
   and `Just pick one!` cover the library's films. The doors then type the
-  source answer's reply in gold and "So, what are we in the mood for?" in
+  source answer's reply in gold and "What are we in the mood for?" in
   cream, over the door answers as letterboxes running across the screen and
   wrapping; their count and `Just pick one!` cover the source's films. With the
   source question not asked, the doors open the walk with the greeting in its
@@ -1774,8 +1786,8 @@ colours as they are.
   stay with whoever runs Matinee." in cream, then "Yes, delete it" (in red) and
   "No, keep it", which holds the keyboard's focus. "No, keep it", Escape or a
   tap elsewhere changes nothing. "Yes, delete it" deletes the profile (section
-  7) and returns to the front door, whose line reads "Done." and "<name>'s seat
-  is empty." over the tiles; a refusal stays on the panel and says why.
+  7) and returns to the front door, whose line reads "<name>'s seat is empty." and
+  "Who's watching?" over the tiles; a refusal stays on the panel and says why.
 - **The profile menu's panels** ("Change avatar" and "Delete profile") show
   their letterboxes with no glow at rest; each glows on hover.
 - **The pails.** The gore question shows four pail pictures, spotless to
@@ -1919,8 +1931,8 @@ colours as they are.
   further. A film the hunt placed keeps its cell until the next pool's
   posters take over.
 
-  While a DoesTheDogDie check runs, the page types "One moment. Let me check
-  this one against your list." and the wall keeps drifting.
+  While a DoesTheDogDie check runs, the page types "Let me check this one against
+  your list." and the wall keeps drifting.
 
   The wall's geometry and re-sort plan, the hop plan and its speed limit, the
   glow colour and the quip deal are modules that touch no page. Their tests
@@ -2331,6 +2343,7 @@ symbol when one does not match.
 | `src/matinee/quips.py::load_quips` / `QuipsError` | `src/matinee/quips.py:63` | 2026-10-05 |
 | `src/matinee/quips.py::quip_problems` / `line_problems` / `in_title_case` | `src/matinee/quips.py:92` | 2026-10-05 |
 | `tests/test_quips.py::test_the_caps_are_the_measured_ones` | `tests/test_quips.py:41` | 2026-10-05 |
+| `tests/test_openers.py::stock_openers` / `opens_stock` / `NOT_SPOKEN` (at most two stock openers across every spoken line) | `tests/test_openers.py:130` | 2026-10-07 |
 
 ### Labels and the household override file
 

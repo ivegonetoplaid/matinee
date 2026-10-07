@@ -1,16 +1,16 @@
 {
   "genre": "Kids",
   "pool": "kids",
-  "opening": "ooh, movie time!",
+  "opening": "movie time!",
   "note": "Decisions 48, 57 and 88. The pool is the films the labels list behind For the kids whose certificate passes (matinee.pools); the gate fails closed. The first question sorts by age band: a film's band is the older of its labelled band and its certificate's band, and bands allow rather than require. The second asks what kind of film, and each answer holds the films the labels give that kind. Spooky is not offered to the little ones. Every kind is always shown, whatever its size: the kind question has no \"anything\" answer, so a hidden kind would leave its films no way in.",
   "questions": [
     {
       "id": "age",
-      "ask": "okay, who's on the couch?",
+      "ask": "who's on the couch?",
       "options": [
         {
           "say": "the little ones. nothing scary.",
-          "reply": "Nice and cozy, then.",
+          "reply": "soft blankets and no monsters.",
           "filter": {
             "kids_band": "little"
           }
@@ -51,14 +51,14 @@
         },
         {
           "say": "something with magic in it.",
-          "reply": "abracadabra...",
+          "reply": "magic words at the ready... abracadabra!",
           "filter": {
             "flavour": "magic"
           }
         },
         {
           "say": "animals! talking animals!",
-          "reply": "paws, claws and whiskers, coming up.",
+          "reply": "every animal gets a speaking part.",
           "filter": {
             "flavour": "animals"
           }
@@ -79,14 +79,14 @@
         },
         {
           "say": "one that makes you feel all warm inside.",
-          "reply": "aww. good pick.",
+          "reply": "grab a blanket. good pick.",
           "filter": {
             "flavour": "warm"
           }
         },
         {
           "say": "a little bit spooky... but not too scary!",
-          "reply": "ooooh. lights on, just in case.",
+          "reply": "lights on, just in case.",
           "filter": {
             "flavour": "spooky"
           },

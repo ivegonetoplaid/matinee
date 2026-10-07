@@ -37,7 +37,7 @@ const visit = {
   trees: [],
 };
 
-const CHECKING = "One moment. Let me check this one against your list.";
+const CHECKING = "Let me check this one against your list.";
 
 // The films still in the running, beside "Just pick one!", with thousands separators.
 function countText(n) {
@@ -112,7 +112,7 @@ function nameTag() {
     switchProfiles: () => leave({}),
     deleteProfile: async () => {
       const res = await del(`/api/profiles/${id}`);
-      if (res.ok) leave({ said: ["Done.", `${res.data.name}'s seat is empty.`] });
+      if (res.ok) leave({ said: [`${res.data.name}'s seat is empty.`, "Who's watching?"] });
       return res;
     },
     saveAvatar: async (avatar) => {

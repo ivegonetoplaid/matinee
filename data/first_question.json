@@ -11,7 +11,7 @@
       {
         "say": "something we don't have yet. something new!",
         "source": "new",
-        "reply": "ooh, something new. let's go window shopping."
+        "reply": "let's go window shopping."
       },
       {
         "say": "anything at all. ours or not.",
@@ -22,7 +22,7 @@
   },
   "lines": [
     "Right this way.",
-    "So, what are we in the mood for?"
+    "What are we in the mood for?"
   ],
   "options": [
     {

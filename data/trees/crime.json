@@ -6,7 +6,7 @@
   "questions": [
     {
       "id": "kind",
-      "ask": "so what are you in for?",
+      "ask": "what are you in for?",
       "options": [
         {
           "say": "cops and detectives. somebody has to work the case.",
@@ -17,14 +17,14 @@
         },
         {
           "say": "gangsters, crews, and organized crime. strictly business.",
-          "reply": "of course. I know a guy.",
+          "reply": "I know a guy.",
           "filter": {
             "flavour": "gangsters"
           }
         },
         {
           "say": "heists, cons, and one last job.",
-          "reply": "excellent. nobody touches the money until I say so.",
+          "reply": "nobody touches the money until I say so.",
           "filter": {
             "flavour": "heists"
           }
@@ -45,14 +45,14 @@
         },
         {
           "say": "prison. doing time, or breaking out.",
-          "reply": "good. I'll check the bars. you check the exits.",
+          "reply": "I'll check the bars. you check the exits.",
           "filter": {
             "flavour": "prison"
           }
         },
         {
           "say": "anything criminal. surprise me.",
-          "reply": "very well. I'll make a few calls.",
+          "reply": "I'll make a few calls.",
           "filter": {}
         }
       ]

@@ -1,16 +1,16 @@
 {
   "genre": "Fantasy",
   "pool": "fantasy",
-  "opening": "fantasy. wonderful. bring a cloak.",
+  "opening": "bring a cloak. the roads get strange from here.",
   "note": "Decision 88: the door runs on the labels (the labels file, data/labels.json). One question, its kinds, then \"anything\". A film sits under every kind it is labelled with, at most two; a film not yet labelled waits behind the door under \"anything\" and \"Just pick one!\" only. A kind under 30 films in the library is not offered.",
   "questions": [
     {
       "id": "kind",
-      "ask": "so, which kind of magic are we after?",
+      "ask": "which kind of magic are we after?",
       "options": [
         {
           "say": "swords, sorcery, and dragons. a whole other world.",
-          "reply": "excellent. mind the dragon.",
+          "reply": "mind the dragon.",
           "filter": {
             "flavour": "sword_sorcery"
           }
@@ -31,14 +31,14 @@
         },
         {
           "say": "superheroes. gods, sorcerers, and capes with magic in them.",
-          "reply": "of course. stand back from the lightning.",
+          "reply": "stand back from the lightning.",
           "filter": {
             "flavour": "superheroes"
           }
         },
         {
           "say": "anything. just take me somewhere enchanted.",
-          "reply": "very well. hold on to your hat.",
+          "reply": "hold on to your hat.",
           "filter": {}
         }
       ]

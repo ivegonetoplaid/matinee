@@ -1,12 +1,12 @@
 {
   "genre": "Drama",
   "pool": "drama",
-  "opening": "lovely. something with a bit of weight to it.",
+  "opening": "something with a bit of weight to it, then.",
   "note": "Decision 88: the door runs on the labels (the labels file, data/labels.json). One question, its kinds, then \"anything\". A film sits under every kind it is labelled with, at most two; a film not yet labelled waits behind the door under \"anything\" and \"Just pick one!\" only. A kind under 30 films in the library is not offered.",
   "questions": [
     {
       "id": "kind",
-      "ask": "so, what kind of story are we settling into?",
+      "ask": "what kind of story are we settling into?",
       "options": [
         {
           "say": "true stories and biopics. it really happened.",
@@ -17,7 +17,7 @@
         },
         {
           "say": "families, childhood, and growing up.",
-          "reply": "ah. everyone's been there, one way or another.",
+          "reply": "everyone's been there, one way or another.",
           "filter": {
             "flavour": "family_coming_of_age"
           }
@@ -31,7 +31,7 @@
         },
         {
           "say": "another era. kings, empires, and history in costume.",
-          "reply": "splendid. mind the corsets.",
+          "reply": "mind the corsets.",
           "filter": {
             "flavour": "history_period"
           }
@@ -66,14 +66,14 @@
         },
         {
           "say": "artists, musicians, and showbiz. the life behind the stage.",
-          "reply": "places, everyone. curtain's up.",
+          "reply": "five minutes to curtain. places, please.",
           "filter": {
             "flavour": "showbiz"
           }
         },
         {
           "say": "anything. something with real weight to it.",
-          "reply": "very well. get comfortable.",
+          "reply": "get comfortable. this one won't rush.",
           "filter": {}
         }
       ]

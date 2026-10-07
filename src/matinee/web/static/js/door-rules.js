@@ -4,10 +4,10 @@
 // What the front door says over the tiles: a device holding a profile is welcomed back without a name.
 export function doorLines(profiles) {
   if (!profiles.length) {
-    return ["Welcome.", "Nobody has a seat yet. Introduce yourself. One profile the whole house shares works fine too."];
+    return ["Come on in.", "Nobody has a seat yet. Introduce yourself. One profile the whole house shares works fine too."];
   }
-  if (profiles.some((p) => p.held)) return ["Welcome back.", "Who's watching?"];
-  return ["Welcome.", "Pick your seat, or introduce yourself and I'll find you something to watch."];
+  if (profiles.some((p) => p.held)) return ["Good to see you again.", "Who's watching?"];
+  return ["Come on in.", "Pick your seat, or introduce yourself and I'll find you something to watch."];
 }
 
 // A tile opens its profile at once when this device holds it or it has no PIN; otherwise the PIN is asked.

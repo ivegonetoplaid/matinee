@@ -1,7 +1,7 @@
 {
   "pool": "horror",
   "genre": "Horror",
-  "opening": "horror. excellent choice.",
+  "opening": "nobody goes down to the basement tonight.",
   "scores": {
     "fear": [
       "scary",
@@ -81,7 +81,7 @@
       "options": [
         {
           "say": "ghosts, demons, curses. invite something in.",
-          "reply": "very well. let's see what answers the invitation.",
+          "reply": "let's see what answers the invitation.",
           "filter": {
             "flavour": "supernatural"
           }
@@ -109,7 +109,7 @@
         },
         {
           "say": "not a nightmare. make me laugh.",
-          "reply": "comedies, camp and the gloriously awful. let's find you one.",
+          "reply": "I'll find one that's gloriously awful on purpose.",
           "filter": {
             "flavour": "horror_comedy"
           }
@@ -132,12 +132,12 @@
     },
     {
       "id": "gore",
-      "ask": "alright. how much blood can you actually take?",
+      "ask": "how much blood can you actually take?",
       "presentation": "pails",
       "options": [
         {
           "say": "none. I'm squeamish.",
-          "reply": "noted. nothing you'll have to look away from.",
+          "reply": "nothing you'll have to look away from.",
           "pail": "spotless, sparkling, not a mark on it",
           "filter": {
             "bands": {
@@ -151,7 +151,7 @@
         },
         {
           "say": "some. I'll look away when I need to.",
-          "reply": "some it is.",
+          "reply": "I'll tell you when to look away.",
           "pail": "splattered down one side, blood pooling in the bottom",
           "filter": {
             "bands": {
@@ -166,7 +166,7 @@
         },
         {
           "say": "properly messy. I'm fine.",
-          "reply": "oh, good.",
+          "reply": "a little mess never hurt anyone.",
           "pail": "nearly full, first drops hitting the floor",
           "filter": {
             "bands": {
@@ -228,7 +228,7 @@
         },
         {
           "say": "something from this century, please.",
-          "reply": "modern it is.",
+          "reply": "everyone has a phone, and it still won't help.",
           "filter": {
             "year_min": 2000
           }
