@@ -1167,24 +1167,44 @@ a.wordmark:focus-visible {
   flex-wrap: wrap;
 }
 
-/* An action does something: a charcoal rounded rectangle, its edge and words in one accent, `gold`, `rose`,
-   `petrol` or `cream`. The body is never filled with the accent. */
+/* An action does something: a dark-enamel face, its thin outline and words in one accent, `gold`, `rose`,
+   `petrol` or `cream`, a highlight along its top edge, a slight shadow along its foot and a very light grain.
+   The body is never filled with the accent. Its face stands 40 px tall; an unseen margin keeps the tap target
+   at 44 px. */
 .action {
   --edge: var(--gold);
   --words: var(--gold-words);
+  --lit: 0 0 0 transparent;
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 44px;
-  padding: 10px 16px;
-  border: 1.5px solid var(--edge);
+  min-height: 40px;
+  margin-block: 2px;
+  padding: 8px 16px;
+  border: 1px solid var(--edge);
   border-radius: 10px;
-  background: var(--action);
+  background: url("/static/grain.svg"), var(--action);
+  box-shadow:
+    var(--lit),
+    inset 0 1px 0 color-mix(in srgb, var(--white) 14%, transparent),
+    inset 0 -2px 3px color-mix(in srgb, var(--black) 45%, transparent);
   color: var(--words);
   font: 600 18px/1.2 var(--body);
   text-align: center;
   text-decoration: none;
   cursor: pointer;
+  transition:
+    transform 0.1s ease,
+    box-shadow 0.2s ease,
+    border-color 0.2s ease;
+}
+
+/* The tap target reaches 2 px beyond the face above and below. */
+.action::before {
+  content: "";
+  position: absolute;
+  inset: -3px -1px;
 }
 
 .action.rose {
@@ -1207,10 +1227,19 @@ a.wordmark:focus-visible {
   color: var(--words);
 }
 
+/* Hovered, the face looks faintly lit from within; pressed, it sinks. */
 @media (hover: hover) {
   .action:hover:not(:disabled) {
+    --lit: inset 0 0 16px color-mix(in srgb, var(--words) 22%, transparent);
     border-color: var(--words);
   }
+}
+
+.action:active:not(:disabled) {
+  transform: translateY(1.5px);
+  box-shadow:
+    var(--lit),
+    inset 0 2px 4px color-mix(in srgb, var(--black) 50%, transparent);
 }
 
 .action:focus-visible {

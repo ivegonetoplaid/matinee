@@ -191,9 +191,12 @@ topic list scrolls in its own box under its search field.
 
 ### 5.2 Actions
 
-A rounded rectangle: 10 px corners, the opaque `--action` body, a 1.5 px edge in
-its accent, and its words, and any icon, in its accent's words colour. The body
-is never filled with the accent. At least 44 px tall.
+A dark-enamel face, always an HTML control and never a picture: 10 px corners,
+the opaque `--action` body under a very light grain (`static/grain.svg`), a 1 px
+outline in its accent, a highlight along its top edge and a slight inset shadow
+along its foot, and its words, and any icon, in its accent's words colour. The
+body is never filled with the accent. The face stands 40 px tall and its tap
+target reaches 2 px beyond it above and below, so the target is at least 44 px.
 
 | Accent | Means | Edge | Words | Words on the body |
 |---|---|---|---|---|
@@ -202,7 +205,9 @@ is never filled with the accent. At least 44 px tall.
 | Petrol | Leave Matinee | `#3B7C8C` | `#5FA3B3` | 6.1 : 1 |
 | Cream | A neutral utility | `#a39e93` | `#efe9dc` | 14.5 : 1 |
 
-On hover the edge takes the words' colour. Keyboard focus shows a 2 px outline
+On hover the outline takes the words' colour and the face looks faintly lit
+from within, a soft inner light in the words' colour; it is never filled.
+Pressed, it sinks 1.5 px. Keyboard focus shows a 2 px outline
 in the words' colour, 2 px outside the edge. A disabled action stands at 45 per
 cent opacity. A petrol action's words always end with ↗.
 

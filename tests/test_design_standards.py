@@ -361,7 +361,8 @@ def test_no_control_is_a_pill_or_wears_a_filled_accent() -> None:
         assert corners and set(corners) == {corner}, (family, corners)
     fills = {"background", "background-color", "background-image", "--action"}
     bodies = [d for d in naming("action") if d.prop in fills]
-    assert bodies and all(d.value == "var(--action)" for d in bodies), [(d.selectors, d.prop, d.value) for d in bodies]
+    enamel = {"var(--action)", 'url("/static/grain.svg"), var(--action)'}  # the body, under its grain
+    assert bodies and all(d.value in enamel for d in bodies), [(d.selectors, d.prop, d.value) for d in bodies]
 
 
 def test_every_action_wears_one_accent_and_a_petrol_one_ends_with_the_arrow() -> None:
