@@ -1474,21 +1474,23 @@ colours as they are.
 
 - **The door.** The marquee stands at the top centre of the screen over the
   poster wall, and nothing else frames it: no booth and no curtains. The
-  marquee is an art deco stepped crown with a sunburst over a free-standing lit
-  sign, with a warm glow behind them and a dark fade across the top of the
-  screen (420 px deep, 260 px on a phone) that lets the sign read against the
-  posters. On a desktop the sign is 900 by 216 px under a crown 620 by 114 px;
-  on a phone it is 350 by 140 px under a crown 230 by 54 px. The sign never
-  runs wider than the screen less 32 px (10 px on a phone). "Matinee" is the
-  largest thing on it, at 104 px (58 px on a phone), over a small letter board
-  reading "Now showing N films" with the live count. A thin gold frame sits
-  inside the ring of bulbs, and on a desktop striped rules flank the name.
-  Bulbs run round the sign: 156 of 10 px on a desktop, 64 of 7 px on a phone.
-  They twinkle while two dark bulbs travel clockwise, half a lap apart, one lap
-  every 12 s; a lap starts with the two at the middles of the top and bottom
-  edges. Under reduced motion no bulb darkens or twinkles. A window too short
-  for the full marquee scales it down: to 0.8 under 820 px tall and 0.45 under
-  700 px tall on a desktop, and to 0.75 under 640 px tall on a phone.
+  marquee is one drawing, `static/marquee/marquee-wide.svg` on a desktop and
+  `marquee-narrow.svg` on a phone: an art deco stepped crown with a sunburst
+  over a free-standing lit sign, with nothing glowing behind it and a dark fade
+  across the top of the screen (420 px deep, 260 px on a phone) that lets the
+  sign read against the posters. The page lays the drawing in and the drawing
+  scales as one piece: 924 px wide at most on a desktop and 374 px on a phone,
+  never wider than the screen less 16 px. "Matinee" is the largest thing on
+  the sign, gilded and crisp with no glow, over a letter board drawn as the
+  letterboxes are, reading "Now showing" and the live film count. Its name and
+  its letter board are live text. The bulbs round the sign twinkle while two
+  dark bulbs travel clockwise, half a lap apart, one lap every 12 s; the light
+  stays inside each bulb's glass. Under reduced motion no bulb darkens or
+  twinkles. A window too short for the full marquee scales it down: to 0.8
+  under 820 px tall and 0.45 under 700 px tall on a desktop, and to 0.75 under
+  640 px tall on a phone. When the drawing cannot be fetched or read, the
+  marquee shows "Matinee" as plain gold text and a warning goes to the browser
+  console.
 
   Every question at the door is typed onto the wall below the marquee. On a
   desktop the words are a centred column
@@ -1510,15 +1512,18 @@ colours as they are.
   wide it drops beneath that line when the two do not fit side by side. The
   list scrolls in its own box under the search field, which filters it, and
   the field keeps its own dark fill. On a phone, while the picker is open,
-  the crown fades and the sign shrinks to a lit strip of bulbs round the letter
-  board, with no name; it returns to full size when the picker closes. The
+  the drawing shrinks toward its top and fades while its room folds away
+  (0.6 s), and a lit strip fades in in its place: a dark band 374 px wide at most with a row of 24 bulbs chasing along each long side
+  and the letter board between them, with no name. The drawing returns when
+  the picker closes. The
   marquee stays on screen until the viewer goes in or opens
   About.
   - **The locked door.** The page asks `GET /api/admission` before anything
     else. When a door word is set and the device has not given it (section
     7.2), it asks nothing more: no film list, poster, count, profile or line is
-    requested until the word is right. The marquee's letter board reads "Now showing" over "Private
-    screening", and beneath it, in place of the poster wall, stands a wall of
+    requested until the word is right. The marquee's letter board reads "Now showing" and "Private
+    screening", on one row on a desktop and the second under the first on a
+    phone, and beneath it, in place of the poster wall, stands a wall of
     black glazed subway tile (a static SVG pattern, warm glow above, vignette at
     the edges), a wooden frame and step drawn by the page, and the painted door
     (`static/door/door.webp`, an 800 by 1200 web image derived from a painted
@@ -1625,7 +1630,8 @@ colours as they are.
   (0.3 s), and the rest of the marquee fades over 0.55 s while it lifts 110 px
   and shrinks to 0.93 of its size over 0.8 s. Meanwhile "Matinee" flies from
   the sign's letters to the wordmark's place at the top left, shrinking to the
-  wordmark's 30 px and losing its glow, over 0.9 s. It lands letter for letter
+  wordmark's 30 px, over 0.9 s; its copy lies letter for letter over the
+  drawing's lettering as it leaves. It lands letter for letter
   on the theatre's wordmark, placed as the top bar will place it with the
   viewer beside it, and gives way to that wordmark when the theatre's screen is
   built.
@@ -2657,9 +2663,7 @@ symbol when one does not match.
 | `src/matinee/web/static/js/door.js::Door.topic` (a letterbox that toggles, with a check mark) | `src/matinee/web/static/js/door.js:543` | 2026-10-05 |
 | `src/matinee/web/static/js/door.js::Door.dtddCredit` (shown on the picker, hidden on every other door screen) | `src/matinee/web/static/js/door.js:171` | 2026-10-05 |
 | `src/matinee/web/static/js/door.js::sign` (frame, rules, name, live count) | `src/matinee/web/static/js/door.js:82` | 2026-10-05 |
-| `src/matinee/web/static/js/door.js::bulbs` / `ringAt` | `src/matinee/web/static/js/door.js:48` | 2026-10-05 |
-| `src/matinee/web/static/js/door.js::time` (the two-bulb chase's start) | `src/matinee/web/static/js/door.js:36` | 2026-10-05 |
-| `src/matinee/web/static/js/door.js::BULBS` / `CHASE_S` | `src/matinee/web/static/js/door.js:17` | 2026-10-05 |
+| `src/matinee/web/static/js/door.js::marqueeReady` / `drawing` / `litStrip` (the drawing fetched once, its style attributes set through the style object; the phone's strip) | `src/matinee/web/static/js/door.js:15` | 2026-10-07 |
 | `src/matinee/web/static/js/door.js::buildMarquee` / `showCount` ("Private screening" until admitted) | `src/matinee/web/static/js/door.js:130` | 2026-10-05 |
 | `src/matinee/web/static/js/door.js::tile` / `newTile` (`.seat-label` carries the name's scrim) | `src/matinee/web/static/js/door.js:107` | 2026-10-05 |
 | `src/matinee/web/static/js/door.js::Door.greet` / `choose` | `src/matinee/web/static/js/door.js:184` | 2026-10-05 |
@@ -2764,9 +2768,9 @@ symbol when one does not match.
 | `tests/test_design_standards.py::declarations` / `built` / `enclosing` / `PERMITTED` / `ARTWORK` (the standard's mechanical rules) | `tests/test_design_standards.py:232` | 2026-10-05 |
 | `src/matinee/web/static/css/matinee.css` reduced-motion rules (the marquee and the door's words change at once) | `src/matinee/web/static/css/matinee.css:1170` | 2026-10-05 |
 | `src/matinee/web/static/css/matinee.css` `.wall`, `.wall-tiles`, `.tile` (`--tile`, the one strength; the dark cell) | `src/matinee/web/static/css/matinee.css:102` | 2026-10-05 |
-| `src/matinee/web/static/css/matinee.css` `.marquee` (its measures as properties, the top fade, the short windows' scaling) | `src/matinee/web/static/css/matinee.css:1220` | 2026-10-05 |
+| `src/matinee/web/static/css/matinee.css` `.marquee` (the top fade, the short windows' scaling) | `src/matinee/web/static/css/matinee.css:1220` | 2026-10-05 |
 | `src/matinee/web/static/css/matinee.css` `.marquee.lifted`, `.stage.leaving`, `.flying-name` (going in) | `src/matinee/web/static/css/matinee.css:1250` | 2026-10-05 |
-| `src/matinee/web/static/css/matinee.css` `.sign`, `.bulb`, `@keyframes chase` | `src/matinee/web/static/css/matinee.css:1435` | 2026-10-05 |
+| `src/matinee/web/static/css/matinee.css` `.mq-drawings`, `.mq-frame`, `.mq text`, `@keyframes mq-chase`, `.mq-strip` | `src/matinee/web/static/css/matinee.css:1300` | 2026-10-07 |
 | `src/matinee/web/static/css/matinee.css` `.door-wall`, `.door-talk`, `.door-foot` | `src/matinee/web/static/css/matinee.css:1271` | 2026-10-05 |
 | `src/matinee/web/static/css/matinee.css` `.picker` | `src/matinee/web/static/css/matinee.css:2150` | 2026-10-05 |
 | `src/matinee/web/static/css/matinee.css` phone door: `.marquee` sizes, `.marquee.compact` (the lit strip) | `src/matinee/web/static/css/matinee.css:1326` | 2026-10-05 |

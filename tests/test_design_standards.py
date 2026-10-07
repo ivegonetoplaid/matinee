@@ -17,22 +17,15 @@ PHONE = "@media (max-width: 600px)"
 ACCENTS = {"gold", "rose", "petrol", "cream"}
 
 # The artwork keeps its own colours (DESIGN_STANDARDS.md 3.1), named by the class its rule styles: the marquee
-# (crown, sign, bulbs, letter board), the locked door's scene, the wall's tiles and the scorch.
+# (its drawing, the phone's lit strip and the name in flight), the locked door's scene, the wall's tiles and
+# the scorch.
 ARTWORK = {
     "tile",
     "marquee",
-    "marquee-glow",
-    "crown",
-    "step",
-    "sunburst",
-    "sun-core",
-    "spire",
-    "sign",
-    "sign-frame",
-    "sign-rule",
+    "mq-strip",
+    "strip-bulb",
     "sign-name",
-    "bulb",
-    "letterboard",
+    "flying-name",
     "subway",
     "door-frame",
     "doorway",
@@ -43,7 +36,7 @@ ARTWORK = {
     "peek",
     "scorch",
 }
-ARTWORK_KEYFRAMES = {"burn", "chase"}  # the fuse's burn on Matinee's line, the bulbs' chase
+ARTWORK_KEYFRAMES = {"burn"}  # the fuse's burn on Matinee's line
 
 # Text buttons and links that are not actions or letterboxes: the foot band's crumbs, About link and credits,
 # About's own prose, the wordmark, and controls that are pictures or menu rows. Each names its element's tag,

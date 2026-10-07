@@ -6,16 +6,39 @@ import { h, prefersLessMotion, wait } from "./dom.js";
 
 export const FLIGHT_MS = 900;
 const EASE = "cubic-bezier(0.2, 0.7, 0.2, 1)";
-const GLOW = "0 0 22px rgba(242, 179, 61, 0.6)";
 const NO_GLOW = "0 0 0 rgba(242, 179, 61, 0)";
 
-// Where the letters of `el` are drawn: the left and top of the copy that lies over them, and their size.
-// `el` sets its line height to its font size, so its box is as tall as its letters are large.
-export function nameAt(el) {
+// How far below its top a copy's baseline sits, per pixel of size, found by laying out an unpainted copy.
+function baselineRatio() {
+  const mark = h("span");
+  mark.style.display = "inline-block";
+  const probe = h("div", { class: "flying-name", "aria-hidden": "true" }, "M", mark);
+  probe.style.fontSize = "100px";
+  document.body.append(probe);
+  const ratio = (mark.getBoundingClientRect().bottom - probe.getBoundingClientRect().top) / 100;
+  probe.remove();
+  return ratio;
+}
+
+// Where the letters of `el`, a plain-text name with its line height at its font size, are drawn.
+function textAt(el) {
   const box = el.getBoundingClientRect();
   const range = document.createRange();
   range.selectNodeContents(el);
-  return { left: range.getBoundingClientRect().left, top: box.top, size: box.height, spacing: "0.12em", glow: GLOW };
+  return { left: range.getBoundingClientRect().left, top: box.top, size: box.height, spacing: "0.12em", glow: NO_GLOW };
+}
+
+// Where the marquee's lettering is drawn: the left and top of the copy that lies over it, and its size. `el` is
+// the drawing's <text>; the drawing scales as one piece, so its font size and baseline scale with it.
+export function nameAt(el) {
+  if (!(el instanceof SVGTextElement)) return textAt(el);
+  const svg = el.ownerSVGElement;
+  const view = svg.viewBox.baseVal;
+  const scale = svg.getBoundingClientRect().width / view.width;
+  const size = parseFloat(getComputedStyle(el).fontSize) * scale;
+  const baseline = svg.getBoundingClientRect().top + (el.y.baseVal[0].value - view.y) * scale;
+  const left = el.getBoundingClientRect().left;
+  return { left, top: baseline - baselineRatio() * size, size, spacing: "0.12em", glow: NO_GLOW };
 }
 
 // Where the theatre's wordmark is drawn, found by laying out, and removing unpainted, a page top of the

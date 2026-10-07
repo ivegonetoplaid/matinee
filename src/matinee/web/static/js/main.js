@@ -3,7 +3,7 @@
 import { del, get, post, put } from "./api.js";
 import { noteLink } from "./note.js";
 import { aboutLink, credits } from "./credits.js";
-import { Door, buildMarquee, showCount } from "./door.js";
+import { Door, buildMarquee, marqueeReady, showCount } from "./door.js";
 import { LockedDoor, WALL_FADE_MS } from "./locked.js";
 import { clear, h, isPhone, prefersLessMotion, sentenceCase, wait } from "./dom.js";
 import { showPick } from "./pick.js";
@@ -328,7 +328,7 @@ async function askPictures() {
 // When a door word is set and this device has not given it, the locked door stands in its place, and
 // nothing about the films is asked for until the word is right.
 async function boot(opts = {}) {
-  const gate = await get("/api/admission");
+  const [gate] = await Promise.all([get("/api/admission"), marqueeReady]);
   if (!gate.ok) return problem(gate.data, () => boot(opts));
   if (!gate.data.admitted) return lockedDoor(gate.data.greeting);
   if (await saidSetup(() => boot(opts))) return undefined;

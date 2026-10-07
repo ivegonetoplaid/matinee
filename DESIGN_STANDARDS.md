@@ -85,7 +85,8 @@ A shade of a colour is its token mixed toward transparent
 `--chip`, the pills' see-through body, goes with the pills. Add a colour for a
 control, a scrim, a band or text only through a new token here and in the
 stylesheet's `:root`; such a colour written straight into a rule is a defect.
-The marquee, the door and the wall's artwork keep their own colours.
+The marquee, the door and the wall's artwork keep their own colours. The marquee is
+the drawing in `static/marquee/`, Matinee's mark, and nothing glows behind it.
 
 ### 3.2 One job per colour
 

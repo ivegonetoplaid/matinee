@@ -1,97 +1,76 @@
-// The front door: the marquee, a stepped crown over a lit sign, stands at the top
+// The front door: the marquee, the drawing of a stepped crown over a lit sign, stands at the top
 // centre over the poster wall, and Matinee greets a viewer on the wall below it.
 // Every question at the door types onto the wall, each piece of text on its own scrim;
 // the marquee stays until the viewer goes in.
 
 import { get, post, put } from "./api.js";
 import { aboutLink, credits } from "./credits.js";
-import { clear, h, isPhone, prefersLessMotion, sentenceCase, wait } from "./dom.js";
+import { clear, h, prefersLessMotion, sentenceCase, wait } from "./dom.js";
 import { FLIGHT_MS, copyAt, fly, nameAt, riseOf, wordmarkAt } from "./flight.js";
-import { doorLines, findTaken, opensAtOnce, twoParts } from "./door-rules.js";
+import { boardText, doorLines, filmCount, findTaken, opensAtOnce, stripLap, twoParts } from "./door-rules.js";
 import { avatarChoices, mark } from "./mark.js";
 import { offers } from "./offers.js";
 import { typeLine } from "./type.js";
 
-// Bulbs round the sign and the gap between them, as on the design boards. Two dark bulbs chase clockwise,
-// half a lap apart, one lap every CHASE_S seconds.
-const BULBS = { desktop: { count: 156, inset: 9 }, phone: { count: 64, inset: 6 } };
-const CHASE_S = 12;
+// The marquee is the drawing in /static/marquee/, wide on a desktop and narrow on a phone, laid into the page
+// so its bulbs chase and its letter board's words are live. Both drawings are fetched once; if either cannot
+// be read, the marquee shows its name as plain text.
+const CHASE_S = 12; // one lap of the chase, in seconds, as the drawing's own bulbs run
+const STRIP_BULBS = 24; // along each long side of the phone's lit strip
 const PIN_LENGTH = 4;
+const DRAWINGS = {};
+export const marqueeReady = Promise.all(
+  ["wide", "narrow"].map(async (key) => {
+    const res = await fetch(`/static/marquee/marquee-${key}.svg`);
+    if (!res.ok) throw new Error(`the marquee drawing ${key} answered ${res.status}`);
+    // The page's security policy refuses style attributes, so each one is read in under another name and set
+    // through the element's style object once the drawing is in the page (`drawing`).
+    const text = (await res.text()).replaceAll(' style="', ' data-paint="');
+    const doc = new DOMParser().parseFromString(text, "image/svg+xml");
+    if (doc.querySelector("parsererror")) throw new Error(`the marquee drawing ${key} did not parse`);
+    DRAWINGS[key] = doc.documentElement;
+  }),
+).catch((err) => console.warn("The marquee drawing could not be loaded; its name shows as text.", err));
 
-
-// Where each bulb sits on a ring `inset` pixels inside a w × h sign, walking clockwise from the top left.
-function ringAt(k, n, w, h, inset) {
-  const rw = w - 2 * inset;
-  const rh = h - 2 * inset;
-  const s = (k * 2 * (rw + rh)) / n;
-  if (s < rw) return [inset + s, inset];
-  if (s < rw + rh) return [inset + rw, inset + s - rw];
-  if (s < 2 * rw + rh) return [inset + rw - (s - rw - rh), inset + rh];
-  return [inset, inset + rh - (s - 2 * rw - rh)];
+// The drawing's name for a screen reader, which reads its letter board too.
+function marqueeTitle(text) {
+  return `Now showing at Matinee: ${text}`;
 }
 
-// Each bulb's place in the chase. A lap starts with the dark bulbs at the top and bottom middles: the
-// top middle lies `start` of the way round the ring from the top left, where bulb 0 sits. Set once,
-// from the sign's first size, so the chase keeps its step when a phone's picker shrinks the sign.
-function time(spans, w, hgt, inset) {
-  const rw = w - 2 * inset;
-  const rh = hgt - 2 * inset;
-  const start = rw / 2 / (2 * (rw + rh));
-  spans.forEach((b, k) => {
-    const twinkle = (1.3 + ((k * 7) % 13) / 10).toFixed(2);
-    const lap = (((k / spans.length - start) % 1) + 1) % 1;
-    b.style.animationDuration = `${CHASE_S}s, ${twinkle}s`;
-    b.style.animationDelay = `${(lap * CHASE_S - CHASE_S).toFixed(3)}s, ${(-((k * 5) % 11) / 10).toFixed(2)}s`;
-  });
+// One drawing, its letter board set to `text`. The wide and the narrow drawings prefix their ids apart, so
+// both stand in the page at once and the stylesheet shows one.
+function drawing(key, text) {
+  const svg = document.importNode(DRAWINGS[key], true);
+  for (const el of svg.querySelectorAll("[data-paint]")) {
+    el.style.cssText = el.dataset.paint;
+    delete el.dataset.paint;
+  }
+  svg.querySelector(".mq-board-big").textContent = text;
+  svg.querySelector("title").textContent = marqueeTitle(text);
+  return h("div", { class: `mq-frame mq-frame-${key}` }, svg);
 }
 
-function bulbs(sign) {
-  const { count, inset } = isPhone() ? BULBS.phone : BULBS.desktop;
-  const layer = h("div", { class: "bulbs", "aria-hidden": "true" });
-  const spans = Array.from({ length: count }, () => h("span", { class: "bulb" }));
-  layer.append(...spans);
-  let timed = false;
-  const place = () => {
-    const w = sign.clientWidth;
-    const hgt = sign.clientHeight;
-    if (!timed && w > 0) {
-      time(spans, w, hgt, inset);
-      timed = true;
-    }
-    spans.forEach((b, k) => {
-      const [x, y] = ringAt(k, count, w, hgt, inset);
-      b.style.left = `${Math.round(x)}px`;
-      b.style.top = `${Math.round(y)}px`;
-    });
-  };
-  new ResizeObserver(place).observe(sign);
-  return layer;
-}
-
-function crown() {
-  const parts = ["step s1", "step s2", "step s3", "sunburst", "sun-core", "spire left", "spire right", "spire middle"];
-  return h("div", { class: "crown", "aria-hidden": "true" }, parts.map((p) => h("div", { class: p })));
-}
-
-function filmCount(count) {
-  return `${count.toLocaleString("en")} ${count === 1 ? "film" : "films"}`;
-}
-
-// The sign: "Matinee", the largest thing on it, over a small letter board with the live film count, or
-// "Private screening" before the device is admitted, inside a thin gold frame and a ring of bulbs.
-function sign(count) {
-  const films = count === null ? "Private screening" : filmCount(count);
-  const face = h(
-    "div",
-    { class: "sign" },
-    h("div", { class: "sign-frame", "aria-hidden": "true" }),
-    h("div", { class: "sign-rule left", "aria-hidden": "true" }),
-    h("div", { class: "sign-rule right", "aria-hidden": "true" }),
-    h("div", { class: "sign-name" }, "Matinee"),
-    h("p", { class: "letterboard" }, h("span", { class: "board-small" }, "Now showing"), " ", h("span", { class: "board-big" }, films)),
+// The phone's lit strip, which stands in for the drawing while the trigger picker is open: a dark band with a
+// row of bulbs chasing along each long side and the letter board between them.
+function litStrip(text) {
+  const row = (side) =>
+    h(
+      "div",
+      { class: `strip-bulbs ${side}` },
+      Array.from({ length: STRIP_BULBS }, (_, k) => {
+        const bulb = h("span", { class: "strip-bulb" });
+        bulb.style.animationDelay = `${(stripLap(side, k, STRIP_BULBS) * CHASE_S - CHASE_S).toFixed(3)}s`;
+        return bulb;
+      }),
+    );
+  const board = h(
+    "p",
+    { class: "strip-board" },
+    h("span", { class: "strip-small" }, "Now showing"),
+    " ",
+    h("span", { class: "mq-board-big" }, text),
   );
-  face.prepend(bulbs(face));
-  return face;
+  return h("div", { class: "mq-strip", "aria-hidden": "true" }, row("top"), board, row("bottom"));
 }
 
 // A neutral way on or back: a cream action.
@@ -126,14 +105,45 @@ function field(props) {
   return h("input", { class: "field", autocomplete: "off", spellcheck: "false", ...props });
 }
 
-// The marquee: the crown over the lit sign. `count` null shows "Private screening".
+// The marquee: the drawing over the poster wall. `count` null shows "Private screening" on its letter board.
 export function buildMarquee(count) {
-  return h("div", { class: "marquee" }, h("div", { class: "marquee-glow", "aria-hidden": "true" }), crown(), sign(count));
+  const text = boardText(count);
+  if (!DRAWINGS.wide || !DRAWINGS.narrow) {
+    return h("div", { class: "marquee plain" }, h("div", { class: "sign-name" }, "Matinee"), litStrip(text));
+  }
+  const drawings = h("div", { class: "mq-drawings" }, drawing("wide", text), drawing("narrow", text));
+  return h("div", { class: "marquee" }, drawings, litStrip(text));
 }
 
 // The letter board shows the library's film count.
 export function showCount(marquee, count) {
-  marquee.querySelector(".board-big").textContent = filmCount(count);
+  for (const big of marquee.querySelectorAll(".mq-board-big")) big.textContent = filmCount(count);
+  for (const title of marquee.querySelectorAll("title")) title.textContent = marqueeTitle(filmCount(count));
+}
+
+// Every face the marquee's name has: the wide and the narrow drawing's lettering, or the plain name.
+function nameFaces(marquee) {
+  return [...marquee.querySelectorAll(".mq-name-face, .sign-name")];
+}
+
+// Whether `face` is on screen: it has a width, and a drawing's lettering lies whole inside its frame, which
+// the phone's lit strip folds to nothing.
+function shows(face) {
+  const box = face.getBoundingClientRect();
+  if (box.width === 0) return false;
+  const frame = face.closest(".mq-frame")?.getBoundingClientRect();
+  return !frame || (frame.height > 0 && box.bottom <= frame.bottom + 1);
+}
+
+// The marquee's name as it stands on screen, or null where none shows (the phone's lit strip).
+function signName(marquee) {
+  return nameFaces(marquee).find(shows) ?? null;
+}
+
+// The name leaves or returns on every face at once, so a resize across 600 px while it is away leaves
+// neither drawing without its name.
+function markAway(marquee, away) {
+  for (const face of nameFaces(marquee)) face.classList.toggle("away", away);
 }
 
 // The door and what it asks. `onEnter` takes the viewer into the theatre, and is handed this door, whose
@@ -397,14 +407,13 @@ export class Door {
   // has landed; it stays there until `settle()`. A phone's lit strip draws no name, so from the picker the
   // name is at the wordmark's place at once while the strip lifts away.
   async leave(beside = []) {
-    const name = this.marquee.querySelector(".sign-name");
     if (!this.copy) {
-      const at = nameAt(name); // measured before the marquee lifts, which moves the sign
-      this.home = at.size > 0 ? at : null;
-      this.copy = copyAt(this.home ?? { ...at, size: 30 });
+      const name = signName(this.marquee);
+      this.home = name ? nameAt(name) : null; // measured before the marquee lifts, which moves the sign
+      this.copy = copyAt(this.home ?? { left: 0, top: 0, size: 30, spacing: "0.08em", glow: "none" });
       this.rise = riseOf(this.copy);
     }
-    name.classList.add("away");
+    markAway(this.marquee, true);
     this.stage.classList.add("leaving");
     this.marquee.classList.add("lifted");
     const to = wordmarkAt(this.rise, beside);
@@ -425,16 +434,15 @@ export class Door {
   async bringBack() {
     this.stage.classList.remove("leaving");
     this.marquee.classList.remove("lifted");
-    const name = this.marquee.querySelector(".sign-name");
     if (!this.home) {
-      name.classList.remove("away");
+      markAway(this.marquee, false);
       this.settle();
       return;
     }
     this.copy ??= copyAt(wordmarkAt(this.rise));
     await fly(this.copy, this.home);
     if (this.marquee.classList.contains("lifted")) return; // it left again before it was home
-    name.classList.remove("away");
+    markAway(this.marquee, false);
     this.settle();
   }
 
