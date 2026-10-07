@@ -1,5 +1,5 @@
 // Matinee's line types out quickly: an acknowledgement in gold, then the
-// question in white. The answers appear once it finishes.
+// question in cream, with no caret. The answers appear once it finishes.
 
 import { h, prefersLessMotion, sentenceCase } from "./dom.js";
 
@@ -14,22 +14,16 @@ export function typeLine(el, ack, ask, { shown = 0 } = {}) {
   const white = /,\s*$/.test(gold) ? ask || "" : sentenceCase(ask || "");
   const ackEl = h("span", { class: "ack" });
   const askEl = h("span", { class: "ask" });
-  const caret = h("span", { class: "caret", "aria-hidden": "true" });
-  el.classList.remove("done");
   el.setAttribute("aria-label", [gold, white].filter(Boolean).join(" "));
   el.replaceChildren(ackEl, white ? askEl : "");
   const total = gold.length + white.length;
-  // With no question to follow, the caret stays on the acknowledgement's line.
-  const caretHome = white ? askEl : ackEl;
   const paint = (n) => {
     ackEl.replaceChildren(gold.slice(0, n));
     askEl.replaceChildren(white.slice(0, Math.max(0, n - gold.length)));
-    caretHome.append(caret);
   };
   return new Promise((resolve) => {
     if (prefersLessMotion() || total === 0) {
       paint(total);
-      el.classList.add("done");
       resolve();
       return;
     }
@@ -40,7 +34,6 @@ export function typeLine(el, ack, ask, { shown = 0 } = {}) {
       paint(n);
       if (n >= total) {
         clearInterval(timer);
-        el.classList.add("done");
         resolve();
       }
     }, TICK_MS);

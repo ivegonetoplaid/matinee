@@ -363,19 +363,6 @@ a.wordmark:focus-visible {
   display: block;
 }
 
-.caret {
-  display: inline-block;
-  width: 0.42em;
-  height: 0.8em;
-  margin-left: 0.08em;
-  background: var(--gold);
-  vertical-align: -0.06em;
-}
-
-.line.done .caret {
-  animation: blink 1.1s steps(1) infinite;
-}
-
 @keyframes blink {
   50% {
     opacity: 0;
@@ -2848,8 +2835,9 @@ a.wordmark:focus-visible {
   transition-duration: 0.4s;
 }
 
-/* The slot's invitation: the greeting's gold caret, blinking at the cover's left end while the slot is empty
-   and holds the focus; on a touch screen, where the slot waits for a tap, whenever it can take the word. */
+/* The slot's invitation: a gold caret, the mark of a field a viewer types into, blinking at the cover's left
+   end while the slot is empty and holds the focus; on a touch screen, where the slot waits for a tap, whenever
+   it can take the word. */
 .slot-cover .caret {
   position: absolute;
   top: 50%;
@@ -2860,6 +2848,7 @@ a.wordmark:focus-visible {
   aspect-ratio: 0.52;
   margin: 0;
   translate: 0 -50%;
+  background: var(--gold);
   animation: blink 1.1s steps(1) infinite;
 }
 

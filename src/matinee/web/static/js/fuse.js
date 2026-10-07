@@ -37,7 +37,6 @@ function scorches(line, text) {
 export function lightFuse(line, seconds, live) {
   const text = line.querySelector(".ack");
   const number = h("span", { class: "countdown", "aria-hidden": "true" });
-  line.querySelector(".caret")?.remove();
   line.append(number);
   const start = performance.now();
   let timer = null;

@@ -122,9 +122,9 @@ export class LockedDoor {
   measure([ack, ask]) {
     const probe = h(
       "p",
-      { class: "line locked-line done probe", "aria-hidden": "true" },
+      { class: "line locked-line probe", "aria-hidden": "true" },
       h("span", { class: "ack" }, ack),
-      h("span", { class: "ask" }, ask, h("span", { class: "caret" })), // the caret can carry a word over
+      h("span", { class: "ask" }, ask),
     );
     this.scene.append(probe);
     const height = probe.getBoundingClientRect().height;

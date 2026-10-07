@@ -2,7 +2,7 @@
 title: Matinee — Design Standards
 purpose: The visual and copy laws every Matinee surface holds to — colour, type, the two control families, the scrim and the bands, where Matinee speaks, and the copy.
 status: Binding for every surface under `src/matinee/web/static/`. Section 1 says what to do when the code disagrees with a rule here.
-updated: 2026-10-05
+updated: 2026-10-07
 ---
 
 # Matinee — Design Standards
@@ -91,8 +91,8 @@ The marquee, the door and the wall's artwork keep their own colours.
 
 On a control or a line of text, gold means two things only: the first part
 Matinee speaks, and carry on. Gold is also the theatre's dressing: the
-wordmark, the marquee, About's headings, a profile's initials, the caret, bare
-links and the keyboard focus ring. Rose means turn something down or take it
+wordmark, the marquee, About's headings, a profile's initials, a field's
+caret, bare links and the keyboard focus ring. Rose means turn something down or take it
 away. Petrol means leave Matinee. Cream is the rest of what Matinee speaks, and
 a neutral utility. Dim is for quiet text inside a band and for disabled
 controls, never for a control a viewer is meant to use.
@@ -138,6 +138,9 @@ reply to the last answer on a question screen, or the first sentence of any
 other line. Cream carries what follows: a question when Matinee asks, a second
 statement when it tells. A line types out; the choices appear once it finishes, except where the
 page spec says otherwise (the locked door's slot takes the word at once).
+
+A line Matinee speaks shows no caret, while it types or after. A caret marks a
+field a viewer types into, and is gold.
 
 ### 4.4 Case
 

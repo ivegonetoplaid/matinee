@@ -1,6 +1,6 @@
 ---
 purpose: The contract Matinee holds to — the media servers it reads, the source question and the conversation model, the labels and the household override file, the pools and scales, the offline film table and its rebuild, the setup note and the logs, profiles and the store file, the door word, the optional DoesTheDogDie topics and check, viewers' notes, the web surface, the page, deployment and third-party terms — with a map of where each part lives.
-updated: 2026-10-05
+updated: 2026-10-07
 governs:
   - src/matinee/
   - tools/
@@ -1535,8 +1535,8 @@ colours as they are.
     door's painted slot holds the password field, covered by a sliding metal
     cover, with no text or placeholder. The field takes input from the moment
     the door shows, while the greeting types, and holds the focus unless the
-    screen is a touch screen. While the field is empty, a gold caret like the
-    greeting's blinks at the cover's left end: when the field holds the focus,
+    screen is a touch screen. While the field is empty, a gold caret blinks at
+    the cover's left end: when the field holds the focus,
     or on a touch screen whenever it can take input. Each character pushes the cover open in proportion, fully at ten,
     and deleting one moves it back; the dots show from the slot's left edge. A small dim eye
     button at the slot's right end, over the cover, shows or hides what is
@@ -1703,7 +1703,8 @@ colours as they are.
   reduced motion it does not fade. A picture that fails is not asked for again on
   that page load. The posters ignore taps and clicks.
 - **Questions.** Matinee's line types out (an acknowledgement, then the
-  question), and the answers appear once it finishes. The line and the answers
+  question), and the answers appear once it finishes. No line Matinee types
+  shows a caret, while it types or after. The line and the answers
   keep apart, and nothing re-centres as the line types or the answers appear:
   the line hangs from the top of the screen with three lines reserved, so on
   desktop the answers start at the same height on every question whose line
