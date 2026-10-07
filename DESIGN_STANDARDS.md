@@ -59,7 +59,7 @@ the rule was right, fix the code.
 | `--base` | `#07080d` | The page, the bands, the scrims |
 | `--text` | `#efe9dc` | Cream: Matinee's second sentence, body text, cream actions' words |
 | `--dim` | cream at 66 % | Quiet text inside a band only; disabled controls |
-| `--gold` | `#f2b33d` | Matinee's first sentence, the wordmark, gold actions' edge |
+| `--gold` | `#f2b33d` | Matinee's first sentence, gold actions' edge |
 | `--velvet` | `#e0566b` | Rose: rose actions' edge, "Delete profile" |
 | `--petrol` | `#3B7C8C` | Petrol actions' edge |
 | `--strip` | `#f4efe2` | A letterbox's glass toward the bezel, on hover; the lit strip's letter board |
@@ -96,7 +96,7 @@ the drawing in `static/marquee/`, Matinee's mark, and nothing glows behind it.
 
 On a control or a line of text, gold means two things only: the first part
 Matinee speaks, and carry on. Gold is also the theatre's dressing: the
-wordmark, the marquee, About's headings, a profile's initials, a field's
+corner mark, the marquee, About's headings, a profile's initials, a field's
 caret, bare links and the keyboard focus ring. Rose means turn something down or take it
 away. Petrol means leave Matinee. Cream is the rest of what Matinee speaks, and
 a neutral utility. Dim is for quiet text inside a band and for disabled
@@ -119,7 +119,7 @@ does not count.
 
 | Face | Weight | Used for |
 |---|---|---|
-| Big Shoulders Display | 800 | Matinee's lines, the wordmark, the marquee, letterbox words, profile names on the tiles and in the top bar |
+| Big Shoulders Display | 800 | Matinee's lines, the marquee, letterbox words, profile names on the tiles and in the top bar |
 | DM Sans | 400 to 600 | Everything else: body text, notes, counts, action words, fields, About |
 
 Both faces are self-hosted with their OFL licences. A third face is a defect.
@@ -237,7 +237,7 @@ section 1; do not invent a fifth.
 Everything a viewer uses over the poster wall is a letterbox or an action. A bare
 text link stands only in the foot band: the credit line, its "About",
 DoesTheDogDie's credit and the trail's crumbs. About's own prose keeps its
-links, and the wordmark is the brand's link.
+links, and the corner mark is the brand's link.
 
 On a phone the trail and the TMDB credit line show on no screen; the About page
 carries TMDB's logo and notice. A question screen past the first shows "Back"
@@ -258,7 +258,10 @@ An action that goes to another address is an `<a>` styled as an action, never a
 The profile menu's rows ("Edit my list", "Change avatar", "Switch profiles",
 "Delete profile") are plain menu rows; "Delete profile" is set in rose. Pictures
 that answer a question, the pails and the avatars, stay pictures. The locked
-door's eye is part of the door. The wordmark is a link styled as the wordmark.
+door's eye is part of the door. The wordmark is the corner mark
+(`static/marquee/mark-corner.svg`), the marquee's crown over a small lit sign
+carrying the name, 40 px tall: a picture inside a link, never text styled as a
+mark. About shows the same mark as a picture, not a link.
 
 ---
 
@@ -283,7 +286,7 @@ from 11 to 15 px, stands only inside a band.
 
 Every screen over the poster wall has a dark band at the top and at the foot.
 Each is the page base at 92 per cent behind its bar, the top bar with the
-wordmark and the viewer, the foot with the credit line (on a phone, its way back
+corner mark and the viewer, the foot with the credit line (on a phone, its way back
 and DoesTheDogDie's credit), and feathers to nothing
 into the wall over 96 px on a desktop and 48 px on a phone, with no visible
 edge. On the door's screens, the dark fade behind the marquee is the top band,

@@ -6,6 +6,7 @@
 // Opened from the door, the marquee's name flies to the wordmark's place first and flies back on closing.
 
 import { h } from "./dom.js";
+import { cornerMark } from "./flight.js";
 import { offers } from "./offers.js";
 
 const stage = document.getElementById("stage");
@@ -179,7 +180,7 @@ export async function openAbout(opener = null, around = null) {
   const layer = h(
     "div",
     { class: around ? "about from-door flying" : "about", role: "dialog", "aria-modal": "true", "aria-labelledby": "about-title" },
-    h("div", { class: "wordmark about-wordmark", "aria-hidden": "true" }, "Matinee"),
+    h("div", { class: "wordmark about-wordmark", "aria-hidden": "true" }, cornerMark()),
     h("main", { class: "about-panel" }, copy(back)),
   );
   shown = { layer, opener, around };
@@ -189,8 +190,9 @@ export async function openAbout(opener = null, around = null) {
   if (around) {
     await around.leave();
     if (shown?.layer !== layer) return; // closed while the name was flying
-    around.settle();
+    layer.querySelector(".about-wordmark").classList.add("arriving");
     layer.classList.remove("flying");
+    around.settle({ handover: true });
   }
   stage.classList.add("behind-about");
 }

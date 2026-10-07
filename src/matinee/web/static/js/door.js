@@ -6,7 +6,7 @@
 import { get, post, put } from "./api.js";
 import { aboutLink, credits } from "./credits.js";
 import { clear, h, prefersLessMotion, sentenceCase, wait } from "./dom.js";
-import { FLIGHT_MS, copyAt, fly, nameAt, riseOf, wordmarkAt } from "./flight.js";
+import { FLIGHT_MS, HANDOVER_MS, copyAt, fly, markAt, nameAt } from "./flight.js";
 import { boardText, doorLines, filmCount, findTaken, opensAtOnce, stripLap, twoParts } from "./door-rules.js";
 import { avatarChoices, mark } from "./mark.js";
 import { offers } from "./offers.js";
@@ -155,7 +155,9 @@ export class Door {
     this.profiles = [];
     this.held = [];
     this.picked = new Set();
-    this.copy = null; // the name while it is away from the sign: flying, or landed at the wordmark's place
+    this.copy = null; // the name while it is away from the sign: flying, or landed at the corner mark's place
+    this.handing = null; // a landed copy still standing over the corner mark while the mark fades in
+    this.handTimer = null;
   }
 
   // Build the door and open on the front door's tiles, or on `screen` when given: a new profile ("new"),
@@ -410,28 +412,42 @@ export class Door {
     if (!this.copy) {
       const name = signName(this.marquee);
       this.home = name ? nameAt(name) : null; // measured before the marquee lifts, which moves the sign
-      this.copy = copyAt(this.home ?? { left: 0, top: 0, size: 30, spacing: "0.08em", glow: "none" });
-      this.rise = riseOf(this.copy);
+      this.copy = copyAt(this.home ?? { left: 0, top: 0, size: 14, spacing: "0.12em", glow: "none" });
     }
     markAway(this.marquee, true);
     this.stage.classList.add("leaving");
     this.marquee.classList.add("lifted");
-    const to = wordmarkAt(this.rise, beside);
+    const to = markAt(beside);
     if (this.home) return fly(this.copy, to);
     await fly(this.copy, to, { instant: true });
     if (!prefersLessMotion()) await wait(FLIGHT_MS);
   }
 
-  // The landed name gives way to a wordmark standing in its place.
-  settle() {
-    this.copy?.remove();
+  // The landed name gives way to the mark standing in its place. With `handover`, the mark fades in beneath
+  // the copy, which goes once the mark is whole, so the name never flickers.
+  // A copy still handing over is the door's until it goes, so a return in that time flies it home.
+  settle({ handover = false } = {}) {
+    const copy = this.copy;
     this.copy = null;
+    if (!copy) return;
+    if (!handover || prefersLessMotion()) {
+      copy.remove();
+      return;
+    }
+    this.handing = copy;
+    this.handTimer = setTimeout(() => {
+      copy.remove();
+      this.handing = null;
+    }, HANDOVER_MS);
   }
 
   // The marquee returns: the name flies back to the sign from wherever it is, and the rest of the marquee
   // and the door's words come back. Resolves once the name is home. With no name on the sign to return to
   // (a phone's lit strip), the copy simply goes.
   async bringBack() {
+    clearTimeout(this.handTimer);
+    this.copy ??= this.handing;
+    this.handing = null;
     this.stage.classList.remove("leaving");
     this.marquee.classList.remove("lifted");
     if (!this.home) {
@@ -439,7 +455,7 @@ export class Door {
       this.settle();
       return;
     }
-    this.copy ??= copyAt(wordmarkAt(this.rise));
+    this.copy ??= copyAt(markAt());
     await fly(this.copy, this.home);
     if (this.marquee.classList.contains("lifted")) return; // it left again before it was home
     markAway(this.marquee, false);

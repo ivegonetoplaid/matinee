@@ -416,3 +416,10 @@ def test_letterboxes_and_actions_have_the_standards_sizes_and_no_override() -> N
     ]
     assert bare == []
     assert all(is_artwork(d) for d in DECLS if d.prop == "zoom")  # zoom shrinks every control it holds
+
+
+def test_the_wordmark_link_carries_the_corner_mark_named_matinee() -> None:
+    main = SCRIPTS["main.js"]
+    body = main[main.index("function wordmark()") :]
+    body = body[: body.index("\n}\n")]
+    assert 'h("a", { class: "wordmark", href: "/", onclick: go }, cornerMark("Matinee"))' in body

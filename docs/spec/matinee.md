@@ -1463,7 +1463,7 @@ the picked poster and the pick's backdrop.
 
 The colour tokens, the two families of
 control (a letterbox chooses something, an action does something) and each
-action's accent are those of `DESIGN_STANDARDS.md`. Matinee's lines and the wordmark are set in Big
+action's accent are those of `DESIGN_STANDARDS.md`. Matinee's lines are set in Big
 Shoulders Display, other text in DM Sans. Both fonts are self-hosted with their
 OFL licences. All displayed text is in sentence case, except that a cream
 part carrying on its gold part's sentence after a comma keeps its first letter
@@ -1629,12 +1629,12 @@ colours as they are.
   Enter changes nothing. The door's words and the corner credit line fade out
   (0.3 s), and the rest of the marquee fades over 0.55 s while it lifts 110 px
   and shrinks to 0.93 of its size over 0.8 s. Meanwhile "Matinee" flies from
-  the sign's letters to the wordmark's place at the top left, shrinking to the
-  wordmark's 30 px, over 0.9 s; its copy lies letter for letter over the
-  drawing's lettering as it leaves. It lands letter for letter
-  on the theatre's wordmark, placed as the top bar will place it with the
-  viewer beside it, and gives way to that wordmark when the theatre's screen is
-  built.
+  the sign's letters to the corner mark's place at the top left, shrinking to
+  the mark's lettering, over 0.9 s; its copy lies letter for letter over the
+  drawing's lettering as it leaves. It lands letter for letter on the corner
+  mark's own name, placed as the top bar will place the mark with the viewer
+  beside it. When the theatre's screen is built, the mark fades in around the
+  landed name (0.3 s) and the name then gives way to it.
   The poster wall stays on screen throughout. No transition on the page passes
   through black. The walk's first screen (the source question, or the doors
   when it is not asked) types once the name has landed and the screen has
@@ -1646,7 +1646,9 @@ colours as they are.
   motion the change is instant. "Edit my list", "Switch profiles" and a deleted
   profile return to the door with the marquee already in place and lit; the
   name does not fly back.
-- **The wordmark.** Inside the theatre the top bar's wordmark "Matinee" is a
+- **The wordmark.** Inside the theatre the top bar's wordmark is the corner
+  mark, `static/marquee/mark-corner.svg`: the marquee's crown over a small lit
+  sign with "Matinee" across it, 40 px tall, as a picture named "Matinee". It is a
   link: activating it, by click, tap or keyboard, does what `Start over` does,
   back to the walk's first screen as the same viewer. On the setup note, and on
   a problem screen reached before going in, where there is no viewer yet, it
@@ -1985,8 +1987,8 @@ colours as they are.
   scroll. The screen underneath, its credit line included, is hidden, never
   rebuilt or paused, so only the posters and the screen's two bands show
   through (Bands, above); it shows again exactly
-  as it stood when About closes. Matinee's wordmark stands at the theatre
-  wordmark's place: fixed from 1400 px wide up, and scrolling away with the page
+  as it stood when About closes. The corner mark stands, as a picture and not
+  a link, at the theatre wordmark's place: fixed from 1400 px wide up, and scrolling away with the page
   below that so it never sits over the text. About scrolls as a page when the panel
   is taller than the screen. "Back" at its top, the browser's Back, a phone's back gesture
   and Escape each close it and return the focus to what opened it ("About
@@ -2686,7 +2688,7 @@ symbol when one does not match.
 | `src/matinee/web/static/door/door.webp`, `subway-tile.svg`, `eye.svg` (the locked door's art) | `src/matinee/web/static/door` | 2026-10-05 |
 | `tests/js/door-rules.test.mjs`, `tests/js/locked.test.mjs`, `tests/js/mark.test.mjs` | `tests/js/door-rules.test.mjs:6` | 2026-10-05 |
 | `src/matinee/web/static/js/flight.js::fly` (`FLIGHT_MS`, the fail-open) | `src/matinee/web/static/js/flight.js:63` | 2026-10-05 |
-| `src/matinee/web/static/js/flight.js::nameAt` / `wordmarkAt` / `riseOf` / `copyAt` | `src/matinee/web/static/js/flight.js:14` | 2026-10-05 |
+| `src/matinee/web/static/js/flight.js::nameAt` / `markAt` / `cornerMark` / `copyAt` / `HANDOVER_MS` (take-off from the drawing's lettering, landing on the corner mark's) | `src/matinee/web/static/js/flight.js:14` | 2026-10-07 |
 | `src/matinee/web/static/js/about.js::openAbout` (the focus returns to what opened it) | `src/matinee/web/static/js/about.js:176` | 2026-10-05 |
 | `src/matinee/web/static/js/about.js::close` (popstate; Escape steps back) | `src/matinee/web/static/js/about.js:159` | 2026-10-05 |
 | `src/matinee/web/static/js/about.js::keeps` (the privacy statement, "What Matinee keeps") | `src/matinee/web/static/js/about.js:115` | 2026-10-05 |

@@ -6,6 +6,7 @@ import { aboutLink, credits } from "./credits.js";
 import { Door, buildMarquee, marqueeReady, showCount } from "./door.js";
 import { LockedDoor, WALL_FADE_MS } from "./locked.js";
 import { clear, h, isPhone, prefersLessMotion, sentenceCase, wait } from "./dom.js";
+import { cornerMark } from "./flight.js";
 import { showPick } from "./pick.js";
 import { posterPaths } from "./pictures.js";
 import { Deck, dealBeneath, dealPair, setFor } from "./quips.js";
@@ -82,21 +83,23 @@ function leaveTo(next) {
   next();
 }
 
-// The wordmark is a link that does what "Start over" does: back to the first question, as the same viewer.
-// Without a viewer (a problem before going in) it goes back to the door.
+// The wordmark is the corner mark, a link that does what "Start over" does: back to the first question, as
+// the same viewer. Without a viewer (a problem before going in) it goes back to the door.
 function wordmark() {
   const go = (e) => {
     e.preventDefault();
     leaveTo(visit.viewer.profile_id ? start : boot);
   };
-  return h("a", { class: "wordmark", href: "/", onclick: go }, "Matinee");
+  return h("a", { class: "wordmark", href: "/", onclick: go }, cornerMark("Matinee"));
 }
 
 // The theatre's top bar, the wordmark at its left. A name that flew in from the door gives way to it, and
 // the door, faded since going in, is no longer the stage's.
 function topbar(...rest) {
-  const bar = h("header", { class: "topbar" }, wordmark(), ...rest);
-  landing?.settle();
+  const mark = wordmark();
+  const bar = h("header", { class: "topbar" }, mark, ...rest);
+  if (landing) mark.classList.add("arriving");
+  landing?.settle({ handover: true });
   landing = null;
   stage.classList.remove("at-door", "leaving");
   return bar;

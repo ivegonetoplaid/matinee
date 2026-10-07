@@ -183,17 +183,28 @@ button {
   pointer-events: none;
 }
 
+/* The theatre's mark at the top left: the corner mark, the marquee's crown over a small lit sign. */
 .wordmark {
-  font-family: var(--display);
-  font-weight: 800;
-  font-size: 30px;
-  letter-spacing: 0.08em;
-  color: var(--gold);
-  text-transform: uppercase;
+  display: block;
+  line-height: 0;
 }
 
-a.wordmark {
-  text-decoration: none;
+.corner-mark {
+  display: block;
+  width: auto;
+  height: 40px;
+}
+
+/* Landed after the name's flight, the mark fades in beneath the name before the name gives way; flight.js's
+   HANDOVER_MS keeps the name for as long. */
+.wordmark.arriving {
+  animation: mark-in 0.3s ease both;
+}
+
+@keyframes mark-in {
+  from {
+    opacity: 0;
+  }
 }
 
 a.wordmark:focus-visible {
@@ -204,7 +215,7 @@ a.wordmark:focus-visible {
 
 @media (hover: hover) {
   a.wordmark:hover {
-    color: var(--gold-words);
+    filter: brightness(1.12);
   }
 }
 
