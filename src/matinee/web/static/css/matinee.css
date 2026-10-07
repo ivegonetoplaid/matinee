@@ -26,6 +26,10 @@
   --strip: #f4efe2;
   --strip-ink: #121212;
   --strip-edge: #2a2622;
+  --strip-hi: #fffdf6;
+  --strip-lo: #e4d9c2;
+  --edge-hi: #5a5046;
+  --edge-lo: #120f0c;
   --action: #161926;
   --gold-words: #f6ca77;
   --rose-words: #e98997;
@@ -413,29 +417,78 @@ a.wordmark:focus-visible {
   display: none;
 }
 
-/* A letterbox chooses something: the cream letter-board placard, one size on every screen. */
+/* A letterbox chooses something: a backlit milk-glass panel in a dark bezel, a channel rail above and below
+   every row of letters, as on the marquee's letter board. One size on every screen; it grows a row per
+   wrapped line. The bezel is a gradient border, the glass and the rails are background layers, and the rails
+   are sized to the line height, so any number of lines sits between rails at any width. */
 .letterbox {
-  text-align: left;
+  --lb-line: 32px;
+  --lb-edge: 3px;
+  --lb-pad-x: 18px;
+  --lb-lo: var(--strip-lo);
+  --lb-glow: 0 0 12px color-mix(in srgb, var(--glow) 30%, transparent);
+  display: flex;
+  align-items: flex-start;
+  min-height: 44px;
+  margin: 0;
+  padding: 5px var(--lb-pad-x);
+  border: var(--lb-edge) solid transparent;
+  border-radius: 4px;
   font-family: var(--display);
   font-weight: 800;
   font-size: 24px;
+  line-height: var(--lb-line);
   letter-spacing: 0.06em;
+  text-align: left;
   text-transform: uppercase;
   color: var(--strip-ink);
-  background-color: var(--strip);
-  background-image: repeating-linear-gradient(180deg, transparent 0, transparent 26px, color-mix(in srgb, var(--black) 10%, transparent) 26px, color-mix(in srgb, var(--black) 10%, transparent) 28px);
-  border: 3px solid var(--strip-edge);
-  border-radius: 4px;
-  padding: 8px 18px;
   cursor: pointer;
-  min-height: 44px;
-  box-shadow: 0 0 22px color-mix(in srgb, var(--glow) 35%, transparent), inset 0 0 18px color-mix(in srgb, var(--white) 80%, transparent);
+  background:
+    /* the rails: a groove's shadow over its lit lip, one per line, laid from the first line's top */
+    linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--black) 26%, transparent) 0 1px,
+        color-mix(in srgb, var(--white) 85%, transparent) 1px 2px,
+        transparent 2px
+      )
+      0 -1px / 100% var(--lb-line) repeat content-box padding-box,
+    /* the glass darkens a little toward its ends */
+    linear-gradient(
+        90deg,
+        color-mix(in srgb, var(--edge-lo) 9%, transparent),
+        transparent 28px calc(100% - 28px),
+        color-mix(in srgb, var(--edge-lo) 9%, transparent)
+      )
+      padding-box,
+    /* the backlight, brightest through the middle */
+    linear-gradient(180deg, var(--lb-lo), var(--strip-hi) 30% 65%, var(--lb-lo)) padding-box,
+    /* the bezel */
+    linear-gradient(180deg, var(--edge-hi), var(--strip-edge) 40%, var(--edge-lo)) border-box;
+  box-shadow:
+    var(--lb-glow),
+    inset 0 3px 3px -1px color-mix(in srgb, var(--black) 22%, transparent),
+    inset 0 -1px 0 color-mix(in srgb, var(--white) 70%, transparent);
+  transition:
+    box-shadow 0.2s ease,
+    --lb-lo 0.2s ease;
+}
+
+/* The glass's lower shade is registered so hover can ease it toward the brighter face. */
+@property --lb-lo {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: transparent;
 }
 
 @media (hover: hover) {
   .letterbox:hover {
-    box-shadow: 0 0 30px color-mix(in srgb, var(--glow) 60%, transparent), inset 0 0 18px color-mix(in srgb, var(--white) 90%, transparent);
+    --lb-lo: var(--strip);
+    --lb-glow: 0 0 18px color-mix(in srgb, var(--glow) 55%, transparent);
   }
+}
+
+.letterbox:active {
+  transform: translateY(1px);
 }
 
 /* A long list of answers (the first question) wraps as a row. */
@@ -446,11 +499,13 @@ a.wordmark:focus-visible {
 
 @media (max-width: 600px) {
   .letterbox {
+    --lb-line: 26px;
+    --lb-edge: 2px;
+    --lb-pad-x: 14px;
+    --lb-glow: 0 0 8px color-mix(in srgb, var(--glow) 26%, transparent);
     font-size: 19px;
     letter-spacing: 0.04em;
-    border-width: 2px;
-    padding: 8px 14px;
-    box-shadow: 0 0 14px color-mix(in srgb, var(--glow) 30%, transparent), inset 0 0 14px color-mix(in srgb, var(--white) 80%, transparent);
+    padding-block: 7px;
   }
 }
 
@@ -2492,14 +2547,14 @@ a.wordmark:focus-visible {
   color: var(--velvet);
 }
 
-/* Inside the profile menu's panels a letterbox has no glow at rest, only its face's inner light; it glows on hover. */
+/* Inside the profile menu's panels a letterbox has no glow at rest; it glows on hover. */
 .viewer-panel .letterbox {
-  box-shadow: inset 0 0 18px color-mix(in srgb, var(--white) 80%, transparent);
+  --lb-glow: 0 0 0 transparent;
 }
 
 @media (hover: hover) {
   .viewer-panel .letterbox:hover {
-    box-shadow: 0 0 30px color-mix(in srgb, var(--glow) 60%, transparent), inset 0 0 18px color-mix(in srgb, var(--white) 90%, transparent);
+    --lb-glow: 0 0 18px color-mix(in srgb, var(--glow) 55%, transparent);
   }
 }
 

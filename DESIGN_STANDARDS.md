@@ -62,9 +62,13 @@ the rule was right, fix the code.
 | `--gold` | `#f2b33d` | Matinee's first sentence, the wordmark, gold actions' edge |
 | `--velvet` | `#e0566b` | Rose: rose actions' edge, "Delete profile" |
 | `--petrol` | `#3B7C8C` | Petrol actions' edge |
-| `--strip` | `#f4efe2` | A letterbox's face |
+| `--strip` | `#f4efe2` | A letterbox's glass toward the bezel, on hover; the lit strip's letter board |
 | `--strip-ink` | `#121212` | A letterbox's words |
-| `--strip-edge` | `#2a2622` | A letterbox's edge |
+| `--strip-edge` | `#2a2622` | A letterbox's bezel, at its middle |
+| `--strip-hi` | `#fffdf6` | A letterbox's glass where the backlight is brightest |
+| `--strip-lo` | `#e4d9c2` | A letterbox's glass toward the bezel |
+| `--edge-hi` | `#5a5046` | A letterbox's bezel, its lit top |
+| `--edge-lo` | `#120f0c` | A letterbox's bezel, its shaded foot |
 | `--action` | `#161926` | An action's body, opaque |
 | `--gold-words` | `#f6ca77` | A gold action's words; replaces `--gold-hover` |
 | `--rose-words` | `#e98997` | A rose action's words |
@@ -102,7 +106,8 @@ controls, never for a control a viewer is meant to use.
 
 Measured against the action body `#161926`, every action's words clear WCAG's
 4.5 : 1 for normal text (section 5.2 gives the figures). A letterbox's words
-measure 16.3 : 1 on its face. Text on the poster wall reaches its contrast only
+measure 13.4 : 1 on the darkest of its glass (`--strip-lo`) and 18.4 : 1 on the
+brightest. Text on the poster wall reaches its contrast only
 through a scrim (section 6.1); a contrast that holds only over a dark poster
 does not count.
 
@@ -162,10 +167,14 @@ them by these classes.
 
 ### 5.1 Letterboxes
 
-The cream letter-board placard: the `--strip` face with faint ruled lines, a
-3 px `--strip-edge` edge (2 px on a phone), 4 px corners, words in Big Shoulders
-Display capitals, and a soft cream glow at rest that brightens on hover.
-Keyboard focus shows a 2 px gold outline 2 px outside the edge.
+A backlit milk-glass panel in a dark bezel, as on the marquee's letter board:
+glass shading from `--strip-lo` at its edges to `--strip-hi` through its middle,
+a 3 px bezel (2 px on a phone) shading from `--edge-hi` through `--strip-edge` to
+`--edge-lo`, 4 px corners, and a channel rail above and below every row of
+words, so a wrapped answer stands between rails at any width. Words in Big
+Shoulders Display capitals on a 32 px line (26 px on a phone). A soft cream glow
+at rest brightens on hover, as the glass brightens toward `--strip`; pressed, it
+sinks 1 px. Keyboard focus shows a 2 px gold outline 2 px outside the bezel.
 
 Letterboxes carry every choice: the answers to Matinee's questions, the doors
 and kinds, the profile-making answers, the trigger topics, and the answers to
