@@ -1,0 +1,33 @@
+name: "Feature request"
+description: "Suggest a new feature or an improvement to Matinee."
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping shape Matinee! Describe the experience you'd like to improve.
+        You don't need to propose code or know how Matinee works internally.
+        Please check existing issues for a similar request first.
+  - type: textarea
+    id: problem
+    attributes:
+      label: "What problem are you trying to solve?"
+      description: "What is frustrating, missing, or difficult today?"
+      placeholder: "When Matinee recommends a film I've recently watched, I have to ask for another..."
+    validations:
+      required: true
+  - type: textarea
+    id: desired-behavior
+    attributes:
+      label: "What would you like Matinee to do?"
+      description: "Describe the outcome from a viewer's point of view, not an implementation."
+      placeholder: "I'd like to temporarily hide recently watched films from my recommendations..."
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: "Additional context (optional)"
+      description: "Examples, alternatives, screenshots, or questions worth considering."
+    validations:
+      required: false
