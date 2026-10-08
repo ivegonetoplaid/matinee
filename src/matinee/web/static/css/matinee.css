@@ -32,9 +32,13 @@
   --edge-lo: #120f0c;
   --action: #161926;
   --gold-words: #f6ca77;
-  --rose-words: #e98997;
-  --petrol-words: #5fa3b3;
-  --cream-edge: #a39e93;
+  --enamel: linear-gradient(180deg, #1d1d22 0%, #0b0b0e 46%, #040405 100%);
+  --enamel-rim: #34302b;
+  --gold-vivid: #ffc44d;
+  --rose-vivid: #ff6f86;
+  --petrol-vivid: #4fc0d9;
+  --cream-vivid: #f3ede0;
+  --cream-thread: #cfc7b6;
   --shade: color-mix(in srgb, var(--base) 92%, transparent);
   --black: #000;
   --white: #fff;
@@ -1167,37 +1171,35 @@ a.wordmark:focus-visible {
   flex-wrap: wrap;
 }
 
-/* An action does something: a dark-enamel face, its thin outline and words in one accent, `gold`, `rose`,
-   `petrol` or `cream`, a highlight along its top edge, a slight shadow along its foot and a very light grain.
-   The body is never filled with the accent. Its face stands 40 px tall; an unseen margin keeps the tap target
-   at 44 px. */
+/* An action does something: a black-enamel face with a neutral rim, a highlight along its top edge, a slight
+   shadow along its foot and a very light grain, and its words in one vivid accent, `gold`, `rose`, `petrol` or
+   `cream`. Hovered, focused or pressed, a thread of its accent draws across its foot. The body is never filled
+   with the accent. Its face stands 40 px tall; an unseen margin keeps the tap target at 44 px. */
 .action {
-  --edge: var(--gold);
-  --words: var(--gold-words);
-  --lit: 0 0 0 transparent;
+  --words: var(--gold-vivid);
+  --thread: var(--gold-vivid);
   position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   min-height: 40px;
   margin-block: 2px;
-  padding: 8px 16px;
-  border: 1px solid var(--edge);
-  border-radius: 10px;
-  background: url("/static/grain.svg"), var(--action);
+  padding: 8px 18px;
+  border: 1px solid var(--black);
+  border-radius: 8px;
+  background: url("/static/grain.svg"), var(--enamel);
   box-shadow:
-    var(--lit),
-    inset 0 1px 0 color-mix(in srgb, var(--white) 14%, transparent),
-    inset 0 -2px 3px color-mix(in srgb, var(--black) 45%, transparent);
+    0 0 0 1px var(--enamel-rim),
+    inset 0 1px 0 color-mix(in srgb, var(--white) 22%, transparent),
+    inset 0 -2px 4px color-mix(in srgb, var(--black) 70%, transparent),
+    0 2px 6px color-mix(in srgb, var(--black) 55%, transparent);
   color: var(--words);
   font: 600 18px/1.2 var(--body);
+  letter-spacing: 0.01em;
   text-align: center;
   text-decoration: none;
   cursor: pointer;
-  transition:
-    transform 0.1s ease,
-    box-shadow 0.2s ease,
-    border-color 0.2s ease;
+  transition: transform 0.1s ease;
 }
 
 /* The tap target reaches 2 px beyond the face above and below. */
@@ -1207,19 +1209,34 @@ a.wordmark:focus-visible {
   inset: -3px -1px;
 }
 
+/* The thread: drawn from the left across the foot, inside the rounded corners. */
+.action::after {
+  content: "";
+  position: absolute;
+  right: 4px;
+  bottom: 0;
+  left: 4px;
+  height: 2px;
+  background: var(--thread);
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 0.32s cubic-bezier(0.35, 0, 0.12, 1);
+  pointer-events: none;
+}
+
 .action.rose {
-  --edge: var(--velvet);
-  --words: var(--rose-words);
+  --words: var(--rose-vivid);
+  --thread: var(--rose-vivid);
 }
 
 .action.petrol {
-  --edge: var(--petrol);
-  --words: var(--petrol-words);
+  --words: var(--petrol-vivid);
+  --thread: var(--petrol-vivid);
 }
 
 .action.cream {
-  --edge: var(--cream-edge);
-  --words: var(--text);
+  --words: var(--cream-vivid);
+  --thread: var(--cream-thread);
 }
 
 /* An action that is a link keeps its accent's words on hover, over the page's link colours. */
@@ -1227,19 +1244,29 @@ a.wordmark:focus-visible {
   color: var(--words);
 }
 
-/* Hovered, the face looks faintly lit from within; pressed, it sinks. */
+/* Hovered (where a pointer can hover), focused or pressed, the thread draws; pressed, the face sinks. */
 @media (hover: hover) {
-  .action:hover:not(:disabled) {
-    --lit: inset 0 0 16px color-mix(in srgb, var(--words) 22%, transparent);
-    border-color: var(--words);
+  .action:hover:not(:disabled)::after {
+    transform: scaleX(1);
   }
+}
+
+.action:focus-visible::after,
+.action:active:not(:disabled)::after {
+  transform: scaleX(1);
 }
 
 .action:active:not(:disabled) {
   transform: translateY(1.5px);
   box-shadow:
-    var(--lit),
+    0 0 0 1px var(--enamel-rim),
     inset 0 2px 4px color-mix(in srgb, var(--black) 50%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .action::after {
+    transition: none;
+  }
 }
 
 .action:focus-visible {

@@ -356,13 +356,16 @@ def test_every_colour_on_a_control_text_band_or_scrim_reads_from_a_token() -> No
 def test_no_control_is_a_pill_or_wears_a_filled_accent() -> None:
     pills = [d for d in DECLS if d.prop == "border-radius" and "999" in d.value and not is_artwork(d)]
     assert pills == []
-    for family, corner in (("action", "10px"), ("letterbox", "4px")):
+    for family, corner in (("action", "8px"), ("letterbox", "4px")):
         corners = [d.value for d in naming(family) if d.prop == "border-radius"]
         assert corners and set(corners) == {corner}, (family, corners)
-    fills = {"background", "background-color", "background-image", "--action"}
-    bodies = [d for d in naming("action") if d.prop in fills]
-    enamel = {"var(--action)", 'url("/static/grain.svg"), var(--action)'}  # the body, under its grain
+    fills = {"background", "background-color", "background-image", "--enamel"}
+    thread = [d for d in naming("action") if d.prop in fills and all(s.endswith("::after") for s in d.selectors)]
+    bodies = [d for d in naming("action") if d.prop in fills and d not in thread]
+    enamel = {'url("/static/grain.svg"), var(--enamel)'}  # the black-enamel body, under its grain
     assert bodies and all(d.value in enamel for d in bodies), [(d.selectors, d.prop, d.value) for d in bodies]
+    # The thread across the foot is a 2 px line in the accent, never a fill of the face.
+    assert [d.value for d in thread] == ["var(--thread)"], [(d.selectors, d.value) for d in thread]
 
 
 def test_every_action_wears_one_accent_and_a_petrol_one_ends_with_the_arrow() -> None:

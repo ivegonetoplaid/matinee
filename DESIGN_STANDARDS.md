@@ -191,23 +191,26 @@ topic list scrolls in its own box under its search field.
 
 ### 5.2 Actions
 
-A dark-enamel face, always an HTML control and never a picture: 10 px corners,
-the opaque `--action` body under a very light grain (`static/grain.svg`), a 1 px
-outline in its accent, a highlight along its top edge and a slight inset shadow
-along its foot, and its words, and any icon, in its accent's words colour. The
-body is never filled with the accent. The face stands 40 px tall and its tap
-target reaches 2 px beyond it above and below, so the target is at least 44 px.
+A black-enamel face, always an HTML control and never a picture: 8 px corners,
+the `--enamel` body (a gradient from `#1d1d22` at the top through `#0b0b0e` to
+`#040405`) under a very light grain (`static/grain.svg`), a 1 px black border
+inside a 1 px neutral rim (`--enamel-rim`, `#34302b`), a highlight along its top
+edge and a slight inset shadow along its foot, and its words, and any icon, in
+its accent's vivid colour. The body is never filled with the accent. The face
+stands 40 px tall and its tap target reaches 2 px beyond it above and below, so
+the target is at least 44 px.
 
-| Accent | Means | Edge | Words | Words on the body |
+| Accent | Means | Words | Thread | Words on the body's lightest part |
 |---|---|---|---|---|
-| Gold | Carry on through Matinee | `#f2b33d` | `#f6ca77` | 11.4 : 1 |
-| Rose | Turn something down or take it away | `#e0566b` | `#e98997` | 7.1 : 1 |
-| Petrol | Leave Matinee | `#3B7C8C` | `#5FA3B3` | 6.1 : 1 |
-| Cream | A neutral utility | `#a39e93` | `#efe9dc` | 14.5 : 1 |
+| Gold | Carry on through Matinee | `#ffc44d` | `#ffc44d` | 10.6 : 1 |
+| Rose | Turn something down or take it away | `#ff6f86` | `#ff6f86` | 6.3 : 1 |
+| Petrol | Leave Matinee | `#4fc0d9` | `#4fc0d9` | 7.9 : 1 |
+| Cream | A neutral utility | `#f3ede0` | `#cfc7b6` | 14.4 : 1 |
 
-On hover the outline takes the words' colour and the face looks faintly lit
-from within, a soft inner light in the words' colour; it is never filled.
-Pressed, it sinks 1.5 px. Keyboard focus shows a 2 px outline
+Hovered (where a pointer can hover), keyboard-focused or pressed, a 2 px thread
+in the accent's thread colour draws across the face's foot from the left in
+0.32 s, inside its corners; under reduced motion it stands at once. The face is
+never filled or lit. Pressed, it sinks 1.5 px. Keyboard focus shows a 2 px outline
 in the words' colour, 2 px outside the edge. A disabled action stands at 45 per
 cent opacity. A petrol action's words always end with ↗.
 
