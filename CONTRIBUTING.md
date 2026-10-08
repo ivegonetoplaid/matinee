@@ -33,8 +33,8 @@ whatever wrote it, you're the one standing behind it.
 - Never commit a key, a `.env` file, or anything that identifies a home:
   hostnames, addresses, names, paths from your machine.
 - The data terms bind contributions too. No TMDB records, no film table, no
-  raw MovieLens files, and nothing fetched from DoesTheDogDie. `AGENTS.md` lists
-  each source's terms.
+  raw MovieLens files, and nothing fetched from DoesTheDogDie.
+  [Data terms](docs/data-terms.md) lists each source's restrictions.
 - Contributions are licensed under the GNU Affero General Public License v3,
   the same as Matinee (`LICENSE`).
 - Be kind. Everyone here is trying to pick a good film.
