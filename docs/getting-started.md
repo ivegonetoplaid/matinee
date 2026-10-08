@@ -75,7 +75,7 @@ While Matinee is starting, or if a service is unavailable, its **setup note** ex
 
 If Matinee faces the internet, put it behind a reverse proxy serving **HTTPS** and set `DOOR_WORD`. The admission cookie is only sent over HTTPS. The door word is a lightweight household gate, not a replacement for the protections you'd use on a security-sensitive public service.
 
-Keep API tokens in `.env`, not in a public URL or a repository. As shipped, Compose publishes port 8000; configure your network and proxy exposure intentionally.
+Keep API tokens in `.env`, not in a public URL or a repository. As shipped, Compose publishes port 8000 and the image trusts forwarded headers from any address. Restrict direct access to the backend to trusted proxy clients when using a reverse proxy; configure your network and proxy exposure intentionally.
 
 ## Troubleshooting your first run
 
@@ -191,4 +191,4 @@ Content warnings are Powered by [DoesTheDogDie.com](https://www.doesthedogdie.co
 - F. Maxwell Harper and Joseph A. Konstan. 2015. *The MovieLens Datasets: History and Context.* ACM Transactions on Interactive Intelligent Systems 5, 4: 19:1–19:19. https://doi.org/10.1145/2827872
 - Jesse Vig, Shilad Sen and John Riedl. 2012. *The Tag Genome: Encoding Community Knowledge to Support Novel Interaction.* ACM Transactions on Interactive Intelligent Systems 2, 3.
 
-Review the source services' terms before commercial deployment or redistribution. This section summarizes the existing project restrictions; it does not replace the original licences and API agreements.
+See [data terms](data-terms.md) for the detailed project restrictions and upstream sources. Review those sources before commercial deployment, redistribution or changing data use. This summary does not replace the original licences and API agreements.
