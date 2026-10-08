@@ -109,7 +109,7 @@
         },
         {
           "say": "not a nightmare. make me laugh.",
-          "reply": "I'll find one that's gloriously awful on purpose.",
+          "reply": "comedies, camp and the gloriously awful. let's find you one.",
           "filter": {
             "flavour": "horror_comedy"
           }
@@ -137,7 +137,7 @@
       "options": [
         {
           "say": "none. I'm squeamish.",
-          "reply": "nothing you'll have to look away from.",
+          "reply": "you won't need to watch this one through your fingers.",
           "pail": "spotless, sparkling, not a mark on it",
           "filter": {
             "bands": {

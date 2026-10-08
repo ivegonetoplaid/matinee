@@ -1,7 +1,7 @@
 {
   "genre": "Romance",
   "pool": "romance",
-  "opening": "I'll dim the lights.",
+  "opening": "love is in the air. I'll dim the lights.",
   "note": "Decision 88: the door runs on the labels (the labels file, data/labels.json). One question, its kinds, then \"anything\". A film sits under every kind it is labelled with, at most two; a film not yet labelled waits behind the door under \"anything\" and \"Just pick one!\" only. A kind under 30 films in the library is not offered.",
   "questions": [
     {

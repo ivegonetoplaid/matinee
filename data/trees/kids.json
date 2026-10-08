@@ -6,7 +6,7 @@
   "questions": [
     {
       "id": "age",
-      "ask": "who's on the couch?",
+      "ask": "okay, who's on the couch?",
       "options": [
         {
           "say": "the little ones. nothing scary.",
@@ -58,7 +58,7 @@
         },
         {
           "say": "animals! talking animals!",
-          "reply": "every animal gets a speaking part.",
+          "reply": "paws, claws and whiskers, coming up.",
           "filter": {
             "flavour": "animals"
           }

@@ -6,7 +6,7 @@
   "questions": [
     {
       "id": "kind",
-      "ask": "what are you in for?",
+      "ask": "so what are you in for?",
       "options": [
         {
           "say": "cops and detectives. somebody has to work the case.",
@@ -17,7 +17,7 @@
         },
         {
           "say": "gangsters, crews, and organized crime. strictly business.",
-          "reply": "I know a guy.",
+          "reply": "I know a guy. he'll find us one we can't refuse.",
           "filter": {
             "flavour": "gangsters"
           }
@@ -52,7 +52,7 @@
         },
         {
           "say": "anything criminal. surprise me.",
-          "reply": "I'll make a few calls.",
+          "reply": "I'll make a few calls and see what we can drum up.",
           "filter": {}
         }
       ]

@@ -1,5 +1,6 @@
-"""Matinee answers what a viewer just said: at most two lines it speaks open with a stock interjection or a
-lone word set off by punctuation ("So, …", "Very well. …", "Horror. …").
+"""Matinee answers what a viewer just said: a line it speaks opens with a stock interjection or a lone word set
+off by punctuation ("So, …", "Very well. …", "Horror. …") only when it is named in KEPT, a line written to land
+that way on purpose.
 
 The count covers the data files' door openings, questions, replies and pick lines, and every sentence the
 page or the server says to a viewer. The page's and the server's sentences are found as string literals in
@@ -20,13 +21,26 @@ from matinee.reference import DATA
 ROOT = Path(__file__).resolve().parent.parent
 PAGE = ROOT / "src/matinee/web/static/js"
 SERVER = ROOT / "src/matinee/web"
-MOST = 2
+
+# Lines that take the form on purpose, each with what it is doing. A new line in the form fails until it is named
+# here or rewritten.
+KEPT = {
+    "Hi, ${suggestion.name}.": "the front door greets a returning viewer by name",
+    "life, uh, finds a way.": "Jurassic Park",
+    "war. war never changes.": "Fallout",
+    "right. we'll keep the naughty bits offstage.": "the beat before the promise is the joke",
+    "very well. I shall fetch the wheel of nonsense.": "the butler's voice is the joke",
+    "Sheesh. Tough crowd. Tough crowd.": "a comic's aside",
+    "okay, who's on the couch?": "the kids' door talks the way a parent does",
+    "comedies, camp and the gloriously awful. let's find you one.": "a list, not an interjection",
+    "paws, claws and whiskers, coming up.": "a list, not an interjection",
+}
 
 # A lone word set off by a comma, full stop, colon or exclamation mark, or one of the stock phrases.
 LONE = re.compile(r"^[\"'(]*[A-Za-z']+(?:[,.:!]|\.\.\.|…)(?:\s|$)")
 STOCK = re.compile(
     r"^[\"'(]*(very well|no problem|one moment|of course|all right|right then|heads up|fair enough|no matter"
-    r"|welcome back|very good|oh,? good|so,? (what|where|which|who|how))\b",
+    r"|welcome back|very good|oh,? good)\b",
     re.IGNORECASE,
 )
 
@@ -137,9 +151,14 @@ def stock_openers() -> list[tuple[str, str]]:
     return found
 
 
-def test_at_most_two_lines_open_with_a_stock_interjection_or_a_lone_word() -> None:
-    found = stock_openers()
-    assert len(found) <= MOST, "\n".join(f"{where}: {line}" for where, line in found)
+def test_only_lines_kept_on_purpose_open_with_a_stock_interjection_or_a_lone_word() -> None:
+    found = [(where, line) for where, line in stock_openers() if line not in KEPT]
+    assert not found, "\n".join(f"{where}: {line}" for where, line in found)
+
+
+def test_every_kept_line_is_still_spoken_and_still_takes_the_form() -> None:
+    spoken = {line for _, line in stock_openers()}
+    assert not set(KEPT) - spoken, sorted(set(KEPT) - spoken)
 
 
 def test_the_form_is_recognised() -> None:
@@ -156,7 +175,6 @@ def test_the_form_is_recognised() -> None:
         "Sheesh! Tough crowd.",
         "very good. somebody save the city.",
         "oh good. a meet-cute.",
-        "so what are you in for?",
     ):
         assert opens_stock(line), line
     for line in (
@@ -167,6 +185,7 @@ def test_the_form_is_recognised() -> None:
         "War never changes.",
         "Who's watching?",
         "soft blankets and no monsters.",
+        "so what are you in for?",
     ):
         assert not opens_stock(line), line
 

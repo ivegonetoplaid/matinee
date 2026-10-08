@@ -10,7 +10,7 @@
       "options": [
         {
           "say": "children present. behave yourself.",
-          "reply": "we'll keep the naughty bits offstage.",
+          "reply": "right. we'll keep the naughty bits offstage.",
           "filter": {
             "certificate_in": [
               "G",
@@ -115,7 +115,7 @@
         },
         {
           "say": "anything. surprise me.*",
-          "reply": "I shall fetch the wheel of nonsense.",
+          "reply": "very well. I shall fetch the wheel of nonsense.",
           "filter": {}
         }
       ],

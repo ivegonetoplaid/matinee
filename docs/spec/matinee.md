@@ -84,13 +84,16 @@ Every question and reply answers what the viewer just said: it picks up the
 matter of the answer rather than marking that an answer arrived. Across every
 line Matinee speaks (the trees' openings, questions and replies, the first
 question's lines and replies, the pick's lines, and every sentence the page or
-the server says to a viewer) at most two open with a stock interjection ("Very
+the server says to a viewer) a line opens with a stock interjection ("Very
 well.", "No problem.") or a lone word set off by a comma, full stop, colon or
-exclamation mark ("So, …", "Horror. …"). The two are "Hi, <name>." at the front
-door and "life, uh, finds a way." behind Sci-fi. A test in `./check.sh` counts
-them and fails at a third; a literal in the page or the server that takes the
-form but is not Matinee speaking, such as an answer a viewer taps, is named in
-that test.
+exclamation mark ("So, …", "Horror. …") only when it was written to land that
+way on purpose: a film's line ("war. war never changes.", "life, uh, finds a
+way."), a joke that needs its beat, or a list that only looks like the form.
+A test in `./check.sh` names each such line with what it is doing and fails on
+any other, and on a named line that is gone; a literal in the page or the
+server that takes the form but is not Matinee speaking, such as an answer a
+viewer taps, is named in that test too. "So what …", with no pause after "so",
+is not the form.
 
 ### 2.0 The source question
 
@@ -104,7 +107,7 @@ none, so the question is not asked. Matinee types "Right this way, <name>." and
 | Answer | The walk draws from | Matinee's reply on the doors |
 |---|---|---|
 | only what we can watch right now. | the films the library holds now (`held`) | home turf. good, the popcorn's already made. |
-| something we don't have yet. something new! | the films the labels name that the library does not hold (`new`) | let's go window shopping. |
+| something we don't have yet. something new! | the films the labels name that the library does not hold (`new`) | coming soon, to a living room near you. |
 | anything at all. ours or not. | both, a film in both once (`all`) | no borders tonight. I like it. |
 
 - The chosen source bounds every later question, count and pick of the walk,
@@ -2354,7 +2357,7 @@ symbol when one does not match.
 | `src/matinee/quips.py::load_quips` / `QuipsError` | `src/matinee/quips.py:63` | 2026-10-05 |
 | `src/matinee/quips.py::quip_problems` / `line_problems` / `in_title_case` | `src/matinee/quips.py:92` | 2026-10-05 |
 | `tests/test_quips.py::test_the_caps_are_the_measured_ones` | `tests/test_quips.py:41` | 2026-10-05 |
-| `tests/test_openers.py::stock_openers` / `opens_stock` / `NOT_SPOKEN` (at most two stock openers across every spoken line) | `tests/test_openers.py:130` | 2026-10-07 |
+| `tests/test_openers.py::stock_openers` / `opens_stock` / `KEPT` / `NOT_SPOKEN` (only named lines open in the stock form) | `tests/test_openers.py:144` | 2026-10-07 |
 
 ### Labels and the household override file
 

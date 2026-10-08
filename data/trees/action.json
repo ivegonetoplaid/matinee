@@ -60,7 +60,7 @@
         },
         {
           "say": "put me on the front lines. I want the war up close.",
-          "reply": "war never changes.",
+          "reply": "war. war never changes.",
           "filter": {
             "flavour": "war_battle"
           }
