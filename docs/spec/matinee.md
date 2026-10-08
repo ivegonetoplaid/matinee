@@ -1464,9 +1464,11 @@ the picked poster and the pick's backdrop.
 
 ## 12. The page
 
-The colour tokens, the two families of
-control (a letterbox chooses something, an action does something) and each
-action's accent are those of `DESIGN_STANDARDS.md`. Matinee's lines are set in Big
+[Design standards](../../DESIGN_STANDARDS.md) owns shared visual requirements,
+token roles and the two control families: a letterbox chooses something; an
+action does something. The stylesheet's `:root` and component rules define
+reusable token values. This section owns screen composition, wording, action
+assignments and behaviour. Matinee's lines are set in Big
 Shoulders Display, other text in DM Sans. Both fonts are self-hosted with their
 OFL licences. All displayed text is in sentence case, except that a cream
 part carrying on its gold part's sentence after a comma keeps its first letter
@@ -1474,6 +1476,53 @@ as written. A phone is a viewport 600 px wide or less. The page declares
 itself dark only (`color-scheme: only dark`, in its head and its stylesheet),
 so a browser's forced dark mode, such as Samsung Internet's, leaves its
 colours as they are.
+
+### Shared action assignments
+
+These assignments apply wherever the named action appears. The design standards
+own each accent's visual treatment and meaning; this table owns its use for the
+page's actions. New actions follow those meanings.
+
+| Action | Accent |
+|---|---|
+| "Find me something to watch" (centred, at the standard size) | gold |
+| "Show me the films" (setup note) | gold |
+| "Continue" (the name step) | gold |
+| "Save and continue", "Save my list" | gold |
+| "Just pick one!" (the questions) | gold |
+| "Roll again" | gold |
+| "Just show me what you picked" | gold |
+| "Save" (a note) | gold |
+| "Not that one" | rose |
+| "More on Seerr ↗", "More on TMDB ↗" | petrol |
+| "Read about these on DoesTheDogDie ↗" | petrol |
+| "Look it up on DoesTheDogDie ↗" | petrol |
+| "Start over" | cream |
+| "Back" (a phone's way back, in the trail's place) | cream |
+| "Never mind", "Never mind, show me everything", "Never mind, keep my list", "That's not me" | cream |
+| "Try again" (a problem screen and the topic list) | cream |
+| "Something wrong with this pick?" | cream |
+| The turned-away pick's reveal button | cream |
+| "Back" (About) | cream |
+
+### Screen composition
+
+Matinee's line and choices stay anchored while the line types and the choices
+appear. This table gives their composition; the detailed screen contracts below
+supply dimensions, responsive exceptions and interaction behaviour. A reporting
+action means "Something wrong with this pick?", not the unchecked-content
+warning. That warning and its lookup action follow the synopsis in the film
+information area on both desktop and phone.
+
+| Screen | Desktop | Phone |
+|---|---|---|
+| The locked door | Beside the door, to its left; between the marquee and the door under 1000 px wide | Between the marquee and the door |
+| The front door and making a profile | A centred column under the marquee, the line left-aligned at its top, tiles or letterboxes beneath | The line under the marquee; letterboxes at the foot of the screen |
+| The trigger picker | The left column's top, its explanation and the save actions beneath; the topics in the right column, with the DoesTheDogDie action under them | Stacked under the marquee's lit strip: the line, the explanation, the topics, the actions |
+| The questions | The line hangs from the top, three lines reserved, letterboxes beneath it | The line hangs from the top; letterboxes at the foot of the screen |
+| The pick | The left column's top: the line, then the actions in a row that wraps when needed, then the reporting action | A fixed foot area, with overflow scrolling inside it: the line, `Not that one` and "More on Seerr ↗" (or TMDB), then "Back" where available and `Start over`, then the reporting action, then DoesTheDogDie's credit line where it has a key |
+
+### Screen behaviour
 
 - **The door.** The marquee stands at the top centre of the screen over the
   poster wall, and nothing else frames it: no booth and no curtains. The
@@ -1658,8 +1707,9 @@ colours as they are.
   goes back to the door, by way of the setup note when that has more to say. On
   the front door the marquee stands in its place, so there it does nothing.
 - **Scrims.** Every piece of text standing on the poster wall stands on a
-  scrim: a feathered dark patch, the page base at 92 per cent across the text's
-  whole block, corners included, fading to nothing about 40 px beyond it with
+  scrim meeting the minimums in the design standards: the current treatment is
+  a feathered dark patch, the page base at 92 per cent across the text's whole
+  block, corners included, fading to nothing about 40 px beyond it with
   no edge. That covers Matinee's lines (each of its two parts), the countdown,
   notes, status lines, counts, footnotes, the tile names, the film's title,
   year and synopsis, and the open "Something wrong with this pick?" panel.
@@ -1950,7 +2000,9 @@ colours as they are.
   under `tests/js/` run with `node --test` from `./check.sh`. The page's
   mechanical design rules (`DESIGN_STANDARDS.md` section 9) are held by
   `tests/test_design_standards.py`, which reads the stylesheet and the page
-  scripts as text.
+  scripts as text, not this Markdown. They do not measure rendered contrast,
+  tap targets or screen geometry. Browser review under the design standards
+  verifies those outcomes.
 - **The self-destructing reply.** When the last answer carries `self_destruct`
   (the spies answer, behind Thriller and behind Action),
   its reply types in gold as usual, then counts down on its own one-second
