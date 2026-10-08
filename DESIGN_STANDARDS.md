@@ -2,7 +2,7 @@
 title: Matinee — Design Standards
 purpose: The visual and copy laws every Matinee surface holds to — colour, type, the two control families, the scrim and the bands, where Matinee speaks, and the copy.
 status: Binding for every surface under `src/matinee/web/static/`. Section 1 says what to do when the code disagrees with a rule here.
-updated: 2026-10-07
+updated: 2026-10-08
 ---
 
 # Matinee — Design Standards
@@ -15,21 +15,24 @@ taste.
 focus, keyboard reach, WCAG 2.1 AA contrast. This document does not repeat it.
 It states what is specific to Matinee.
 
-This file holds the rules that hold on every screen; a decision about one
-screen's wording or placement goes to the page spec. The `:root` block of
-`src/matinee/web/static/css/matinee.css` is this file's one transcription for
-the browser. Where this file and the stylesheet disagree, this file wins.
+This file owns shared design requirements and the meaning of its tokens.
+[The page specification](docs/spec/matinee.md#12-the-page) owns screen wording,
+action assignments, placement and behaviour. The `:root` block and component
+rules in `src/matinee/web/static/css/matinee.css` define reusable token values.
+Do not maintain a second palette in Markdown. A value change must preserve the
+requirements here, or include an explicitly reviewed change to the contract.
 
 ---
 
-## 1. These rules are law, and how to disagree with one
+## 1. Authority and exceptions
 
-When the code strongly disagrees with a rule here, that is information about
-the rule. Do not break it silently, do not contort a screen to satisfy it, and
-do not edit the rule to match what got built. Build the thing the way it wants
-to be built, then raise the conflict as an issue on the code host, naming the
-rule, what the code wanted, and why. If the code was right, amend this file. If
-the rule was right, fix the code.
+Follow the design contract; do not silently override it or contort a screen to
+hide a conflict. When a requirement and implementation disagree, identify the
+rule, show the evidence and propose a correction or a scoped exception in the
+issue or PR. Implementation is evidence, not authority to waive a rule.
+An amendment or exception needs maintainer approval and a recorded reason
+before it becomes part of the accepted design. A prototype may demonstrate an
+alternative for review, but must identify the requirement it departs from.
 
 ---
 
@@ -39,7 +42,7 @@ the rule was right, fix the code.
   and a voice that speaks in large condensed type. Nothing looks like a
   software dashboard: no filled coloured pills, no cards with drop shadows, no
   toggle switches.
-- **Dark only.** One theme on the page base `#07080d`. There is no light theme.
+- **Dark only.** One theme on the page base `--base`. There is no light theme.
 - **One bright thing at a time.** The eye goes to Matinee's line, then to the
   choices under it. Nothing else competes.
 - **The poster wall is the stage.** It is never blurred and never dimmed
@@ -54,43 +57,37 @@ the rule was right, fix the code.
 
 ### 3.1 The tokens
 
-| Token | Value | Job |
-|---|---|---|
-| `--base` | `#07080d` | The page, the bands, the scrims |
-| `--text` | `#efe9dc` | Cream: Matinee's second sentence, body text, cream actions' words |
-| `--dim` | cream at 66 % | Quiet text inside a band only; disabled controls |
-| `--gold` | `#f2b33d` | Matinee's first sentence, gold actions' edge |
-| `--velvet` | `#e0566b` | Rose: rose actions' edge, "Delete profile" |
-| `--petrol` | `#3B7C8C` | Petrol actions' edge |
-| `--strip` | `#f4efe2` | A letterbox's glass toward the bezel, on hover; the lit strip's letter board |
-| `--strip-ink` | `#121212` | A letterbox's words |
-| `--strip-edge` | `#2a2622` | A letterbox's bezel, at its middle |
-| `--strip-hi` | `#fffdf6` | A letterbox's glass where the backlight is brightest |
-| `--strip-lo` | `#e4d9c2` | A letterbox's glass toward the bezel |
-| `--edge-hi` | `#5a5046` | A letterbox's bezel, its lit top |
-| `--edge-lo` | `#120f0c` | A letterbox's bezel, its shaded foot |
-| `--action` | `#161926` | An action's body, opaque |
-| `--gold-words` | `#f6ca77` | A gold action's words; replaces `--gold-hover` |
-| `--rose-words` | `#e98997` | A rose action's words |
-| `--petrol-words` | `#5FA3B3` | A petrol action's words |
-| `--cream-edge` | `#a39e93` | A cream action's edge |
-| `--shade` | `--base` at 92 % | Scrims and bands |
-| `--black` | `#000` | Drop shadows and a letterbox's ruled lines |
-| `--white` | `#fff` | A letterbox's inner light; a field's edge |
-| `--glow` | `#ffecbe` | A letterbox's glow |
-| `--warm` | `#ffd68c` | The resting poster's ring |
-| `--mark` | `#151827` | A profile's mark |
-| `--menu` | `#12141f` | The profile menu |
-| `--panel` | `#0e101a` | The profile panels |
-| `--about-panel` | `#090a10` | About's panel |
+The stylesheet is the source for token values; this table states their roles.
+Component-local aliases such as `--words` and `--thread` resolve to these palette
+tokens. Use the token appropriate to the role, not a hard-coded colour.
 
-A shade of a colour is its token mixed toward transparent
-(`color-mix(in srgb, var(--gold) 45%, transparent)`), never a value written again.
-`--chip`, the pills' see-through body, goes with the pills. Add a colour for a
-control, a scrim, a band or text only through a new token here and in the
-stylesheet's `:root`; such a colour written straight into a rule is a defect.
-The marquee, the door and the wall's artwork keep their own colours. The marquee is
-the drawing in `static/marquee/`, Matinee's mark, and nothing glows behind it.
+| Token | Role |
+|---|---|
+| `--base` | Page base and the source colour for scrims and bands |
+| `--text` | Cream body text and the second part of Matinee's line |
+| `--dim` | Quiet text inside bands and muted chrome; never an active control's label |
+| `--gold` | Matinee's first sentence, theatre accents and general focus rings |
+| `--velvet` | Base rose colour, including destructive menu text and warning strips |
+| `--petrol` | Base petrol palette colour; action text uses `--petrol-vivid` |
+| `--strip`, `--strip-hi`, `--strip-lo` | Letterbox glass and the marquee's letter board |
+| `--strip-ink` | Letterbox words |
+| `--strip-edge`, `--edge-hi`, `--edge-lo` | Letterbox bezel |
+| `--enamel`, `--enamel-rim` | Action body gradient and neutral rim |
+| `--gold-vivid`, `--rose-vivid`, `--petrol-vivid`, `--cream-vivid` | Action text and accent threads |
+| `--cream-thread` | Cream action's thread |
+| `--action` | Supporting form-field backgrounds; not the enamel action body |
+| `--gold-words` | Link hover and supporting highlights; not gold action text |
+| `--shade` | Scrims and bands, mixed from `--base` |
+| `--black`, `--white` | Shadows, ruled lines, highlights and field edges |
+| `--glow` | Letterbox glow |
+| `--warm` | Resting poster ring |
+| `--mark`, `--menu`, `--panel`, `--about-panel` | Profile mark, menu and panel backgrounds |
+
+A shade is its token mixed toward transparent
+(`color-mix(in srgb, var(--gold) 45%, transparent)`), never a repeated literal.
+Add a new palette colour through `:root` and document its role here in the same
+change. The marquee, door and poster artwork keep their own colours. The
+marquee is the drawing in `static/marquee/`, Matinee's mark, with no glow behind it.
 
 ### 3.2 One job per colour
 
@@ -104,12 +101,12 @@ controls, never for a control a viewer is meant to use.
 
 ### 3.3 Contrast
 
-Measured against the action body `#161926`, every action's words clear WCAG's
-4.5 : 1 for normal text (section 5.2 gives the figures). A letterbox's words
-measure 13.4 : 1 on the darkest of its glass (`--strip-lo`) and 18.4 : 1 on the
-brightest. Text on the poster wall reaches its contrast only
-through a scrim (section 6.1); a contrast that holds only over a dark poster
-does not count.
+Action text must reach at least 4.5 : 1 contrast against the lightest rendered
+part of the enamel body. Letterbox words must reach the same floor against the
+darkest part of the glass. Measure
+again when either foreground or background changes; a historical ratio does
+not validate new colours. Text on the poster wall needs a scrim that maintains
+contrast over bright posters, not just a dark example.
 
 ---
 
@@ -176,36 +173,34 @@ Shoulders Display capitals on a 32 px line (26 px on a phone). A soft cream glow
 at rest brightens on hover, as the glass brightens toward `--strip`; pressed, it
 sinks 1 px. Keyboard focus shows a 2 px gold outline 2 px outside the bezel.
 
-Letterboxes carry every choice: the answers to Matinee's questions, the doors
-and kinds, the profile-making answers, the trigger topics, and the answers to
-"Delete <name>?". "Yes, delete it" keeps its rose words. Inside the profile
-menu's panels ("Delete <name>?" and "Change avatar") a letterbox has no glow at
+Letterboxes carry the text choices in Matinee's questions, doors and kinds,
+profile-making steps, trigger topics and "Delete <name>?". Picture choices and
+report-form fields use the exceptions under Everything else. "Yes, delete it"
+keeps its rose words. Inside the profile menu's panels ("Delete <name>?" and
+"Change avatar") a letterbox has no glow at
 rest and glows on hover.
 
 A letterbox that toggles, as a trigger topic does, shows a check mark before
 its words when chosen. Its face, glow and size do not change.
 
-The trigger picker's topics stand in two aligned columns on a desktop and one
-column on a phone. In a row of two, both take the height of the taller. The
-topic list scrolls in its own box under its search field.
+The page specification owns the trigger picker's column layout and scrolling.
+A long topic wraps without shrinking the standard letterbox type.
 
 ### 5.2 Actions
 
 A black-enamel face, always an HTML control and never a picture: 8 px corners,
-the `--enamel` body (a gradient from `#1d1d22` at the top through `#0b0b0e` to
-`#040405`) under a very light grain (`static/grain.svg`), a 1 px black border
-inside a 1 px neutral rim (`--enamel-rim`, `#34302b`), a highlight along its top
-edge and a slight inset shadow along its foot, and its words, and any icon, in
-its accent's vivid colour. The body is never filled with the accent. The face
-stands 40 px tall and its tap target reaches 2 px beyond it above and below, so
-the target is at least 44 px.
+the `--enamel` gradient under a very light grain (`static/grain.svg`), a 1 px
+black border inside a 1 px neutral rim (`--enamel-rim`), a highlight along the
+top edge and a slight inset shadow at the foot. Words and icons use the accent's
+vivid colour. The body is never filled with the accent. A single-line face is
+40 px tall and grows when its label wraps; the tap target is at least 44 px tall.
 
-| Accent | Means | Words | Thread | Words on the body's lightest part |
-|---|---|---|---|---|
-| Gold | Carry on through Matinee | `#ffc44d` | `#ffc44d` | 10.6 : 1 |
-| Rose | Turn something down or take it away | `#ff6f86` | `#ff6f86` | 6.3 : 1 |
-| Petrol | Leave Matinee | `#4fc0d9` | `#4fc0d9` | 7.9 : 1 |
-| Cream | A neutral utility | `#f3ede0` | `#cfc7b6` | 14.4 : 1 |
+| Accent | Meaning | Words | Thread |
+|---|---|---|---|
+| Gold | Carry on through Matinee | `--gold-vivid` | `--gold-vivid` |
+| Rose | Turn something down or take it away | `--rose-vivid` | `--rose-vivid` |
+| Petrol | Leave Matinee | `--petrol-vivid` | `--petrol-vivid` |
+| Cream | Neutral utility | `--cream-vivid` | `--cream-thread` |
 
 Hovered (where a pointer can hover), keyboard-focused or pressed, a 2 px thread
 in the accent's thread colour draws across the face's foot from the left in
@@ -214,31 +209,9 @@ never filled or lit. Pressed, it sinks 1.5 px. Keyboard focus shows a 2 px outli
 in the words' colour, 2 px outside the edge. A disabled action stands at 45 per
 cent opacity. A petrol action's words always end with ↗.
 
-Every action and its accent:
-
-| Action | Accent |
-|---|---|
-| "Find me something to watch" (centred, at the standard size) | gold |
-| "Continue" (the name step) | gold |
-| "Save and continue", "Save my list" | gold |
-| "Just pick one!" (the questions) | gold |
-| "Roll again" | gold |
-| "Just show me what you picked" | gold |
-| "Save" (a note) | gold |
-| "Not that one" | rose |
-| "More on Seerr ↗" | petrol |
-| "Read about these on DoesTheDogDie ↗" | petrol |
-| "Look it up on DoesTheDogDie ↗" | petrol |
-| "Start over" | cream |
-| "Back" (a phone's way back, in the trail's place) | cream |
-| "Never mind", "Never mind, show me everything", "Never mind, keep my list", "That's not me" | cream |
-| "Try again" (a problem screen and the topic list) | cream |
-| "Something wrong with this pick?" | cream |
-| The turned-away pick's reveal button | cream |
-| "Back" (About) | cream |
-
-A new action takes the accent its meaning names. If none fits, raise it under
-section 1; do not invent a fifth.
+[The page specification](docs/spec/matinee.md#shared-action-assignments) lists each action's
+accent. New actions follow the meanings above; if none fits, propose a contract
+change under Authority and exceptions instead of inventing a fifth accent.
 
 ### 5.3 Links
 
@@ -247,12 +220,7 @@ text link stands only in the foot band: the credit line, its "About",
 DoesTheDogDie's credit and the trail's crumbs. About's own prose keeps its
 links, and the corner mark is the brand's link.
 
-On a phone the trail and the TMDB credit line show on no screen; the About page
-carries TMDB's logo and notice. A question screen past the first shows "Back"
-and "Start over", actions at the standard size, centred in the foot band where a
-desktop shows the trail; where "Back" would lead to the walk's first screen,
-only "Start over" shows. The pick shows "Back" before "Start over" among its
-actions.
+The page specification owns phone navigation, action order and credit placement.
 
 "Powered by DoesTheDogDie.com" stands in the foot band of every screen that
 shows DoesTheDogDie's data.
@@ -269,7 +237,9 @@ that answer a question, the pails and the avatars, stay pictures. The locked
 door's eye is part of the door. The wordmark is the corner mark
 (`static/marquee/mark-corner.svg`), the marquee's crown over a small lit sign
 carrying the name, 40 px tall: a picture inside a link, never text styled as a
-mark. About shows the same mark as a picture, not a link.
+mark. About shows the same mark as a picture, not a link. The film-reporting
+form uses labelled native radio buttons and checkboxes as the spec describes;
+these are form fields, not letterbox choices.
 
 ---
 
@@ -279,8 +249,9 @@ mark. About shows the same mark as a picture, not a link.
 
 Every piece of text set on the poster wall stands on a scrim: a feathered dark
 patch with no visible edge, the page base at no less than 72 per cent behind the
-text, fading to nothing at least 32 px beyond the text's block. That covers Matinee's lines,
-notes, counts, status lines and footnotes. Text inside a band, on a letterbox,
+text, fading to nothing at least 32 px beyond the text's block. These are
+minimum requirements; the page specification describes the current treatment.
+That covers Matinee's lines, notes, counts, status lines and footnotes. Text inside a band, on a letterbox,
 on an action or in a panel needs none. The darkness holds across the text's
 whole block, corners included. The locked door's greeting, on subway tile rather
 than the wall, shows the look.
@@ -306,16 +277,10 @@ keeps its own panel, with the bands beneath it.
 ## 7. Where Matinee speaks
 
 Matinee speaks from one place on each screen, and its choices stand in one place
-beneath it. Nothing re-centres while a line types or the choices appear. The
-page spec (`docs/spec/matinee.md`, section 12) gives the measurements.
-
-| Screen | Desktop | Phone |
-|---|---|---|
-| The locked door | Beside the door, to its left; between the marquee and the door under 1000 px wide | Between the marquee and the door |
-| The front door and making a profile | A centred column under the marquee, the line left-aligned at its top, tiles or letterboxes beneath | The line under the marquee; letterboxes at the foot of the screen |
-| The trigger picker | The left column's top, its explanation and the save actions beneath; the topics in the right column, with the DoesTheDogDie action under them | Stacked under the marquee's lit strip: the line, the explanation, the topics, the actions |
-| The questions | The line hangs from the top, three lines reserved, letterboxes beneath it | The line hangs from the top; letterboxes at the foot of the screen |
-| The pick | The left column's top: the line, then the actions in one row, then the note | The foot of the screen, which never scrolls: the line, `Not that one` and "More on Seerr ↗", then "Back" and `Start over`, then the note, then DoesTheDogDie's credit line where it has a key |
+beneath it. Nothing re-centres while a line types or the choices appear.
+[The page specification](docs/spec/matinee.md#screen-composition) owns the desktop and
+phone composition for each screen. Distinguish the reporting action beneath the
+pick's controls from an unchecked-content warning beneath the film's synopsis.
 
 ---
 
@@ -334,25 +299,17 @@ page spec (`docs/spec/matinee.md`, section 12) gives the measurements.
 
 ## 9. Enforcement
 
-**The tests check mechanically:**
+**Source checks:** `tests/test_design_standards.py`, run by `./check.sh`, reads
+CSS and JavaScript as text. It checks token references, component corners and
+bodies, action accents and petrol arrows, permitted bare links, external-link
+attributes, and control font sizes. It also checks the control-building helper
+and wordmark. It does not compare this Markdown with the stylesheet.
 
-- every colour on a control, a scrim, a band or text comes from a `:root`
-  token;
-- no control uses the pill shape (a 999 px radius) or a filled accent body;
-- every action is one of the four accents, and every petrol action's words end
-  with ↗;
-- no `<a>` or text button outside the foot band, About's prose and the
-  wordmark is styled as a bare link;
-- every external `<a>` opens in a new tab with `rel="noopener noreferrer"`;
-- the letterbox and action sizes match section 4.2.
+**Browser review:** inspect changed surfaces at 390 px and 1440 px wide, over a
+bright stretch of wall. Check readable wall text and scrims, both bands without
+visible edges, stable screen composition and one bright thing at a time. Also
+check keyboard operation and focus, rendered contrast, wrapped-label tap targets
+and reduced motion. Source checks do not verify those browser outcomes.
 
-**A visual review judges,** on a render at 390 px and at 1440 px wide, over a
-bright stretch of wall:
-
-- every piece of wall text stands on a scrim, reads clearly and is at least
-  16 px;
-- both bands frame the screen with no visible edge;
-- Matinee speaks from the place section 7 names;
-- one bright thing at a time.
-
-Render it and look at it before calling a surface done.
+Keep intended design requirements, token values and spec behaviour consistent.
+If browser review cannot run, report `UNVERIFIED` and what remains unchecked.
