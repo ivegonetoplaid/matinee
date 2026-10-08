@@ -201,6 +201,10 @@ The ten heuristics, kept to the ones that bite most:
   lands`). Code describes what is, not what was or will be.
 - No pointers to private notes, chat threads or decision logs. Rationale lives
   in the spec or the record of the decision, not in source.
+- A file's header says, in a few lines, what the file is for, what it promises
+  the code that uses it, and any trap that would catch the next person. It does
+  not restate the behaviour the spec promises: one rule written in two places
+  drifts.
 - Explicit `TODO` and `FIXME` markers are fine; work-state disguised as a
   description is not.
 - A deliberate simplification may carry a `NOTE:` naming its ceiling and the
