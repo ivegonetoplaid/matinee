@@ -2114,11 +2114,13 @@ information area on both desktop and phone.
   It needs no editing and no checkout beside it; `./state` is ignored by git
   and kept out of the build context.
 - **Releases.** Publishing a GitHub release tagged `vX.Y.Z` runs
-  `.github/workflows/release.yml`: `./check.sh` must pass and the image must
-  start and serve its page on an empty data folder on both amd64 and arm64,
-  and only then is the image pushed to GHCR for both, tagged `X.Y.Z`, `X.Y`
-  and `latest`. Pull requests run the same checks and starts without
-  publishing. While the version is 0.x, a release that changes only `Z` needs
+  `.github/workflows/release.yml`: `./check.sh` must pass, then the image is
+  built and must start and serve its page on an empty data folder, natively on
+  both amd64 and arm64. Each machine then pushes the image it tested to GHCR
+  as `X.Y.Z-amd64` or `X.Y.Z-arm64`, and the two are joined under `X.Y.Z`,
+  `X.Y` and `latest`, so what ships is what was tested. Pull requests run the
+  same checks and starts without publishing. No step downloads from Docker
+  Hub, whose anonymous limit and outages failed CI at random. While the version is 0.x, a release that changes only `Z` needs
   no steps from an installation; one that changes `Y` may, and its release
   notes say so. The version in `pyproject.toml` matches the latest release.
   The image carries `LICENSE` and `README.md`, for the credits and terms of
