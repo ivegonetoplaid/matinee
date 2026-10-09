@@ -2,11 +2,16 @@
 # per-device lookup cap live in the process, so a second worker would double both.
 # The state directory (the film table, the profile store and the TMDB cache) is
 # mounted at /state; settings and keys arrive as environment.
-FROM python:3.13-slim
+# Docker's official python image, from its ECR Public copy: Docker Hub turns away
+# anonymous pulls from shared CI addresses with 429, failing builds at random.
+FROM public.ecr.aws/docker/library/python:3.13-slim
 
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 DATA_DIR=/state
 
 WORKDIR /app
+# The published image redistributes Matinee and its MovieLens-derived files, so the
+# licence and the README's credits travel with them.
+COPY LICENSE README.md ./
 COPY pyproject.toml ./
 COPY src ./src
 COPY data ./data

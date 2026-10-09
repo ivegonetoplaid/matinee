@@ -2097,10 +2097,21 @@ information area on both desktop and phone.
   trusts forwarded headers from any address, so it must sit behind a reverse
   proxy. The image carries `tools/`, so the same image can run the nightly
   rebuild with `--daily`.
-- **`compose.yaml`** runs the image twice from the repository's folder: the
-  server, built there, on port 8000, and the rebuild (`--daily`, never pulled),
-  both reading `.env` and mounting `./state` at `/state`. It needs no editing;
-  `./state` is ignored by git and kept out of the build context.
+- **`compose.yaml`** runs the published image
+  (`ghcr.io/ivegonetoplaid/matinee:latest`) twice: the server on port 8000,
+  and the rebuild (`--daily`), both reading `.env` and mounting `./state` at
+  `/state`. It needs no editing and no checkout beside it; `./state` is
+  ignored by git and kept out of the build context.
+- **Releases.** Publishing a GitHub release tagged `vX.Y.Z` runs
+  `.github/workflows/release.yml`: `./check.sh` must pass and the image must
+  start and serve its page on an empty data folder on both amd64 and arm64,
+  and only then is the image pushed to GHCR for both, tagged `X.Y.Z`, `X.Y`
+  and `latest`. Pull requests run the same checks and starts without
+  publishing. While the version is 0.x, a release that changes only `Z` needs
+  no steps from an installation; one that changes `Y` may, and its release
+  notes say so. The version in `pyproject.toml` matches the latest release.
+  The image carries `LICENSE` and `README.md`, for the credits and terms of
+  what it redistributes.
 - **State** is one directory mounted at `/state` (`DATA_DIR`). It holds
   the film table (`films.sqlite`, and `films.sqlite.kept` while a rebuild
   runs), Matinee's store (`matinee.sqlite`), the door's secret (`door.key`,
