@@ -38,6 +38,8 @@ The demo shows the real interface, artwork and dialogue with a small, scripted s
 
 You'll need **Docker** (or Python 3.12+), a free **TMDB API Read Access Token**, and somewhere to keep Matinee's data. Everything else is optional.
 
+It doesn't need much. I use Matinee every day on my own home server, and it's also been checked on a **Raspberry Pi 5 with 2 GB of memory**: with its full table of over 10,000 films and a 4,000-film Jellyfin library, the site and its nightly rebuild together peaked at about 350 MB.
+
 ```sh
 mkdir matinee && cd matinee
 curl -fsSLO https://raw.githubusercontent.com/ivegonetoplaid/matinee/main/compose.yaml
