@@ -1,14 +1,16 @@
-# Matinee: the site and its nightly rebuild, two containers from one image.
+# Matinee: the site and its nightly rebuild, two containers from one published image.
 # Every setting lives in .env (copy example.env), so this file needs no editing.
 #
-# Start:  mkdir -p state && sudo chown 1000:1000 state && docker compose up -d --build
-# Update: git pull && docker compose up -d --build
+# Start:  mkdir -p state && sudo chown 1000:1000 state && docker compose up -d
+# Update: docker compose pull && docker compose up -d
 # Your data lives in ./state beside this file: the one thing to back up.
+#
+# latest follows every release. To stay on one release line, replace latest with
+# that line's number in both services, e.g. :0.1, and change it when you choose to.
 
 services:
   matinee:
-    build: .
-    image: matinee
+    image: ghcr.io/ivegonetoplaid/matinee:latest
     env_file: .env
     environment:
       DATA_DIR: /state # the folder inside the container; ./state is mounted there
@@ -20,8 +22,7 @@ services:
 
   # Fetches film details now, then every night at REBUILD_TIME (set in .env).
   rebuild:
-    image: matinee
-    pull_policy: never # built by the service above; there is nothing to pull
+    image: ghcr.io/ivegonetoplaid/matinee:latest
     env_file: .env
     environment:
       DATA_DIR: /state

@@ -39,19 +39,21 @@ The demo shows the real interface, artwork and dialogue with a small, scripted s
 You'll need **Docker** (or Python 3.12+), a free **TMDB API Read Access Token**, and somewhere to keep Matinee's data. Everything else is optional.
 
 ```sh
-git clone https://github.com/ivegonetoplaid/matinee.git
-cd matinee
-cp example.env .env
+mkdir matinee && cd matinee
+curl -fsSLO https://raw.githubusercontent.com/ivegonetoplaid/matinee/main/compose.yaml
+curl -fsSL https://raw.githubusercontent.com/ivegonetoplaid/matinee/main/example.env -o .env
 ```
 
 Set `TMDB_TOKEN` in `.env`, then:
 
 ```sh
 mkdir -p state && sudo chown 1000:1000 state
-docker compose up -d --build
+docker compose up -d
 ```
 
-Open `http://<your-server>:8000`. The film table fills in as the first rebuild runs.
+Open `http://<your-server>:8000`. The film table fills in as the first rebuild runs. To update later, run `docker compose pull && docker compose up -d`.
+
+Matinee is in **beta**. Releases are numbered 0.x: an update that changes only the last number (0.1.3 to 0.1.4) is always safe, and one that changes the middle number (0.1 to 0.2) may need steps, which its [release notes](https://github.com/ivegonetoplaid/matinee/releases) give.
 
 **[Read the full getting-started guide →](docs/getting-started.md)** for the token, optional integrations, HTTPS setup, first-run behaviour, troubleshooting, data backups and non-Docker installation.
 

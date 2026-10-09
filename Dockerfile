@@ -7,6 +7,9 @@ FROM python:3.13-slim
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 DATA_DIR=/state
 
 WORKDIR /app
+# The published image redistributes Matinee and its MovieLens-derived files, so the
+# licence and the README's credits travel with them.
+COPY LICENSE README.md ./
 COPY pyproject.toml ./
 COPY src ./src
 COPY data ./data

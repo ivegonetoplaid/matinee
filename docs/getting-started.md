@@ -25,18 +25,17 @@ The optional content-topic checks are **best-effort**, not guarantees. A film wi
 
 ## Install with Docker Compose
 
-### 1. Get the code
+### 1. Get the two files
+
+Matinee runs from a ready-made image, so you need only its Compose file and its settings template:
 
 ```sh
-git clone https://github.com/ivegonetoplaid/matinee.git
-cd matinee
+mkdir matinee && cd matinee
+curl -fsSLO https://raw.githubusercontent.com/ivegonetoplaid/matinee/main/compose.yaml
+curl -fsSL https://raw.githubusercontent.com/ivegonetoplaid/matinee/main/example.env -o .env
 ```
 
 ### 2. Set up the environment
-
-```sh
-cp example.env .env
-```
 
 Edit `.env`. Uncomment the lines you need (remove `# `), and put the value immediately after `=` without extra spaces or surrounding quotes. The file explains every setting.
 
@@ -51,12 +50,14 @@ Matinee uses one image to run two services:
 - **`matinee`:** the site on port 8000, with exactly one server worker.
 - **`rebuild`:** builds the film table immediately and refreshes it every night at `REBUILD_TIME` (in the time zone set by `TZ`).
 
-Both services read the same `.env` and persistent data folder. The repository's `compose.yaml` needs no edits for the default installation.
+Both services read the same `.env` and persistent data folder. The `compose.yaml` needs no edits for the default installation.
 
 ```sh
 mkdir -p state && sudo chown 1000:1000 state
-docker compose up -d --build
+docker compose up -d
 ```
+
+The image is published for both regular PCs (amd64) and ARM boards such as a 64-bit Raspberry Pi (arm64); Docker picks the right one.
 
 The image runs as UID 1000, so the data folder must be writable by that user. Open `http://<your-server>:8000`. To publish Matinee outside your LAN, read [Internet access and HTTPS](#internet-access-and-https) before exposing the port.
 
@@ -99,13 +100,19 @@ docker compose logs rebuild
 | Change a setting | Edit `.env`, then `docker compose up -d` to recreate affected services |
 | Change the nightly time | Set `REBUILD_TIME` (`HH:MM`) and `TZ` in `.env`, then `docker compose up -d` |
 | Retry the rebuild | `docker compose restart rebuild` |
-| Update Matinee | `git pull`, then `docker compose up -d --build` |
+| Update Matinee | `docker compose pull`, then `docker compose up -d` |
 | Review viewers' reports | `docker compose exec matinee python tools/notes.py list` |
 | Back up Matinee | Back up the persistent `./state` folder (or the folder you configured) |
 
 `tools/notes.py` can review "Something wrong with this pick?" notes, clear a forgotten PIN, and remove DoesTheDogDie topics left after an API key was removed. The [specification](spec/matinee.md) documents the operator details.
 
 Run **exactly one server worker**. The DoesTheDogDie limits are enforced inside that process; additional workers would duplicate them. Your own data and `overrides.json` live outside the image and are not overwritten by the normal update command.
+
+### Versions and updates
+
+Each [release](https://github.com/ivegonetoplaid/matinee/releases) has a number and notes saying what changed. The image is tagged three ways: the exact version (`0.1.4`), its release line (`0.1`), and `latest`, which follows every release. The shipped `compose.yaml` uses `latest`.
+
+Matinee is in beta, so its numbers start with 0. Within a release line, an update is always safe. A new line (0.1 to 0.2) may need steps, and its release notes give them before you update. To move to a new line only when you choose, replace `latest` with the line's number (for example `:0.1`) in both services in `compose.yaml`.
 
 ## Make the film classifications your own
 
@@ -131,11 +138,14 @@ Think the correction should apply to everyone? Open a [Sorting suggestion](https
 
 ## Without Docker
 
-Docker Compose is the supported installation path. To run the processes yourself, install the Python package into a virtual environment from the repository root:
+Docker Compose is the supported installation path. To run the processes yourself, get the code and install the Python package into a virtual environment from the repository root:
 
 ```sh
+git clone https://github.com/ivegonetoplaid/matinee.git && cd matinee
 python3 -m venv .venv && .venv/bin/pip install -e .
 ```
+
+To build the Docker image from the code instead of pulling it, run `docker build -t ghcr.io/ivegonetoplaid/matinee:latest .` in the repository, then start Compose as above without `docker compose pull`. A pull replaces your build with the published image.
 
 Matinee reads the **process environment**, not the `.env` file directly. In each shell that launches a process, load the file this way (it preserves values containing spaces, unlike a naive `source`):
 
