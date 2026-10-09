@@ -10,9 +10,15 @@ Sometimes you ask for horror and get *Hubie Halloween* when what you wanted was 
 
 Matinee asks a few questions about the mood, then picks **one film** and presents it as tonight's showing. Not that one? Ask for another. No endless poster grid, and no AI subscription required.
 
+![A speakeasy door under the Matinee marquee. A sign beside it reads: "State your business. Make it quick, the show's about to start."](docs/images/door.webp)
+
+*Set a door word and Matinee waits behind this. Friends type it once at the slot; bots and passers-by stay on the pavement.*
+
 ## What's playing?
 
 - **A conversation, not a search box.** Choose a mood, follow a short question tree, or hit **Just pick one!**
+- **A door, not a login.** An optional door word keeps strangers and bots out. Each device knocks once and is remembered for 400 days. No accounts and no passwords to reset.
+- **At home on a phone.** Add Matinee to the home screen on iPhone or Android and it opens full-screen, like an app. Every screen is laid out for phones as carefully as for a desktop.
 - **Films that fit the answer.** An opinionated sort of roughly 10,300 films, with MovieLens tag-genome scores to help distinguish things like how gory a horror film is.
 - **Your collection, if you want.** Read from **Jellyfin or Plex**, or use Matinee without a media server. With a library, choose films you own, films you don't, or both. Matinee never changes your library.
 - **A little more help.** Optional **Seerr** links for requests and **DoesTheDogDie** checks for topics you'd rather avoid. Content checks are best-effort, not guarantees.
@@ -21,6 +27,8 @@ Matinee asks a few questions about the mood, then picks **one film** and present
 Matinee picks a film; it doesn't play one. That's still your media server's job.
 
 ## Take a seat
+
+![Matinee's first question, "What are we in the mood for?", with a button for each mood from Comedy to Documentaries over a wall of film posters](docs/images/mood.webp)
 
 **[Try Matinee in your browser →](https://ivegonetoplaid.github.io/)**
 
