@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import threading
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
@@ -323,3 +324,18 @@ def test_without_a_key_a_record_whose_date_cannot_be_read_is_skipped_and_the_sto
     assert (status.state, status.reason) == ("stopped", NO_KEY)
     kept = load_cache(cache)
     assert set(kept) == {1} and kept[1].fetched_at == good["fetched_at"]
+
+
+def test_a_second_rebuild_waits_until_the_first_lets_go_of_the_table(tmp_path: Path) -> None:
+    entered = threading.Event()
+
+    def second() -> None:
+        with rebuild_table.one_at_a_time(tmp_path):
+            entered.set()
+
+    with rebuild_table.one_at_a_time(tmp_path):
+        waiting = threading.Thread(target=second)
+        waiting.start()
+        assert not entered.wait(0.3)  # the subject is that it is still waiting, so this one waits on the clock
+    assert entered.wait(10)
+    waiting.join()

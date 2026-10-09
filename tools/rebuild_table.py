@@ -7,8 +7,9 @@ any fetch, every SAVE_EVERY new records while it fetches, most-voted first, and 
 the end. Each write replaces the previous table whole. Prints what it saw, including every file whose `{tmdb-N}` folder
 tag differs from the server's TMDB id; it uses the server's id and changes
 nothing. With `--daily HH:MM` it rebuilds now and then every day at that local
-time, which is how the deployed stack runs it every night; `--daily` alone takes
-the time from REBUILD_TIME, 04:30 when unset. It reports itself in
+time, which is how the server runs it beside itself; `--daily` alone takes
+the time from REBUILD_TIME, 04:30 when unset. A second rebuild on the same state
+directory waits for the first (`rebuild.lock`). It reports itself in
 `rebuild.json` (`matinee.progress`): running, with its progress at least every few
 seconds while it fetches, finished, or stopped with the reason, such as no TMDB
 key, a refused key, or TMDB not answering. Without a key it
@@ -24,13 +25,15 @@ Usage: python3 tools/rebuild_table.py [--state DIR] [--daily [HH:MM]]
 from __future__ import annotations
 
 import argparse
+import contextlib
+import fcntl
 import logging
 import math
 import os
 import shutil
 import sys
 import time
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterator, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from functools import partial
@@ -65,6 +68,7 @@ FAILED = "the rebuild failed; its log says why"
 SAVE_EVERY = 500  # new records between saves of the film table while the rebuild fetches
 DEFAULT_DAILY = "04:30"  # the nightly rebuild's time when REBUILD_TIME is unset
 FROM_SETTING = "REBUILD_TIME"  # what `--daily` given alone stands for
+LOCK = "rebuild.lock"  # held in the state directory for each rebuild
 
 
 def _now() -> str:
@@ -274,6 +278,19 @@ def rebuild_time(text: str) -> tuple[int, int]:
         return daily_time(DEFAULT_DAILY)
 
 
+@contextlib.contextmanager
+def one_at_a_time(state: Path) -> Iterator[None]:
+    """Holds the state directory's rebuild lock for one rebuild, so two never write the table at once. A second
+    rebuild, such as one left running from an older two-container setup, waits here and then runs its own."""
+    with open(state / LOCK, "w") as lock:
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            log.info("another rebuild is writing the film table; this one waits for it to finish")
+            fcntl.flock(lock, fcntl.LOCK_EX)
+        yield
+
+
 def seconds_until(at: tuple[int, int], now: datetime) -> float:
     hour, minute = at
     target = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
@@ -307,10 +324,12 @@ def main() -> int:
     if not args.state.is_dir():
         parser.error(f"the state directory {args.state} does not exist")
     if not args.daily:
-        return 0 if rebuild(server, args.state, token, rate).state == "finished" else 1
+        with one_at_a_time(args.state):
+            return 0 if rebuild(server, args.state, token, rate).state == "finished" else 1
     while True:
         try:
-            rebuild(server, args.state, token, rate)
+            with one_at_a_time(args.state):
+                rebuild(server, args.state, token, rate)
         except Exception as exc:  # any failure waits for the next night, never a restart loop
             log.warning(
                 "the rebuild failed: %s. Meanwhile the previous table stays in place and the rebuild tries again at"

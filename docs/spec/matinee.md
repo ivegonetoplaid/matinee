@@ -713,6 +713,14 @@ started with, which it keeps under a second name (`films.sqlite.kept`) while it
 runs; one that stops on TMDB (no key, a refused key, TMDB not answering) keeps
 what it saved.
 
+The server runs it: while the server serves, it keeps `rebuild_table.py --daily`
+running as its own process beside itself (`matinee.web.main.Rebuilds`), so a
+slow or failing rebuild never holds up a page. A rebuild process that exits is
+logged and started again five minutes later; stopping the server stops it. Each
+rebuild holds `rebuild.lock` in the state directory while it runs, so a second
+rebuild on the same directory (one started by hand, or one left running by an
+older two-container setup) waits for the first and then runs its own.
+
 1. Without a TMDB key (`TMDB_TOKEN`) it fetches nothing, writes no table, and
    reports the reason (below). It still drops cached records past six months
    and shelved pictures past 150 days (section 5.2).
@@ -2089,25 +2097,30 @@ information area on both desktop and phone.
 
 - **One server process, one worker.** Every DoesTheDogDie limit, hold and
   remembered item id lives in the process (known gap 7). A second worker would
-  double every limit.
-- **The image** (`Dockerfile`) runs on `python:3.13-slim`. It installs the
+  double every limit. The server's one rebuild process runs beside it
+  (section 5.1).
+- **The image** (`Dockerfile`) runs on Docker's official `python:3.13-slim`,
+  pulled from its ECR Public copy (`public.ecr.aws/docker/library`), which does
+  not turn away CI builds as Docker Hub's anonymous limit does. It installs the
   package editable, so it finds `data/` beside `src/` as a checkout does. It
   runs as an unprivileged user (uid 1000), with `uvicorn --factory
   matinee.web.main:build --workers 1` on port 8000, no server header and no access log, so no visitor's address is logged. It
   trusts forwarded headers from any address, so it must sit behind a reverse
-  proxy. The image carries `tools/`, so the same image can run the nightly
-  rebuild with `--daily`.
+  proxy. The image carries `tools/`, from which the server runs the nightly
+  rebuild.
 - **`compose.yaml`** runs the published image
-  (`ghcr.io/ivegonetoplaid/matinee:latest`) twice: the server on port 8000,
-  and the rebuild (`--daily`), both reading `.env` and mounting `./state` at
-  `/state`. It needs no editing and no checkout beside it; `./state` is
-  ignored by git and kept out of the build context.
+  (`ghcr.io/ivegonetoplaid/matinee:latest`) once: the server on port 8000,
+  with its rebuild inside, reading `.env` and mounting `./state` at `/state`.
+  It needs no editing and no checkout beside it; `./state` is ignored by git
+  and kept out of the build context.
 - **Releases.** Publishing a GitHub release tagged `vX.Y.Z` runs
-  `.github/workflows/release.yml`: `./check.sh` must pass and the image must
-  start and serve its page on an empty data folder on both amd64 and arm64,
-  and only then is the image pushed to GHCR for both, tagged `X.Y.Z`, `X.Y`
-  and `latest`. Pull requests run the same checks and starts without
-  publishing. While the version is 0.x, a release that changes only `Z` needs
+  `.github/workflows/release.yml`: `./check.sh` must pass, then the image is
+  built and must start and serve its page on an empty data folder, natively on
+  both amd64 and arm64. Each machine then pushes the image it tested to GHCR
+  as `X.Y.Z-amd64` or `X.Y.Z-arm64`, and the two are joined under `X.Y.Z`,
+  `X.Y` and `latest`, so what ships is what was tested. Pull requests run the
+  same checks and starts without publishing. No step downloads from Docker
+  Hub, whose anonymous limit and outages failed CI at random. While the version is 0.x, a release that changes only `Z` needs
   no steps from an installation; one that changes `Y` may, and its release
   notes say so. The version in `pyproject.toml` matches the latest release.
   The image carries `LICENSE` and `README.md`, for the credits and terms of
@@ -2117,7 +2130,7 @@ information area on both desktop and phone.
   runs), Matinee's store (`matinee.sqlite`), the door's secret (`door.key`,
   made at the first start with a door word), the TMDB cache
   (`tmdb/films.jsonl`) and its shelf of pictures (`tmdb/pictures/`), the
-  rebuild's report (`rebuild.json`) and, where the
+  rebuild's report (`rebuild.json`), its lock (`rebuild.lock`) and, where the
   household keeps one, its override file (`overrides.json`). None of it is in
   the image. The labels ship in the image with the code (`data/labels.json`).
 - **Settings and keys arrive as environment**, never committed, logged or sent
@@ -2438,9 +2451,9 @@ symbol when one does not match.
 | `src/matinee/engine.py::label_problems` (a tree no file defines, a kind it does not label) | `src/matinee/engine.py:303` | 2026-10-05 |
 | `src/matinee/engine.py::household_problems` (bands only under kids; a kids film needs kinds and band) | `src/matinee/engine.py:318` | 2026-10-05 |
 | `src/matinee/engine.py::_check_labels` (the engine refuses to prepare) | `src/matinee/engine.py:332` | 2026-10-05 |
-| `src/matinee/web/main.py::household` / `OVERRIDES_BROKEN` (the file laid over, or a fault) | `src/matinee/web/main.py:54` | 2026-10-05 |
-| `src/matinee/web/main.py::build` (the shipped labels, an unread `labels.json` in the data directory warned of) | `src/matinee/web/main.py:82` | 2026-10-05 |
-| `tools/rebuild_table.py::household_films` (the rebuild fetches the films the household names) | `tools/rebuild_table.py:206` | 2026-10-05 |
+| `src/matinee/web/main.py::household` / `OVERRIDES_BROKEN` (the file laid over, or a fault) | `src/matinee/web/main.py:62` | 2026-10-09 |
+| `src/matinee/web/main.py::build` (the shipped labels, an unread `labels.json` in the data directory warned of) | `src/matinee/web/main.py:142` | 2026-10-09 |
+| `tools/rebuild_table.py::household_films` (the rebuild fetches the films the household names) | `tools/rebuild_table.py:210` | 2026-10-09 |
 | `tests/test_overrides.py::test_a_film_the_household_names_takes_its_whole_placement_from_the_file` | `tests/test_overrides.py:24` | 2026-10-05 |
 
 ### Pools and reference statistics
@@ -2481,16 +2494,18 @@ symbol when one does not match.
 
 | Handle | Where | Verified |
 |---|---|---|
-| `tools/rebuild_table.py::main` (`TMDB_TOKEN`, `TMDB_RATE`, the server whose settings are filled in) | `tools/rebuild_table.py:285` | 2026-10-05 |
-| `tools/rebuild_table.py::daily_time` / `daily_arg` / `seconds_until` (`--daily HH:MM`, validated before the first rebuild) | `tools/rebuild_table.py:245` | 2026-10-05 |
-| `tools/rebuild_table.py::rebuild_time` / `DEFAULT_DAILY` (`REBUILD_TIME` for `--daily` alone; 04:30 when unset or not a time, logged) | `tools/rebuild_table.py:261` | 2026-10-05 |
-| `tools/rebuild_table.py::rebuild` (no key: compact and stop; an unexpected failure puts the kept table back) | `tools/rebuild_table.py:74` | 2026-10-05 |
-| `tools/rebuild_table.py::_keep` / `_compact_without_key` (`films.sqlite.kept`) | `tools/rebuild_table.py:131` | 2026-10-05 |
-| `tools/rebuild_table.py::_sweep_pictures` (every rebuild sweeps the picture shelf) | `tools/rebuild_table.py:113` | 2026-10-05 |
-| `tools/rebuild_table.py::_rebuild` (the start line; save before any fetch; most-voted order) | `tools/rebuild_table.py:145` | 2026-10-05 |
-| `tools/rebuild_table.py::_Run` / `save` / `tick` (a save every `SAVE_EVERY` records) | `tools/rebuild_table.py:178` | 2026-10-05 |
-| `tools/rebuild_table.py::SAVE_EVERY` / `FAILED` | `tools/rebuild_table.py:65` | 2026-10-05 |
-| `tools/rebuild_table.py::tmdb_rate` (any positive number; anything else the default, logged) | `tools/rebuild_table.py:226` | 2026-10-05 |
+| `tools/rebuild_table.py::main` (`TMDB_TOKEN`, `TMDB_RATE`, the server whose settings are filled in) | `tools/rebuild_table.py:302` | 2026-10-09 |
+| `tools/rebuild_table.py::daily_time` / `daily_arg` / `seconds_until` (`--daily HH:MM`, validated before the first rebuild) | `tools/rebuild_table.py:249` | 2026-10-09 |
+| `tools/rebuild_table.py::rebuild_time` / `DEFAULT_DAILY` (`REBUILD_TIME` for `--daily` alone; 04:30 when unset or not a time, logged) | `tools/rebuild_table.py:265` | 2026-10-09 |
+| `tools/rebuild_table.py::one_at_a_time` / `LOCK` (`rebuild.lock`; a second rebuild waits) | `tools/rebuild_table.py:282` | 2026-10-09 |
+| `src/matinee/web/main.py::Rebuilds` / `REBUILD` / `RESTART_AFTER_S` (the server runs the rebuild beside itself; restarted five minutes after it exits) | `src/matinee/web/main.py:94` | 2026-10-09 |
+| `tools/rebuild_table.py::rebuild` (no key: compact and stop; an unexpected failure puts the kept table back) | `tools/rebuild_table.py:78` | 2026-10-09 |
+| `tools/rebuild_table.py::_keep` / `_compact_without_key` (`films.sqlite.kept`) | `tools/rebuild_table.py:135` | 2026-10-09 |
+| `tools/rebuild_table.py::_sweep_pictures` (every rebuild sweeps the picture shelf) | `tools/rebuild_table.py:117` | 2026-10-09 |
+| `tools/rebuild_table.py::_rebuild` (the start line; save before any fetch; most-voted order) | `tools/rebuild_table.py:149` | 2026-10-09 |
+| `tools/rebuild_table.py::_Run` / `save` / `tick` (a save every `SAVE_EVERY` records) | `tools/rebuild_table.py:182` | 2026-10-09 |
+| `tools/rebuild_table.py::SAVE_EVERY` / `FAILED` | `tools/rebuild_table.py:68` | 2026-10-09 |
+| `tools/rebuild_table.py::tmdb_rate` (any positive number; anything else the default, logged) | `tools/rebuild_table.py:230` | 2026-10-09 |
 | `src/matinee/progress.py::RebuildStatus` / `STATUS_FILE` (`rebuild.json`) | `src/matinee/progress.py:24` | 2026-10-05 |
 | `src/matinee/progress.py::write_status` / `read_status` / `_well_formed` | `src/matinee/progress.py:33` | 2026-10-05 |
 | `src/matinee/tmdb.py::refresh` (one shared pacer; compaction in `finally`) | `src/matinee/tmdb.py:494` | 2026-10-05 |
@@ -2549,9 +2564,9 @@ symbol when one does not match.
 | `src/matinee/web/common.py::Seat` / `Tile` / `Deleted` / `Door` (what the page is told of a profile) | `src/matinee/web/common.py:38` | 2026-10-05 |
 | `src/matinee/web/common.py::NewProfile` / `AvatarChoice` / `PinEntry` (request caps) | `src/matinee/web/common.py:72` | 2026-10-05 |
 | `src/matinee/web/common.py::set_tokens` / `with_token` | `src/matinee/web/common.py:104` | 2026-10-05 |
-| `src/matinee/web/app.py::add_door_routes` (`GET /api/door`, create, open) | `src/matinee/web/app.py:310` | 2026-10-05 |
-| `src/matinee/web/app.py::add_avatar_route` (`PUT /api/profiles/{id}/avatar`) | `src/matinee/web/app.py:349` | 2026-10-05 |
-| `src/matinee/web/app.py::add_delete_route` (`DELETE /api/profiles/{id}`) | `src/matinee/web/app.py:358` | 2026-10-05 |
+| `src/matinee/web/app.py::add_door_routes` (`GET /api/door`, create, open) | `src/matinee/web/app.py:311` | 2026-10-09 |
+| `src/matinee/web/app.py::add_avatar_route` (`PUT /api/profiles/{id}/avatar`) | `src/matinee/web/app.py:350` | 2026-10-09 |
+| `src/matinee/web/app.py::add_delete_route` (`DELETE /api/profiles/{id}`) | `src/matinee/web/app.py:359` | 2026-10-09 |
 | `src/matinee/web/viewing.py::ViewerIn` (a profile id only) | `src/matinee/web/viewing.py:36` | 2026-10-05 |
 | `src/matinee/web/viewing.py::held_profile` | `src/matinee/web/viewing.py:197` | 2026-10-05 |
 | `src/matinee/web/viewing.py::resolve` (no profile: the front door's pool; no key: stored topics ignored) | `src/matinee/web/viewing.py:229` | 2026-10-05 |
@@ -2585,9 +2600,9 @@ symbol when one does not match.
 | `src/matinee/web/admission.py::Admission` (`issue`, `admits`, `matches`) | `src/matinee/web/admission.py:88` | 2026-10-05 |
 | `src/matinee/web/config.py::GREETINGS` | `src/matinee/web/config.py:24` | 2026-10-05 |
 | `src/matinee/web/config.py::_door` (a wrong lock refuses the start; with no word, a bad mode is a fault) | `src/matinee/web/config.py:72` | 2026-10-05 |
-| `src/matinee/web/app.py::AdmissionOut` / `WordIn` | `src/matinee/web/app.py:377` | 2026-10-05 |
-| `src/matinee/web/app.py::open_before_admission` | `src/matinee/web/app.py:389` | 2026-10-05 |
-| `src/matinee/web/app.py::add_admission` (the gate, `GET`/`POST /api/admission`, the 2-second wait) | `src/matinee/web/app.py:394` | 2026-10-05 |
+| `src/matinee/web/app.py::AdmissionOut` / `WordIn` | `src/matinee/web/app.py:378` | 2026-10-09 |
+| `src/matinee/web/app.py::open_before_admission` | `src/matinee/web/app.py:390` | 2026-10-09 |
+| `src/matinee/web/app.py::add_admission` (the gate, `GET`/`POST /api/admission`, the 2-second wait) | `src/matinee/web/app.py:395` | 2026-10-09 |
 | `tests/test_admission.py` | `tests/test_admission.py:83` | 2026-10-05 |
 
 ### Notes and the notes tool
@@ -2614,12 +2629,12 @@ symbol when one does not match.
 | Handle | Where | Verified |
 |---|---|---|
 | `src/matinee/web/config.py::Config.dtdd_key` (optional) | `src/matinee/web/config.py:44` | 2026-10-05 |
-| `src/matinee/web/app.py::create_app` (one `topics_on`; a picker that disagrees is refused) | `src/matinee/web/app.py:527` | 2026-10-05 |
+| `src/matinee/web/app.py::create_app` (one `topics_on`; a picker that disagrees is refused) | `src/matinee/web/app.py:528` | 2026-10-09 |
 | `src/matinee/web/viewing.py::add_topic_routes` (`GET /api/topics`, `PUT /api/profiles/{id}/topics`, only with a key) | `src/matinee/web/viewing.py:324` | 2026-10-05 |
 | `src/matinee/web/viewing.py::save_topics` | `src/matinee/web/viewing.py:348` | 2026-10-05 |
 | `src/matinee/web/viewing.py::FirstOut.checked` (whether this viewer's picks are checked) | `src/matinee/web/viewing.py:115` | 2026-10-05 |
 | `src/matinee/web/common.py::Door.dtdd` (`GET /api/door` says whether a key is set) | `src/matinee/web/common.py:68` | 2026-10-05 |
-| `src/matinee/web/main.py::warn_kept_topics` / `TOPICS_KEPT` / `WARN_EVERY` (kept topics without a key) | `src/matinee/web/main.py:41` | 2026-10-05 |
+| `src/matinee/web/main.py::warn_kept_topics` / `TOPICS_KEPT` / `WARN_EVERY` (kept topics without a key) | `src/matinee/web/main.py:49` | 2026-10-09 |
 | `src/matinee/pick.py::Picker.dtdd` / `_checked` (none without a key) | `src/matinee/pick.py:274` | 2026-10-05 |
 | `src/matinee/dtdd.py::Dtdd.get` / `_pace` (`BURST`, `RATE_PER_S`) | `src/matinee/dtdd.py:106` | 2026-10-05 |
 | `src/matinee/dtdd.py::Dtdd._check_holds` / `_refused` / `_note_remaining` (`REQUESTS_PER_HOUR`, `MONTH_RESERVE`, `RESERVE_HOLD_S`, `BACKOFF_S`) | `src/matinee/dtdd.py:123` | 2026-10-05 |
@@ -2656,8 +2671,8 @@ symbol when one does not match.
 | `src/matinee/web/setup.py::SetupNote` (`warning` while the data is stale) | `src/matinee/web/setup.py:49` | 2026-10-05 |
 | `src/matinee/web/setup.py::note` / `library_away` / `rebuild_lines` / `stalled` | `src/matinee/web/setup.py:109` | 2026-10-05 |
 | `src/matinee/web/setup.py::HEADING` / `MEANWHILE` / `STOPPED` / `STALE` / `STALLED_AFTER` (every line's words) | `src/matinee/web/setup.py:20` | 2026-10-05 |
-| `src/matinee/web/app.py::setup_faults` (the configured, start-up and run-time faults) | `src/matinee/web/app.py:494` | 2026-10-05 |
-| `src/matinee/web/app.py::add_setup_route` (`GET /api/setup`) | `src/matinee/web/app.py:508` | 2026-10-05 |
+| `src/matinee/web/app.py::setup_faults` (the configured, start-up and run-time faults) | `src/matinee/web/app.py:495` | 2026-10-09 |
+| `src/matinee/web/app.py::add_setup_route` (`GET /api/setup`) | `src/matinee/web/app.py:509` | 2026-10-09 |
 | `src/matinee/web/theatre.py::NothingToShow` (shipped data that cannot make a catalog) | `src/matinee/web/theatre.py:61` | 2026-10-05 |
 | `src/matinee/web/theatre.py::Theatre._catalog` | `src/matinee/web/theatre.py:150` | 2026-10-05 |
 | `src/matinee/web/theatre.py::Showing.library` / `UNUSABLE` / `warn_library` (`none`, `usable`, `unreachable`, `refused`) | `src/matinee/web/theatre.py:70` | 2026-10-05 |
@@ -2665,7 +2680,7 @@ symbol when one does not match.
 | `src/matinee/web/seerr.py::SeerrCheck` (`CHECK_EVERY`; picks link to TMDB while it does not answer) | `src/matinee/web/seerr.py:25` | 2026-10-05 |
 | `src/matinee/web/logbook.py::describe` / `StateLog` / `state_log` / `CHECK_EVERY` (the state line) | `src/matinee/web/logbook.py:72` | 2026-10-05 |
 | `src/matinee/web/logbook.py::Quiet` / `QUIET_FOR` / `SERVER_NAMES` (a repeating warning once a minute, with a count) | `src/matinee/web/logbook.py:116` | 2026-10-05 |
-| `src/matinee/web/app.py::add_state_log` / `QUIET` | `src/matinee/web/app.py:516` | 2026-10-05 |
+| `src/matinee/web/app.py::add_state_log` / `QUIET` | `src/matinee/web/app.py:517` | 2026-10-09 |
 | `tests/test_setup.py::test_only_a_wrong_lock_and_a_missing_data_directory_refuse_to_start` | `tests/test_setup.py:109` | 2026-10-05 |
 | `tests/test_logbook.py::test_the_state_line_names_every_part_and_no_secret` | `tests/test_logbook.py:30` | 2026-10-05 |
 
@@ -2673,21 +2688,21 @@ symbol when one does not match.
 
 | Handle | Where | Verified |
 |---|---|---|
-| `src/matinee/web/main.py::build` (reads the labels and the household file; faults go on the note) | `src/matinee/web/main.py:82` | 2026-10-05 |
-| `src/matinee/web/app.py::create_app` (docs disabled) | `src/matinee/web/app.py:527` | 2026-10-05 |
-| `src/matinee/web/app.py::security_headers` / `CONTENT_SECURITY_POLICY` | `src/matinee/web/app.py:450` | 2026-10-05 |
-| `src/matinee/web/app.py::add_page` | `src/matinee/web/app.py:456` | 2026-10-05 |
-| `src/matinee/web/app.py::add_quip_routes` (`GET /api/quips`; 503 when the lines cannot be read) | `src/matinee/web/app.py:482` | 2026-10-05 |
-| `src/matinee/web/app.py::add_film_routes` / `IMAGE_WIDTHS` / `IMAGE_CACHE` (`GET /api/pictures`) | `src/matinee/web/app.py:275` | 2026-10-05 |
-| `src/matinee/web/app.py::film_link` / `FilmCard` (Seerr, else TMDB) | `src/matinee/web/app.py:178` | 2026-10-05 |
-| `src/matinee/web/app.py::Held` / `held` / `stored_path` | `src/matinee/web/app.py:102` | 2026-10-05 |
-| `src/matinee/web/app.py::film_image` / `tmdb_image` / `TMDB_IMAGE_CACHE` (the media server's, else TMDB's; 30 days for a film the library does not hold) | `src/matinee/web/app.py:185` | 2026-10-05 |
-| `src/matinee/web/app.py::Shelf` / `from_shelf` (each TMDB picture fetched once for every viewer) | `src/matinee/web/app.py:207` | 2026-10-05 |
+| `src/matinee/web/main.py::build` (reads the labels and the household file; faults go on the note) | `src/matinee/web/main.py:142` | 2026-10-09 |
+| `src/matinee/web/app.py::create_app` (docs disabled) | `src/matinee/web/app.py:528` | 2026-10-09 |
+| `src/matinee/web/app.py::security_headers` / `CONTENT_SECURITY_POLICY` | `src/matinee/web/app.py:451` | 2026-10-09 |
+| `src/matinee/web/app.py::add_page` | `src/matinee/web/app.py:457` | 2026-10-09 |
+| `src/matinee/web/app.py::add_quip_routes` (`GET /api/quips`; 503 when the lines cannot be read) | `src/matinee/web/app.py:483` | 2026-10-09 |
+| `src/matinee/web/app.py::add_film_routes` / `IMAGE_WIDTHS` / `IMAGE_CACHE` (`GET /api/pictures`) | `src/matinee/web/app.py:276` | 2026-10-09 |
+| `src/matinee/web/app.py::film_link` / `FilmCard` (Seerr, else TMDB) | `src/matinee/web/app.py:179` | 2026-10-09 |
+| `src/matinee/web/app.py::Held` / `held` / `stored_path` | `src/matinee/web/app.py:103` | 2026-10-09 |
+| `src/matinee/web/app.py::film_image` / `tmdb_image` / `TMDB_IMAGE_CACHE` (the media server's, else TMDB's; 30 days for a film the library does not hold) | `src/matinee/web/app.py:186` | 2026-10-09 |
+| `src/matinee/web/app.py::Shelf` / `from_shelf` (each TMDB picture fetched once for every viewer) | `src/matinee/web/app.py:208` | 2026-10-09 |
 | `src/matinee/tmdb.py::shelf_file` / `read_shelf` / `shelve` / `sweep_shelf` / `PICTURE_KEEP` (150 days) | `src/matinee/tmdb.py:324` | 2026-10-05 |
-| `src/matinee/web/app.py::film_synopsis` (the media server's, else TMDB's) | `src/matinee/web/app.py:264` | 2026-10-05 |
+| `src/matinee/web/app.py::film_synopsis` (the media server's, else TMDB's) | `src/matinee/web/app.py:265` | 2026-10-09 |
 | `src/matinee/tmdb.py::fetch_picture` / `IMAGES` / `IMAGE_SIZES` / `TmdbImageError` | `src/matinee/tmdb.py:292` | 2026-10-05 |
 | `src/matinee/tmdb.py::ImageGate` / `IMAGE_GATE` / `IMAGE_RATE` (50 a second, 20,000 an hour, a hold after a 429 or 503) | `src/matinee/tmdb.py:236` | 2026-10-05 |
-| `src/matinee/web/app.py::add_error_handlers` | `src/matinee/web/app.py:137` | 2026-10-05 |
+| `src/matinee/web/app.py::add_error_handlers` | `src/matinee/web/app.py:138` | 2026-10-09 |
 | `src/matinee/web/common.py::Problem` | `src/matinee/web/common.py:125` | 2026-10-05 |
 | `src/matinee/web/viewing.py::add_viewing_routes` (`POST /api/first` with the source question, `POST /api/walk`) | `src/matinee/web/viewing.py:353` | 2026-10-05 |
 | `src/matinee/web/viewing.py::WalkIn` / `PickIn` / `FirstIn` (request caps; no field skips the check) | `src/matinee/web/viewing.py:45` | 2026-10-05 |
