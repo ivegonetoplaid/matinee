@@ -1,4 +1,4 @@
-# Matinee: the site and its nightly rebuild, two containers from one published image.
+# Matinee: the site, which also runs its own nightly rebuild, in one container.
 # Every setting lives in .env (copy example.env), so this file needs no editing.
 #
 # Start:  mkdir -p state && sudo chown 1000:1000 state && docker compose up -d
@@ -6,7 +6,7 @@
 # Your data lives in ./state beside this file: the one thing to back up.
 #
 # latest follows every release. To stay on one release line, replace latest with
-# that line's number in both services, e.g. :0.1, and change it when you choose to.
+# that line's number, e.g. :0.1, and change it when you choose to.
 
 services:
   matinee:
@@ -18,15 +18,4 @@ services:
       - ./state:/state
     ports:
       - "8000:8000" # to serve on another port, change the first number, e.g. "8080:8000"
-    restart: unless-stopped
-
-  # Fetches film details now, then every night at REBUILD_TIME (set in .env).
-  rebuild:
-    image: ghcr.io/ivegonetoplaid/matinee:latest
-    env_file: .env
-    environment:
-      DATA_DIR: /state
-    volumes:
-      - ./state:/state
-    command: ["python", "tools/rebuild_table.py", "--daily"]
     restart: unless-stopped

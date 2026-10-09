@@ -3,14 +3,21 @@
 Refuses to start when a setting is missing, the state directory does not exist,
 the film table or reference statistics are absent or too old, or the labels file
 or the pick's lines (data/quips.json) are malformed. Both are read once here;
-replacing either takes a restart.
+replacing either takes a restart. While it serves, it runs the nightly rebuild
+beside itself as its own process (`Rebuilds`), so one container holds Matinee.
 """
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import logging
 import math
+import subprocess
+import sys
+import threading
 import time
+from collections.abc import AsyncIterator, Sequence
 from functools import partial
 from pathlib import Path
 
@@ -21,6 +28,7 @@ from matinee.engine import household_problems, load_catalog
 from matinee.genome_file import tags_read
 from matinee.labels import LABELS, OVERRIDES, Labels, LabelsError, load_labels, load_overrides, with_overrides
 from matinee.library.choice import open_reader
+from matinee.reference import DATA
 from matinee.store import Store
 from matinee.trees import load_trees
 from matinee.web.app import create_app
@@ -79,6 +87,58 @@ def household(shipped: Labels, data_dir: Path, faults: list[str]) -> Labels:
     return with_overrides(shipped, theirs)
 
 
+REBUILD = DATA.parent / "tools" / "rebuild_table.py"
+RESTART_AFTER_S = 300.0  # seconds before a rebuild process that exited is started again
+
+
+class Rebuilds:
+    """The nightly rebuild (`tools/rebuild_table.py --daily`), its own process beside the server for as long as the
+    server runs. A rebuild that exits is logged and started again after `restart_after_s`, so a crash in it never
+    stops the site and never becomes a tight restart loop. Stopping the server stops it."""
+
+    def __init__(self, command: Sequence[str], restart_after_s: float = RESTART_AFTER_S) -> None:
+        self._command = list(command)
+        self._restart_after_s = restart_after_s
+        self._stopping = threading.Event()
+        self._lock = threading.Lock()  # a stop never misses a process started at the same moment
+        self._child: subprocess.Popen[bytes] | None = None
+        self._thread = threading.Thread(target=self._run, name="rebuild", daemon=True)
+
+    def start(self) -> None:
+        self._thread.start()
+
+    def stop(self) -> None:
+        with self._lock:
+            self._stopping.set()
+            if self._child is not None:
+                self._child.terminate()
+        self._thread.join()
+
+    @contextlib.asynccontextmanager
+    async def lifespan(self, _app: FastAPI) -> AsyncIterator[None]:
+        self.start()
+        yield
+        await asyncio.to_thread(self.stop)
+
+    def _run(self) -> None:
+        while True:
+            with self._lock:
+                if self._stopping.is_set():
+                    return
+                self._child = subprocess.Popen(self._command)
+            code = self._child.wait()
+            if self._stopping.is_set():
+                return
+            log.error(
+                "the nightly rebuild stopped (exit status %s); its log above says why. Meanwhile the film table stays"
+                " as it is, and the rebuild starts again in %d minutes.",
+                code,
+                round(self._restart_after_s / 60),
+            )
+            if self._stopping.wait(self._restart_after_s):
+                return
+
+
 def build() -> FastAPI:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
     config = from_env()
@@ -129,4 +189,5 @@ def build() -> FastAPI:
         tags=tags,
     )
     state = partial(state_log, theatre, config, dtdd_on=dtdd is not None)
-    return create_app(config, theatre, store, dtdd, faults=faults, state=state)
+    rebuilds = Rebuilds([sys.executable, str(REBUILD), "--daily"])
+    return create_app(config, theatre, store, dtdd, faults=faults, state=state, lifespan=rebuilds.lifespan)

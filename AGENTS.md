@@ -99,7 +99,7 @@ missing decisions rather than choosing silently:
 6. The nightly rebuild time (`REBUILD_TIME`, `HH:MM`) and time zone (`TZ`).
 
 `TMDB_TOKEN` and `DATA_DIR` are required; the shipped Compose file supplies
-`DATA_DIR=/state`. Keep persistent storage mounted for both processes. Matinee
+`DATA_DIR=/state`. Keep persistent storage mounted at that path. Matinee
 reads the process environment, not `.env` directly; the installation guide
-explains how each process receives it. Use HTTPS for the admission cookie and
+explains how it receives it. Use HTTPS for the admission cookie and
 follow the guide's proxy precautions when exposing the site.

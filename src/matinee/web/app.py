@@ -22,6 +22,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.types import Lifespan
 
 from matinee.dtdd import Dtdd
 from matinee.engine import EngineError
@@ -536,6 +537,7 @@ def create_app(
     seerr: SeerrCheck | None = None,
     faults: Sequence[str] = (),
     state: Callable[[SeerrCheck], StateLog] | None = None,
+    lifespan: Lifespan[FastAPI] | None = None,
 ) -> FastAPI:
     """The app. `quips` defaults to data/quips.json, read now. `faults` are setup faults found before the app,
     in words for the setup note.
@@ -543,7 +545,7 @@ def create_app(
     With a door word set, the installation secret is read, or made at the first start, now; an unreadable one
     stops the start.
     """
-    app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
+    app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None, lifespan=lifespan)
     faults = list(faults)
     try:
         lines: Quips | None = quips or load_quips()

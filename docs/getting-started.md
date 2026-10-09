@@ -43,14 +43,9 @@ The minimum settings outside Docker are `DATA_DIR` and `TMDB_TOKEN`. **With the 
 
 Fill in optional media-server, Seerr, content-topic, and door-word settings only when you use those services. Never commit `.env`.
 
-### 3. Start both processes
+### 3. Start Matinee
 
-Matinee uses one image to run two services:
-
-- **`matinee`:** the site on port 8000, with exactly one server worker.
-- **`rebuild`:** builds the film table immediately and refreshes it every night at `REBUILD_TIME` (in the time zone set by `TZ`).
-
-Both services read the same `.env` and persistent data folder. The `compose.yaml` needs no edits for the default installation.
+Matinee runs as one container: the site on port 8000, which also builds the film table as it starts and refreshes it every night at `REBUILD_TIME` (in the time zone set by `TZ`). The `compose.yaml` needs no edits for the default installation.
 
 ```sh
 mkdir -p state && sudo chown 1000:1000 state
@@ -70,7 +65,7 @@ You don't have to wait for the full rebuild:
 - **With Jellyfin or Plex**, your own library can be picked within seconds. The rebuild saves it first.
 - **Without a library**, picks can start after roughly a minute. Popular films are fetched first and saved as they arrive.
 
-While Matinee is starting, or if a service is unavailable, its **setup note** explains the current state instead of dropping you into an empty interface. The server and rebuild logs report the same state.
+While Matinee is starting, or if a service is unavailable, its **setup note** explains the current state instead of dropping you into an empty interface. The log reports the same state.
 
 ## Internet access and HTTPS
 
@@ -80,26 +75,25 @@ Keep API tokens in `.env`, not in a public URL or a repository. As shipped, Comp
 
 ## Troubleshooting your first run
 
-Start with the logs:
+Start with the log, which holds both the site's lines and the rebuild's:
 
 ```sh
 docker compose logs matinee
-docker compose logs rebuild
 ```
 
 - **No TMDB key or a rejected key:** fix `TMDB_TOKEN` in `.env`, then run `docker compose up -d`. That recreates services when their environment changes; `docker compose restart` alone retains the previous environment.
-- **TMDB isn't answering:** Matinee tries again on the next nightly rebuild. To try sooner, run `docker compose restart rebuild`.
+- **TMDB isn't answering:** Matinee tries again on the next nightly rebuild. To try sooner, run `docker compose restart matinee`; every start runs a rebuild, which takes seconds once the film details are fetched.
 - **Your library isn't answering, a setting is invalid, or the rebuild is still fetching:** read the setup note and matching logs. Matinee reports these states explicitly.
-- **A stale-data warning appears:** the nightly rebuild has not refreshed records in time. Check the rebuild logs and restore its schedule; Matinee continues picking while it warns.
+- **A stale-data warning appears:** the nightly rebuild has not refreshed records in time. Check the log for the rebuild's lines; Matinee continues picking while it warns.
 
 ## Day-to-day operation
 
 | Task | Command or location |
 | --- | --- |
-| Check logs | `docker compose logs matinee` / `docker compose logs rebuild` |
+| Check the log | `docker compose logs matinee` |
 | Change a setting | Edit `.env`, then `docker compose up -d` to recreate affected services |
 | Change the nightly time | Set `REBUILD_TIME` (`HH:MM`) and `TZ` in `.env`, then `docker compose up -d` |
-| Retry the rebuild | `docker compose restart rebuild` |
+| Retry the rebuild | `docker compose restart matinee` |
 | Update Matinee | `docker compose pull`, then `docker compose up -d` |
 | Review viewers' reports | `docker compose exec matinee python tools/notes.py list` |
 | Back up Matinee | Back up the persistent `./state` folder (or the folder you configured) |
@@ -112,7 +106,7 @@ Run **exactly one server worker**. The DoesTheDogDie limits are enforced inside 
 
 Each [release](https://github.com/ivegonetoplaid/matinee/releases) has a number and notes saying what changed. The image is tagged three ways: the exact version (`0.1.4`), its release line (`0.1`), and `latest`, which follows every release. The shipped `compose.yaml` uses `latest`.
 
-Matinee is in beta, so its numbers start with 0. Within a release line, an update is always safe. A new line (0.1 to 0.2) may need steps, and its release notes give them before you update. To move to a new line only when you choose, replace `latest` with the line's number (for example `:0.1`) in both services in `compose.yaml`.
+Matinee is in beta, so its numbers start with 0. Within a release line, an update is always safe. A new line (0.1 to 0.2) may need steps, and its release notes give them before you update. To move to a new line only when you choose, replace `latest` with the line's number (for example `:0.1`) in `compose.yaml`.
 
 ## Make the film classifications your own
 
@@ -138,7 +132,7 @@ Think the correction should apply to everyone? Open a [Sorting suggestion](https
 
 ## Without Docker
 
-Docker Compose is the supported installation path. To run the processes yourself, get the code and install the Python package into a virtual environment from the repository root:
+Docker Compose is the supported installation path. To run Matinee yourself, get the code and install the Python package into a virtual environment from the repository root:
 
 ```sh
 git clone https://github.com/ivegonetoplaid/matinee.git && cd matinee
@@ -147,20 +141,19 @@ python3 -m venv .venv && .venv/bin/pip install -e .
 
 To build the Docker image from the code instead of pulling it, run `docker build -t ghcr.io/ivegonetoplaid/matinee:latest .` in the repository, then start Compose as above without `docker compose pull`. A pull replaces your build with the published image.
 
-Matinee reads the **process environment**, not the `.env` file directly. In each shell that launches a process, load the file this way (it preserves values containing spaces, unlike a naive `source`):
+Matinee reads the **process environment**, not the `.env` file directly. In the shell that starts it, load the file this way (it preserves values containing spaces, unlike a naive `source`):
 
 ```sh
 while IFS= read -r line || [ -n "$line" ]; do case $line in ""|"#"*) ;; *) export "$line" ;; esac; done < .env
 ```
 
-Set both `DATA_DIR` and `TMDB_TOKEN` for this installation. Then run the rebuild and the site as separate long-running processes, with the environment loaded in each:
+Set both `DATA_DIR` and `TMDB_TOKEN` for this installation. Then start the site, which runs the nightly rebuild beside itself:
 
 ```sh
-.venv/bin/python tools/rebuild_table.py --daily &
 .venv/bin/uvicorn --factory matinee.web.main:build --workers 1 --port 8000 --no-access-log
 ```
 
-The example starts the rebuild in the background of the current shell, but doesn't configure permanent service management. Arrange that yourself if you choose this path. Keep **one** web worker.
+The example doesn't configure permanent service management. Arrange that yourself if you choose this path. Keep **one** web worker.
 
 ## Why every installation fetches its own TMDB data
 

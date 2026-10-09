@@ -4,6 +4,10 @@ from __future__ import annotations
 
 import json
 import logging
+import os
+import sys
+import threading
+import time
 from pathlib import Path
 from typing import Any
 
@@ -95,3 +99,37 @@ def test_the_household_file_in_the_data_directory_reaches_the_catalog_and_the_of
     labels = seen.catalog_of.keywords["labels"]
     assert labels.of("comedy").kinds[999_999_999] == frozenset({"slapstick"})
     assert 999_999_999 in seen.listed and labels.overridden == frozenset({999_999_999})
+
+
+def until(done: Any, timeout_s: float = 10.0) -> bool:
+    """Waits for `done()` to hold, checking every 20 ms; False when it never does within `timeout_s`."""
+    deadline = time.monotonic() + timeout_s
+    while time.monotonic() < deadline:
+        if done():
+            return True
+        time.sleep(0.02)
+    return False
+
+
+def test_a_rebuild_process_that_exits_is_started_again(tmp_path: Path) -> None:
+    starts = tmp_path / "starts"
+    rebuilds = main.Rebuilds([sys.executable, "-c", f"open({str(starts)!r}, 'a').write('x')"], restart_after_s=0)
+    rebuilds.start()
+    try:
+        assert until(lambda: starts.exists() and len(starts.read_text()) >= 2)
+    finally:
+        rebuilds.stop()
+
+
+def test_stopping_the_server_ends_its_rebuild_process(tmp_path: Path) -> None:
+    pid_file = tmp_path / "pid"
+    script = f"import os, time; open({str(pid_file)!r}, 'w').write(str(os.getpid())); time.sleep(60)"
+    rebuilds = main.Rebuilds([sys.executable, "-c", script])
+    rebuilds.start()
+    assert until(lambda: pid_file.exists() and pid_file.read_text())
+    stopper = threading.Thread(target=rebuilds.stop)
+    stopper.start()
+    stopper.join(10)  # a stop that only waited the rebuild out would take its whole minute
+    assert not stopper.is_alive()
+    with pytest.raises(ProcessLookupError):
+        os.kill(int(pid_file.read_text()), 0)
