@@ -23,7 +23,7 @@ from matinee.engine import Answer, Catalog, Source, Viewer, first_question, gent
 from matinee.pick import Pick, Picker, candidates
 from matinee.store import Note, Profile, Store
 from matinee.trees import Tree
-from matinee.web.common import COOKIE_AGE_S, Seat, device_tokens, optional_int, problem, seat
+from matinee.web.common import COOKIE_AGE_S, Seat, device_tokens, optional_int, over_https, problem, seat
 from matinee.web.setup import fallback_line
 from matinee.web.theatre import UNUSABLE, Showing, Theatre
 
@@ -271,13 +271,13 @@ def film_ref(table_films: Any, tmdb: int) -> FilmRef:
 
 
 def device_id(request: Request, response: Response) -> str:
-    """This device's anonymous id, for the hourly lookup cap only; issued when absent."""
+    """This device's anonymous id, for the hourly lookup cap only; issued when absent, Secure over HTTPS."""
     existing = request.cookies.get(DEVICE_COOKIE, "")
     if 16 <= len(existing) <= 64 and existing.replace("-", "").replace("_", "").isalnum():
         return existing
     fresh = secrets.token_urlsafe(16)
     response.set_cookie(
-        DEVICE_COOKIE, fresh, max_age=COOKIE_AGE_S, path="/", secure=True, httponly=True, samesite="lax"
+        DEVICE_COOKIE, fresh, max_age=COOKIE_AGE_S, path="/", secure=over_https(request), httponly=True, samesite="lax"
     )
     return fresh
 

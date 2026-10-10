@@ -69,7 +69,7 @@ While Matinee is starting, or if a service is unavailable, its **setup note** ex
 
 ## Internet access and HTTPS
 
-If Matinee faces the internet, put it behind a reverse proxy serving **HTTPS** and set `DOOR_WORD`. The admission cookie is only sent over HTTPS. The door word is a lightweight household gate, not a replacement for the protections you'd use on a security-sensitive public service.
+If Matinee faces the internet, put it behind a reverse proxy serving **HTTPS** and set `DOOR_WORD`. The admission cookie is only sent over HTTPS. On your own network plain `http://` works: the profile cookie is marked secure only when the browser arrives over HTTPS, directly or through a proxy that says so with `X-Forwarded-Proto`, which the shipped image trusts. The door word is a lightweight household gate, not a replacement for the protections you'd use on a security-sensitive public service.
 
 Keep API tokens in `.env`, not in a public URL or a repository. As shipped, Compose publishes port 8000 and the image trusts forwarded headers from any address. Restrict direct access to the backend to trusted proxy clients when using a reverse proxy; configure your network and proxy exposure intentionally.
 
