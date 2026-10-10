@@ -39,8 +39,8 @@ ARTWORK = {
 ARTWORK_KEYFRAMES = {"burn"}  # the fuse's burn on Matinee's line
 
 # Text buttons and links that are not actions or letterboxes: the foot band's crumbs, About link and credits,
-# About's own prose, the wordmark, the pick panel's × and rows, and controls that are pictures or menu rows. Each
-# names its element's tag, script, building function and classes, never a line.
+# About's own prose, the wordmark, the pick's poster link, the panel's × and rows, and controls that are pictures
+# or menu rows. Each names its element's tag, script, building function and classes, never a line.
 PERMITTED = {
     ("a", "about.js", "link", frozenset()),
     ("a", "credits.js", "tmdbLogo", frozenset()),
@@ -58,6 +58,7 @@ PERMITTED = {
     ("button", "locked.js", "show", frozenset({"peek"})),
     ("button", "panel.js", "open", frozenset({"panel-close"})),
     ("button", "main.js", "answerRow", frozenset({"panel-row", "answer-row"})),
+    ("a", "pick.js", "posterLink", frozenset({"poster-link"})),
 }
 
 # Every CSS named colour.
@@ -374,8 +375,10 @@ def test_no_control_is_a_pill_or_wears_a_filled_accent() -> None:
 def test_every_action_wears_one_accent_and_a_petrol_one_ends_with_the_arrow() -> None:
     assert all(len(a.classes & ACCENTS) == 1 for a in ACTIONS), [sorted(a.classes) for a in ACTIONS]
     petrol = [a for a in ACTIONS if "petrol" in a.classes]
-    assert len(petrol) == sum(s.count('"action petrol"') for s in SCRIPTS.values()) >= 3
+    assert len(petrol) == sum(s.count('"action petrol"') for s in SCRIPTS.values()) >= 2
     assert all(a.first_child and a.first_child.endswith("↗") for a in petrol), [a.first_child for a in petrol]
+    # The pick's poster strip leaves Matinee in petrol words too, and ends with the same arrow.
+    assert "`More on ${site} ↗`" in SCRIPTS["pick.js"]
 
 
 def test_bare_links_and_text_buttons_stand_only_where_the_standard_permits() -> None:

@@ -21,6 +21,7 @@ const SETTLE_MS = 1300;
 const PHONE_HOLD_MS = 2200;
 const POSTER_RATIO = 1.5; // height over width
 const POSTER_MIN_H = 160; // below this the page scrolls rather than shrink the poster further
+const STRIP_H = 44; // the poster link's strip, beneath the poster
 const PICTURE_WAIT_MS = 10000; // a picture not drawable by then is given up, as the server gives up on the media server
 
 // A picture fetched ahead of its moment. Resolves to the image once it can be drawn, or to null when it
@@ -42,31 +43,59 @@ function picture(src, alt) {
   });
 }
 
-// The poster's resting box: as tall as the slot allows at 2:3, never wider than the slot.
+// The poster's resting box: as tall as the slot allows at 2:3 above the link's strip, never wider than the slot.
 function fit(slot) {
   const box = slot.getBoundingClientRect();
-  const height = Math.min(box.width * POSTER_RATIO, Math.max(POSTER_MIN_H, box.height));
+  const height = Math.min(box.width * POSTER_RATIO, Math.max(POSTER_MIN_H, box.height - STRIP_H));
   return { width: height / POSTER_RATIO, height };
 }
 
-// Moves `poster` into `slot` in the page's flow, carried from `from`, the screen box where it hung on the
-// wall. The slot is placed by the caller before this runs. The move starts from that box, measured from
-// the same corner it scales from, so it never jumps. It keeps the glow it wore on the wall, `glow(width)`.
-function settle(poster, from, slot, glow) {
+// The resting poster is the link to the film's page, on the configured Seerr or on TMDB, opening a new tab; a
+// strip on its foot names the site. It is the strip alone when the film has no poster to rest. Its warm outline
+// and the strip show once the poster has landed in it (`landed`).
+function posterLink(info, film) {
+  const site = info.link_to === "seerr" ? "Seerr" : "TMDB";
+  return h(
+    "a",
+    {
+      class: "poster-link",
+      href: info.link,
+      target: "_blank",
+      rel: "noopener noreferrer",
+      "aria-label": `${film.title}: more on ${site} (opens a new tab)`,
+    },
+    h("span", { class: "poster-strip" }, `More on ${site} ↗`),
+  );
+}
+
+function landed(link) {
+  link.classList.add("landed");
+}
+
+// Moves `poster` into `link`, above its strip, in the page's flow, carried from `from`, the screen box where it
+// hung on the wall. The link stands in `slot`, placed by the caller before this runs. The move starts from that
+// box, measured from the same corner it scales from, so it never jumps. The link keeps the glow the poster wore on
+// the wall, `glow(width)`.
+function settle(poster, from, slot, link, glow) {
   const size = fit(slot);
   poster.className = "slot-poster";
   poster.style.width = `${size.width}px`;
   poster.style.height = `${size.height}px`;
-  poster.style.boxShadow = `${glow(size.width)}, 0 24px 60px rgba(0, 0, 0, 0.6)`;
-  slot.append(poster);
+  link.style.setProperty("--poster-glow", glow(size.width));
+  link.prepend(poster);
+  slot.append(link);
   const to = poster.getBoundingClientRect();
-  if (prefersLessMotion() || !to.width) return;
+  if (prefersLessMotion() || !to.width) return landed(link);
   const shift = `translate(${from.left - to.left}px, ${from.top - to.top}px) scale(${from.width / to.width}, ${from.height / to.height})`;
   poster.style.transformOrigin = "top left";
-  poster.animate([{ transform: shift }, { transform: "none" }], {
+  const move = poster.animate([{ transform: shift }, { transform: "none" }], {
     duration: SETTLE_MS,
     easing: "cubic-bezier(0.2, 0.7, 0.2, 1)",
   });
+  return move.finished.then(
+    () => landed(link),
+    () => landed(link),
+  );
 }
 
 // How well audiences regard the film, as its card ranks it: a line in the display face, with what it is counted by
@@ -173,18 +202,10 @@ async function showNoFilm(result, frame, actions) {
   fillBar(frame, [backAction(frame, actions)]);
 }
 
-// The pick's link reads by where it goes: the configured Seerr, or TMDB without one.
-function moreOn(info) {
-  if (info.link_to === "seerr") {
-    return h("a", { class: "action petrol", href: info.link, target: "_blank", rel: "noopener noreferrer" }, "More on Seerr ↗");
-  }
-  return h("a", { class: "action petrol", href: info.link, target: "_blank", rel: "noopener noreferrer" }, "More on TMDB ↗");
-}
-
-// What sits under the line and its facts on the resting page: the film's link, then the swap reason's credit,
-// `note`, beneath it.
-function underLine(info, result, note) {
-  return [info.link ? h("div", { class: "choices" }, moreOn(info)) : null, note ? firstPickReveal(result, note) : null].filter(Boolean);
+// What sits under the line and its facts on the resting page: the swap reason's note, `note`, revealing the film the
+// check turned away.
+function underLine(result, note) {
+  return note ? [firstPickReveal(result, note)] : [];
 }
 
 // "‹ Back", which opens the panel with the way back.
@@ -221,15 +242,19 @@ async function rest({ stage, wall, frame, film, result, actions, info, backdrop,
   const shown = feature(info, film, result, backdrop);
   frame.showing.append(shown);
   if (!isPhone()) factsUnderLine(frame, info, fuse);
-  frame.aside.append(...underLine(info, result, frame.aside.querySelector(".swap-note")));
+  frame.aside.append(...underLine(result, frame.aside.querySelector(".swap-note")));
   pickBar(frame, film, actions);
   // Measured once the aside is whole, so the poster takes only the height left beneath it.
   const from = wall.landedTile()?.img.getBoundingClientRect();
+  const slot = h("div", { class: "poster-slot" });
+  frame.left.append(slot);
+  const link = posterLink(info, film);
   if (poster && from) {
-    const slot = h("div", { class: "poster-slot" });
-    frame.left.append(slot);
-    settle(poster, from, slot, (w) => wall.glowAt(w));
+    settle(poster, from, slot, link, (w) => wall.glowAt(w));
     wall.lift(true);
+  } else {
+    slot.append(link);
+    landed(link);
   }
   if (isPhone()) {
     frame.showing.scrollTop = 0;

@@ -697,8 +697,52 @@ a.wordmark:focus-visible {
 .slot-poster {
   display: block;
   object-fit: cover;
+}
+
+/* The resting poster is the link to the film's page: its warm outline and glow, and a strip on its foot naming the
+   site in petrol words, show once the poster has landed. Hovered or focused, the warm outline strengthens; it
+   never turns petrol. */
+.poster-link {
+  display: flex;
+  flex-direction: column;
   border-radius: 6px;
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--warm) 35%, transparent), 0 24px 60px color-mix(in srgb, var(--black) 60%, transparent);
+  overflow: hidden;
+  text-decoration: none;
+  transition: box-shadow 0.2s ease;
+}
+
+.poster-link.landed {
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--warm) 35%, transparent),
+    var(--poster-glow, 0 0 0 transparent),
+    0 24px 60px color-mix(in srgb, var(--black) 60%, transparent);
+}
+
+.poster-link.landed:is(:hover, :focus-visible) {
+  outline: none;
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--warm) 75%, transparent),
+    var(--poster-glow, 0 0 0 transparent),
+    0 24px 60px color-mix(in srgb, var(--black) 60%, transparent);
+}
+
+.poster-strip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 12px;
+  border-top: 1px solid color-mix(in srgb, var(--warm) 25%, transparent);
+  background: url("/static/grain.svg"), var(--enamel);
+  color: var(--petrol-vivid);
+  font: 600 17px/1.2 var(--body);
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.poster-link.landed .poster-strip {
+  opacity: 1;
 }
 
 .aside {
@@ -1317,6 +1361,10 @@ a.wordmark:focus-visible {
     margin: 28px 0;
     justify-content: center;
     align-items: center;
+  }
+
+  .poster-strip {
+    font-size: 16px;
   }
 
   /* Clear of the showing's fades at both ends, so the title and the synopsis's last line read in full. */
