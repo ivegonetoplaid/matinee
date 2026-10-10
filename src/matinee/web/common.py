@@ -101,17 +101,26 @@ def device_tokens(request: Request) -> list[str]:
     return [t for t in raw.split(".") if t][:MAX_TOKENS]
 
 
-def set_tokens(response: Response, tokens: list[str]) -> None:
-    """The device's token list: random tokens only, never a name or a PIN; HttpOnly, Secure, SameSite=Lax."""
+def over_https(request: Request) -> bool:
+    """Whether the browser reached Matinee over HTTPS, directly or through a proxy whose forwarded scheme uvicorn
+    trusts. A browser discards a `Secure` cookie set over plain HTTP, so a LAN installation on `http://` marks its
+    cookies `Secure` only when they can be kept."""
+    return request.url.scheme == "https"
+
+
+def set_tokens(request: Request, response: Response, tokens: list[str]) -> None:
+    """The device's token list: random tokens only, never a name or a PIN; HttpOnly, SameSite=Lax, and Secure
+    over HTTPS."""
+    secure = over_https(request)
     if not tokens:
-        response.delete_cookie(TOKENS_COOKIE, path="/", secure=True, httponly=True, samesite="lax")
+        response.delete_cookie(TOKENS_COOKIE, path="/", secure=secure, httponly=True, samesite="lax")
         return
     response.set_cookie(
         TOKENS_COOKIE,
         ".".join(tokens[-MAX_TOKENS:]),
         max_age=COOKIE_AGE_S,
         path="/",
-        secure=True,
+        secure=secure,
         httponly=True,
         samesite="lax",
     )
@@ -119,7 +128,7 @@ def set_tokens(response: Response, tokens: list[str]) -> None:
 
 def with_token(request: Request, response: Response, token: str) -> None:
     kept = [t for t in device_tokens(request) if t != token]
-    set_tokens(response, [*kept, token])
+    set_tokens(request, response, [*kept, token])
 
 
 class Problem(BaseModel):

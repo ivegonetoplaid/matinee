@@ -169,6 +169,15 @@ def test_saving_a_profile_sets_a_token_cookie_without_name_or_pin(door: Any) -> 
     assert held_names(client) == ["Robin"]
 
 
+def test_a_profile_saved_over_plain_http_walks_on_the_next_request(door: Any) -> None:
+    """A LAN installation on http:// keeps its token cookie; a Secure one is dropped and every walk is refused."""
+    https_client, _ = door
+    client = TestClient(https_client.app, base_url="http://testserver")
+    made = client.post("/api/profiles", json={"name": "Robin"})
+    assert "Secure" not in made.headers["set-cookie"]
+    assert client.post("/api/first", json={"viewer": {"profile_id": made.json()["id"]}}).status_code == 200
+
+
 def test_the_front_door_lists_every_profile_by_name_and_never_its_topics(door: Any) -> None:
     client, store = door
     store.create("zed", "1111", [153], "vhs")
