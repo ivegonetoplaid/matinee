@@ -75,11 +75,18 @@ function rankLine(card) {
   return h("p", { class: "rank" }, h("span", { class: "rank-words" }, card.rank), " ", h("span", { class: "rank-by" }, "by audience votes"));
 }
 
-// What the pick says about the film beyond its title: its rank. Null when there is nothing to say, so the layout
-// closes up. On a desktop it stands under Matinee's line; on a phone, under the film's title.
+// The film's tags, its strongest genome words, as outlined chips; null when it has none. They describe the film
+// and never say why it was picked.
+function tagList(card) {
+  if (!card.tags?.length) return null;
+  return h("ul", { class: "tags", "aria-label": "Tags" }, card.tags.map((tag) => h("li", { class: "tag" }, sentenceCase(tag))));
+}
+
+// What the pick says about the film beyond its title: its rank, then its tags. Null when there is nothing to say,
+// so the layout closes up. On a desktop it stands under Matinee's line; on a phone, under the film's title.
 function facts(card) {
-  const rank = rankLine(card);
-  return rank ? h("div", { class: "facts" }, rank) : null;
+  const said = [rankLine(card), tagList(card)].filter(Boolean);
+  return said.length ? h("div", { class: "facts" }, said) : null;
 }
 
 function heading(film) {

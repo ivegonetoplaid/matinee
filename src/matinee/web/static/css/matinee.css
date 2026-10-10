@@ -920,6 +920,26 @@ a.wordmark:focus-visible {
   color: var(--dim);
 }
 
+/* The film's tags: outlined chips that wrap, with small corners; never filled and never a pill. */
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tag {
+  padding: 5px 12px;
+  border: 1px solid color-mix(in srgb, var(--text) 30%, transparent);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--base) 60%, transparent);
+  color: var(--text);
+  font-size: 16px;
+  line-height: 1.2;
+}
+
 .feature {
   grid-column: 2;
   grid-row: 1;
