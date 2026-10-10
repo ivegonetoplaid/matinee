@@ -33,8 +33,9 @@ function place(stage, frame, node) {
 }
 
 // `frame` is the pick screen's. The panel joins `stage`; while it is open the parts it covers are hidden, so focus
-// never walks under it.
-export function pickPanel(stage, frame) {
+// never walks under it. `entries.opened()` runs as a panel opens where none was, on the tap that opens it, and
+// `entries.closed()` as it closes by any way but the browser's back, which closes it through `closedByBack()`.
+export function pickPanel(stage, frame, entries = { opened() {}, closed() {} }) {
   let shown = null; // { node, opener } while a panel is open
 
   // The parts the panel stands over, out of reach while it is open: the left column on a desktop; on a phone
@@ -72,6 +73,12 @@ export function pickPanel(stage, frame) {
 
   function close() {
     if (!shown) return;
+    entries.closed();
+    closedByBack();
+  }
+
+  function closedByBack() {
+    if (!shown) return;
     const { node, opener } = shown;
     forget();
     cover(false);
@@ -90,9 +97,10 @@ export function pickPanel(stage, frame) {
       shown.opener.setAttribute("aria-expanded", "false");
     } else {
       listen(true);
+      entries.opened();
     }
     const heading = h("h2", { class: "panel-title", id: "panel-title" }, title);
-    const shut = h("button", { class: "panel-close", type: "button", "aria-label": "Close", onclick: close }, "×");
+    const shut = h("button", { class: "panel-close", type: "button", "aria-label": "Close", onclick: () => close() }, "×");
     const node = h(
       "section",
       { class: "pick-panel", role: "dialog", "aria-labelledby": "panel-title" },
@@ -109,7 +117,7 @@ export function pickPanel(stage, frame) {
     return undefined;
   }
 
-  return { open, close, isOpen: () => Boolean(shown) };
+  return { open, close, closedByBack, isOpen: () => Boolean(shown) };
 }
 
 // An action that opens a panel: cream, marked as an opener, announcing the panel it opens.

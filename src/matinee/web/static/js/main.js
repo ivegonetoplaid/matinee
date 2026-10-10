@@ -9,7 +9,7 @@ import { clear, h, isPhone, prefersLessMotion, sentenceCase, wait } from "./dom.
 import { cornerMark } from "./flight.js";
 import { pickPanel } from "./panel.js";
 import { asPick, newestFirst, remember } from "./run.js";
-import { answerRows, forget, wayTo } from "./way-back.js";
+import { answerRows, forget, stepBack, wayTo } from "./way-back.js";
 import { showPick } from "./pick.js";
 import { posterPaths } from "./pictures.js";
 import { Deck, dealBeneath, dealPair, setFor } from "./quips.js";
@@ -85,6 +85,7 @@ function lockStage() {
 // Leaving a pick by a way back out (an answer in the Back panel, the name tag, "Start over") ends it at the tap:
 // the hunt stops where it is, and the pick changes nothing further while the next screen loads.
 function leaveTo(next) {
+  dropPickEntry();
   lockStage();
   wall.endPick();
   next();
@@ -238,6 +239,7 @@ async function ask({ ack, question, options, count, many = false, picture = fals
 // A problem screen: the message and "Try again". The wall is emptied, so no stale film list shows, except
 // when `keep` is set: a start that fails after going in keeps the door's posters behind it.
 function problem(data, again, keep = false) {
+  dropPickEntry();
   if (!keep) wall.clear();
   const line = h("h1", { class: "line" });
   line.append(h("span", { class: "ack" }, data.message || "Something went wrong."));
@@ -519,9 +521,70 @@ function pickFrame() {
   const foot = h("footer", { class: "bottombar" }, phone ? null : bar);
   clear(stage).append(topbar(nameTag() || h("span")), showing, ...(phone ? [aside] : []), foot);
   const frame = { line, aside, left, showing, bar };
-  frame.panel = pickPanel(stage, frame);
+  frame.panel = pickPanel(stage, frame, panelHistory);
+  pickShowing = frame;
+  holdPickEntry();
   return frame;
 }
+
+// The browser's back, and a phone's back gesture, on a pick. While a pick is on screen the page holds one history
+// entry at its own address, as About does, and an open panel holds one more above it, pushed by the tap that opens
+// it. Back from the panel's entry closes the panel alone; back from the pick's steps back one answer (way-back.js
+// `stepBack`). Leaving a pick, or closing its panel, any other way takes its entries back off, so a later back never
+// lands on a pick or panel that has gone. Back with About open over a pick closes About alone. A reload starts with
+// none of them.
+// NOTE: the page's own back is a task the browser runs later; a pick opened within that moment holds no entry.
+const PICK_ENTRY = { matinee: "pick" };
+const PANEL_ENTRY = { matinee: "panel" };
+let pickShowing = null; // the frame of the last pick screen drawn
+let ownBacks = 0; // backs the page takes itself, to drop its own entries
+
+// A new pick screen holds the pick's entry: pushed after an answer, kept through "Not that one", and stepped down to
+// from a panel's entry when a film is brought back from the panel.
+function holdPickEntry() {
+  if (history.state?.matinee === PANEL_ENTRY.matinee) {
+    ownBacks++;
+    history.back();
+  } else if (history.state?.matinee !== PICK_ENTRY.matinee) {
+    history.pushState(PICK_ENTRY, "");
+  }
+}
+
+function dropPickEntry() {
+  const depth = { [PICK_ENTRY.matinee]: 1, [PANEL_ENTRY.matinee]: 2 }[history.state?.matinee];
+  if (!depth) return;
+  ownBacks++;
+  history.go(-depth);
+}
+
+const panelHistory = {
+  opened: () => history.pushState(PANEL_ENTRY, ""),
+  closed: () => {
+    if (history.state?.matinee !== PANEL_ENTRY.matinee) return;
+    ownBacks++;
+    history.back();
+  },
+};
+
+function onBack(e) {
+  if (ownBacks > 0) {
+    ownBacks--;
+    return;
+  }
+  const onPick = pickShowing?.showing.isConnected;
+  if (e.state?.matinee === PICK_ENTRY.matinee) {
+    // Back from the panel's entry closes the panel; back from About's leaves About to close itself; arriving on a
+    // pick's entry with no pick on screen (a pick that failed under About) steps off it.
+    if (!onPick) dropPickEntry();
+    else pickShowing.panel.closedByBack();
+    return;
+  }
+  if (!onPick) return;
+  leaveTo(() => wayTo({ to: stepBack(visit) }, { source: start, doors: () => doors(), reask }));
+}
+
+window.addEventListener("popstate", onBack);
+dropPickEntry(); // a reload, or arriving back at a page that held a pick
 
 function hasTopics() {
   return visit.profileTopics;

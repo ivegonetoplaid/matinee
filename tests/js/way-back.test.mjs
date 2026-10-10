@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { answerRows, forget, wayTo } from "../../src/matinee/web/static/js/way-back.js";
+import { answerRows, forget, stepBack, wayTo } from "../../src/matinee/web/static/js/way-back.js";
 
 const walk = {
   answers: [
@@ -53,4 +53,17 @@ test("each row takes its own way, with its kept count unchanged", () => {
 
 test("a walk whose lists have drifted apart is refused, never sent to a wrong question", () => {
   assert.throws(() => forget({ ...walk, asks: [...walk.asks, "one too many?"] }, 1));
+});
+
+test("back from a pick asks again the question last answered, or the one 'Just pick one!' left", () => {
+  assert.equal(stepBack({ ...walk, rushed: false }), 1); // keep one answer: ask the second question again
+  assert.equal(stepBack({ ...walk, rushed: true }), 2); // keep both: ask the question it left
+  assert.equal(stepBack({ ...walk, says: [], asks: [], answers: [], rushed: false }), "doors"); // a door with no questions
+  assert.equal(stepBack({ ...walk, says: [], asks: [], answers: [], rushed: true }), 0); // left the door's first question
+});
+
+test("back from a pick made before any door goes to the screen it left: the doors, or the walk's first screen", () => {
+  const noDoor = { ...walk, firstSay: null, says: [], asks: [], answers: [], rushed: true };
+  assert.equal(stepBack(noDoor), "doors");
+  assert.equal(stepBack({ ...noDoor, sourceSay: null }), "source");
 });

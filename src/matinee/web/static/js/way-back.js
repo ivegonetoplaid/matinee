@@ -29,3 +29,13 @@ export function wayTo(row, ways) {
   if (row.to === "doors") return ways.doors();
   return ways.reask(row.to);
 }
+
+// Where the browser's back goes from a pick, as a row's `to`: the question last answered; from a pick "Just pick
+// one!" ended early, the question it left; the doors where the walk holds a door and no answer; the walk's first
+// screen ("source") where it holds no door, from which a further back leaves the page.
+export function stepBack(walk) {
+  if (walk.firstSay === null) return walk.sourceSay === null ? "source" : "doors";
+  const answered = walk.says.length;
+  if (walk.rushed) return answered;
+  return answered > 0 ? answered - 1 : "doors";
+}
