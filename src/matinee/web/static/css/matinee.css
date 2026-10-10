@@ -390,25 +390,23 @@ a.wordmark:focus-visible {
    it holds, so a box holding wall text near its edge keeps 40 px of room there. */
 .line:not(.locked-line, .viewer-line) > :is(.ack, .ask):not(:empty),
 .countdown,
-.note:not(:empty, .viewer-panel .note, .correct-panel .note),
+.note:not(:empty, .viewer-panel .note, .note-form .note),
 .footnote,
 .count,
 .seat-label,
 .feature-text,
-.rank,
-.correct-panel {
+.rank {
   position: relative;
 }
 
 .line:not(.locked-line, .viewer-line) > :is(.ack, .ask):not(:empty)::before,
 .countdown::before,
-.note:not(:empty, .viewer-panel .note, .correct-panel .note)::before,
+.note:not(:empty, .viewer-panel .note, .note-form .note)::before,
 .footnote::before,
 .count::before,
 .seat-label::before,
 .feature-text::before,
-.rank::before,
-.correct-panel::before {
+.rank::before {
   content: "";
   position: absolute;
   inset: -16px;
@@ -991,31 +989,25 @@ a.wordmark:focus-visible {
   color: var(--text);
 }
 
-.correct {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 8px;
-}
-
-.correct-panel {
+/* "Wrong pick?"'s form in the pick's panel: its fields one under another, Save at the panel's foot. */
+.note-form {
+  flex: 1 0 auto;
   display: flex;
   flex-direction: column;
   gap: 10px;
-  align-items: flex-start;
 }
 
-.correct-panel[hidden] {
-  display: none;
+.note-form .panel-section {
+  margin-inline: 0;
 }
 
 /* A saved note's two lines: the first in gold, the second in cream. */
-.correct-panel .note .ack {
+.note-form .note .ack {
   color: var(--gold);
   font-weight: 600;
 }
 
-.correct-panel .note .ask {
+.note-form .note .ask {
   color: var(--text);
 }
 
@@ -1083,13 +1075,8 @@ a.wordmark:focus-visible {
   display: none;
 }
 
-.correct-panel textarea {
-  width: min(420px, 100%);
+.note-form textarea {
   resize: vertical;
-}
-
-.correct-panel textarea,
-.correct-panel input[type="text"] {
   font: inherit;
   font-size: 16px;
   color: var(--text);
@@ -1098,7 +1085,7 @@ a.wordmark:focus-visible {
   border-radius: 10px;
   padding: 10px 14px;
   min-height: 44px;
-  width: min(320px, 100%);
+  width: 100%;
 }
 
 @keyframes rise {

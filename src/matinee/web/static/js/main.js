@@ -1,7 +1,7 @@
 // Matinee's page: the box office, then the questions on the poster wall, then the pick.
 
 import { del, get, post, put } from "./api.js";
-import { noteLink } from "./note.js";
+import { noteLink, walkOf } from "./note.js";
 import { aboutLink, credits } from "./credits.js";
 import { Door, buildMarquee, marqueeReady, showCount } from "./door.js";
 import { LockedDoor, WALL_FADE_MS } from "./locked.js";
@@ -682,7 +682,7 @@ function pickActions() {
     startOver: () => leaveTo(start),
     backPanel,
     failed: (data) => problem(data, start),
-    noteLink: (film) => noteLink({ visit, film, trees: visit.trees }),
+    noteLink: (film, panel) => noteLink({ walk: walkOf(visit), film, trees: visit.trees, panel }),
   };
 }
 

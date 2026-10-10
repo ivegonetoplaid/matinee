@@ -194,7 +194,7 @@ function choices(frame, info, film, result, actions, note) {
     info.link ? moreOn(info) : null,
     back,
   );
-  return [buttons, note ? firstPickReveal(result, note) : null, actions.noteLink(film)].filter(Boolean);
+  return [buttons, note ? firstPickReveal(result, note) : null, actions.noteLink(film, frame.panel)].filter(Boolean);
 }
 
 // On a desktop the facts stand under Matinee's line, and the resting line gives up the room it kept for four lines

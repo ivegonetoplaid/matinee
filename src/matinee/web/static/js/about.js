@@ -44,7 +44,7 @@ function copy(back) {
       h(
         "p",
         {},
-        'It won\'t always get it right. Where a film belongs is a judgment call, and yours may differ from mine. If you think I\'ve put something in the wrong place, you can tell me where it fits best by choosing "Something wrong with this pick?". Every note reaches whoever runs Matinee, and when they agree, the film moves for everyone.',
+        'It won\'t always get it right. Where a film belongs is a judgment call, and yours may differ from mine. If you think I\'ve put something in the wrong place, you can tell me where it fits best by choosing "Wrong pick?". Every note reaches whoever runs Matinee, and when they agree, the film moves for everyone.',
       ),
     ),
     section(
