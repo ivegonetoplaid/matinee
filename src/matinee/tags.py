@@ -83,7 +83,7 @@ def _shown(words: Sequence[str], films: object, skip: frozenset[str]) -> dict[in
         raise TagsError("its films are not an object keyed by TMDB id")
     shown: dict[int, tuple[str, ...]] = {}
     for tmdb, positions in films.items():
-        if not isinstance(positions, list) or not all(isinstance(p, int) and 0 <= p < len(words) for p in positions):
+        if not isinstance(positions, list) or not all(type(p) is int and 0 <= p < len(words) for p in positions):
             raise TagsError(f"the tags for film {tmdb} are not positions in the word list")
         kept = [words[p] for p in positions if words[p] not in skip]
         shown[int(tmdb)] = tuple(kept[:SHOWN])

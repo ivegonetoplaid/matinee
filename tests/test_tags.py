@@ -70,7 +70,7 @@ def test_written_tags_keep_each_films_strongest_words_in_order_and_the_first_mov
     assert json.loads((tmp_path / "t.json").read_text())["licence"] == "terms"
 
 
-@pytest.mark.parametrize("films", [{"1": [7]}, {"1": "x"}, {"one": [0]}, [[0]]])
+@pytest.mark.parametrize("films", [{"1": [7]}, {"1": [-1]}, {"1": [True]}, {"1": "x"}, {"one": [0]}, [[0]]])
 def test_malformed_tags_and_a_missing_skip_list_are_refused(tmp_path: Path, films: object) -> None:
     (tmp_path / "t.json").write_text(json.dumps({"source": "s", "words": ["a", "b"], "films": films}))
     (tmp_path / "skip.txt").write_text("", encoding="utf-8")
