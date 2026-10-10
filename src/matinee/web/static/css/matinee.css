@@ -694,8 +694,10 @@ a.wordmark:focus-visible {
   align-items: flex-end;
 }
 
+/* The picture fills its link's width, which the strip's words can widen on a narrow phone. */
 .slot-poster {
   display: block;
+  min-width: 100%;
   object-fit: cover;
 }
 
@@ -1539,11 +1541,39 @@ a.wordmark:focus-visible {
   scroll-margin-bottom: calc(-1 * (var(--band-fade) + 72px));
 }
 
+/* On a phone the bar stands at the foot of Matinee's words in two rows: "Not that one" alone on the first, "‹ Back"
+   and "Wrong pick?" sharing the second. */
 @media (max-width: 600px) {
   .foot-bar {
+    flex-basis: auto;
     display: flex;
-    flex-wrap: wrap;
-    gap: 8px 12px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    margin-top: auto;
+  }
+
+  .foot-bar > div {
+    display: flex;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .foot-bar > .bar-centre {
+    order: -1;
+  }
+
+  .foot-bar > div:empty {
+    display: none;
+  }
+
+  .foot-bar .action {
+    flex: 1 1 0;
+  }
+
+  /* "‹ Back" alone (before any door, or with no film) keeps the width it has beside "Wrong pick?". */
+  .foot-bar .bar-left > .action:only-child {
+    flex: 0 1 calc(50% - 5px);
   }
 }
 
