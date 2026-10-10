@@ -2,7 +2,7 @@
 
 import { del, get, post, put } from "./api.js";
 import { noteLink, walkOf } from "./note.js";
-import { aboutLink, credits } from "./credits.js";
+import { aboutLink, credits, dtddFoot } from "./credits.js";
 import { Door, buildMarquee, marqueeReady, showCount } from "./door.js";
 import { LockedDoor, WALL_FADE_MS } from "./locked.js";
 import { clear, h, isPhone, prefersLessMotion, sentenceCase, wait } from "./dom.js";
@@ -515,12 +515,15 @@ function pickFrame() {
   const phone = isPhone();
   const left = h("div", { class: "pick-left" }, phone ? null : aside);
   const showing = h("section", { class: "showing" }, left);
+  // DoesTheDogDie's credit, hidden until a line names one of its topics: at the foot bar's right end on a desktop,
+  // centred in the foot band on a phone.
+  const credit = dtddFoot();
   // The foot bar's row is kept from the start on a desktop, so nothing moves when its actions arrive.
-  const bar = h("div", { class: "foot-bar" });
-  // The pick shows no trail and no credit line: "Start over" is in the Back panel, and TMDB's notice is on About.
-  const foot = h("footer", { class: "bottombar" }, phone ? null : bar);
+  const bar = h("div", { class: "foot-bar" }, h("div"), h("div"), h("div", { class: "bar-right" }, phone ? null : credit));
+  // The pick shows no trail and no TMDB line: "Start over" is in the Back panel, and TMDB's notice is on About.
+  const foot = h("footer", { class: "bottombar" }, phone ? credit : bar);
   clear(stage).append(topbar(nameTag() || h("span")), showing, ...(phone ? [aside] : []), foot);
-  const frame = { line, aside, left, showing, bar };
+  const frame = { line, aside, left, showing, bar, credit };
   frame.panel = pickPanel(stage, frame, panelHistory);
   pickShowing = frame;
   holdPickEntry();

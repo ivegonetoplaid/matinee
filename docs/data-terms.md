@@ -44,7 +44,15 @@ https://www.doesthedogdie.com/terms (last modified 2026-08-07).
   verified or guaranteed (section 13.3). Matinee's About page says the check is
   best effort and a film nobody has voted on cannot be checked.
 - **Credit it.** "Powered by DoesTheDogDie.com", visible and linked to
-  `https://www.doesthedogdie.com`, wherever its data is shown (section 6).
+  `https://www.doesthedogdie.com`, wherever its data is shown. Section 6 reads:
+  "You must display clear and visible attribution to Does the Dog Die? wherever
+  the Company Offering is displayed in Your Application. Attribution must: (a)
+  use the phrase “Powered by DoesTheDogDie.com” or such other phrase as we
+  approve in writing; (b) be reasonably visible to End Users viewing the Company
+  Offering; and (c) include a hyperlink to https://www.doesthedogdie.com where
+  the medium permits. Attribution requirements may be modified only by written
+  agreement." Where on the pick Matinee shows it is in the behaviour
+  specification, section 12 (Credits).
 - **One key per installation.** Each household uses its own key; the terms
   forbid letting anyone else use your credentials (section 3). Matinee stays
   under the free tier's published rate.

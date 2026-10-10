@@ -1505,7 +1505,8 @@ a.wordmark:focus-visible {
 }
 
 /* The pick's foot bar, a row of its own across the foot on a desktop: "‹ Back" and "Wrong pick?" at its left, "Not
-   that one" at its exact centre at every width, its right end empty. Its row is kept from the start of the pick. */
+   that one" at its exact centre at every width, DoesTheDogDie's credit at its right end when shown. Its row is kept
+   from the start of the pick. */
 .foot-bar {
   flex-basis: 100%;
   display: grid;
@@ -1520,6 +1521,12 @@ a.wordmark:focus-visible {
   flex-wrap: wrap;
   align-items: center;
   gap: 12px;
+}
+
+/* DoesTheDogDie's credit stands at the bar's right end, on the band, when a pick's line names one of its topics. */
+.bar-right {
+  display: flex;
+  justify-content: flex-end;
 }
 
 /* A desktop too narrow for one row keeps two from the start: "Not that one" centred on the first, "‹ Back" and
@@ -1540,6 +1547,11 @@ a.wordmark:focus-visible {
     grid-column: 1 / -1;
     grid-row: 2;
     flex-wrap: nowrap;
+  }
+
+  .foot-bar > .bar-right {
+    grid-column: 3;
+    grid-row: 1;
   }
 }
 

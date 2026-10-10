@@ -224,16 +224,17 @@ Everything a viewer uses over the poster wall is a letterbox or an action. A bar
 text link stands only in the foot band: the credit line, its "About",
 DoesTheDogDie's credit and the trail's crumbs. About's own prose keeps its
 links, and the corner mark is the brand's link. The pick is the exception: it
-shows no trail and no credit line, at any width. Its poster is the link to the
-film's page, and DoesTheDogDie's credit stands beside what it credits.
+shows no trail and no TMDB credit line, at any width. Its poster is the link to
+the film's page, and DoesTheDogDie's credit stands in its foot band.
 
 The page specification owns phone navigation, action order and credit placement.
 
 "Powered by DoesTheDogDie.com" stands in the foot band of every screen that
-shows DoesTheDogDie's data. On the pick it stands instead in small text
-directly beside the content it credits: beneath Matinee's line when the line
-is built on that data, beside the content note, and in the note that reveals a
-turned-away film. It stands nowhere else on the pick.
+shows DoesTheDogDie's data. On the pick it stands in the foot band whenever
+Matinee's line names one of DoesTheDogDie's topics: at the foot bar's right end
+on a desktop, centred beneath Matinee's words on a phone. On a resting pick it
+also stands directly after an unchecked film's note. It stands nowhere else on
+the pick.
 
 An action that goes to another address is an `<a>` styled as an action, never a
 `<button>`. Every link that leaves Matinee opens in a new tab with
@@ -292,14 +293,15 @@ Text on the wall is at least 16 px and set in cream or gold. Dim text, and text
 from 11 to 15 px, stands only inside a band, with one exception: on the resting
 pick, where the wall behind is dimmed, and inside the pick's panel, such text
 may stand directly beside what it describes, as "by audience votes" stands
-beside the rank and DoesTheDogDie's credit beside its content.
+beside the rank and DoesTheDogDie's credit after an unchecked film's note.
 
 ### 6.3 The bands
 
 Every screen over the poster wall has a dark band at the top and at the foot.
 Each is the page base at 92 per cent behind its bar, the top bar with the
 corner mark and the viewer, the foot with the credit line (on a phone, its way back
-and DoesTheDogDie's credit; on the pick, its actions), and feathers to nothing
+and DoesTheDogDie's credit; on the pick, its actions and DoesTheDogDie's
+credit), and feathers to nothing
 into the wall over 96 px on a desktop and 48 px on a phone, with no visible
 edge. On the door's screens, the dark fade behind the marquee is the top band,
 at its own depth. The locked door stands on subway tile and has no bands. About

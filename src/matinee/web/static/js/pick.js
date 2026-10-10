@@ -146,12 +146,11 @@ function lookUp(result) {
   return h("a", { class: "action petrol", href, target: "_blank", rel: "noopener noreferrer" }, "Look it up on DoesTheDogDie ↗");
 }
 
-// DoesTheDogDie's credit for a line built on its data: directly beneath Matinee's line, before the line starts to
-// type, so it is on screen for as long as the line is. Once per pick. Without a DoesTheDogDie key none of its data
-// shows, so neither does its credit.
-function creditLine(frame) {
-  if (!offers.dtdd || frame.aside.querySelector(":scope > .beside-credit")) return;
-  frame.line.after(dtddBeside());
+// DoesTheDogDie's credit in the foot band, for a line that names one of its topics: shown before the line starts to
+// type, so it is on screen for as long as the line is. Without a DoesTheDogDie key none of its data shows, so neither
+// does its credit.
+function showCredit(frame) {
+  if (offers.dtdd) frame.credit.hidden = false;
 }
 
 // Adds "What were you going to show me?", which reveals the film the check turned away, to `note`, the
@@ -183,7 +182,7 @@ function firstPickReveal(result, note) {
 // the last of them, its trip named.
 async function showNoFilm(result, frame, actions) {
   const { line, aside } = frame;
-  creditLine(frame);
+  if (result.tired) showCredit(frame); // the line names the first film's topic; an exhausted pool names none
   const [said, more] = twoParts(result.tired || result.exhausted); // first sentence gold, the rest cream
   await typeLine(line, said, more);
   const startOver = h("button", { class: "action cream start-over", type: "button", onclick: actions.startOver }, "Start over");
@@ -220,7 +219,8 @@ function backAction(frame, actions) {
 // The pick's foot bar: `left` at its left, `centre` at its exact centre, its right end empty. On a phone the bar
 // stands at the foot of Matinee's words.
 function fillBar(frame, left, centre = null) {
-  frame.bar.replaceChildren(h("div", { class: "bar-left" }, left), h("div", { class: "bar-centre" }, centre), h("div"));
+  // The bar's right end keeps what pickFrame put there: DoesTheDogDie's credit on a desktop.
+  frame.bar.replaceChildren(h("div", { class: "bar-left" }, left), h("div", { class: "bar-centre" }, centre), frame.bar.lastElementChild);
   if (isPhone()) frame.aside.append(frame.bar);
 }
 
@@ -235,7 +235,7 @@ function pickBar(frame, film, actions, walk) {
 // fuse burnt the line away, and whether DoesTheDogDie's credit stood with it (the line, or the turned-away film it
 // names, was its data).
 function lineSaid(frame, fuse) {
-  const credit = Boolean(frame.aside.querySelector(".beside-credit"));
+  const credit = !frame.credit.hidden;
   if (fuse?.lit()) return { gold: "", reveal: "", credit };
   const { line } = frame;
   return { gold: line.querySelector(".ack")?.textContent ?? "", reveal: line.querySelector(".ask")?.textContent ?? "", credit };
@@ -246,7 +246,7 @@ function lineSaid(frame, fuse) {
 function factsUnderLine(frame, info, fuse) {
   if (!fuse?.lit()) frame.line.classList.add("rested");
   const said = facts(info);
-  if (said) (frame.aside.querySelector(":scope > .beside-credit") ?? frame.line).after(said);
+  if (said) frame.line.after(said);
 }
 
 // The resting page: the film's details rise, and the landed poster, where there is one, moves from the
@@ -301,12 +301,13 @@ async function goldLine(frame, result, lines, fuse) {
   const { line, aside } = frame;
   // A film shown after three tripped the list names its trip from DoesTheDogDie's data, as does a film brought back
   // whose line was built on it.
-  if (result.last || lines.credit) creditLine(frame);
+  if (result.last || lines.credit) showCredit(frame);
   if (!result.swapped) return lines.gold || "";
   fuse?.cancel();
   lines.reveal = lines.beneath(result.swapped.line);
-  // The reason and the turned-away film are DoesTheDogDie's data: its credit stands in the note that reveals the film.
-  aside.append(h("div", { class: "swap-note" }, dtddBeside()));
+  // The reason names DoesTheDogDie's topic, so its credit stands in the foot band.
+  showCredit(frame);
+  aside.append(h("div", { class: "swap-note" }));
   await typeLine(line, result.swapped.line, "");
   return result.swapped.line;
 }
