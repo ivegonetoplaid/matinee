@@ -966,7 +966,8 @@ a.wordmark:focus-visible {
   color: var(--dim);
 }
 
-/* The film's tags: outlined chips that wrap, with small corners; never filled and never a pill. */
+/* The film's tags: outlined chips that wrap, with small corners, each on the scrim's own dark backing; never filled
+   with an accent and never a pill. */
 .tags {
   display: flex;
   flex-wrap: wrap;
@@ -980,7 +981,7 @@ a.wordmark:focus-visible {
   padding: 5px 12px;
   border: 1px solid color-mix(in srgb, var(--text) 30%, transparent);
   border-radius: 6px;
-  background: color-mix(in srgb, var(--base) 60%, transparent);
+  background: var(--shade);
   color: var(--text);
   font-size: 16px;
   line-height: 1.2;

@@ -11,6 +11,7 @@ import { get } from "./api.js";
 import { twoParts } from "./door-rules.js";
 import { h, isPhone, prefersLessMotion, sentenceCase, wait } from "./dom.js";
 import { dtddBeside } from "./credits.js";
+import { offers } from "./offers.js";
 import { kept } from "./run.js";
 import { backdropUrl, corsImage } from "./pictures.js";
 import { panelAction } from "./panel.js";
@@ -146,9 +147,10 @@ function lookUp(result) {
 }
 
 // DoesTheDogDie's credit for a line built on its data: directly beneath Matinee's line, before the line starts to
-// type, so it is on screen for as long as the line is. Once per pick.
+// type, so it is on screen for as long as the line is. Once per pick. Without a DoesTheDogDie key none of its data
+// shows, so neither does its credit.
 function creditLine(frame) {
-  if (frame.aside.querySelector(":scope > .beside-credit")) return;
+  if (!offers.dtdd || frame.aside.querySelector(":scope > .beside-credit")) return;
   frame.line.after(dtddBeside());
 }
 
