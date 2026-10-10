@@ -12,6 +12,7 @@ import { twoParts } from "./door-rules.js";
 import { h, isPhone, prefersLessMotion, sentenceCase, wait } from "./dom.js";
 import { backdropUrl, corsImage } from "./pictures.js";
 import { offers } from "./offers.js";
+import { panelAction } from "./panel.js";
 import { typeLine } from "./type.js";
 
 const BEAT_MS = 500; // the grown poster holds for one beat before it moves to rest
@@ -182,18 +183,16 @@ function moreOn(info) {
   return h("a", { class: "action petrol", href: info.link, target: "_blank", rel: "noopener noreferrer" }, "More on TMDB ↗");
 }
 
-// What sits under the line on the resting page. The actions come straight after the line, which keeps
-// four lines of room whatever its words, so "Not that one" sits in the same place for every film. The
-// swap reason's credit, `note`, moves beneath them. The answers so far are in the trail at the foot of
-// the screen; a phone, which shows no trail, shows "Back" before "Start over" instead.
-function choices(info, film, result, actions, note) {
+// What sits under the line on the resting page. The actions come straight after the line and its facts. The swap
+// reason's credit, `note`, moves beneath them. "‹ Back" opens the panel with the way back.
+function choices(frame, info, film, result, actions, note) {
+  const back = panelAction("‹ Back", () => frame.panel.open(back, "Go back to…", actions.backPanel()));
   const buttons = h(
     "div",
     { class: "choices" },
     h("button", { class: "action rose", type: "button", onclick: actions.notThatOne }, "Not that one"),
     info.link ? moreOn(info) : null,
-    actions.back ? h("button", { class: "action cream back", type: "button", onclick: actions.back }, "Back") : null,
-    h("button", { class: "action cream start-over", type: "button", onclick: actions.startOver }, "Start over"),
+    back,
   );
   return [buttons, note ? firstPickReveal(result, note) : null, actions.noteLink(film)].filter(Boolean);
 }
@@ -214,7 +213,7 @@ async function rest({ stage, wall, frame, film, result, actions, info, backdrop,
   const shown = feature(info, film, result, backdrop);
   frame.showing.append(shown);
   if (!isPhone()) factsUnderLine(frame, info, fuse);
-  frame.aside.append(...choices(info, film, result, actions, frame.aside.querySelector(".swap-note")));
+  frame.aside.append(...choices(frame, info, film, result, actions, frame.aside.querySelector(".swap-note")));
   // Measured once the aside is whole, so the poster takes only the height left beneath it.
   const from = wall.landedTile()?.img.getBoundingClientRect();
   if (poster && from) {
@@ -304,8 +303,8 @@ async function bringOut({ wall, frame, pause, posterReady, left, lines, gold, fu
 }
 
 // The page's pick screen. `door` is the tree the film was drawn through, which its rank counts among (null before
-// a door). `actions` holds notThatOne, rollAgain, showPicked, startOver, back (null without a
-// way back), failed and the note link panel's builder. `readUntil` (a performance.now() time) holds the hunt until the line on screen has
+// a door). `actions` holds notThatOne, rollAgain, showPicked, startOver, backPanel (what the Back panel holds),
+// failed and the note link panel's builder. `readUntil` (a performance.now() time) holds the hunt until the line on screen has
 // been read. After every wait the pick checks that its screen is still showing and that the pick was
 // not ended on the wall: a trail answer or the name tag can end it at any moment, and a pick the viewer
 // has left changes nothing further.

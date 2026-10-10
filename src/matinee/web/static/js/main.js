@@ -7,6 +7,7 @@ import { Door, buildMarquee, marqueeReady, showCount } from "./door.js";
 import { LockedDoor, WALL_FADE_MS } from "./locked.js";
 import { clear, h, isPhone, prefersLessMotion, sentenceCase, wait } from "./dom.js";
 import { cornerMark } from "./flight.js";
+import { pickPanel } from "./panel.js";
 import { showPick } from "./pick.js";
 import { posterPaths } from "./pictures.js";
 import { Deck, dealBeneath, dealPair, setFor } from "./quips.js";
@@ -491,7 +492,9 @@ function pickFrame() {
   const showing = h("section", { class: "showing" }, left);
   const foot = h("footer", { class: "bottombar" }, trail(lastCrumb(true)), h("span"), credits({ dtdd: offers.dtdd }));
   clear(stage).append(topbar(nameTag() || h("span")), showing, ...(phone ? [aside] : []), foot);
-  return { line, aside, left, showing, credit: foot.querySelector(".dtdd-credit") };
+  const frame = { line, aside, left, showing, credit: foot.querySelector(".dtdd-credit") };
+  frame.panel = pickPanel(stage, frame);
+  return frame;
 }
 
 function hasTopics() {
@@ -626,11 +629,10 @@ async function pickNow(opening = "", again = false, destruct = null, posterBack 
   });
 }
 
-// A phone pick's "Back", to the question the last answer was given on; null where that is the walk's first
-// screen.
-function backAction() {
-  const target = backTo(lastCrumb(true));
-  return target === null ? null : () => leaveTo(() => goTo(target));
+// What the Back panel holds: "Start over" at its foot.
+function backPanel() {
+  const again = h("button", { class: "action cream", type: "button", onclick: () => leaveTo(start) }, "Start over");
+  return h("div", { class: "panel-foot" }, again);
 }
 
 // What the pick screen's controls do.
@@ -649,7 +651,7 @@ function pickActions() {
       showPicked(held);
     },
     startOver: () => leaveTo(start),
-    back: backAction(),
+    backPanel,
     failed: (data) => problem(data, start),
     noteLink: (film) => noteLink({ visit, film, trees: visit.trees }),
   };

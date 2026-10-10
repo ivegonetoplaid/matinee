@@ -258,8 +258,7 @@ a.wordmark:focus-visible {
 }
 
 /* A phone's way back, "Back" and "Start over", stands where a desktop shows the trail. */
-.way-back,
-.aside .choices > .back {
+.way-back {
   display: none;
 }
 
@@ -276,10 +275,6 @@ a.wordmark:focus-visible {
     flex-basis: 100%;
     justify-content: center;
     gap: 12px;
-  }
-
-  .aside .choices > .back {
-    display: inline-flex;
   }
 
   /* After three films trip the list, "Start over" stands beside "Roll again" and the longer action takes a
@@ -1118,11 +1113,149 @@ a.wordmark:focus-visible {
   }
 }
 
+/* The pick's panel: a solid panel over the left column, from under the top bar down to the foot's bar, always at that
+   full height (panel.js places it), and above the foot's band; over everything under the top bar on a phone. Its
+   text needs no scrim. */
+.pick-panel {
+  position: fixed;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 0;
+  padding: 16px 16px 14px;
+  border: 1px solid color-mix(in srgb, var(--text) 14%, transparent);
+  border-radius: 12px;
+  background: var(--menu);
+  box-shadow: 0 18px 50px color-mix(in srgb, var(--black) 65%, transparent);
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 4px 0;
+  gap: 12px;
+}
+
+.panel-title {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 30px;
+  letter-spacing: 0.02em;
+  color: var(--gold);
+}
+
+.panel-close {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--text);
+  font-size: 30px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .panel-close:hover {
+    background: color-mix(in srgb, var(--text) 8%, transparent);
+  }
+}
+
+/* The panel's own room: it scrolls inside the panel when its content is taller, with room inside its edges for a
+   focus ring. */
+.panel-body {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 4px;
+  overflow-y: auto;
+}
+
+/* The left column the panel stands over is not drawn while it is open, so nothing shows through the panel's
+   corners; panel.js makes it inert. The foot's bar stays. */
+.stage:has(> .pick-panel) .pick-left {
+  opacity: 0;
+}
+
+/* Each panel opens with its explanation at the synopsis's size. */
+.panel-lede {
+  margin: 0 0 8px;
+  font-size: 18px;
+  line-height: 1.5;
+  color: var(--text);
+}
+
+/* In a panel with few choices, the choices stand centred in the height below the explanation. */
+.panel-mid {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+}
+
+.panel-foot {
+  margin-top: auto;
+  padding-top: 8px;
+  display: flex;
+}
+
+.panel-foot > .action {
+  flex: 1 1 auto;
+}
+
+/* The action whose panel is open shows its thread. */
+.action.open::after {
+  transform: scaleX(1);
+}
+
 /* On a phone Matinee's words keep the foot of the pick: the line, two rows of buttons and the correction
    link, then DoesTheDogDie's credit line where it has a key; its top never moves from the first word of a
    pick to the last. Above it the showing scrolls on its own and ends at the foot, so
    nothing passes behind the words: the poster fills it first, and the details follow beneath. */
 @media (max-width: 600px) {
+  /* On a phone the panel takes everything under the top bar, to the screen's edges and foot. */
+  .stage:has(> .showing) > .pick-panel {
+    position: relative;
+    grid-row: 2 / -1;
+    margin: 0 calc(-1 * var(--pad)) calc(-1 * var(--pad));
+    padding: 12px calc(var(--pad) - 4px) 16px;
+    border-width: 1px 0 0;
+    border-radius: 0;
+    z-index: 3;
+  }
+
+  /* Each part keeps its cell, so the panel can stand over the rows beneath the top bar. */
+  .stage:has(> .showing) > * {
+    grid-column: 1;
+  }
+
+  .stage:has(> .showing) > .topbar {
+    grid-row: 1;
+  }
+
+  .stage:has(> .showing) > .showing {
+    grid-row: 2;
+  }
+
+  .stage:has(> .showing) > .aside {
+    grid-row: 3;
+  }
+
+  .stage:has(> .showing) > .bottombar {
+    grid-row: 4;
+  }
+
   .stage:has(> .showing) {
     --pick-talk: 316px; /* the line's four lines, two rows of actions and the correction, without scrolling */
     display: grid;
