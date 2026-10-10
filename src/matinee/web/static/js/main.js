@@ -734,7 +734,9 @@ function answerRow(row) {
 // the film showing now is marked as such and does nothing.
 function filmRow(shown) {
   const { film } = shown;
-  const thumb = h("img", { class: "thumb", src: wall.posterUrl(film.tmdb, "xs"), alt: "", loading: "lazy", decoding: "async" });
+  // Fetched as the wall fetches its posters (crossorigin before src), so the two never share a cached copy that one
+  // of them refuses.
+  const thumb = h("img", { class: "thumb", crossorigin: "anonymous", src: wall.posterUrl(film.tmdb, "xs"), alt: "", loading: "lazy", decoding: "async" });
   thumb.addEventListener("error", () => thumb.setAttribute("src", "/static/blank.svg"), { once: true }); // a plain card
   const words = [h("span", { class: "row-title" }, film.title), film.year ? h("span", { class: "row-year" }, ` ${film.year}`) : null];
   if (shown.now) {
