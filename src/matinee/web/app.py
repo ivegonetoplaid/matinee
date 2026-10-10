@@ -321,7 +321,7 @@ def add_door_routes(
         tokens = device_tokens(request)
         held_by_device = store.holding(tokens)
         if len(held_by_device) != len(tokens):
-            set_tokens(response, [t for t in tokens if t in held_by_device])
+            set_tokens(request, response, [t for t in tokens if t in held_by_device])
         held = {p.id for p in held_by_device.values()}
         tiles = [
             Tile(id=p.id, name=p.name, avatar=p.avatar, has_pin=p.has_pin, held=p.id in held) for p in store.everyone()
@@ -366,7 +366,7 @@ def add_delete_route(app: FastAPI, store: Store) -> None:
         if not mine:
             raise HTTPException(status_code=403, detail="refused")
         gone = store.delete(profile_id, tokens)
-        set_tokens(response, [t for t in tokens if t in held and t not in mine])
+        set_tokens(request, response, [t for t in tokens if t in held and t not in mine])
         return Deleted(name=gone.name)
 
 

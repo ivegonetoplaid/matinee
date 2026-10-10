@@ -962,7 +962,7 @@ picks nothing until it opens or makes a profile.
 | PIN storage | salted scrypt digest (N 2^14, r 8, p 1, 32 bytes, 16-byte salt); never stored as typed |
 | Lockout | **5** wrong PINs lock that profile against PIN entry for **15 minutes**; keyed on the profile, never on a client address |
 | Device token | 32 random bytes, URL-safe; stored only as a SHA-256 digest, so a copy of the store cannot be replayed as a cookie |
-| Token cookie | `matinee_tokens`: `HttpOnly`, `Secure`, `SameSite=Lax`, path `/`, 400 days; holds at most **8** tokens, a ninth pushing out the oldest, and never a name or PIN |
+| Token cookie | `matinee_tokens`: `HttpOnly`, `SameSite=Lax`, path `/`, 400 days, and `Secure` whenever the browser reached Matinee over HTTPS (directly, or through a proxy whose forwarded scheme uvicorn trusts); over plain `http://` it is not `Secure`, because a browser discards a `Secure` cookie set there and every walk under a profile would be refused; holds at most **8** tokens, a ninth pushing out the oldest, and never a name or PIN |
 | Token pruning | tokens older than 400 days are deleted whenever a new token is issued |
 
 - **A device holding a valid token for a profile is never asked its PIN** and
@@ -1230,8 +1230,8 @@ never kept. No tree, scale or score is built from DoesTheDogDie data.
   read afresh.
 - **Per-device allowance.** A device may spend at most **60 film lookups** in
   any hour. A film lookup is one film, which is up to two requests. The device
-  is known by an anonymous cookie, `matinee_device` (`HttpOnly`, `Secure`,
-  `SameSite=Lax`, 400 days), issued only to a viewer with topics. Devices idle
+  is known by an anonymous cookie, `matinee_device` (`HttpOnly`,
+  `SameSite=Lax`, 400 days, `Secure` over HTTPS as the token cookie is), issued only to a viewer with topics. Devices idle
   for an hour are forgotten.
 - Every request names Matinee in its user agent, because DoesTheDogDie refuses
   the default one.
@@ -2563,7 +2563,7 @@ symbol when one does not match.
 | `src/matinee/web/common.py::PROFILE_LINES` (each refusal's words) | `src/matinee/web/common.py:25` | 2026-10-05 |
 | `src/matinee/web/common.py::Seat` / `Tile` / `Deleted` / `Door` (what the page is told of a profile) | `src/matinee/web/common.py:38` | 2026-10-05 |
 | `src/matinee/web/common.py::NewProfile` / `AvatarChoice` / `PinEntry` (request caps) | `src/matinee/web/common.py:72` | 2026-10-05 |
-| `src/matinee/web/common.py::set_tokens` / `with_token` | `src/matinee/web/common.py:104` | 2026-10-05 |
+| `src/matinee/web/common.py::over_https` / `set_tokens` / `with_token` | `src/matinee/web/common.py:104` | 2026-10-10 |
 | `src/matinee/web/app.py::add_door_routes` (`GET /api/door`, create, open) | `src/matinee/web/app.py:311` | 2026-10-09 |
 | `src/matinee/web/app.py::add_avatar_route` (`PUT /api/profiles/{id}/avatar`) | `src/matinee/web/app.py:350` | 2026-10-09 |
 | `src/matinee/web/app.py::add_delete_route` (`DELETE /api/profiles/{id}`) | `src/matinee/web/app.py:359` | 2026-10-09 |
@@ -2703,7 +2703,7 @@ symbol when one does not match.
 | `src/matinee/tmdb.py::fetch_picture` / `IMAGES` / `IMAGE_SIZES` / `TmdbImageError` | `src/matinee/tmdb.py:292` | 2026-10-05 |
 | `src/matinee/tmdb.py::ImageGate` / `IMAGE_GATE` / `IMAGE_RATE` (50 a second, 20,000 an hour, a hold after a 429 or 503) | `src/matinee/tmdb.py:236` | 2026-10-05 |
 | `src/matinee/web/app.py::add_error_handlers` | `src/matinee/web/app.py:138` | 2026-10-09 |
-| `src/matinee/web/common.py::Problem` | `src/matinee/web/common.py:125` | 2026-10-05 |
+| `src/matinee/web/common.py::Problem` | `src/matinee/web/common.py:134` | 2026-10-10 |
 | `src/matinee/web/viewing.py::add_viewing_routes` (`POST /api/first` with the source question, `POST /api/walk`) | `src/matinee/web/viewing.py:353` | 2026-10-05 |
 | `src/matinee/web/viewing.py::WalkIn` / `PickIn` / `FirstIn` (request caps; no field skips the check) | `src/matinee/web/viewing.py:45` | 2026-10-05 |
 | `tests/test_user_agent.py::test_every_outbound_request_names_matinee` | `tests/test_user_agent.py:36` | 2026-10-05 |
