@@ -33,6 +33,7 @@ from matinee.quips import Quips, QuipsError, load_quips
 from matinee.ranks import rank
 from matinee.store import AVATARS, Locked, Store, StoreError
 from matinee.table import TableError
+from matinee.tags import Tags, TagsError, load_tags
 from matinee.tmdb import TmdbImageError, fetch_picture, picture_type, read_shelf, shelf_file, shelve
 from matinee.web.admission import COOKIE as ADMISSION_COOKIE
 from matinee.web.admission import LIFE_S as ADMISSION_LIFE_S
@@ -92,6 +93,7 @@ class FilmCard(BaseModel):
     link_to: Literal["seerr", "tmdb"]
     backdrop_path: str | None  # TMDB's path for the backdrop, given only when TMDB is the image source
     rank: str | None  # how well audiences regard the film among the door's films, in words; None under the vote floor
+    tags: list[str]  # the film's strongest genome words less the skip list, strongest first; none when not covered
 
 
 class Pictures(BaseModel):
@@ -275,7 +277,9 @@ def film_synopsis(theatre: Theatre, film: Held, tmdb: int) -> str | None:
         return film.synopsis
 
 
-def add_film_routes(app: FastAPI, theatre: Theatre, seerr: SeerrCheck, images: ImageSource, shelf: Shelf) -> None:
+def add_film_routes(
+    app: FastAPI, theatre: Theatre, seerr: SeerrCheck, images: ImageSource, shelf: Shelf, tags: Tags
+) -> None:
     @app.get("/img/{kind}/{tmdb}/{size}")
     def image(kind: str, tmdb: int, size: str) -> Response:
         image_kind: ImageKind = "backdrop" if kind == "backdrop" else "poster"
@@ -312,6 +316,7 @@ def add_film_routes(app: FastAPI, theatre: Theatre, seerr: SeerrCheck, images: I
             link_to=link_to,
             backdrop_path=film.backdrop_path if images == "tmdb" else None,
             rank=rank(cat, tmdb, door),
+            tags=tags.of(tmdb),
         )
 
 
@@ -532,6 +537,20 @@ def add_state_log(app: FastAPI, logbook: StateLog) -> None:
         return response
 
 
+NO_TAGS = Tags()  # an app given no tags shows none
+
+
+def shipped_tags(faults: list[str]) -> Tags:
+    """The shipped tags with the skip list applied; none, with a setup fault added to `faults`, when either cannot
+    be read, so picks go on without tags."""
+    try:
+        return load_tags()
+    except TagsError as exc:
+        log.error("the pick's tags cannot be read, so picks show none: %s", exc)
+        faults.append(f"The film tags can't be read ({exc}), so picks come without them. Update or reinstall Matinee.")
+        return Tags()
+
+
 def create_app(
     config: Config,
     theatre: Theatre,
@@ -540,14 +559,16 @@ def create_app(
     clock: Callable[[], float] = time.time,
     picker: Picker | None = None,
     quips: Quips | None = None,
+    tags: Tags = NO_TAGS,
     wrong_word_delay_s: float = WRONG_WORD_DELAY_S,
     seerr: SeerrCheck | None = None,
     faults: Sequence[str] = (),
     state: Callable[[SeerrCheck], StateLog] | None = None,
     lifespan: Lifespan[FastAPI] | None = None,
 ) -> FastAPI:
-    """The app. `quips` defaults to data/quips.json, read now. `faults` are setup faults found before the app,
-    in words for the setup note.
+    """The app. `quips` defaults to data/quips.json, read now; `tags` are the films' tags, none unless given
+    (`shipped_tags` reads Matinee's own). `faults` are setup faults found before the app, in words for the setup
+    note.
 
     With a door word set, the installation secret is read, or made at the first start, now; an unreadable one
     stops the start.
@@ -570,7 +591,7 @@ def create_app(
     seerr = seerr or SeerrCheck(config.seerr_url)
     if state is not None:
         add_state_log(app, state(seerr))
-    add_film_routes(app, theatre, seerr, config.images, Shelf(config.picture_shelf, clock))
+    add_film_routes(app, theatre, seerr, config.images, Shelf(config.picture_shelf, clock), tags)
     add_setup_route(app, theatre, config, seerr, faults)
     add_page(app, config.images)
     add_door_routes(app, theatre, store, clock, dtdd is not None, config.images)

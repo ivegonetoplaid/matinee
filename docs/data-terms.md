@@ -62,8 +62,8 @@ https://files.grouplens.org/datasets/movielens/ml-latest-README.html
 
 - **Never commit the raw data.** No installation downloads MovieLens. Matinee
   ships small files derived from the tag genome (`data/genome.json`,
-  `data/reference.json`), and each states the dataset's conditions in its
-  `licence` field.
+  `data/reference.json`, `data/tags.json`), and each states the dataset's
+  conditions in its `licence` field.
 - **Redistribute only under the same conditions.** The licence allows
   redistributing the data, transformations included, only under the same
   licence conditions.

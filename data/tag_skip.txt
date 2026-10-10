@@ -1,0 +1,306 @@
+# Words the pick never shows as a film's tags. One word per line, exactly as the MovieLens tag genome spells it;
+# a line starting with # is a note. The pick shows a film's four strongest genome words that are not listed here.
+# Matinee reads this file when it starts, so an edit in a source checkout, or in an image built from one, takes
+# effect at the next start. A pulled image carries its own copy, which an update replaces.
+
+# Genre names: the door already says them.
+computer animation
+teen movie
+action
+adventure
+animated
+animation
+anime
+cartoon
+children
+comedy
+crime
+documentary
+drama
+family
+fantasy
+horror
+kids
+kids and family
+musical
+mystery
+romance
+romantic
+romantic comedy
+sci fi
+sci-fi
+science fiction
+scifi
+thriller
+war
+war movie
+western
+chick flick
+girlie movie
+
+# Generic praise and generic judgement: they say nothing about this film.
+beautiful scenery
+beautifully filmed
+breathtaking
+cinematography
+confusing
+dumb but funny
+good romantic comedies
+guilty pleasure
+hard to watch
+highly quotable
+not funny
+notable soundtrack
+plot holes
+pretentious
+ridiculous
+sad but good
+sappy
+shallow
+slow paced
+so bad it's funny
+stunning
+stupidity
+suprisingly clever
+unintentionally funny
+unlikeable characters
+very funny
+visually appealing
+visually stunning
+amazing cinematography
+amazing photography
+awesome
+awesome soundtrack
+awful
+bad
+bad acting
+bad cgi
+bad ending
+bad plot
+bad science
+bad script
+beautiful
+better than expected
+boring
+boring!
+brilliant
+classic
+cool
+disappointing
+dumb
+entertaining
+excellent
+excellent script
+exceptional acting
+fun
+fun movie
+good
+good acting
+good action
+good dialogue
+good music
+good soundtrack
+good story
+great
+great acting
+great cinematography
+great dialogue
+great ending
+great movie
+great music
+great soundtrack
+horrible
+idiotic
+interesting
+lame
+masterpiece
+mentor
+original
+original plot
+overrated
+perfect
+plot
+pointless
+script
+special
+story
+storytelling
+stupid
+underrated
+unique
+very good
+very interesting
+waste of time
+women
+
+# Labels about the release rather than the film: lists, awards, sources, sequels, ratings, formats and names.
+007 (series)
+comic book
+ennio morricone
+graphic novel
+independent film
+marx brothers
+monty python
+saturday night live
+scifi cult
+3d
+70mm
+adaptation
+adapted from:book
+adapted from:comic
+adapted from:game
+afi 100
+afi 100 (laughs)
+afi 100 (movie quotes)
+alternate endings
+based on a book
+based on a comic
+based on a play
+based on a true story
+based on a tv show
+based on a video game
+based on book
+based on comic
+based on true story
+best of 2005
+best war films
+better than the american version
+big budget
+book
+book was better
+books
+comic book adaption
+criterion
+crappy sequel
+cult
+cult classic
+cult film
+directorial debut
+easily confused with other movie(s) (title)
+franchise
+free to download
+funniest movies
+golden palm
+good sequel
+bad sequel
+imdb top 250
+literary adaptation
+long
+low budget
+made for tv
+movielens top pick
+not as good as the first
+oscar
+oscar (best actor)
+oscar (best actress)
+oscar (best animated feature)
+oscar (best cinematography)
+oscar (best directing)
+oscar (best editing)
+oscar (best effects - visual effects)
+oscar (best foreign language film)
+oscar (best music - original score)
+oscar (best music - original song)
+oscar (best picture)
+oscar (best sound)
+oscar (best supporting actor)
+oscar (best supporting actress)
+oscar (best writing - screenplay written directly for the screen)
+oscar winner
+pg
+pg-13
+potential oscar nom
+prequel
+product placement
+remade
+remake
+saturn award (best science fiction film)
+saturn award (best special effects)
+sequel
+sequels
+series
+short
+too long
+too short
+trilogy
+video game adaptation
+watch the credits
+aardman
+aardman studios
+almodovar
+amy smart
+arnold
+author:alan moore
+author:neil gaiman
+c.s. lewis
+carrie-anne moss
+chris tucker
+coen bros
+coen brothers
+depp & burton
+disney
+disney animated feature
+dr. seuss
+dreamworks
+emma watson
+francis ford copolla
+george orwell
+gilliam
+hitchcock
+jane austen
+kubrick
+kurosawa
+liv tyler
+lynch
+marvel
+dc comics
+miyazaki
+neil gaiman
+philip k. dick
+pixar
+pixar animation
+roald dahl
+robert downey jr
+robert ludlum
+sophia coppola
+spielberg
+studio ghibli
+tarantino
+tolkien
+tom clancy
+truman capote
+view askew
+
+# Words unfit for a family screen.
+child abuse
+prostitution
+sexuality
+bdsm
+bullshit history
+erotic
+funny as hell
+heroine in tight suit
+incest
+male nudity
+mindfuck
+notable nudity
+nudity
+nudity (full frontal - brief)
+nudity (full frontal - notable)
+nudity (full frontal)
+nudity (rear)
+nudity (topless - brief)
+nudity (topless - notable)
+nudity (topless)
+pornography
+rape
+sex
+sex comedy
+sexual
+sexual abuse
+sexualized violence
+sexy
+strippers
+stupid as hell
+virginity
+voyeurism

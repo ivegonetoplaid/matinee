@@ -13,6 +13,7 @@ import urllib.error
 import urllib.request
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime, timedelta
+from functools import partial
 from pathlib import Path
 from typing import Any
 
@@ -30,6 +31,8 @@ from matinee.library.jellyfin import JellyfinReader
 from matinee.ranks import VOTE_FLOOR
 from matinee.store import Store
 from matinee.table import FilmTable, write_table
+from matinee.tags import Tags, load_tags
+from matinee.web import app as app_module
 from matinee.web.app import IMAGE_CACHE, STATIC, TMDB_IMAGE_CACHE, create_app
 from matinee.web.config import Config, ConfigError, ImageSource, from_env
 from matinee.web.seerr import SeerrCheck
@@ -146,7 +149,12 @@ def make_world(
     theatre = Theatre(library, tmp_path / "films.sqlite", clock=clock, catalog_of=catalog_of, listed=listed)
     config = Config(SERVER, tmp_path, seerr, "d" * 16, images=images)
     app = create_app(
-        config, theatre, Store(tmp_path / "store.sqlite"), Dtdd("k"), seerr=SeerrCheck(seerr, opener=answers)
+        config,
+        theatre,
+        Store(tmp_path / "store.sqlite"),
+        Dtdd("k"),
+        seerr=SeerrCheck(seerr, opener=answers),
+        tags=Tags("test", {5: ("lone hero", "small town")}),
     )
     return TestClient(app), library, clock, theatre
 
@@ -189,10 +197,22 @@ def test_film_card_reads_the_synopsis_live(world: Any) -> None:
         "link_to": "seerr",
         "backdrop_path": None,  # the media server is the image source
         "rank": None,  # the film has no TMDB score
+        "tags": ["lone hero", "small town"],
     }
     assert ("synopsis", "f" * 32) in library.calls
     assert client.get("/api/film/40").status_code == 404  # gone from the library: never offered
     assert client.get("/api/film/5?door=nowhere").status_code == 400  # a door that is not a tree is refused
+    assert client.get("/api/film/6").json()["tags"] == []  # a film the genome does not cover has none
+
+
+def test_unreadable_tags_leave_picks_without_them_and_say_so_in_the_setup_note(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    (tmp_path / "skip.txt").write_bytes(b"caf\xe9\n")  # an editor's own encoding, not UTF-8
+    monkeypatch.setattr(app_module, "load_tags", partial(load_tags, skip_path=tmp_path / "skip.txt"))
+    faults: list[str] = []
+    assert app_module.shipped_tags(faults).of(609) == []
+    assert faults and "film tags" in faults[0] and "Update or reinstall Matinee" in faults[0]
 
 
 def test_the_film_card_ranks_among_the_door_it_names_and_overall_without_one(
