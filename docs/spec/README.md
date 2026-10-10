@@ -1,6 +1,6 @@
 ---
 purpose: Index of Matinee's behaviour specifications — what each spec covers, how much to trust it against the code, and the policy that keeps the two reconciled.
-updated: 2026-10-05
+updated: 2026-10-10
 ---
 
 # Matinee Specs
@@ -57,7 +57,7 @@ deleted rather than left standing. Git history holds it.
 - [`matinee.md`](matinee.md) — the whole of Matinee: the Jellyfin and Plex
   readers, the conversation model (the source question, the first question,
   trees and modes as data files, answers as filters, and the checker that keeps
-  every film reachable), the shipped labels and the household override file,
+  every film reachable), the pick's rank and tags, the shipped labels and the household override file,
   the pool rules, the reference statistics, the gore scale and house pins, the
   offline film table and its rebuild (TMDB's records fetched at a set pace,
   most-voted first, saved as it goes), the setup note and the logs, profiles,
@@ -68,5 +68,5 @@ deleted rather than left standing. Git history holds it.
   the stale-data warning and the viewer's profile menu among it), the
   deployment shape and its settings, and the terms of the three data sources.
   Written from the code on 2026-09-26, and last reconciled with it on
-  2026-10-05. It ends with a list of known gaps: behaviour deliberately
+  2026-10-05; its pick screen, rank and tags on 2026-10-10. It ends with a list of known gaps: behaviour deliberately
   absent, still open, or short of the contract.
