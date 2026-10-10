@@ -1410,6 +1410,81 @@ a.wordmark:focus-visible {
   flex-wrap: wrap;
 }
 
+/* The pick's foot bar, a row of its own across the foot on a desktop: "‹ Back" and "Wrong pick?" at its left, "Not
+   that one" at its exact centre at every width, its right end empty. Its row is kept from the start of the pick. */
+.foot-bar {
+  flex-basis: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+}
+
+.bar-left {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+/* A desktop too narrow for one row keeps two from the start: "Not that one" centred on the first, "‹ Back" and
+   "Wrong pick?" side by side at the left of the second, as on a phone. */
+@media (min-width: 601px) and (max-width: 800px) {
+  .foot-bar {
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    grid-template-rows: 44px 44px;
+    min-height: 100px;
+  }
+
+  .foot-bar > .bar-centre {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .foot-bar > .bar-left {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    flex-wrap: nowrap;
+  }
+}
+
+/* The foot is pinned and never scrolls, so its controls take no scroll room from the stage. */
+.bottombar :is(a, button) {
+  scroll-margin-bottom: calc(-1 * (var(--band-fade) + 72px));
+}
+
+@media (max-width: 600px) {
+  .foot-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+  }
+}
+
+/* On a desktop the pick takes the room between the top bar and the foot's bar exactly: the film's details scroll
+   inside their own column, fading at its foot, so nothing runs under the bar. */
+@media (min-width: 601px) {
+  .showing {
+    min-height: 0;
+    grid-template-rows: minmax(0, 1fr);
+  }
+
+  /* The foot's band fades over the pick's last stretch, and the pick ends one gap above the bar itself. */
+  .stage:has(> .showing) > .bottombar {
+    margin-top: calc(-1 * var(--band-fade));
+  }
+
+  .feature {
+    min-height: 0;
+    max-height: 100%;
+    overflow-y: auto;
+    scrollbar-width: none;
+    padding-bottom: 32px;
+    mask-image: linear-gradient(#000 calc(100% - 32px), transparent);
+  }
+}
+
 /* An action does something: a black-enamel face with a neutral rim, a highlight along its top edge, a slight
    shadow along its foot and a very light grain, and its words in one vivid accent, `gold`, `rose`, `petrol` or
    `cream`. Hovered, focused or pressed, a thread of its accent draws across its foot. The body is never filled
@@ -1476,6 +1551,19 @@ a.wordmark:focus-visible {
 .action.cream {
   --words: var(--cream-vivid);
   --thread: var(--cream-thread);
+}
+
+/* "Not that one" stands out by its rose words, its thread drawn at all times and a faint rose glow, never by its size. */
+.action.lead {
+  box-shadow:
+    0 0 0 1px var(--enamel-rim),
+    inset 0 1px 0 color-mix(in srgb, var(--white) 22%, transparent),
+    inset 0 -2px 4px color-mix(in srgb, var(--black) 70%, transparent),
+    0 0 22px color-mix(in srgb, var(--rose-vivid) 22%, transparent);
+}
+
+.action.lead::after {
+  transform: scaleX(1);
 }
 
 /* An action that is a link keeps its accent's words on hover, over the page's link colours. */

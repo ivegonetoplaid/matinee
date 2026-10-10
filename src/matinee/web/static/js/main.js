@@ -507,9 +507,11 @@ function pickFrame() {
   const phone = isPhone();
   const left = h("div", { class: "pick-left" }, phone ? null : aside);
   const showing = h("section", { class: "showing" }, left);
-  const foot = h("footer", { class: "bottombar" }, trail(lastCrumb(true)), h("span"), credits({ dtdd: offers.dtdd }));
+  // The foot bar's row is kept from the start on a desktop, so nothing moves when its actions arrive.
+  const bar = h("div", { class: "foot-bar" });
+  const foot = h("footer", { class: "bottombar" }, phone ? null : bar, trail(lastCrumb(true)), h("span"), credits({ dtdd: offers.dtdd }));
   clear(stage).append(topbar(nameTag() || h("span")), showing, ...(phone ? [aside] : []), foot);
-  const frame = { line, aside, left, showing, credit: foot.querySelector(".dtdd-credit") };
+  const frame = { line, aside, left, showing, bar, credit: foot.querySelector(".dtdd-credit") };
   frame.panel = pickPanel(stage, frame);
   return frame;
 }

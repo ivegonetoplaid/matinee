@@ -155,24 +155,22 @@ async function showNoFilm(result, frame, actions) {
   const [said, more] = twoParts(result.tired || result.exhausted); // first sentence gold, the rest cream
   await typeLine(line, said, more);
   const startOver = h("button", { class: "action cream start-over", type: "button", onclick: actions.startOver }, "Start over");
-  if (!result.tired) {
-    aside.append(startOver);
-    return;
-  }
   // A phone sets "Start over" beside "Roll again", so all three fit its foot.
-  aside.append(
-    h(
-      "div",
-      { class: "choices" },
-      h("button", { class: "action gold", type: "button", onclick: actions.rollAgain }, "Roll again"),
-      h(
-        "button",
-        { class: "action gold show-picked", type: "button", onclick: () => actions.showPicked(result) },
-        "Just show me what you picked",
-      ),
-      startOver,
-    ),
-  );
+  const choices = result.tired
+    ? h(
+        "div",
+        { class: "choices" },
+        h("button", { class: "action gold", type: "button", onclick: actions.rollAgain }, "Roll again"),
+        h(
+          "button",
+          { class: "action gold show-picked", type: "button", onclick: () => actions.showPicked(result) },
+          "Just show me what you picked",
+        ),
+        startOver,
+      )
+    : startOver;
+  aside.append(choices);
+  fillBar(frame, [backAction(frame, actions)]);
 }
 
 // The pick's link reads by where it goes: the configured Seerr, or TMDB without one.
@@ -183,18 +181,29 @@ function moreOn(info) {
   return h("a", { class: "action petrol", href: info.link, target: "_blank", rel: "noopener noreferrer" }, "More on TMDB ↗");
 }
 
-// What sits under the line on the resting page. The actions come straight after the line and its facts. The swap
-// reason's credit, `note`, moves beneath them. "‹ Back" opens the panel with the way back.
-function choices(frame, info, film, result, actions, note) {
+// What sits under the line and its facts on the resting page: the film's link, then the swap reason's credit,
+// `note`, beneath it.
+function underLine(info, result, note) {
+  return [info.link ? h("div", { class: "choices" }, moreOn(info)) : null, note ? firstPickReveal(result, note) : null].filter(Boolean);
+}
+
+// "‹ Back", which opens the panel with the way back.
+function backAction(frame, actions) {
   const back = panelAction("‹ Back", () => frame.panel.open(back, "Go back to…", actions.backPanel()));
-  const buttons = h(
-    "div",
-    { class: "choices" },
-    h("button", { class: "action rose", type: "button", onclick: actions.notThatOne }, "Not that one"),
-    info.link ? moreOn(info) : null,
-    back,
-  );
-  return [buttons, note ? firstPickReveal(result, note) : null, actions.noteLink(film, frame.panel)].filter(Boolean);
+  return back;
+}
+
+// The pick's foot bar: `left` at its left, `centre` at its exact centre, its right end empty. On a phone the bar
+// stands at the foot of Matinee's words.
+function fillBar(frame, left, centre = null) {
+  frame.bar.replaceChildren(h("div", { class: "bar-left" }, left), h("div", { class: "bar-centre" }, centre), h("div"));
+  if (isPhone()) frame.aside.append(frame.bar);
+}
+
+// The resting pick's actions: "‹ Back" and "Wrong pick?" at the bar's left, "Not that one" at its centre.
+function pickBar(frame, film, actions) {
+  const nope = h("button", { class: "action rose lead", type: "button", onclick: actions.notThatOne }, "Not that one");
+  fillBar(frame, [backAction(frame, actions), actions.noteLink(film, frame.panel)], nope);
 }
 
 // On a desktop the facts stand under Matinee's line, and the resting line gives up the room it kept for four lines
@@ -213,7 +222,8 @@ async function rest({ stage, wall, frame, film, result, actions, info, backdrop,
   const shown = feature(info, film, result, backdrop);
   frame.showing.append(shown);
   if (!isPhone()) factsUnderLine(frame, info, fuse);
-  frame.aside.append(...choices(frame, info, film, result, actions, frame.aside.querySelector(".swap-note")));
+  frame.aside.append(...underLine(info, result, frame.aside.querySelector(".swap-note")));
+  pickBar(frame, film, actions);
   // Measured once the aside is whole, so the poster takes only the height left beneath it.
   const from = wall.landedTile()?.img.getBoundingClientRect();
   if (poster && from) {
