@@ -1380,19 +1380,6 @@ a.wordmark:focus-visible {
     top: calc(-1 * var(--band-fade));
   }
 
-  /* DoesTheDogDie's credit takes a line of its own, kept for it whether or not it shows, so the foot never
-     changes height when it appears. */
-  .stage:has(> .showing) .dtdd-credit {
-    display: block;
-  }
-
-  .stage:has(> .showing) .dtdd-credit[hidden] {
-    visibility: hidden;
-  }
-
-  .stage:has(> .showing) .dtdd-credit::before {
-    content: none;
-  }
 }
 
 /* Pinned to the foot of the screen, its band's fade part of it, so nothing rests under the fade and what
@@ -1955,6 +1942,23 @@ a.wordmark:focus-visible {
 
 .credits a {
   color: color-mix(in srgb, var(--gold) 75%, transparent);
+}
+
+/* DoesTheDogDie's credit on the pick, in small text directly beside the content it credits. */
+.beside-credit {
+  margin: 0;
+  font-size: 13px;
+  color: var(--dim);
+}
+
+.beside-credit a {
+  color: color-mix(in srgb, var(--gold) 75%, transparent);
+}
+
+@media (max-width: 600px) {
+  .beside-credit {
+    font-size: 11px;
+  }
 }
 
 /* DoesTheDogDie's credit joins the line on a screen that shows its data. */

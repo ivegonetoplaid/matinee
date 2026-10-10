@@ -45,6 +45,7 @@ PERMITTED = {
     ("a", "about.js", "link", frozenset()),
     ("a", "credits.js", "tmdbLogo", frozenset()),
     ("a", "credits.js", "dtddCredit", frozenset()),
+    ("a", "credits.js", "dtddBeside", frozenset()),
     ("a", "main.js", "wordmark", frozenset({"wordmark"})),
     ("button", "main.js", "trail", frozenset({"crumb"})),
     ("button", "credits.js", "aboutLink", frozenset({"inline-link", "about-link"})),

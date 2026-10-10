@@ -10,8 +10,8 @@
 import { get } from "./api.js";
 import { twoParts } from "./door-rules.js";
 import { h, isPhone, prefersLessMotion, sentenceCase, wait } from "./dom.js";
+import { dtddBeside } from "./credits.js";
 import { backdropUrl, corsImage } from "./pictures.js";
-import { offers } from "./offers.js";
 import { panelAction } from "./panel.js";
 import { typeLine } from "./type.js";
 
@@ -98,7 +98,7 @@ function heading(film) {
 // resting page shows no backdrop, and a backdrop that failed is left out.
 function feature(card, film, result, backdrop) {
   if (backdrop) backdrop.className = "backdrop";
-  const unchecked = result.unchecked ? [h("p", { class: "note" }, result.unchecked), lookUp(result)] : [];
+  const unchecked = result.unchecked ? [h("p", { class: "note" }, result.unchecked), dtddBeside(), lookUp(result)] : [];
   const phoneFacts = isPhone() ? facts(card) : null;
   return h(
     "div",
@@ -115,11 +115,11 @@ function lookUp(result) {
   return h("a", { class: "action petrol", href, target: "_blank", rel: "noopener noreferrer" }, "Look it up on DoesTheDogDie ↗");
 }
 
-// DoesTheDogDie's credit in the foot band: shown before a line built on its data starts to type, so it is on
-// screen for as long as that line is, and for the rest of the pick.
-function showCredit(frame) {
-  if (!offers.dtdd) return; // no DoesTheDogDie key: none of its data shows, so neither does its credit
-  frame.credit.hidden = false;
+// DoesTheDogDie's credit for a line built on its data: directly beneath Matinee's line, before the line starts to
+// type, so it is on screen for as long as the line is. Once per pick.
+function creditLine(frame) {
+  if (frame.aside.querySelector(":scope > .beside-credit")) return;
+  frame.line.after(dtddBeside());
 }
 
 // Adds "What were you going to show me?", which reveals the film the check turned away, to `note`, the
@@ -151,7 +151,7 @@ function firstPickReveal(result, note) {
 // the last of them, its trip named.
 async function showNoFilm(result, frame, actions) {
   const { line, aside } = frame;
-  showCredit(frame);
+  creditLine(frame);
   const [said, more] = twoParts(result.tired || result.exhausted); // first sentence gold, the rest cream
   await typeLine(line, said, more);
   const startOver = h("button", { class: "action cream start-over", type: "button", onclick: actions.startOver }, "Start over");
@@ -211,14 +211,13 @@ function pickBar(frame, film, actions) {
 function factsUnderLine(frame, info, fuse) {
   if (!fuse?.lit()) frame.line.classList.add("rested");
   const said = facts(info);
-  if (said) frame.line.after(said);
+  if (said) (frame.aside.querySelector(":scope > .beside-credit") ?? frame.line).after(said);
 }
 
 // The resting page: the film's details rise, and the landed poster, where there is one, moves from the
 // wall to its place and leaves its cell empty until the pick ends.
 async function rest({ stage, wall, frame, film, result, actions, info, backdrop, poster, fuse }) {
   stage.classList.add("revealed");
-  if (result.unchecked) showCredit(frame); // the warning is DoesTheDogDie's data
   const shown = feature(info, film, result, backdrop);
   frame.showing.append(shown);
   if (!isPhone()) factsUnderLine(frame, info, fuse);
@@ -261,12 +260,12 @@ async function restingPoster(sharp, wall, film) {
 async function goldLine(frame, result, lines, fuse) {
   const { line, aside } = frame;
   // A film shown after three tripped the list names its trip from DoesTheDogDie's data.
-  if (result.last) showCredit(frame);
+  if (result.last) creditLine(frame);
   if (!result.swapped) return lines.gold || "";
   fuse?.cancel();
   lines.reveal = lines.beneath(result.swapped.line);
-  showCredit(frame);
-  aside.append(h("div", { class: "swap-note" }));
+  // The reason and the turned-away film are DoesTheDogDie's data: its credit stands in the note that reveals the film.
+  aside.append(h("div", { class: "swap-note" }, dtddBeside()));
   await typeLine(line, result.swapped.line, "");
   return result.swapped.line;
 }
@@ -316,7 +315,7 @@ async function bringOut({ wall, frame, pause, posterReady, left, lines, gold, fu
 // a door). `actions` holds notThatOne, rollAgain, showPicked, startOver, backPanel (what the Back panel holds),
 // failed and the note link panel's builder. `readUntil` (a performance.now() time) holds the hunt until the line on screen has
 // been read. After every wait the pick checks that its screen is still showing and that the pick was
-// not ended on the wall: a trail answer or the name tag can end it at any moment, and a pick the viewer
+// not ended on the wall: a way back or the name tag can end it at any moment, and a pick the viewer
 // has left changes nothing further.
 export async function showPick({ stage, wall, result, frame, readUntil = 0, lines, fuse = null, actions, door }) {
   const film = result.film;

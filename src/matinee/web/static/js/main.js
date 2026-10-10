@@ -80,7 +80,7 @@ function lockStage() {
   for (const button of stage.querySelectorAll("button")) button.disabled = true;
 }
 
-// Leaving a pick by a way back out (a trail answer, the name tag, "Start over") ends it at the tap:
+// Leaving a pick by a way back out (an answer in the Back panel, the name tag, "Start over") ends it at the tap:
 // the hunt stops where it is, and the pick changes nothing further while the next screen loads.
 function leaveTo(next) {
   lockStage();
@@ -153,11 +153,10 @@ function trail(here) {
   return h("nav", { class: "trail", "aria-label": "The way here" }, h("ol", {}, items));
 }
 
-// Where "Back" leads, as a crumb: the screen before the one showing, whose crumb is `here` (null on a pick
-// "Just pick one!" ended early, which leads back to the question it left). None where that is the walk's
-// first screen, which "Start over" reaches.
+// Where a question screen's "Back" leads, as a crumb: the screen before the one showing, whose crumb is `here`.
+// None where that is the walk's first screen, which "Start over" reaches.
 function backTo(here) {
-  const target = here === null ? crumbs().length - 1 : here - 1;
+  const target = here - 1;
   return target > 0 ? target : null;
 }
 
@@ -174,10 +173,9 @@ function wayBack(here) {
   return h("nav", { class: "way-back", "aria-label": "Way back" }, back, again);
 }
 
-// The trail's last crumb, which led to the screen showing now; on a pick "Just pick one!" ended early,
-// the last crumb led to a question, so none.
-function lastCrumb(onPick) {
-  return onPick && visit.rushed ? null : crumbs().length - 1;
+// The trail's last crumb, which led to the screen showing now.
+function lastCrumb() {
+  return crumbs().length - 1;
 }
 
 // A question screen. "Just pick one!" stands last, beneath the answers and any footnote, with the count of
@@ -203,7 +201,7 @@ function frame({ count, footnote }) {
   clear(stage).append(
     topbar(nameTag()),
     h("section", { class: "talk" }, line, answers, note, row),
-    h("div", { class: "bottombar" }, trail(lastCrumb(false)), wayBack(lastCrumb(false)), h("span"), credits()),
+    h("div", { class: "bottombar" }, trail(lastCrumb()), wayBack(lastCrumb()), h("span"), credits()),
   );
   return { line, answers, note, pick: row };
 }
@@ -509,9 +507,10 @@ function pickFrame() {
   const showing = h("section", { class: "showing" }, left);
   // The foot bar's row is kept from the start on a desktop, so nothing moves when its actions arrive.
   const bar = h("div", { class: "foot-bar" });
-  const foot = h("footer", { class: "bottombar" }, phone ? null : bar, trail(lastCrumb(true)), h("span"), credits({ dtdd: offers.dtdd }));
+  // The pick shows no trail and no credit line: "Start over" is in the Back panel, and TMDB's notice is on About.
+  const foot = h("footer", { class: "bottombar" }, phone ? null : bar);
   clear(stage).append(topbar(nameTag() || h("span")), showing, ...(phone ? [aside] : []), foot);
-  const frame = { line, aside, left, showing, bar, credit: foot.querySelector(".dtdd-credit") };
+  const frame = { line, aside, left, showing, bar };
   frame.panel = pickPanel(stage, frame);
   return frame;
 }

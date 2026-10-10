@@ -32,6 +32,15 @@ function dtddCredit() {
   );
 }
 
+// DoesTheDogDie's credit on the pick, in small text directly beside the content it credits.
+export function dtddBeside() {
+  return h(
+    "p",
+    { class: "beside-credit" },
+    h("a", { href: "https://www.doesthedogdie.com", target: "_blank", rel: "noopener noreferrer" }, "Powered by DoesTheDogDie.com"),
+  );
+}
+
 // `dtdd` makes room for DoesTheDogDie's credit, on a screen that may show its data.
 export function credits({ dtdd = false } = {}) {
   return h(
