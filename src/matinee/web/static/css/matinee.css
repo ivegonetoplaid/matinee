@@ -673,8 +673,7 @@ a.wordmark:focus-visible {
 /* ---------- the pick ---------- */
 
 /* Above the wall. The row fills the screen and everything hangs from its top, so
-   nothing re-centres as the film arrives, and opening the correction panel grows
-   the page downward. */
+   nothing re-centres as the film arrives. */
 .showing {
   position: relative;
   z-index: 1;
@@ -1355,9 +1354,8 @@ a.wordmark:focus-visible {
   transform: scaleX(1);
 }
 
-/* On a phone Matinee's words keep the foot of the pick: the line, two rows of buttons and the correction
-   link, then DoesTheDogDie's credit line where it has a key; its top never moves from the first word of a
-   pick to the last. Above it the showing scrolls on its own and ends at the foot, so
+/* On a phone Matinee's words keep the foot of the pick: the line, then the foot bar's two rows of actions; its
+   top never moves from the first word of a pick to the last. Above it the showing scrolls on its own and ends at the foot, so
    nothing passes behind the words: the poster fills it first, and the details follow beneath. */
 @media (max-width: 600px) {
   /* On a phone the panel takes everything under the top bar, to the screen's edges and foot. */
@@ -1393,7 +1391,7 @@ a.wordmark:focus-visible {
   }
 
   .stage:has(> .showing) {
-    --pick-talk: 316px; /* the line's four lines, two rows of actions and the correction, without scrolling */
+    --pick-talk: 316px; /* the line's four lines and two rows of actions, with room for a turned-away film's note */
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto minmax(0, 1fr) var(--pick-talk) auto;

@@ -1,5 +1,6 @@
-// The corner credit line: "Posters and film data from TMDB [logo]", in the foot band; a phone shows only its
-// DoesTheDogDie part, since the About page carries TMDB's logo and notice. TMDB's notice and the
+// The corner credit line: "Posters and film data from TMDB [logo]", in the foot band of every screen but the pick;
+// a phone shows only its DoesTheDogDie part, since the About page carries TMDB's logo and notice. On the pick,
+// DoesTheDogDie's credit stands beside what it credits instead (`dtddBeside`). TMDB's notice and the
 // MovieLens citations are on the About page, which "About Matinee" opens: at the foot's middle on a screen with
 // no profile menu, and as the profile menu's last item inside the theatre. On a screen that shows DoesTheDogDie's data the line
 // carries "Powered by DoesTheDogDie.com" too. The TMDB logo is always smaller than Matinee's own mark.

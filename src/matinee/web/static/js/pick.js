@@ -293,7 +293,7 @@ async function restingPoster(sharp, wall, film) {
 
 // Where the check turned the first pick away, the line says so before the new pick lands.
 // Where the check turned a film away, its reason takes the nope line's place in gold at once, with
-// DoesTheDogDie's credit in the foot band, and only the reveal line is redealt to fit beneath it. Resolves to
+// DoesTheDogDie's credit in the note beneath it, and only the reveal line is redealt to fit beneath it. Resolves to
 // the gold line that stays through the hunt: the reason, or the nope line, or "" when nothing stays.
 async function goldLine(frame, result, lines, fuse) {
   const { line, aside } = frame;
