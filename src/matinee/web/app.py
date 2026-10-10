@@ -30,6 +30,7 @@ from matinee.library import Image, ImageKind, LibraryError
 from matinee.pick import DeviceCap, Picker
 from matinee.progress import read_status
 from matinee.quips import Quips, QuipsError, load_quips
+from matinee.ranks import rank
 from matinee.store import AVATARS, Locked, Store, StoreError
 from matinee.table import TableError
 from matinee.tmdb import TmdbImageError, fetch_picture, picture_type, read_shelf, shelf_file, shelve
@@ -90,6 +91,7 @@ class FilmCard(BaseModel):
     link: str  # the film's page on the configured Seerr, or on TMDB without one
     link_to: Literal["seerr", "tmdb"]
     backdrop_path: str | None  # TMDB's path for the backdrop, given only when TMDB is the image source
+    rank: str | None  # how well audiences regard the film among the door's films, in words; None under the vote floor
 
 
 class Pictures(BaseModel):
@@ -292,8 +294,12 @@ def add_film_routes(app: FastAPI, theatre: Theatre, seerr: SeerrCheck, images: I
         return Pictures(source=images, posters={tmdb: path for tmdb, path in paths.items() if path})
 
     @app.get("/api/film/{tmdb}")
-    def film(tmdb: int) -> FilmCard:
+    def film(tmdb: int, door: str | None = None) -> FilmCard:
+        """One film's card. `door` is the tree its pick came through, which the rank counts among; none before one."""
         film = held(theatre, tmdb)
+        cat = theatre.showing().catalog
+        if door is not None and door not in cat.trees:
+            raise HTTPException(status_code=400, detail="refused")
         synopsis = film_synopsis(theatre, film, tmdb)
         link, link_to = film_link(seerr.link_base(), tmdb)
         return FilmCard(
@@ -305,6 +311,7 @@ def add_film_routes(app: FastAPI, theatre: Theatre, seerr: SeerrCheck, images: I
             link=link,
             link_to=link_to,
             backdrop_path=film.backdrop_path if images == "tmdb" else None,
+            rank=rank(cat, tmdb, door),
         )
 
 

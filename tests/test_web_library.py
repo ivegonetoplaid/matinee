@@ -17,14 +17,17 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
+import pandas as pd
 import pytest
 from fastapi.testclient import TestClient
 
+from matinee import ranks
 from matinee.dtdd import Dtdd
 from matinee.engine import load_catalog
 from matinee.library import Image, LibraryError, LibraryFilm, LibraryRefused
 from matinee.library.choice import MediaServer
 from matinee.library.jellyfin import JellyfinReader
+from matinee.ranks import VOTE_FLOOR
 from matinee.store import Store
 from matinee.table import FilmTable, write_table
 from matinee.web.app import IMAGE_CACHE, STATIC, TMDB_IMAGE_CACHE, create_app
@@ -123,9 +126,15 @@ def make_world(
     images: ImageSource = "server",
     seerr: str | None = "https://seerr.invalid",
     listed: frozenset[int] = frozenset(),
+    scores: dict[int, float] | None = None,
 ) -> tuple[TestClient, FakeLibrary, Clock, Theatre]:
+    """`scores` gives films a TMDB score with enough votes to be ranked; every other film has none."""
     data = write_data(tmp_path / "data")
     stored = film_table()
+    stored.films["tmdb_rating"] = [(scores or {}).get(int(t), np.nan) for t in stored.films.index]
+    stored.films["vote_count"] = pd.array(
+        [VOTE_FLOOR if int(t) in (scores or {}) else None for t in stored.films.index], dtype="Int64"
+    )
     stored.films["tmdb_title"] = [f"TMDB {t}" for t in stored.films.index]  # every film has a TMDB record
     stored.films["synopsis"] = [f"TMDB says {t}." for t in stored.films.index]
     write_table(stored, tmp_path / "films.sqlite")
@@ -179,9 +188,22 @@ def test_film_card_reads_the_synopsis_live(world: Any) -> None:
         "link": "https://seerr.invalid/movie/5",
         "link_to": "seerr",
         "backdrop_path": None,  # the media server is the image source
+        "rank": None,  # the film has no TMDB score
     }
     assert ("synopsis", "f" * 32) in library.calls
     assert client.get("/api/film/40").status_code == 404  # gone from the library: never offered
+    assert client.get("/api/film/5?door=nowhere").status_code == 400  # a door that is not a tree is refused
+
+
+def test_the_film_card_ranks_among_the_door_it_names_and_overall_without_one(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setitem(ranks.DOOR_WORDS, "west", "westerns")
+    client, _, _, _ = make_world(tmp_path, scores={t: 10.0 - t / 10 for t in range(1, 41) if t != 6})
+    # Film 5 is the fifth best of the rated westerns.
+    assert client.get("/api/film/5?door=west").json()["rank"] == "Well liked in westerns"
+    assert client.get("/api/film/5").json()["rank"] == "Well liked overall"
+    assert client.get("/api/film/6?door=west").json()["rank"] is None  # no TMDB score: no rank
 
 
 def test_a_film_new_to_the_library_is_offered_by_its_tags(world: Any) -> None:

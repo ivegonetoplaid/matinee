@@ -622,6 +622,7 @@ async function pickNow(opening = "", again = false, destruct = null, posterBack 
     lines,
     fuse,
     actions: pickActions(),
+    door: visit.tree,
   });
 }
 
@@ -665,7 +666,7 @@ async function showPicked(held) {
   const { frame, readUntil } = await openPick(gold, null);
   if (!frame.showing.isConnected || wall.round !== round) return undefined;
   const result = { ...held, film: held.last.film, swapped: null, tired: null, turned_away: [] };
-  return showPick({ stage, wall, result, frame, readUntil, lines, fuse: null, actions: pickActions() });
+  return showPick({ stage, wall, result, frame, readUntil, lines, fuse: null, actions: pickActions(), door: visit.tree });
 }
 
 boot();

@@ -400,6 +400,7 @@ a.wordmark:focus-visible {
 .count,
 .seat-label,
 .feature-text,
+.rank,
 .correct-panel {
   position: relative;
 }
@@ -411,6 +412,7 @@ a.wordmark:focus-visible {
 .count::before,
 .seat-label::before,
 .feature-text::before,
+.rank::before,
 .correct-panel::before {
   content: "";
   position: absolute;
@@ -731,6 +733,11 @@ a.wordmark:focus-visible {
   min-height: calc(4 * 0.98em);
 }
 
+/* At rest on a desktop the line gives up its reserved lines, so what follows stands one gap under its words. */
+.pick-line.rested {
+  min-height: 0;
+}
+
 /* Matinee's words fade out as a pick begins and while the wall hunts. */
 .pick-line,
 .talk {
@@ -872,6 +879,45 @@ a.wordmark:focus-visible {
   font-size: 16px;
   line-height: 1.45;
   color: var(--text);
+}
+
+/* What the pick says about the film beyond its title: under Matinee's line on a desktop, under the title on a
+   phone. It fades in with the resting page. */
+.facts {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: fade 0.9s ease both;
+}
+
+/* Under the line on a desktop, the facts keep a 24 px gap from the words around them. */
+.aside > .facts {
+  margin-block: 8px;
+}
+
+/* How well audiences regard the film: a line in the display face, in cream, with what it is counted by beside it
+   in quiet text. */
+.rank {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  margin: 0;
+}
+
+.rank-words {
+  text-wrap: balance;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 30px;
+  line-height: 1.05;
+  letter-spacing: 0.02em;
+  color: var(--text);
+}
+
+.rank-by {
+  font-size: 13px;
+  color: var(--dim);
 }
 
 .feature {
@@ -1108,6 +1154,14 @@ a.wordmark:focus-visible {
 
   .synopsis {
     font-size: 16px;
+  }
+
+  .rank-words {
+    font-size: 22px;
+  }
+
+  .rank-by {
+    font-size: 11px;
   }
 
   /* The foot scrolls on its own: it reaches the screen's sides, and fades its top and its foot over
