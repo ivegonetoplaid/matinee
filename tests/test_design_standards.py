@@ -39,8 +39,8 @@ ARTWORK = {
 ARTWORK_KEYFRAMES = {"burn"}  # the fuse's burn on Matinee's line
 
 # Text buttons and links that are not actions or letterboxes: the foot band's crumbs, About link and credits,
-# About's own prose, the wordmark, the pick panel's ×, and controls that are pictures or menu rows. Each names its
-# element's tag, script, building function and classes, never a line.
+# About's own prose, the wordmark, the pick panel's × and rows, and controls that are pictures or menu rows. Each
+# names its element's tag, script, building function and classes, never a line.
 PERMITTED = {
     ("a", "about.js", "link", frozenset()),
     ("a", "credits.js", "tmdbLogo", frozenset()),
@@ -56,6 +56,7 @@ PERMITTED = {
     ("button", "viewer.js", "item", frozenset({"viewer-item", "danger"})),
     ("button", "locked.js", "show", frozenset({"peek"})),
     ("button", "panel.js", "open", frozenset({"panel-close"})),
+    ("button", "main.js", "answerRow", frozenset({"panel-row", "answer-row"})),
 }
 
 # Every CSS named colour.

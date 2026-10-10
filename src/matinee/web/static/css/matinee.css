@@ -1204,6 +1204,51 @@ a.wordmark:focus-visible {
   gap: 10px;
 }
 
+/* A section of a panel's list, named in quiet text. */
+.panel-section {
+  margin: 6px 12px 2px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--dim);
+}
+
+/* A row a panel lists, such as one of the viewer's answers: plain words that light faintly under the pointer. */
+.panel-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 52px;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--text);
+  font: 400 18px/1.2 var(--body);
+  text-align: left;
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .panel-row:hover {
+    background: color-mix(in srgb, var(--text) 6%, transparent);
+  }
+}
+
+/* An answer: its question in quiet text, the answer beneath. */
+.answer-row {
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 2px;
+}
+
+.row-ask {
+  font-size: 13px;
+  color: var(--dim);
+}
+
 .panel-foot {
   margin-top: auto;
   padding-top: 8px;

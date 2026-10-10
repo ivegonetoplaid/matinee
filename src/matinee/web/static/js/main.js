@@ -8,6 +8,7 @@ import { LockedDoor, WALL_FADE_MS } from "./locked.js";
 import { clear, h, isPhone, prefersLessMotion, sentenceCase, wait } from "./dom.js";
 import { cornerMark } from "./flight.js";
 import { pickPanel } from "./panel.js";
+import { answerRows, forget, wayTo } from "./way-back.js";
 import { showPick } from "./pick.js";
 import { posterPaths } from "./pictures.js";
 import { Deck, dealBeneath, dealPair, setFor } from "./quips.js";
@@ -29,11 +30,14 @@ const visit = {
   tree: null,
   answers: [],
   says: [], // what the viewer answered, one per entry in answers
+  asks: [], // the question each of those answered
   rushed: false, // "Just pick one!" ended the questions early
   firstSay: null,
   source: null, // the source question's answer, asked at the start of every walk; "all" when it is not asked
   sourceSay: null,
+  sourceAsk: null, // the source question, while it is asked
   sourceReply: "", // Matinee's gold line on the doors within the source
+  doorAsk: null, // the doors' question
   seen: [],
   pool: [],
   trees: [],
@@ -388,24 +392,32 @@ async function enter({ viewer, name, avatar, profileTopics, door }) {
   await start({ request, keep: true });
 }
 
+// Where a walk stands before any answer, from the start the server gave.
+function freshWalk(first) {
+  return {
+    tree: null,
+    answers: [],
+    says: [],
+    asks: [],
+    rushed: false,
+    firstSay: null,
+    source: first.source ? null : "all",
+    sourceSay: null,
+    sourceAsk: first.source ? first.source.ask : null,
+    doorAsk: null,
+    sourceReply: "",
+    seen: [],
+    profileTopics: first.checked, // the server's word on whether picks are checked, read afresh every start
+  };
+}
+
 // A walk's first screen: the source question while it is asked, else the doors. No answer carries over from
 // the last walk. `request` is the start already asked for, if any; `keep` keeps the wall's posters behind a
 // problem screen (a start after going in, and its retries).
 async function start({ request = null, keep = false } = {}) {
   const res = await (request ?? post("/api/first", { viewer: visit.viewer }));
   if (!res.ok) return problem(res.data, () => start({ keep }), keep);
-  Object.assign(visit, {
-    tree: null,
-    answers: [],
-    says: [],
-    rushed: false,
-    firstSay: null,
-    source: res.data.source ? null : "all",
-    sourceSay: null,
-    sourceReply: "",
-    seen: [],
-    profileTopics: res.data.checked, // the server's word on whether picks are checked, read afresh every start
-  });
+  Object.assign(visit, freshWalk(res.data));
   const [greeting] = res.data.lines;
   const name = res.data.name;
   const ack = name ? greeting.replace(/\.$/, `, ${name}.`) : greeting;
@@ -431,16 +443,17 @@ function chooseSource(option) {
 // The doors, within the source answer and with its reply. `res` is the first screen already fetched, when the
 // source question was not asked; `ack` its greeting.
 async function doors(res = null, ack = visit.sourceReply) {
-  Object.assign(visit, { tree: null, answers: [], says: [], rushed: false, firstSay: null, seen: [] });
+  Object.assign(visit, { tree: null, answers: [], says: [], asks: [], rushed: false, firstSay: null, seen: [] });
   const got = res ?? (await post("/api/first", { viewer: visit.viewer, source: visit.source }));
   if (!got.ok) return problem(got.data, start);
   showFirst(got);
+  visit.doorAsk = got.data.lines[1];
   const options = got.data.options.map((o) => ({ say: o.say, go: () => chooseTree(o) }));
   await ask({ ack, question: got.data.lines[1], options, count: countText(visit.pool.length), many: true });
 }
 
 function chooseTree(option) {
-  Object.assign(visit, { tree: option.tree, answers: [], says: [], rushed: false, firstSay: option.say, seen: [] });
+  Object.assign(visit, { tree: option.tree, answers: [], says: [], asks: [], rushed: false, firstSay: option.say, seen: [] });
   step();
 }
 
@@ -450,9 +463,12 @@ function goTo(i) {
   if (i === 0) return start();
   const off = visit.sourceSay === null ? 0 : 1;
   if (i === off) return doors();
-  visit.answers = visit.answers.slice(0, i - 1 - off);
-  visit.says = visit.says.slice(0, i - 1 - off);
-  visit.rushed = false;
+  return reask(i - 1 - off);
+}
+
+// Asks again the question that followed the first `kept` answers, forgetting that answer and every later one.
+function reask(kept) {
+  Object.assign(visit, forget(visit, kept));
   return step();
 }
 
@@ -473,6 +489,7 @@ async function step() {
     go: () => {
       visit.answers.push({ question: q.id, option: o.index });
       visit.says.push(o.say);
+      visit.asks.push(q.ask);
       step();
     },
   }));
@@ -629,10 +646,22 @@ async function pickNow(opening = "", again = false, destruct = null, posterBack 
   });
 }
 
-// What the Back panel holds: "Start over" at its foot.
+// One answer in the Back panel: its question in quiet text, the answer beneath. A tap asks that question again.
+function answerRow(row) {
+  const go = () => wayTo(row, { source: start, doors: () => doors(), reask });
+  return h(
+    "button",
+    { class: "panel-row answer-row", type: "button", onclick: () => leaveTo(go) },
+    h("span", { class: "row-ask" }, sentenceCase(row.ask)),
+    h("span", { class: "row-say" }, sentenceCase(row.say)),
+  );
+}
+
+// What the Back panel holds: the viewer's answers, each a way back to its question, then "Start over" at its foot.
 function backPanel() {
+  const rows = answerRows(visit).map(answerRow);
   const again = h("button", { class: "action cream", type: "button", onclick: () => leaveTo(start) }, "Start over");
-  return h("div", { class: "panel-foot" }, again);
+  return [rows.length ? h("p", { class: "panel-section" }, "An answer") : null, rows, h("div", { class: "panel-foot" }, again)];
 }
 
 // What the pick screen's controls do.
