@@ -193,10 +193,17 @@ button {
   line-height: 0;
 }
 
+/* The corner mark stands 64 px tall on a desktop and 40 px on a phone. */
 .corner-mark {
   display: block;
   width: auto;
-  height: 40px;
+  height: 64px;
+}
+
+@media (max-width: 600px) {
+  .corner-mark {
+    height: 40px;
+  }
 }
 
 /* Landed after the name's flight, the mark fades in beneath the name before the name gives way; flight.js's
@@ -694,10 +701,8 @@ a.wordmark:focus-visible {
   align-items: flex-end;
 }
 
-/* The picture fills its link's width, which the strip's words can widen on a narrow phone. */
 .slot-poster {
   display: block;
-  min-width: 100%;
   object-fit: cover;
 }
 
@@ -728,7 +733,10 @@ a.wordmark:focus-visible {
     0 24px 60px color-mix(in srgb, var(--black) 60%, transparent);
 }
 
+/* The strip takes the poster's width and never widens the link: a small poster's strip wraps its words. */
 .poster-strip {
+  width: 0;
+  min-width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
