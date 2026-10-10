@@ -8,6 +8,7 @@ import { LockedDoor, WALL_FADE_MS } from "./locked.js";
 import { clear, h, isPhone, prefersLessMotion, sentenceCase, wait } from "./dom.js";
 import { cornerMark } from "./flight.js";
 import { pickPanel } from "./panel.js";
+import { asPick, newestFirst, remember } from "./run.js";
 import { answerRows, forget, wayTo } from "./way-back.js";
 import { showPick } from "./pick.js";
 import { posterPaths } from "./pictures.js";
@@ -41,6 +42,7 @@ const visit = {
   seen: [],
   pool: [],
   trees: [],
+  run: [], // the films this run has shown on screen, oldest first (run.js)
 };
 
 const CHECKING = "Let me check this one against your list.";
@@ -93,7 +95,7 @@ function leaveTo(next) {
 function wordmark() {
   const go = (e) => {
     e.preventDefault();
-    leaveTo(visit.viewer.profile_id ? start : boot);
+    leaveTo(visit.viewer.profile_id ? startOver : boot);
   };
   return h("a", { class: "wordmark", href: "/", onclick: go }, cornerMark("Matinee"));
 }
@@ -169,7 +171,7 @@ function wayBack(here) {
     target === null
       ? null
       : h("button", { class: "action cream", type: "button", onclick: () => leaveTo(() => goTo(target)) }, "Back");
-  const again = h("button", { class: "action cream", type: "button", onclick: () => leaveTo(start) }, "Start over");
+  const again = h("button", { class: "action cream", type: "button", onclick: () => leaveTo(startOver) }, "Start over");
   return h("nav", { class: "way-back", "aria-label": "Way back" }, back, again);
 }
 
@@ -383,7 +385,7 @@ function lockedDoor(greeting) {
 // Going in: the start is asked for at once, while the door's name flies to the wordmark's place, and the
 // first question types once it has landed.
 async function enter({ viewer, name, avatar, profileTopics, door }) {
-  Object.assign(visit, { viewer, name, avatar, profileTopics });
+  Object.assign(visit, { viewer, name, avatar, profileTopics, run: [] });
   const request = post("/api/first", { viewer });
   landing = door;
   await door.leave([nameTag()].filter(Boolean));
@@ -407,6 +409,12 @@ function freshWalk(first) {
     seen: [],
     profileTopics: first.checked, // the server's word on whether picks are checked, read afresh every start
   };
+}
+
+// "Start over" and the wordmark: a new run, which forgets the films shown, from the walk's first screen.
+function startOver() {
+  visit.run = [];
+  return start();
 }
 
 // A walk's first screen: the source question while it is asked, else the doors. No answer carries over from
@@ -644,6 +652,7 @@ async function pickNow(opening = "", again = false, destruct = null, posterBack 
     fuse,
     actions: pickActions(),
     door: visit.tree,
+    walk: walkOf(visit),
   });
 }
 
@@ -658,11 +667,29 @@ function answerRow(row) {
   );
 }
 
-// What the Back panel holds: the viewer's answers, each a way back to its question, then "Start over" at its foot.
+// One film the run has shown, in the Back panel: its small poster, title and year. A tap brings it back as the pick;
+// the film showing now is marked as such and does nothing.
+function filmRow(shown) {
+  const { film } = shown;
+  const thumb = h("img", { class: "thumb", src: wall.posterUrl(film.tmdb, "xs"), alt: "", loading: "lazy", decoding: "async" });
+  thumb.addEventListener("error", () => thumb.setAttribute("src", "/static/blank.svg"), { once: true }); // a plain card
+  const words = [h("span", { class: "row-title" }, film.title), film.year ? h("span", { class: "row-year" }, ` ${film.year}`) : null];
+  if (shown.now) {
+    return h("div", { class: "panel-row film-row now", "aria-current": "true" }, thumb, h("span", {}, words, h("span", { class: "row-now" }, "Showing now")));
+  }
+  return h("button", { class: "panel-row film-row", type: "button", onclick: () => bringBack(shown) }, thumb, h("span", {}, words));
+}
+
+// What the Back panel holds: the viewer's answers, each a way back to its question, then every film this run has
+// shown, newest first, scrolling on its own, then "Start over" at its foot.
 function backPanel() {
   const rows = answerRows(visit).map(answerRow);
-  const again = h("button", { class: "action cream", type: "button", onclick: () => leaveTo(start) }, "Start over");
-  return [rows.length ? h("p", { class: "panel-section" }, "An answer") : null, rows, h("div", { class: "panel-foot" }, again)];
+  const films = newestFirst(visit.run, stage.classList.contains("revealed")); // a film rests on screen
+  const shown = films.length
+    ? [h("p", { class: "panel-section" }, `Shown this run · ${films.length} ${films.length === 1 ? "film" : "films"}`), h("div", { class: "films" }, films.map(filmRow))]
+    : [];
+  const again = h("button", { class: "action cream", type: "button", onclick: () => leaveTo(startOver) }, "Start over");
+  return [rows.length ? h("p", { class: "panel-section" }, "An answer") : null, rows, shown, h("div", { class: "panel-foot" }, again)];
 }
 
 // What the pick screen's controls do.
@@ -680,10 +707,13 @@ function pickActions() {
       lockStage();
       showPicked(held);
     },
-    startOver: () => leaveTo(start),
+    startOver: () => leaveTo(startOver),
     backPanel,
+    remember: (shown) => {
+      visit.run = remember(visit.run, shown);
+    },
     failed: (data) => problem(data, start),
-    noteLink: (film, panel) => noteLink({ walk: walkOf(visit), film, trees: visit.trees, panel }),
+    noteLink: (film, panel, walk) => noteLink({ walk, film, trees: visit.trees, panel }),
   };
 }
 
@@ -698,7 +728,20 @@ async function showPicked(held) {
   const { frame, readUntil } = await openPick(gold, null);
   if (!frame.showing.isConnected || wall.round !== round) return undefined;
   const result = { ...held, film: held.last.film, swapped: null, tired: null, turned_away: [] };
-  return showPick({ stage, wall, result, frame, readUntil, lines, fuse: null, actions: pickActions(), door: visit.tree });
+  return showPick({ stage, wall, result, frame, readUntil, lines, fuse: null, actions: pickActions(), door: visit.tree, walk: walkOf(visit) });
+}
+
+// A film this run has shown, brought back from the Back panel as the pick: no new pick is asked for. It shows as it
+// was first shown, with its line, its content note and the door and walk it was drawn under; its details, rank,
+// tags and pictures load as on any pick, and nothing of DoesTheDogDie is asked for.
+async function bringBack(shown) {
+  lockStage();
+  await clearForPick(Boolean(stage.querySelector(".slot-poster")));
+  const round = wall.round;
+  const { result, lines, door, walk } = asPick(shown);
+  const { frame, readUntil } = await openPick(lines.gold, null);
+  if (!frame.showing.isConnected || wall.round !== round) return undefined;
+  return showPick({ stage, wall, result, frame, readUntil, lines, fuse: null, actions: pickActions(), door, walk });
 }
 
 boot();

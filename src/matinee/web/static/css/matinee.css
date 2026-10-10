@@ -1210,6 +1210,7 @@ a.wordmark:focus-visible {
   gap: 6px;
   padding: 4px;
   overflow-y: auto;
+  scrollbar-color: color-mix(in srgb, var(--gold) 45%, transparent) transparent;
 }
 
 /* The left column the panel stands over is not drawn while it is open, so nothing shows through the panel's
@@ -1261,8 +1262,13 @@ a.wordmark:focus-visible {
   cursor: pointer;
 }
 
+.panel-row:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
 @media (hover: hover) {
-  .panel-row:hover {
+  button.panel-row:hover {
     background: color-mix(in srgb, var(--text) 6%, transparent);
   }
 }
@@ -1276,6 +1282,50 @@ a.wordmark:focus-visible {
 }
 
 .row-ask {
+  font-size: 13px;
+  color: var(--dim);
+}
+
+/* The films shown this run: a list that scrolls on its own, so the answers and "Start over" stay in place. */
+.films {
+  flex: 1 1 0;
+  min-height: 52px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0 -4px;
+  padding: 4px;
+  overflow-y: auto;
+  scroll-padding-block: 8px 40px;
+  scrollbar-color: color-mix(in srgb, var(--gold) 45%, transparent) transparent;
+  mask-image: linear-gradient(180deg, transparent, var(--black) 8px, var(--black) calc(100% - 40px), transparent);
+}
+
+.film-row {
+  flex: none;
+}
+
+.film-row .thumb {
+  flex: none;
+  width: 34px;
+  height: 51px;
+  border-radius: 3px;
+  object-fit: cover;
+  background: var(--mark);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--warm) 30%, transparent);
+}
+
+.row-year {
+  color: var(--dim);
+}
+
+/* The film showing now, marked as such; it does nothing. */
+.film-row.now {
+  cursor: default;
+}
+
+.row-now {
+  display: block;
   font-size: 13px;
   color: var(--dim);
 }

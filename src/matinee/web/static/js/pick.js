@@ -11,6 +11,7 @@ import { get } from "./api.js";
 import { twoParts } from "./door-rules.js";
 import { h, isPhone, prefersLessMotion, sentenceCase, wait } from "./dom.js";
 import { dtddBeside } from "./credits.js";
+import { kept } from "./run.js";
 import { backdropUrl, corsImage } from "./pictures.js";
 import { panelAction } from "./panel.js";
 import { typeLine } from "./type.js";
@@ -221,10 +222,21 @@ function fillBar(frame, left, centre = null) {
   if (isPhone()) frame.aside.append(frame.bar);
 }
 
-// The resting pick's actions: "‹ Back" and "Wrong pick?" at the bar's left, "Not that one" at its centre.
-function pickBar(frame, film, actions) {
+// The resting pick's actions: "‹ Back" and "Wrong pick?" at the bar's left, "Not that one" at its centre. A note
+// records `walk`, the walk the film was drawn under.
+function pickBar(frame, film, actions, walk) {
   const nope = h("button", { class: "action rose lead", type: "button", onclick: actions.notThatOne }, "Not that one");
-  fillBar(frame, [backAction(frame, actions), actions.noteLink(film, frame.panel)], nope);
+  fillBar(frame, [backAction(frame, actions), actions.noteLink(film, frame.panel, walk)], nope);
+}
+
+// What Matinee's line says at rest, as the films shown this run keep it: its gold and cream parts, or nothing when a
+// fuse burnt the line away, and whether DoesTheDogDie's credit stood with it (the line, or the turned-away film it
+// names, was its data).
+function lineSaid(frame, fuse) {
+  const credit = Boolean(frame.aside.querySelector(".beside-credit"));
+  if (fuse?.lit()) return { gold: "", reveal: "", credit };
+  const { line } = frame;
+  return { gold: line.querySelector(".ack")?.textContent ?? "", reveal: line.querySelector(".ask")?.textContent ?? "", credit };
 }
 
 // On a desktop the facts stand under Matinee's line, and the resting line gives up the room it kept for four lines
@@ -237,13 +249,14 @@ function factsUnderLine(frame, info, fuse) {
 
 // The resting page: the film's details rise, and the landed poster, where there is one, moves from the
 // wall to its place and leaves its cell empty until the pick ends.
-async function rest({ stage, wall, frame, film, result, actions, info, backdrop, poster, fuse }) {
+async function rest({ stage, wall, frame, film, result, actions, info, backdrop, poster, fuse, door, walk }) {
   stage.classList.add("revealed");
+  actions.remember(kept({ film, result, door, walk, said: lineSaid(frame, fuse) }));
   const shown = feature(info, film, result, backdrop);
   frame.showing.append(shown);
   if (!isPhone()) factsUnderLine(frame, info, fuse);
   frame.aside.append(...underLine(result, frame.aside.querySelector(".swap-note")));
-  pickBar(frame, film, actions);
+  pickBar(frame, film, actions, walk);
   // Measured once the aside is whole, so the poster takes only the height left beneath it.
   const from = wall.landedTile()?.img.getBoundingClientRect();
   const slot = h("div", { class: "poster-slot" });
@@ -284,8 +297,9 @@ async function restingPoster(sharp, wall, film) {
 // the gold line that stays through the hunt: the reason, or the nope line, or "" when nothing stays.
 async function goldLine(frame, result, lines, fuse) {
   const { line, aside } = frame;
-  // A film shown after three tripped the list names its trip from DoesTheDogDie's data.
-  if (result.last) creditLine(frame);
+  // A film shown after three tripped the list names its trip from DoesTheDogDie's data, as does a film brought back
+  // whose line was built on it.
+  if (result.last || lines.credit) creditLine(frame);
   if (!result.swapped) return lines.gold || "";
   fuse?.cancel();
   lines.reveal = lines.beneath(result.swapped.line);
@@ -337,12 +351,13 @@ async function bringOut({ wall, frame, pause, posterReady, left, lines, gold, fu
 }
 
 // The page's pick screen. `door` is the tree the film was drawn through, which its rank counts among (null before
-// a door). `actions` holds notThatOne, rollAgain, showPicked, startOver, backPanel (what the Back panel holds),
-// failed and the note link panel's builder. `readUntil` (a performance.now() time) holds the hunt until the line on screen has
+// a door), and `walk` the walk it was drawn under, which a note records. `actions` holds notThatOne, rollAgain,
+// showPicked, startOver, backPanel (what the Back panel holds), failed, the note link's builder, and remember,
+// which keeps each film shown on screen for the Back panel. `readUntil` (a performance.now() time) holds the hunt until the line on screen has
 // been read. After every wait the pick checks that its screen is still showing and that the pick was
 // not ended on the wall: a way back or the name tag can end it at any moment, and a pick the viewer
 // has left changes nothing further.
-export async function showPick({ stage, wall, result, frame, readUntil = 0, lines, fuse = null, actions, door }) {
+export async function showPick({ stage, wall, result, frame, readUntil = 0, lines, fuse = null, actions, door, walk }) {
   const film = result.film;
   if (!film) {
     fuse?.cancel();
@@ -361,11 +376,11 @@ export async function showPick({ stage, wall, result, frame, readUntil = 0, line
   if (pause === null || left()) return undefined;
   const out = await bringOut({ wall, frame, pause, posterReady, left, lines, gold, fuse });
   if (!out) return undefined;
-  return toRest({ stage, wall, frame, film, result, actions, left, out, cardRequest, backdropReady, fuse });
+  return toRest({ stage, wall, frame, film, result, actions, left, out, cardRequest, backdropReady, fuse, door, walk });
 }
 
 // After the beat, once the film's details and backdrop have arrived, the poster moves to rest.
-async function toRest({ stage, wall, frame, film, result, actions, left, out, cardRequest, backdropReady, fuse }) {
+async function toRest({ stage, wall, frame, film, result, actions, left, out, cardRequest, backdropReady, fuse, door, walk }) {
   const beat = wait(prefersLessMotion() ? STILL_HOLD_MS : BEAT_MS);
   const [card, backdrop] = await Promise.all([cardRequest, backdropReady, out.typing, beat]);
   if (left()) return undefined;
@@ -373,7 +388,7 @@ async function toRest({ stage, wall, frame, film, result, actions, left, out, ca
   const poster = out.shown ? await restingPoster(out.sharp.img, wall, film) : null;
   if (left()) return undefined;
   out.sharp.resting = poster;
-  return rest({ stage, wall, frame, film, result, actions, info: card.data, backdrop, poster, fuse });
+  return rest({ stage, wall, frame, film, result, actions, info: card.data, backdrop, poster, fuse, door, walk });
 }
 
 // What the pick fetches as soon as it knows the film: its details, ranked among `door`'s films (null before a
