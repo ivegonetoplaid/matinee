@@ -1,6 +1,6 @@
 [project]
 name = "matinee"
-version = "0.1.0"
+version = "0.2.1"
 description = "Matinee: a film picker for a home media library, one conversation at a time."
 requires-python = ">=3.12"
 dependencies = [
