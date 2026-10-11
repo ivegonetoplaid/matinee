@@ -875,7 +875,7 @@ a.wordmark:focus-visible {
 }
 
 /* How well audiences regard the film: a line in the display face, in cream, with its standing beneath it in quiet
-   text, such as "Top half by TMDB audience rating". */
+   text, such as "Middle 20% by TMDB audience rating". */
 .rank {
   display: flex;
   flex-wrap: wrap;
