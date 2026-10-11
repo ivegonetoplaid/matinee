@@ -1309,11 +1309,16 @@ a.wordmark:focus-visible {
   color: var(--dim);
 }
 
-/* The films shown this run stand apart from the answers, under a rule. */
+/* The films shown this run stand apart from the answers: at the panel's foot, above "Start over", under a gold rule,
+   the theatre's dressing, as the marquee's rules are. */
 .panel-section.apart {
-  margin-top: 18px;
-  padding-top: 16px;
-  border-top: 1px solid color-mix(in srgb, var(--text) 14%, transparent);
+  margin-top: auto;
+  padding-top: 18px;
+  border-top: 3px solid color-mix(in srgb, var(--gold) 70%, transparent);
+}
+
+.panel-body:has(.apart) > .panel-foot {
+  margin-top: 0;
 }
 
 /* The films shown this run: room for three rows, scrolling on its own past them with its scrollbar showing, so the

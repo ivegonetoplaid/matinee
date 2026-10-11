@@ -2197,8 +2197,9 @@ the film information area on both desktop and phone.
     every later one: the source answer asks the source question again, the door
     shows the doors (with the source answer's reply), and a later answer asks
     its question again;
-  - under a rule, when answers are listed above it, "Shown this run · <N> films"
-    ("1 film" for one), then every film the run
+  - at the panel's foot above `Start over`, under a 3 px gold rule when answers
+    are listed above it, "Shown this run · <N> films" ("1 film" for one), then
+    every film the run
     has shown on screen, newest first, each a row with its small poster
     (34 by 51 px, a plain card when the picture fails), title and year. The
     film showing now is marked "Showing now" and does nothing. The list has no
