@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import urllib.error
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -12,6 +13,7 @@ from fastapi.testclient import TestClient
 
 from matinee.engine import load_catalog
 from matinee.labels import LabelsError
+from matinee.outage import RETRY_S, STARTING_S
 from matinee.progress import RebuildStatus, write_status
 from matinee.store import Store
 from matinee.table import FilmTable
@@ -20,7 +22,7 @@ from matinee.tmdb import KEY_REFUSED, NO_KEY, NOT_ANSWERING
 from matinee.trees import TreeError
 from matinee.web.app import create_app
 from matinee.web.config import Config, ConfigError, from_env
-from matinee.web.seerr import CHECK_EVERY, SeerrCheck
+from matinee.web.seerr import SeerrCheck
 from matinee.web.setup import (
     FAILED,
     FETCHING,
@@ -29,6 +31,7 @@ from matinee.web.setup import (
     SEERR_AWAY,
     STALLED_AFTER,
     STOPPED,
+    WAITING,
     rebuild_lines,
 )
 from matinee.web.theatre import Theatre
@@ -54,7 +57,10 @@ def status(state: str, reason: str | None = None, age: float = 0) -> RebuildStat
         (status("stopped", NO_KEY), 0, [STOPPED[NO_KEY]]),
         (status("stopped", KEY_REFUSED), 5, [STOPPED[KEY_REFUSED]]),
         (status("stopped", NOT_ANSWERING), 5, [STOPPED[NOT_ANSWERING]]),
-        (status("stopped", "the rebuild failed; its log says why"), 5, [FAILED]),
+        (status("stopped", "the rebuild failed: a code fault"), 5, [FAILED]),
+        (status("waiting"), 5, []),  # the library's own line says it does not answer
+        (status("waiting"), 0, [WAITING]),
+        (status("waiting", age=STALLED_AFTER.total_seconds() + 10), 5, [FAILED]),  # a waiting rebuild that died
         (status("running", age=STALLED_AFTER.total_seconds() - 10), 0, [FETCHING]),
         (status("running", age=STALLED_AFTER.total_seconds() + 10), 0, [FAILED]),  # a rebuild that died
         (status("running", age=STALLED_AFTER.total_seconds() + 10), 5, [FAILED]),
@@ -103,7 +109,7 @@ def test_settings_it_cannot_use_and_a_silent_seerr_are_said_and_the_library_is_s
     card = client.get("/api/door")
     assert card.status_code == 200
     seerr._opener = answers  # Seerr comes back; the note drops it at the next check, with no restart
-    clock[0] += CHECK_EVERY
+    clock[0] += RETRY_S
     assert SEERR_AWAY not in client.get("/api/setup").json()["lines"]
 
 
@@ -141,7 +147,9 @@ def test_no_media_server_is_no_fault(tmp_path: Path) -> None:
     assert MEANWHILE not in lines and not any("reach" in line for line in lines)  # a choice, not a fault
 
 
-def test_a_seerr_that_stops_answering_sends_picks_to_tmdb_until_it_answers(tmp_path: Path) -> None:
+def test_a_seerr_that_stops_answering_sends_picks_to_tmdb_and_says_so_in_the_strip_until_it_answers(
+    tmp_path: Path, caplog: pytest.LogCaptureFixture
+) -> None:
     def silent(req: Any, timeout: float) -> Any:
         raise urllib.error.URLError("no route")
 
@@ -149,10 +157,17 @@ def test_a_seerr_that_stops_answering_sends_picks_to_tmdb_until_it_answers(tmp_p
     config = Config(SERVER, tmp_path, "https://seerr.invalid", None)
     seerr = SeerrCheck(config.seerr_url, clock=lambda: clock[0], opener=silent)
     client = site(tmp_path, config, seerr, FakeLibrary())
-    assert client.get("/api/film/5").json()["link_to"] == "tmdb"
+    clock[0] = STARTING_S  # mid-day, long past start
+    with caplog.at_level(logging.WARNING, logger="matinee.seerr"):
+        assert client.get("/api/film/5").json()["link_to"] == "tmdb"
+        assert client.post("/api/first", json={"viewer": {}}).json()["fallback"] == SEERR_AWAY
+        clock[0] += RETRY_S  # asked again, never given up on, and not warned again
+        assert client.post("/api/first", json={"viewer": {}}).json()["fallback"] == SEERR_AWAY
+    assert len(caplog.records) == 1
     seerr._opener = answers
-    clock[0] += CHECK_EVERY
+    clock[0] += RETRY_S
     assert client.get("/api/film/5").json()["link_to"] == "seerr"
+    assert client.post("/api/first", json={"viewer": {}}).json()["fallback"] is None
 
 
 @pytest.mark.parametrize("table", [None, b"this is not a film table"])

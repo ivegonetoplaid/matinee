@@ -1,7 +1,8 @@
 """The rebuild's report on itself, `rebuild.json` in the data directory, where the web server reads it.
 
-The rebuild writes it as it starts, as it finishes, and when it stops early with
-the reason. The file is replaced atomically, so a reader never sees half of one.
+The rebuild writes it as it starts, as it finishes, when it stops early with
+the reason, and every few seconds while it waits for a media server that does not
+answer. The file is replaced atomically, so a reader never sees half of one.
 A file that cannot be read counts as absent.
 """
 
@@ -17,7 +18,7 @@ from typing import Literal
 STATUS_FILE = "rebuild.json"
 log = logging.getLogger("matinee.progress")
 
-State = Literal["running", "finished", "stopped"]
+State = Literal["waiting", "running", "finished", "stopped"]
 
 
 @dataclass(frozen=True)
@@ -70,7 +71,7 @@ def _count(value: object) -> bool:
 def _well_formed(status: RebuildStatus) -> bool:
     """Every field of the kind the report promises: a known state, text times, counts, and text or no reason."""
     return (
-        status.state in ("running", "finished", "stopped")
+        status.state in ("waiting", "running", "finished", "stopped")
         and isinstance(status.started_at, str)
         and isinstance(status.updated_at, str)
         and _count(status.done)

@@ -2,9 +2,11 @@
 
 The film list is read from the media server live, at most every `LIVE_TTL`
 seconds. While it cannot be read the library cannot be used: no film counts as
-held, and the films the labels name are offered alone. For `RETRY_AFTER` seconds
-after a failed read no new read is attempted, so a hung server cannot queue every
-request behind it. With no media server configured there is no list to read.
+held, and the films the labels name are offered alone. It is never given up on:
+for `outage.RETRY_S` seconds after a failed read no new read is attempted, so a
+hung server cannot queue every request behind it, and then it is read again. A
+failure just after start is said as a server that may still be starting
+(`matinee.outage`). With no media server configured there is no list to read.
 
 The table file is reloaded when the rebuild replaces it, and its TMDB age is
 checked on every call: a table six months old or more is still served, and
@@ -32,12 +34,12 @@ from typing import Literal
 from matinee.engine import Catalog, EngineError, load_catalog
 from matinee.labels import LabelsError
 from matinee.library import Library, LibraryError, LibraryFilm, LibraryRefused
+from matinee.outage import RETRY_S, STARTING_S, Outage
 from matinee.reference import ReferenceError
 from matinee.table import FilmTable, TableError, empty_table, is_stale, load_table, with_live
 from matinee.trees import TreeError
 
 LIVE_TTL = 300.0
-RETRY_AFTER = 15.0
 log = logging.getLogger("matinee.theatre")
 
 LibraryState = Literal["none", "usable", "unreachable", "refused"]
@@ -45,15 +47,26 @@ UNUSABLE: tuple[LibraryState, ...] = ("unreachable", "refused")  # a media serve
 BROKEN_DATA = (EngineError, LabelsError, ReferenceError, TreeError, TableError, OSError, KeyError, json.JSONDecodeError)
 
 
-def warn_library(exc: LibraryError, failed_as: LibraryState) -> None:
-    """Say once how the media server failed, with the check that fits: its key when it turned the key down, its
-    address and whether it runs when it gave no usable answer."""
+def warn_library(exc: LibraryError, failed_as: LibraryState, level: int = logging.WARNING) -> None:
+    """Say how the media server failed, with the check that fits: its key when it turned the key down, its address
+    and whether it runs when it gave no usable answer. At INFO, just after start, it may still be starting."""
+    if level < logging.WARNING:
+        log.log(
+            level,
+            "the media server is not answering yet: %s. Matinee has just started, so it may still be starting too."
+            " Meanwhile Matinee recommends from the films the labels name. It tries again every %d seconds, and"
+            " warns if it still does not answer %d seconds after start.",
+            exc,
+            int(RETRY_S),
+            int(STARTING_S),
+        )
+        return
     check = "check the key in its settings" if failed_as == "refused" else "check that it is running and its address"
     log.warning(
         "the media server could not be read: %s. Meanwhile Matinee recommends from the films the labels name. It"
         " tries again every %d seconds; %s.",
         exc,
-        int(RETRY_AFTER),
+        int(RETRY_S),
         check,
     )
 
@@ -94,6 +107,7 @@ class Theatre:
         self._showing: Showing | None = None
         self._failed_at: float | None = None
         self._failed_as: LibraryState = "unreachable"  # how the last failed read failed
+        self._outage = Outage(clock())
         self.broken: str | None = None  # why Matinee's own data cannot make a catalog, as last found
         self._stale_said = False
         with contextlib.suppress(NothingToShow):  # logged where it was found; every later call tries again
@@ -132,17 +146,20 @@ class Theatre:
         """The live film list and what state the library is in; the last list stands until a read fails."""
         if self._library is None:
             return None, "none"
-        if self._failed_at is not None and now - self._failed_at < RETRY_AFTER:
+        if self._failed_at is not None and now - self._failed_at < RETRY_S:
             return None, self._failed_as
         try:
             films = self._library.films()
         except LibraryError as exc:
             failed_as: LibraryState = "refused" if isinstance(exc, LibraryRefused) else "unreachable"
-            if self._failed_at is None or failed_as != self._failed_as:
-                warn_library(exc, failed_as)
+            if failed_as != self._failed_as:
+                self._outage.answered()  # a new kind of failure is said afresh
+            level = self._outage.failed(now, may_be_starting=failed_as == "unreachable")
+            if level is not None:
+                warn_library(exc, failed_as, level)
             self._failed_at, self._failed_as = now, failed_as
             return None, failed_as
-        if self._failed_at is not None:
+        if self._outage.answered():
             log.info("the media server answers again")
         self._failed_at = None
         return films, "usable"
@@ -204,8 +221,8 @@ class Theatre:
 
     @staticmethod
     def _ttl(showing: Showing) -> float:
-        """How long a showing stands: LIVE_TTL, or RETRY_AFTER while the library cannot be read."""
-        return RETRY_AFTER if showing.library in UNUSABLE else LIVE_TTL
+        """How long a showing stands: LIVE_TTL, or RETRY_S while the library cannot be read."""
+        return RETRY_S if showing.library in UNUSABLE else LIVE_TTL
 
     @property
     def library(self) -> Library | None:

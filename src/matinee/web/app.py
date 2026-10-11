@@ -516,7 +516,7 @@ def setup_faults(theatre: Theatre, config: Config, seerr: SeerrCheck, faults: Se
         return [*found, BROKEN.format(detail=exc)], 0
     if showing.library in UNUSABLE and config.server is not None:
         found.append(library_away(SERVER_NAMES[config.server.kind], showing.library == "refused"))
-    if config.seerr_url is not None and not seerr.answers():
+    if seerr.away():
         found.append(SEERR_AWAY)
     return [*found, *rebuild_lines(read_status(config.state), theatre.table_films)], showing.now_showing
 
@@ -609,8 +609,8 @@ def create_app(
     server = None
     if config.server is not None:
         server = SERVER_NAMES[config.server.kind]
-    add_viewing_routes(app, theatre, store, topics_on, server)
-    add_pick_routes(app, theatre, store, picker, topics_on, server)
+    add_viewing_routes(app, theatre, store, topics_on, server, seerr)
+    add_pick_routes(app, theatre, store, picker, topics_on, server, seerr)
     add_note_routes(app, theatre, store)
     add_quip_routes(app, lines)
     app.state.config = config

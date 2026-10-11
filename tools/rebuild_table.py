@@ -10,10 +10,13 @@ nothing. With `--daily HH:MM` it rebuilds now and then every day at that local
 time, which is how the server runs it beside itself; `--daily` alone takes
 the time from REBUILD_TIME, 04:30 when unset. A second rebuild on the same state
 directory waits for the first (`rebuild.lock`). It reports itself in
-`rebuild.json` (`matinee.progress`): running, with its progress at least every few
-seconds while it fetches, finished, or stopped with the reason, such as no TMDB
-key, a refused key, or TMDB not answering. Without a key it
-fetches nothing and writes no table.
+`rebuild.json` (`matinee.progress`): waiting while the media server does not
+answer, running, with its progress at least every few seconds while it fetches,
+finished, or stopped with the reason, such as no TMDB key, a refused key, TMDB not
+answering, or an unexpected failure and its error. Without a key it fetches
+nothing and writes no table. A media server that does not answer is never given
+up on (`matinee.outage`): the rebuild reads it again every few seconds, keeping
+the table in place, and goes on once it answers.
 
 Settings come from the environment: DATA_DIR (or `--state`), the media server
 (JELLYFIN_URL and JELLYFIN_API_KEY, or PLEX_URL and PLEX_TOKEN), TMDB_TOKEN,
@@ -42,8 +45,9 @@ from pathlib import Path
 from matinee.genome import Scores
 from matinee.genome_file import load_scores
 from matinee.labels import LabelsError, load_labels, load_overrides
-from matinee.library import LibraryFilm
+from matinee.library import LibraryError, LibraryFilm, LibraryRefused
 from matinee.library.choice import MediaServer, ServerChoiceError, configured_server, open_reader
+from matinee.outage import RETRY_S, STARTING_S, Outage
 from matinee.progress import RebuildStatus, write_status
 from matinee.table import BuildReport, build_table, write_table
 from matinee.tmdb import (
@@ -64,11 +68,12 @@ from matinee.tmdb import (
 
 log = logging.getLogger("rebuild_table")
 DEFAULT_STATE = Path.home() / ".local/share/matinee"
-FAILED = "the rebuild failed; its log says why"
+FAILED = "the rebuild failed"  # the report's reason for an unexpected failure, followed by its error
 SAVE_EVERY = 500  # new records between saves of the film table while the rebuild fetches
 DEFAULT_DAILY = "04:30"  # the nightly rebuild's time when REBUILD_TIME is unset
 FROM_SETTING = "REBUILD_TIME"  # what `--daily` given alone stands for
 LOCK = "rebuild.lock"  # held in the state directory for each rebuild
+BEGAN = time.monotonic()  # when this process started: a media server failing soon after may still be starting
 
 
 def _now() -> str:
@@ -88,11 +93,11 @@ def rebuild(server: MediaServer | None, state: Path, token: str, rate: float = D
     kept = _keep(table)
     try:
         status = _rebuild(server, state, cache, token, started, rate)
-    except Exception:
+    except Exception as exc:
         if kept is not None:
             os.replace(kept, table)  # an unexpected failure puts back the table this run started with
             log.warning("the rebuild failed, so the film table it started with is back in place")
-        _report(state, RebuildStatus("stopped", started, _now(), reason=FAILED))
+        _report(state, RebuildStatus("stopped", started, _now(), reason=f"{FAILED}: {exc}"))
         raise
     if kept is not None:
         kept.unlink(missing_ok=True)
@@ -149,7 +154,7 @@ def _keep(table: Path) -> Path | None:
 def _rebuild(
     server: MediaServer | None, state: Path, cache: Path, token: str, started: str, rate: float
 ) -> RebuildStatus:
-    films = open_reader(server).films() if server is not None else []
+    films = library_films(server, state, started) if server is not None else []
     listed = load_labels().films() | household_films(state)
     ids = listed | {f.tmdb for f in films if f.tmdb is not None}
     have = load_cache(cache)
@@ -205,6 +210,50 @@ class _Run:
                 log.info("rebuild progress: %d of %d films fetched or failed (%d%%)", done, total, 100 * done // total)
             self.save(records)
             self.saved_at = so_far.fetched
+
+
+def library_films(server: MediaServer, state: Path, started: str) -> list[LibraryFilm]:
+    """The media server's film list, read again every RETRY_S seconds until it answers: the server runs on the
+    household's network, so it is never given up on. Meanwhile the report says the rebuild waits and the table in
+    place stands."""
+    reader = open_reader(server)
+    outage = Outage(BEGAN)
+    while True:
+        try:
+            films = reader.films()
+        except LibraryError as exc:
+            level = outage.failed(time.monotonic(), may_be_starting=not isinstance(exc, LibraryRefused))
+            if level is not None:
+                _say_waiting(exc, level)
+            _report(state, RebuildStatus("waiting", started, _now()))
+            time.sleep(RETRY_S)
+            continue
+        if outage.answered():
+            log.info("the media server answers; the rebuild goes on")
+        return films
+
+
+def _say_waiting(exc: LibraryError, level: int) -> None:
+    """Say that the rebuild waits for the media server; at INFO, just after start, as one that may still be
+    starting."""
+    if level < logging.WARNING:
+        log.log(
+            level,
+            "the media server is not answering yet: %s. Matinee has just started, so it may still be starting too."
+            " The rebuild waits for it, reading again every %d seconds, and warns if it still does not answer %d"
+            " seconds after start. Meanwhile the film table in place stays.",
+            exc,
+            int(RETRY_S),
+            int(STARTING_S),
+        )
+        return
+    log.warning(
+        "the media server could not be read: %s. The rebuild waits for it, reading again every %d seconds, and goes"
+        " on once it answers. Meanwhile the film table in place stays; check that the server runs, its address and"
+        " its key.",
+        exc,
+        int(RETRY_S),
+    )
 
 
 def household_films(state: Path) -> frozenset[int]:

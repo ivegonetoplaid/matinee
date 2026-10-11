@@ -28,6 +28,7 @@ from matinee.engine import load_catalog
 from matinee.library import Image, LibraryError, LibraryFilm, LibraryRefused
 from matinee.library.choice import MediaServer
 from matinee.library.jellyfin import JellyfinReader
+from matinee.outage import RETRY_S
 from matinee.ranks import VOTE_FLOOR
 from matinee.store import Store
 from matinee.table import FilmTable, write_table
@@ -36,7 +37,7 @@ from matinee.web import app as app_module
 from matinee.web.app import IMAGE_CACHE, STATIC, TMDB_IMAGE_CACHE, create_app
 from matinee.web.config import Config, ConfigError, ImageSource, from_env
 from matinee.web.seerr import SeerrCheck
-from matinee.web.theatre import LIVE_TTL, RETRY_AFTER, Theatre
+from matinee.web.theatre import LIVE_TTL, Theatre
 from test_engine import make_table, reference, write_data
 
 SECRET_URL = "http://media.invalid:8096"
@@ -270,7 +271,7 @@ def test_an_unreachable_library_holds_no_film_and_says_so(world: Any) -> None:
     library.down = False
     assert client.get("/api/film/5").status_code == 404  # still inside the hold-off: no new read
     assert len([c for c in library.calls if c[0] == "films"]) == reads
-    clock.now += RETRY_AFTER + 1
+    clock.now += RETRY_S + 1
     assert client.get("/api/film/5").status_code == 200
     assert client.get("/api/setup").json()["lines"] == []  # the note goes without a restart
 
@@ -612,7 +613,7 @@ def test_while_the_library_cannot_be_used_every_picture_and_synopsis_comes_from_
     card = client.get("/api/film/6")
     assert card.status_code == 200 and card.json()["synopsis"] == "TMDB says 6."
     library.down = False
-    clock.now += RETRY_AFTER + 1
+    clock.now += RETRY_S + 1
     assert client.get("/api/film/6").json()["synopsis"] == "A stranger rides into town."  # the library's again
 
 

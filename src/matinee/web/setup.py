@@ -32,6 +32,7 @@ STOPPED = {
 SEERR_AWAY = "I can't reach your Seerr right now, so each pick links to TMDB until it's back."
 FAILED = "My last rebuild of the film details failed. Its log says why; run it again once that's fixed."
 FETCHING = "I'm still fetching film details from TMDB. Give me a minute and try again."
+WAITING = "I'm waiting for your media server to answer before I fetch any film details. Give me a minute and try again."
 NEVER_BUILT = (
     "I don't have any film details yet, and nothing is fetching them. Run the rebuild (tools/rebuild_table.py)."
 )
@@ -81,7 +82,8 @@ def fallback_line(server: str, refused: bool) -> str:
 
 
 def stalled(status: RebuildStatus, now: datetime) -> bool:
-    """Whether a running report has stood still past STALLED_AFTER (or names no time), so the rebuild has died."""
+    """Whether a running or waiting report has stood still past STALLED_AFTER (or names no time), so the rebuild
+    has died."""
     try:
         return now - datetime.fromisoformat(status.updated_at) > STALLED_AFTER
     except (ValueError, TypeError):
@@ -89,10 +91,12 @@ def stalled(status: RebuildStatus, now: datetime) -> bool:
 
 
 def rebuild_lines(status: RebuildStatus | None, films: int, now: datetime | None = None) -> list[str]:
-    """What the rebuild's report says: a stop's reason, and why there is no film when there is none. A running
-    report that stood still too long reads as a failed rebuild."""
+    """What the rebuild's report says: a stop's reason, and why there is no film when there is none. A running or
+    waiting report that stood still too long reads as a failed rebuild. A rebuild waiting for the media server adds
+    nothing while there are films: the library's own line says it does not answer."""
     lines: list[str] = []
-    if status is not None and status.state == "running" and stalled(status, now or datetime.now(UTC)):
+    live = ("running", "waiting")
+    if status is not None and status.state in live and stalled(status, now or datetime.now(UTC)):
         lines.append(FAILED)
         return lines
     if status is not None and status.state == "stopped":
@@ -103,6 +107,8 @@ def rebuild_lines(status: RebuildStatus | None, films: int, now: datetime | None
         lines.append(NEVER_BUILT)
     elif status.state == "running":
         lines.append(FETCHING)
+    elif status.state == "waiting":
+        lines.append(WAITING)
     return lines
 
 
