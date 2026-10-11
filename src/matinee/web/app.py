@@ -93,7 +93,8 @@ class FilmCard(BaseModel):
     link_to: Literal["seerr", "tmdb"]
     backdrop_path: str | None  # TMDB's path for the backdrop, given only when TMDB is the image source
     rank: str | None  # how well audiences regard the film among the door's films, in words; None under the vote floor
-    tags: list[str]  # the film's strongest genome words less the skip list, strongest first; none when not covered
+    standing: str | None  # the rank's band as a share of the door's films and what it is measured by; None with no rank
+    tags: list[str]  # its strongest genome words less the skip list and words alike to one shown; none when not covered
 
 
 class Pictures(BaseModel):
@@ -306,6 +307,7 @@ def add_film_routes(
             raise HTTPException(status_code=400, detail="refused")
         synopsis = film_synopsis(theatre, film, tmdb)
         link, link_to = film_link(seerr.link_base(), tmdb)
+        ranked = rank(cat, tmdb, door)
         return FilmCard(
             tmdb=tmdb,
             title=film.title,
@@ -315,7 +317,8 @@ def add_film_routes(
             link=link,
             link_to=link_to,
             backdrop_path=film.backdrop_path if images == "tmdb" else None,
-            rank=rank(cat, tmdb, door),
+            rank=ranked.words if ranked else None,
+            standing=ranked.standing if ranked else None,
             tags=tags.of(tmdb),
         )
 

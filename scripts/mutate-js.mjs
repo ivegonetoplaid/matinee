@@ -10,7 +10,14 @@ import { cpSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync }
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
-const PARTS = ["src/matinee/web/static/js", "src/matinee/web/static/css", "tests/js", "data/quips.json", "package.json"];
+const PARTS = [
+  "src/matinee/web/static/js",
+  "src/matinee/web/static/css",
+  "src/matinee/web/static/marquee",
+  "tests/js",
+  "data/quips.json",
+  "package.json",
+];
 const TESTS = "tests/js/*.test.mjs";
 
 const listing = process.argv[2];
