@@ -2374,7 +2374,9 @@ the film information area on both desktop and phone.
   same checks and starts without publishing. No step downloads from Docker
   Hub, whose anonymous limit and outages failed CI at random. While the version is 0.x, a release that changes only `Z` needs
   no steps from an installation; one that changes `Y` may, and its release
-  notes say so. The version in `pyproject.toml` matches the latest release.
+  notes say so. `pyproject.toml` holds version `0.0.0` in the repository; the
+  release writes the tag's `X.Y.Z` into it before building, so the image
+  carries the release's number and nobody keeps the file in step.
   The image carries `LICENSE` and `README.md`, for the credits and terms of
   what it redistributes.
 - **State** is one directory mounted at `/state` (`DATA_DIR`). It holds
