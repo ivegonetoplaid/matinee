@@ -260,7 +260,7 @@ UNCHECKED_LINES = {
     ),
 }
 EXHAUSTED = "Every film left here trips something on your list. Want to start over?"
-USED_UP = "That's every film I've got for those answers. Step back along the trail, or start over."
+USED_UP = "That's every film I've got for those answers. Step back, or start over."
 TIRED = "Three in a row trip your list, starting with one where {topic}. Roll again, or I can show you what I picked."
 PICKED = ("Here's what I picked.", "You should know it's one where {topic}.")
 

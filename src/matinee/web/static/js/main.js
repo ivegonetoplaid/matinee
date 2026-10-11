@@ -2,7 +2,7 @@
 
 import { del, get, post, put } from "./api.js";
 import { noteLink, walkOf } from "./note.js";
-import { aboutLink, credits, dtddFoot } from "./credits.js";
+import { aboutLink, dtddFoot } from "./credits.js";
 import { Door, buildMarquee, marqueeReady, showCount } from "./door.js";
 import { LockedDoor, WALL_FADE_MS } from "./locked.js";
 import { clear, h, isPhone, prefersLessMotion, sentenceCase, wait } from "./dom.js";
@@ -134,36 +134,20 @@ function nameTag() {
   });
 }
 
-// The way here: "Start", the source answer when the source question was asked, the door, then each answer.
-function crumbs() {
+// The walk's steps so far: "Start", the source answer when the source question was asked, the door, then each
+// answer. A question screen's "Back" goes to the screen before the step showing now.
+function walkSteps() {
   return ["Start", visit.sourceSay, visit.firstSay, ...visit.says].filter((say) => say !== null);
 }
 
-// The way here, at the foot of the screen. A crumb takes the viewer to the screen it led to; the crumb for
-// the screen they are on, `here`, is plain text. "Start" and the door keep their full words where the trail
-// must fit one line; the source answer and the answers shorten first.
-function trail(here) {
-  if (!visit.tree && !visit.sourceSay) return null;
-  const door = visit.sourceSay === null ? 1 : 2;
-  const items = crumbs().map((say, i) => {
-    const words = sentenceCase(say);
-    const crumb =
-      i === here
-        ? h("span", { class: "crumb here", "aria-current": "page", title: words }, words)
-        : h("button", { class: "crumb", type: "button", title: words, onclick: () => leaveTo(() => goTo(i)) }, words);
-    return h("li", i === 0 || i === door ? { class: "keep" } : {}, crumb);
-  });
-  return h("nav", { class: "trail", "aria-label": "The way here" }, h("ol", {}, items));
-}
-
-// Where a question screen's "Back" leads, as a crumb: the screen before the one showing, whose crumb is `here`.
+// Where a question screen's "Back" leads, as a step: the screen before the one showing, whose step is `here`.
 // None where that is the walk's first screen, which "Start over" reaches.
 function backTo(here) {
   const target = here - 1;
   return target > 0 ? target : null;
 }
 
-// A phone's way back from a question screen, in the trail's place: "Back", where there is a screen before
+// A question screen's way back, at the foot of the screen at every width: "Back", where there is a screen before
 // this one other than the first, and "Start over". None on the walk's first screen.
 function wayBack(here) {
   if (!visit.tree && !visit.sourceSay) return null;
@@ -176,9 +160,9 @@ function wayBack(here) {
   return h("nav", { class: "way-back", "aria-label": "Way back" }, back, again);
 }
 
-// The trail's last crumb, which led to the screen showing now.
-function lastCrumb() {
-  return crumbs().length - 1;
+// The last step, which led to the screen showing now.
+function lastStep() {
+  return walkSteps().length - 1;
 }
 
 // A question screen. "Just pick one!" stands last, beneath the answers and any footnote, with the count of
@@ -204,7 +188,7 @@ function frame({ count, footnote }) {
   clear(stage).append(
     topbar(nameTag()),
     h("section", { class: "talk" }, line, answers, note, row),
-    h("div", { class: "bottombar" }, trail(lastCrumb()), wayBack(lastCrumb()), h("span"), credits()),
+    h("div", { class: "bottombar" }, wayBack(lastStep())),
   );
   return { line, answers, note, pick: row };
 }
@@ -251,7 +235,7 @@ function problem(data, again, keep = false) {
       line,
       h("button", { class: "action cream", type: "button", onclick: again }, "Try again"),
     ),
-    h("footer", { class: "bottombar" }, aboutLink(), credits()),
+    h("footer", { class: "bottombar" }, aboutLink()),
   );
 }
 
@@ -271,7 +255,7 @@ async function setupNote(note, onGo) {
     ? h("button", { class: "action gold", type: "button", onclick: go }, "Show me the films")
     : h("button", { class: "action cream", type: "button", onclick: go }, "Try again");
   action.hidden = true;
-  clear(stage).append(topbar(), h("section", { class: "talk setup" }, line, said, action), h("footer", { class: "bottombar" }, aboutLink(), credits()));
+  clear(stage).append(topbar(), h("section", { class: "talk setup" }, line, said, action), h("footer", { class: "bottombar" }, aboutLink()));
   // What it says, and the way on, appear once the heading has typed; the way on takes the focus, which scrolls
   // it clear of the foot's band when the note runs long.
   await typeLine(line, note.heading, "");
@@ -465,8 +449,8 @@ function chooseTree(option) {
   step();
 }
 
-// Crumb 0 ("Start") is the walk's first screen; the source answer's crumb, when there is one, is the doors;
-// the door's crumb is its first question; each crumb above that is the screen its answer led to.
+// Step 0 ("Start") is the walk's first screen; the source answer's step, when there is one, is the doors;
+// the door's step is its first question; each step above that is the screen its answer led to.
 function goTo(i) {
   if (i === 0) return start();
   const off = visit.sourceSay === null ? 0 : 1;
@@ -520,7 +504,7 @@ function pickFrame() {
   const credit = dtddFoot();
   // The foot bar's row is kept from the start on a desktop, so nothing moves when its actions arrive.
   const bar = h("div", { class: "foot-bar" }, h("div"), h("div"), h("div", { class: "bar-right" }, phone ? null : credit));
-  // The pick shows no trail and no TMDB line: "Start over" is in the Back panel, and TMDB's notice is on About.
+  // The pick's foot holds its bar: "Start over" is in the Back panel, and the acknowledgements are on About.
   const foot = h("footer", { class: "bottombar" }, phone ? credit : bar);
   clear(stage).append(topbar(nameTag() || h("span")), showing, ...(phone ? [aside] : []), foot);
   const frame = { line, aside, left, showing, bar, credit };
