@@ -1,5 +1,7 @@
-// The corner credit line: "Posters and film data from TMDB [logo]", in the foot band; a phone shows only its
-// DoesTheDogDie part, since the About page carries TMDB's logo and notice. TMDB's notice and the
+// The corner credit line: "Posters and film data from TMDB [logo]", in the foot band of every screen but the pick;
+// a phone shows only its DoesTheDogDie part, since the About page carries TMDB's logo and notice. On the pick,
+// DoesTheDogDie's credit stands alone in the foot band (`dtddFoot`), or beside an unchecked film's note (`dtddBeside`).
+// TMDB's notice and the
 // MovieLens citations are on the About page, which "About Matinee" opens: at the foot's middle on a screen with
 // no profile menu, and as the profile menu's last item inside the theatre. On a screen that shows DoesTheDogDie's data the line
 // carries "Powered by DoesTheDogDie.com" too. The TMDB logo is always smaller than Matinee's own mark.
@@ -28,6 +30,25 @@ function dtddCredit() {
   return h(
     "span",
     { class: "dtdd-credit", hidden: true },
+    h("a", { href: "https://www.doesthedogdie.com", target: "_blank", rel: "noopener noreferrer" }, "Powered by DoesTheDogDie.com"),
+  );
+}
+
+// DoesTheDogDie's credit beside a resting pick's unchecked note, which stands on the scrim.
+export function dtddBeside() {
+  return h(
+    "p",
+    { class: "beside-credit" },
+    h("a", { href: "https://www.doesthedogdie.com", target: "_blank", rel: "noopener noreferrer" }, "Powered by DoesTheDogDie.com"),
+  );
+}
+
+// DoesTheDogDie's credit in the pick's foot band, built hidden: a pick whose line names one of its topics shows it
+// before the line starts to type, and it stays for as long as the pick does.
+export function dtddFoot() {
+  return h(
+    "p",
+    { class: "credits", hidden: true },
     h("a", { href: "https://www.doesthedogdie.com", target: "_blank", rel: "noopener noreferrer" }, "Powered by DoesTheDogDie.com"),
   );
 }

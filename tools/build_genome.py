@@ -1,13 +1,14 @@
-"""Write data/genome.json: the genome scores Matinee ships, for the maintainer.
+"""Write data/genome.json and data/tags.json: the genome data Matinee ships, for the maintainer.
 
 Reads the MovieLens ml-latest genome and keeps the relevance of every tag a reader
-names (`matinee.genome_file.tags_read`) for every genome film with a TMDB id. The
-file carries the dataset's licence conditions, as data/reference.json does. Rerun
-it when a tree file or the answer key names a new tag;
+names (`matinee.genome_file.tags_read`) for every genome film with a TMDB id, and
+each such film's strongest words for the pick's tags (`matinee.tags`). Both files
+carry the dataset's licence conditions, as data/reference.json does. Rerun it when
+a tree file or the answer key names a new tag;
 tests/test_genome_file.py fails in ./check.sh until it is rerun. Running it twice
 on the same release writes an identical file.
 
-Usage: python3 tools/build_genome.py [--ml DIR] [--out FILE]
+Usage: python3 tools/build_genome.py [--ml DIR] [--out FILE] [--tags-out FILE]
 """
 
 from __future__ import annotations
@@ -20,6 +21,7 @@ from pathlib import Path
 from matinee.genome import load_genome
 from matinee.genome_file import GENOME_FILE, tags_read, write_scores
 from matinee.reference import REFERENCE_PATH, load_reference
+from matinee.tags import TAGS_FILE, write_tags
 
 DEFAULT_ML = Path.home() / ".local/share/matinee/ml-latest"
 
@@ -28,6 +30,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--ml", type=Path, default=DEFAULT_ML, help="ml-latest directory")
     parser.add_argument("--out", type=Path, default=GENOME_FILE)
+    parser.add_argument("--tags-out", type=Path, default=TAGS_FILE)
     args = parser.parse_args()
     genome = load_genome(args.ml, cache=args.ml / "genome-matrix.npz")
     cut_from = load_reference().source
@@ -42,6 +45,8 @@ def main() -> int:
     licence = json.loads(REFERENCE_PATH.read_text(encoding="utf-8"))["licence"]
     write_scores(scores, args.out, licence)
     print(f"{len(scores.rows)} films, {len(scores.tags)} tags, {scores.release}: {args.out}")
+    films = write_tags(genome, args.tags_out, licence)
+    print(f"{films} films' strongest words: {args.tags_out}")
     return 0
 
 

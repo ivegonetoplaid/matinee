@@ -10,8 +10,11 @@
 import { get } from "./api.js";
 import { twoParts } from "./door-rules.js";
 import { h, isPhone, prefersLessMotion, sentenceCase, wait } from "./dom.js";
-import { backdropUrl, corsImage } from "./pictures.js";
+import { dtddBeside } from "./credits.js";
 import { offers } from "./offers.js";
+import { kept } from "./run.js";
+import { backdropUrl, corsImage } from "./pictures.js";
+import { panelAction } from "./panel.js";
 import { typeLine } from "./type.js";
 
 const BEAT_MS = 500; // the grown poster holds for one beat before it moves to rest
@@ -20,6 +23,7 @@ const SETTLE_MS = 1300;
 const PHONE_HOLD_MS = 2200;
 const POSTER_RATIO = 1.5; // height over width
 const POSTER_MIN_H = 160; // below this the page scrolls rather than shrink the poster further
+const STRIP_H = 44; // the poster link's strip, beneath the poster
 const PICTURE_WAIT_MS = 10000; // a picture not drawable by then is given up, as the server gives up on the media server
 
 // A picture fetched ahead of its moment. Resolves to the image once it can be drawn, or to null when it
@@ -41,31 +45,80 @@ function picture(src, alt) {
   });
 }
 
-// The poster's resting box: as tall as the slot allows at 2:3, never wider than the slot.
+// The poster's resting box: as tall as the slot allows at 2:3 above the link's strip, never wider than the slot.
 function fit(slot) {
   const box = slot.getBoundingClientRect();
-  const height = Math.min(box.width * POSTER_RATIO, Math.max(POSTER_MIN_H, box.height));
+  const height = Math.min(box.width * POSTER_RATIO, Math.max(POSTER_MIN_H, box.height - STRIP_H));
   return { width: height / POSTER_RATIO, height };
 }
 
-// Moves `poster` into `slot` in the page's flow, carried from `from`, the screen box where it hung on the
-// wall. The slot is placed by the caller before this runs. The move starts from that box, measured from
-// the same corner it scales from, so it never jumps. It keeps the glow it wore on the wall, `glow(width)`.
-function settle(poster, from, slot, glow) {
+// The resting poster is the link to the film's page, on the configured Seerr or on TMDB, opening a new tab; a
+// strip on its foot names the site. It is the strip alone when the film has no poster to rest. Its warm outline
+// and the strip show once the poster has landed in it (`landed`).
+function posterLink(info, film) {
+  const site = info.link_to === "seerr" ? "Seerr" : "TMDB";
+  return h(
+    "a",
+    {
+      class: "poster-link",
+      href: info.link,
+      target: "_blank",
+      rel: "noopener noreferrer",
+      "aria-label": `${film.title}: more on ${site} (opens a new tab)`,
+    },
+    h("span", { class: "poster-strip" }, `More on ${site} ↗`),
+  );
+}
+
+function landed(link) {
+  link.classList.add("landed");
+}
+
+// Moves `poster` into `link`, above its strip, in the page's flow, carried from `from`, the screen box where it
+// hung on the wall. The link stands in `slot`, placed by the caller before this runs. The move starts from that
+// box, measured from the same corner it scales from, so it never jumps. The link keeps the glow the poster wore on
+// the wall, `glow(width)`.
+function settle(poster, from, slot, link, glow) {
   const size = fit(slot);
   poster.className = "slot-poster";
   poster.style.width = `${size.width}px`;
   poster.style.height = `${size.height}px`;
-  poster.style.boxShadow = `${glow(size.width)}, 0 24px 60px rgba(0, 0, 0, 0.6)`;
-  slot.append(poster);
+  link.style.setProperty("--poster-glow", glow(size.width));
+  link.prepend(poster);
+  slot.append(link);
   const to = poster.getBoundingClientRect();
-  if (prefersLessMotion() || !to.width) return;
+  if (prefersLessMotion() || !to.width) return landed(link);
   const shift = `translate(${from.left - to.left}px, ${from.top - to.top}px) scale(${from.width / to.width}, ${from.height / to.height})`;
   poster.style.transformOrigin = "top left";
-  poster.animate([{ transform: shift }, { transform: "none" }], {
+  const move = poster.animate([{ transform: shift }, { transform: "none" }], {
     duration: SETTLE_MS,
     easing: "cubic-bezier(0.2, 0.7, 0.2, 1)",
   });
+  return move.finished.then(
+    () => landed(link),
+    () => landed(link),
+  );
+}
+
+// How well audiences regard the film, as its card ranks it: a line in the display face, with what it is counted by
+// beside it in quiet text. Null when the film has no rank.
+function rankLine(card) {
+  if (!card.rank) return null;
+  return h("p", { class: "rank" }, h("span", { class: "rank-words" }, card.rank), " ", h("span", { class: "rank-by" }, "by audience votes"));
+}
+
+// The film's tags, its strongest genome words, as outlined chips; null when it has none. They describe the film
+// and never say why it was picked.
+function tagList(card) {
+  if (!card.tags?.length) return null;
+  return h("ul", { class: "tags", "aria-label": "Tags" }, card.tags.map((tag) => h("li", { class: "tag" }, sentenceCase(tag))));
+}
+
+// What the pick says about the film beyond its title: its rank, then its tags. Null when there is nothing to say,
+// so the layout closes up. On a desktop it stands under Matinee's line; on a phone, under the film's title.
+function facts(card) {
+  const said = [rankLine(card), tagList(card)].filter(Boolean);
+  return said.length ? h("div", { class: "facts" }, said) : null;
 }
 
 function heading(film) {
@@ -76,12 +129,13 @@ function heading(film) {
 // resting page shows no backdrop, and a backdrop that failed is left out.
 function feature(card, film, result, backdrop) {
   if (backdrop) backdrop.className = "backdrop";
-  const unchecked = result.unchecked ? [h("p", { class: "note" }, result.unchecked), lookUp(result)] : [];
+  const unchecked = result.unchecked ? [h("p", { class: "note" }, result.unchecked), dtddBeside(), lookUp(result)] : [];
+  const phoneFacts = isPhone() ? facts(card) : null;
   return h(
     "div",
     { class: "feature" },
     backdrop,
-    h("div", { class: "feature-text" }, heading(film), h("p", { class: "synopsis" }, card.synopsis || ""), unchecked),
+    h("div", { class: "feature-text" }, heading(film), phoneFacts, h("p", { class: "synopsis" }, card.synopsis || ""), unchecked),
   );
 }
 
@@ -92,11 +146,11 @@ function lookUp(result) {
   return h("a", { class: "action petrol", href, target: "_blank", rel: "noopener noreferrer" }, "Look it up on DoesTheDogDie ↗");
 }
 
-// DoesTheDogDie's credit in the foot band: shown before a line built on its data starts to type, so it is on
-// screen for as long as that line is, and for the rest of the pick.
+// DoesTheDogDie's credit in the foot band, for a line that names one of its topics: shown before the line starts to
+// type, so it is on screen for as long as the line is. Without a DoesTheDogDie key none of its data shows, so neither
+// does its credit.
 function showCredit(frame) {
-  if (!offers.dtdd) return; // no DoesTheDogDie key: none of its data shows, so neither does its credit
-  frame.credit.hidden = false;
+  if (offers.dtdd) frame.credit.hidden = false;
 }
 
 // Adds "What were you going to show me?", which reveals the film the check turned away, to `note`, the
@@ -128,69 +182,94 @@ function firstPickReveal(result, note) {
 // the last of them, its trip named.
 async function showNoFilm(result, frame, actions) {
   const { line, aside } = frame;
-  showCredit(frame);
+  if (result.tired) showCredit(frame); // the line names the first film's topic; an exhausted pool names none
   const [said, more] = twoParts(result.tired || result.exhausted); // first sentence gold, the rest cream
   await typeLine(line, said, more);
   const startOver = h("button", { class: "action cream start-over", type: "button", onclick: actions.startOver }, "Start over");
-  if (!result.tired) {
-    aside.append(startOver);
-    return;
-  }
   // A phone sets "Start over" beside "Roll again", so all three fit its foot.
-  aside.append(
-    h(
-      "div",
-      { class: "choices" },
-      h("button", { class: "action gold", type: "button", onclick: actions.rollAgain }, "Roll again"),
-      h(
-        "button",
-        { class: "action gold show-picked", type: "button", onclick: () => actions.showPicked(result) },
-        "Just show me what you picked",
-      ),
-      startOver,
-    ),
-  );
+  const choices = result.tired
+    ? h(
+        "div",
+        { class: "choices" },
+        h("button", { class: "action gold", type: "button", onclick: actions.rollAgain }, "Roll again"),
+        h(
+          "button",
+          { class: "action gold show-picked", type: "button", onclick: () => actions.showPicked(result) },
+          "Just show me what you picked",
+        ),
+        startOver,
+      )
+    : startOver;
+  aside.append(choices);
+  fillBar(frame, [backAction(frame, actions)]);
 }
 
-// The pick's link reads by where it goes: the configured Seerr, or TMDB without one.
-function moreOn(info) {
-  if (info.link_to === "seerr") {
-    return h("a", { class: "action petrol", href: info.link, target: "_blank", rel: "noopener noreferrer" }, "More on Seerr ↗");
-  }
-  return h("a", { class: "action petrol", href: info.link, target: "_blank", rel: "noopener noreferrer" }, "More on TMDB ↗");
+// What sits under the line and its facts on the resting page: the swap reason's note, `note`, revealing the film the
+// check turned away.
+function underLine(result, note) {
+  return note ? [firstPickReveal(result, note)] : [];
 }
 
-// What sits under the line on the resting page. The actions come straight after the line, which keeps
-// four lines of room whatever its words, so "Not that one" sits in the same place for every film. The
-// swap reason's credit, `note`, moves beneath them. The answers so far are in the trail at the foot of
-// the screen; a phone, which shows no trail, shows "Back" before "Start over" instead.
-function choices(info, film, result, actions, note) {
-  const buttons = h(
-    "div",
-    { class: "choices" },
-    h("button", { class: "action rose", type: "button", onclick: actions.notThatOne }, "Not that one"),
-    info.link ? moreOn(info) : null,
-    actions.back ? h("button", { class: "action cream back", type: "button", onclick: actions.back }, "Back") : null,
-    h("button", { class: "action cream start-over", type: "button", onclick: actions.startOver }, "Start over"),
-  );
-  return [buttons, note ? firstPickReveal(result, note) : null, actions.noteLink(film)].filter(Boolean);
+// "‹ Back", which opens the panel with the way back.
+function backAction(frame, actions) {
+  const back = panelAction("‹ Back", () => frame.panel.open(back, "Go back to…", actions.backPanel()));
+  return back;
+}
+
+// The pick's foot bar: `left` at its left, `centre` at its exact centre, its right end empty. On a phone the bar
+// stands at the foot of Matinee's words.
+function fillBar(frame, left, centre = null) {
+  // The bar's right end keeps what pickFrame put there: DoesTheDogDie's credit on a desktop.
+  frame.bar.replaceChildren(h("div", { class: "bar-left" }, left), h("div", { class: "bar-centre" }, centre), frame.bar.lastElementChild);
+  if (isPhone()) frame.aside.append(frame.bar);
+}
+
+// The resting pick's actions: "‹ Back" and "Wrong pick?" at the bar's left, "Not that one" at its centre. A note
+// records `walk`, the walk the film was drawn under.
+function pickBar(frame, film, actions, walk) {
+  const nope = h("button", { class: "action rose lead", type: "button", onclick: actions.notThatOne }, "Not that one");
+  fillBar(frame, [backAction(frame, actions), actions.noteLink(film, frame.panel, walk)], nope);
+}
+
+// What Matinee's line says at rest, as the films shown this run keep it: its gold and cream parts, or nothing when a
+// fuse burnt the line away, and whether DoesTheDogDie's credit stood with it (the line, or the turned-away film it
+// names, was its data).
+function lineSaid(frame, fuse) {
+  const credit = !frame.credit.hidden;
+  if (fuse?.lit()) return { gold: "", reveal: "", credit };
+  const { line } = frame;
+  return { gold: line.querySelector(".ack")?.textContent ?? "", reveal: line.querySelector(".ask")?.textContent ?? "", credit };
+}
+
+// On a desktop the facts stand under Matinee's line, and the resting line gives up the room it kept for four lines
+// so they stand one gap under its words; a lit fuse keeps that room, since its countdown still changes the line.
+function factsUnderLine(frame, info, fuse) {
+  if (!fuse?.lit()) frame.line.classList.add("rested");
+  const said = facts(info);
+  if (said) frame.line.after(said);
 }
 
 // The resting page: the film's details rise, and the landed poster, where there is one, moves from the
 // wall to its place and leaves its cell empty until the pick ends.
-async function rest({ stage, wall, frame, film, result, actions, info, backdrop, poster }) {
+async function rest({ stage, wall, frame, film, result, actions, info, backdrop, poster, fuse, door, walk }) {
   stage.classList.add("revealed");
-  if (result.unchecked) showCredit(frame); // the warning is DoesTheDogDie's data
+  actions.remember(kept({ film, result, door, walk, said: lineSaid(frame, fuse) }));
   const shown = feature(info, film, result, backdrop);
   frame.showing.append(shown);
-  frame.aside.append(...choices(info, film, result, actions, frame.aside.querySelector(".swap-note")));
+  if (!isPhone()) factsUnderLine(frame, info, fuse);
+  frame.aside.append(...underLine(result, frame.aside.querySelector(".swap-note")));
+  pickBar(frame, film, actions, walk);
   // Measured once the aside is whole, so the poster takes only the height left beneath it.
   const from = wall.landedTile()?.img.getBoundingClientRect();
+  const slot = h("div", { class: "poster-slot" });
+  frame.left.append(slot);
+  const link = posterLink(info, film);
   if (poster && from) {
-    const slot = h("div", { class: "poster-slot" });
-    frame.left.append(slot);
-    settle(poster, from, slot, (w) => wall.glowAt(w));
+    settle(poster, from, slot, link, (w) => wall.glowAt(w));
     wall.lift(true);
+  } else {
+    slot.append(link);
+    landed(link);
   }
   if (isPhone()) {
     frame.showing.scrollTop = 0;
@@ -216,15 +295,17 @@ async function restingPoster(sharp, wall, film) {
 
 // Where the check turned the first pick away, the line says so before the new pick lands.
 // Where the check turned a film away, its reason takes the nope line's place in gold at once, with
-// DoesTheDogDie's credit in the foot band, and only the reveal line is redealt to fit beneath it. Resolves to
+// DoesTheDogDie's credit in the note beneath it, and only the reveal line is redealt to fit beneath it. Resolves to
 // the gold line that stays through the hunt: the reason, or the nope line, or "" when nothing stays.
 async function goldLine(frame, result, lines, fuse) {
   const { line, aside } = frame;
-  // A film shown after three tripped the list names its trip from DoesTheDogDie's data.
-  if (result.last) showCredit(frame);
+  // A film shown after three tripped the list names its trip from DoesTheDogDie's data, as does a film brought back
+  // whose line was built on it.
+  if (result.last || lines.credit) showCredit(frame);
   if (!result.swapped) return lines.gold || "";
   fuse?.cancel();
   lines.reveal = lines.beneath(result.swapped.line);
+  // The reason names DoesTheDogDie's topic, so its credit stands in the foot band.
   showCredit(frame);
   aside.append(h("div", { class: "swap-note" }));
   await typeLine(line, result.swapped.line, "");
@@ -272,12 +353,14 @@ async function bringOut({ wall, frame, pause, posterReady, left, lines, gold, fu
   return { shown, sharp, typing };
 }
 
-// The page's pick screen. `actions` holds notThatOne, rollAgain, showPicked, startOver, back (null without a
-// way back), failed and the note link panel's builder. `readUntil` (a performance.now() time) holds the hunt until the line on screen has
+// The page's pick screen. `door` is the tree the film was drawn through, which its rank counts among (null before
+// a door), and `walk` the walk it was drawn under, which a note records. `actions` holds notThatOne, rollAgain,
+// showPicked, startOver, backPanel (what the Back panel holds), failed, the note link's builder, and remember,
+// which keeps each film shown on screen for the Back panel. `readUntil` (a performance.now() time) holds the hunt until the line on screen has
 // been read. After every wait the pick checks that its screen is still showing and that the pick was
-// not ended on the wall: a trail answer or the name tag can end it at any moment, and a pick the viewer
+// not ended on the wall: a way back or the name tag can end it at any moment, and a pick the viewer
 // has left changes nothing further.
-export async function showPick({ stage, wall, result, frame, readUntil = 0, lines, fuse = null, actions }) {
+export async function showPick({ stage, wall, result, frame, readUntil = 0, lines, fuse = null, actions, door, walk }) {
   const film = result.film;
   if (!film) {
     fuse?.cancel();
@@ -287,7 +370,7 @@ export async function showPick({ stage, wall, result, frame, readUntil = 0, line
   const left = () => !frame.showing.isConnected || wall.round !== round;
   const gold = await goldLine(frame, result, lines, fuse);
   if (left()) return undefined;
-  const { cardRequest, posterReady, backdropReady } = fetchFilm(film, wall);
+  const { cardRequest, posterReady, backdropReady } = fetchFilm(film, wall, door);
   // The words fade as the drift stops; a gold line (a nope line, or why a film was turned away) stays.
   const onStop = () => {
     if (!gold && !fuse?.lit()) frame.line.classList.add("hushed");
@@ -296,11 +379,11 @@ export async function showPick({ stage, wall, result, frame, readUntil = 0, line
   if (pause === null || left()) return undefined;
   const out = await bringOut({ wall, frame, pause, posterReady, left, lines, gold, fuse });
   if (!out) return undefined;
-  return toRest({ stage, wall, frame, film, result, actions, left, out, cardRequest, backdropReady });
+  return toRest({ stage, wall, frame, film, result, actions, left, out, cardRequest, backdropReady, fuse, door, walk });
 }
 
 // After the beat, once the film's details and backdrop have arrived, the poster moves to rest.
-async function toRest({ stage, wall, frame, film, result, actions, left, out, cardRequest, backdropReady }) {
+async function toRest({ stage, wall, frame, film, result, actions, left, out, cardRequest, backdropReady, fuse, door, walk }) {
   const beat = wait(prefersLessMotion() ? STILL_HOLD_MS : BEAT_MS);
   const [card, backdrop] = await Promise.all([cardRequest, backdropReady, out.typing, beat]);
   if (left()) return undefined;
@@ -308,14 +391,14 @@ async function toRest({ stage, wall, frame, film, result, actions, left, out, ca
   const poster = out.shown ? await restingPoster(out.sharp.img, wall, film) : null;
   if (left()) return undefined;
   out.sharp.resting = poster;
-  return rest({ stage, wall, frame, film, result, actions, info: card.data, backdrop, poster });
+  return rest({ stage, wall, frame, film, result, actions, info: card.data, backdrop, poster, fuse, door, walk });
 }
 
-// What the pick fetches as soon as it knows the film: its details, its sharp poster and, on a desktop,
-// its backdrop. With TMDB as the image source the backdrop waits for the details, which carry its TMDB
+// What the pick fetches as soon as it knows the film: its details, ranked among `door`'s films (null before a
+// door), its sharp poster and, on a desktop, its backdrop. With TMDB as the image source the backdrop waits for the details, which carry its TMDB
 // path; otherwise it is fetched at once. A phone's resting page shows no backdrop, so a phone fetches none.
-function fetchFilm(film, wall) {
-  const cardRequest = get(`/api/film/${film.tmdb}`);
+function fetchFilm(film, wall, door) {
+  const cardRequest = get(`/api/film/${film.tmdb}${door ? `?door=${encodeURIComponent(door)}` : ""}`);
   const still = `${film.title}, a still from the film`;
   let backdropReady = null;
   if (!isPhone() && wall.fromTmdb) {

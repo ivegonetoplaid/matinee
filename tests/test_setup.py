@@ -15,6 +15,7 @@ from matinee.labels import LabelsError
 from matinee.progress import RebuildStatus, write_status
 from matinee.store import Store
 from matinee.table import FilmTable
+from matinee.tags import Tags
 from matinee.tmdb import KEY_REFUSED, NO_KEY, NOT_ANSWERING
 from matinee.trees import TreeError
 from matinee.web.app import create_app
@@ -188,6 +189,26 @@ def build_real(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, **broken: Any) -
 
         monkeypatch.setattr(main, name, fail)
     return TestClient(main.build(), base_url="https://testserver")
+
+
+def test_the_server_hands_the_shipped_tags_to_the_app_with_the_setup_notes_faults(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from matinee.web import main
+
+    sentinel = Tags("sentinel", {1: ("x",)})
+    seen: dict[str, Any] = {}
+
+    def shipped(faults: list[str]) -> Tags:
+        seen["shipped_faults"] = faults
+        return sentinel
+
+    monkeypatch.setattr(main, "shipped_tags", shipped)
+    monkeypatch.setattr(main, "create_app", lambda *_, **kwargs: seen.update(kwargs))
+    monkeypatch.setenv("DATA_DIR", str(tmp_path))
+    main.build()
+    assert seen["tags"] is sentinel
+    assert seen["shipped_faults"] is seen["faults"]  # a tags fault reaches the setup note
 
 
 @pytest.mark.parametrize("failure", [TreeError("crime.json is not a tree"), KeyError("list_tags")])

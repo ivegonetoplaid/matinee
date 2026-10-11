@@ -1,12 +1,15 @@
 // Matinee's page: the box office, then the questions on the poster wall, then the pick.
 
 import { del, get, post, put } from "./api.js";
-import { noteLink } from "./note.js";
-import { aboutLink, credits } from "./credits.js";
+import { noteLink, walkOf } from "./note.js";
+import { aboutLink, credits, dtddFoot } from "./credits.js";
 import { Door, buildMarquee, marqueeReady, showCount } from "./door.js";
 import { LockedDoor, WALL_FADE_MS } from "./locked.js";
 import { clear, h, isPhone, prefersLessMotion, sentenceCase, wait } from "./dom.js";
 import { cornerMark } from "./flight.js";
+import { pickPanel } from "./panel.js";
+import { asPick, newestFirst, remember } from "./run.js";
+import { answerRows, forget, stepBack, wayTo } from "./way-back.js";
 import { showPick } from "./pick.js";
 import { posterPaths } from "./pictures.js";
 import { Deck, dealBeneath, dealPair, setFor } from "./quips.js";
@@ -28,14 +31,18 @@ const visit = {
   tree: null,
   answers: [],
   says: [], // what the viewer answered, one per entry in answers
+  asks: [], // the question each of those answered
   rushed: false, // "Just pick one!" ended the questions early
   firstSay: null,
   source: null, // the source question's answer, asked at the start of every walk; "all" when it is not asked
   sourceSay: null,
+  sourceAsk: null, // the source question, while it is asked
   sourceReply: "", // Matinee's gold line on the doors within the source
+  doorAsk: null, // the doors' question
   seen: [],
   pool: [],
   trees: [],
+  run: [], // the films this run has shown on screen, oldest first (run.js)
 };
 
 const CHECKING = "Let me check this one against your list.";
@@ -75,9 +82,10 @@ function lockStage() {
   for (const button of stage.querySelectorAll("button")) button.disabled = true;
 }
 
-// Leaving a pick by a way back out (a trail answer, the name tag, "Start over") ends it at the tap:
+// Leaving a pick by a way back out (an answer in the Back panel, the name tag, "Start over") ends it at the tap:
 // the hunt stops where it is, and the pick changes nothing further while the next screen loads.
 function leaveTo(next) {
+  dropPickEntry();
   lockStage();
   wall.endPick();
   next();
@@ -88,7 +96,7 @@ function leaveTo(next) {
 function wordmark() {
   const go = (e) => {
     e.preventDefault();
-    leaveTo(visit.viewer.profile_id ? start : boot);
+    leaveTo(visit.viewer.profile_id ? startOver : boot);
   };
   return h("a", { class: "wordmark", href: "/", onclick: go }, cornerMark("Matinee"));
 }
@@ -148,11 +156,10 @@ function trail(here) {
   return h("nav", { class: "trail", "aria-label": "The way here" }, h("ol", {}, items));
 }
 
-// Where "Back" leads, as a crumb: the screen before the one showing, whose crumb is `here` (null on a pick
-// "Just pick one!" ended early, which leads back to the question it left). None where that is the walk's
-// first screen, which "Start over" reaches.
+// Where a question screen's "Back" leads, as a crumb: the screen before the one showing, whose crumb is `here`.
+// None where that is the walk's first screen, which "Start over" reaches.
 function backTo(here) {
-  const target = here === null ? crumbs().length - 1 : here - 1;
+  const target = here - 1;
   return target > 0 ? target : null;
 }
 
@@ -165,14 +172,13 @@ function wayBack(here) {
     target === null
       ? null
       : h("button", { class: "action cream", type: "button", onclick: () => leaveTo(() => goTo(target)) }, "Back");
-  const again = h("button", { class: "action cream", type: "button", onclick: () => leaveTo(start) }, "Start over");
+  const again = h("button", { class: "action cream", type: "button", onclick: () => leaveTo(startOver) }, "Start over");
   return h("nav", { class: "way-back", "aria-label": "Way back" }, back, again);
 }
 
-// The trail's last crumb, which led to the screen showing now; on a pick "Just pick one!" ended early,
-// the last crumb led to a question, so none.
-function lastCrumb(onPick) {
-  return onPick && visit.rushed ? null : crumbs().length - 1;
+// The trail's last crumb, which led to the screen showing now.
+function lastCrumb() {
+  return crumbs().length - 1;
 }
 
 // A question screen. "Just pick one!" stands last, beneath the answers and any footnote, with the count of
@@ -198,7 +204,7 @@ function frame({ count, footnote }) {
   clear(stage).append(
     topbar(nameTag()),
     h("section", { class: "talk" }, line, answers, note, row),
-    h("div", { class: "bottombar" }, trail(lastCrumb(false)), wayBack(lastCrumb(false)), h("span"), credits()),
+    h("div", { class: "bottombar" }, trail(lastCrumb()), wayBack(lastCrumb()), h("span"), credits()),
   );
   return { line, answers, note, pick: row };
 }
@@ -233,6 +239,7 @@ async function ask({ ack, question, options, count, many = false, picture = fals
 // A problem screen: the message and "Try again". The wall is emptied, so no stale film list shows, except
 // when `keep` is set: a start that fails after going in keeps the door's posters behind it.
 function problem(data, again, keep = false) {
+  dropPickEntry();
   if (!keep) wall.clear();
   const line = h("h1", { class: "line" });
   line.append(h("span", { class: "ack" }, data.message || "Something went wrong."));
@@ -380,11 +387,36 @@ function lockedDoor(greeting) {
 // Going in: the start is asked for at once, while the door's name flies to the wordmark's place, and the
 // first question types once it has landed.
 async function enter({ viewer, name, avatar, profileTopics, door }) {
-  Object.assign(visit, { viewer, name, avatar, profileTopics });
+  Object.assign(visit, { viewer, name, avatar, profileTopics, run: [] });
   const request = post("/api/first", { viewer });
   landing = door;
   await door.leave([nameTag()].filter(Boolean));
   await start({ request, keep: true });
+}
+
+// Where a walk stands before any answer, from the start the server gave.
+function freshWalk(first) {
+  return {
+    tree: null,
+    answers: [],
+    says: [],
+    asks: [],
+    rushed: false,
+    firstSay: null,
+    source: first.source ? null : "all",
+    sourceSay: null,
+    sourceAsk: first.source ? first.source.ask : null,
+    doorAsk: null,
+    sourceReply: "",
+    seen: [],
+    profileTopics: first.checked, // the server's word on whether picks are checked, read afresh every start
+  };
+}
+
+// "Start over" and the wordmark: a new run, which forgets the films shown, from the walk's first screen.
+function startOver() {
+  visit.run = [];
+  return start();
 }
 
 // A walk's first screen: the source question while it is asked, else the doors. No answer carries over from
@@ -393,18 +425,7 @@ async function enter({ viewer, name, avatar, profileTopics, door }) {
 async function start({ request = null, keep = false } = {}) {
   const res = await (request ?? post("/api/first", { viewer: visit.viewer }));
   if (!res.ok) return problem(res.data, () => start({ keep }), keep);
-  Object.assign(visit, {
-    tree: null,
-    answers: [],
-    says: [],
-    rushed: false,
-    firstSay: null,
-    source: res.data.source ? null : "all",
-    sourceSay: null,
-    sourceReply: "",
-    seen: [],
-    profileTopics: res.data.checked, // the server's word on whether picks are checked, read afresh every start
-  });
+  Object.assign(visit, freshWalk(res.data));
   const [greeting] = res.data.lines;
   const name = res.data.name;
   const ack = name ? greeting.replace(/\.$/, `, ${name}.`) : greeting;
@@ -430,16 +451,17 @@ function chooseSource(option) {
 // The doors, within the source answer and with its reply. `res` is the first screen already fetched, when the
 // source question was not asked; `ack` its greeting.
 async function doors(res = null, ack = visit.sourceReply) {
-  Object.assign(visit, { tree: null, answers: [], says: [], rushed: false, firstSay: null, seen: [] });
+  Object.assign(visit, { tree: null, answers: [], says: [], asks: [], rushed: false, firstSay: null, seen: [] });
   const got = res ?? (await post("/api/first", { viewer: visit.viewer, source: visit.source }));
   if (!got.ok) return problem(got.data, start);
   showFirst(got);
+  visit.doorAsk = got.data.lines[1];
   const options = got.data.options.map((o) => ({ say: o.say, go: () => chooseTree(o) }));
   await ask({ ack, question: got.data.lines[1], options, count: countText(visit.pool.length), many: true });
 }
 
 function chooseTree(option) {
-  Object.assign(visit, { tree: option.tree, answers: [], says: [], rushed: false, firstSay: option.say, seen: [] });
+  Object.assign(visit, { tree: option.tree, answers: [], says: [], asks: [], rushed: false, firstSay: option.say, seen: [] });
   step();
 }
 
@@ -449,9 +471,12 @@ function goTo(i) {
   if (i === 0) return start();
   const off = visit.sourceSay === null ? 0 : 1;
   if (i === off) return doors();
-  visit.answers = visit.answers.slice(0, i - 1 - off);
-  visit.says = visit.says.slice(0, i - 1 - off);
-  visit.rushed = false;
+  return reask(i - 1 - off);
+}
+
+// Asks again the question that followed the first `kept` answers, forgetting that answer and every later one.
+function reask(kept) {
+  Object.assign(visit, forget(visit, kept));
   return step();
 }
 
@@ -472,6 +497,7 @@ async function step() {
     go: () => {
       visit.answers.push({ question: q.id, option: o.index });
       visit.says.push(o.say);
+      visit.asks.push(q.ask);
       step();
     },
   }));
@@ -489,10 +515,79 @@ function pickFrame() {
   const phone = isPhone();
   const left = h("div", { class: "pick-left" }, phone ? null : aside);
   const showing = h("section", { class: "showing" }, left);
-  const foot = h("footer", { class: "bottombar" }, trail(lastCrumb(true)), h("span"), credits({ dtdd: offers.dtdd }));
+  // DoesTheDogDie's credit, hidden until a line names one of its topics: at the foot bar's right end on a desktop,
+  // centred in the foot band on a phone.
+  const credit = dtddFoot();
+  // The foot bar's row is kept from the start on a desktop, so nothing moves when its actions arrive.
+  const bar = h("div", { class: "foot-bar" }, h("div"), h("div"), h("div", { class: "bar-right" }, phone ? null : credit));
+  // The pick shows no trail and no TMDB line: "Start over" is in the Back panel, and TMDB's notice is on About.
+  const foot = h("footer", { class: "bottombar" }, phone ? credit : bar);
   clear(stage).append(topbar(nameTag() || h("span")), showing, ...(phone ? [aside] : []), foot);
-  return { line, aside, left, showing, credit: foot.querySelector(".dtdd-credit") };
+  const frame = { line, aside, left, showing, bar, credit };
+  frame.panel = pickPanel(stage, frame, panelHistory);
+  pickShowing = frame;
+  holdPickEntry();
+  return frame;
 }
+
+// The browser's back, and a phone's back gesture, on a pick. While a pick is on screen the page holds one history
+// entry at its own address, as About does, and an open panel holds one more above it, pushed by the tap that opens
+// it. Back from the panel's entry closes the panel alone; back from the pick's steps back one answer (way-back.js
+// `stepBack`). Leaving a pick, or closing its panel, any other way takes its entries back off, so a later back never
+// lands on a pick or panel that has gone. Back with About open over a pick closes About alone. A reload starts with
+// none of them.
+// NOTE: the page's own back is a task the browser runs later; a pick opened within that moment holds no entry.
+const PICK_ENTRY = { matinee: "pick" };
+const PANEL_ENTRY = { matinee: "panel" };
+let pickShowing = null; // the frame of the last pick screen drawn
+let ownBacks = 0; // backs the page takes itself, to drop its own entries
+
+// A new pick screen holds the pick's entry: pushed after an answer, kept through "Not that one", and stepped down to
+// from a panel's entry when a film is brought back from the panel.
+function holdPickEntry() {
+  if (history.state?.matinee === PANEL_ENTRY.matinee) {
+    ownBacks++;
+    history.back();
+  } else if (history.state?.matinee !== PICK_ENTRY.matinee) {
+    history.pushState(PICK_ENTRY, "");
+  }
+}
+
+function dropPickEntry() {
+  const depth = { [PICK_ENTRY.matinee]: 1, [PANEL_ENTRY.matinee]: 2 }[history.state?.matinee];
+  if (!depth) return;
+  ownBacks++;
+  history.go(-depth);
+}
+
+const panelHistory = {
+  opened: () => history.pushState(PANEL_ENTRY, ""),
+  closed: () => {
+    if (history.state?.matinee !== PANEL_ENTRY.matinee) return;
+    ownBacks++;
+    history.back();
+  },
+};
+
+function onBack(e) {
+  if (ownBacks > 0) {
+    ownBacks--;
+    return;
+  }
+  const onPick = pickShowing?.showing.isConnected;
+  if (e.state?.matinee === PICK_ENTRY.matinee) {
+    // Back from the panel's entry closes the panel; back from About's leaves About to close itself; arriving on a
+    // pick's entry with no pick on screen (a pick that failed under About) steps off it.
+    if (!onPick) dropPickEntry();
+    else pickShowing.panel.closedByBack();
+    return;
+  }
+  if (!onPick) return;
+  leaveTo(() => wayTo({ to: stepBack(visit) }, { source: start, doors: () => doors(), reask }));
+}
+
+window.addEventListener("popstate", onBack);
+dropPickEntry(); // a reload, or arriving back at a page that held a pick
 
 function hasTopics() {
   return visit.profileTopics;
@@ -622,14 +717,47 @@ async function pickNow(opening = "", again = false, destruct = null, posterBack 
     lines,
     fuse,
     actions: pickActions(),
+    door: visit.tree,
+    walk: walkOf(visit),
   });
 }
 
-// A phone pick's "Back", to the question the last answer was given on; null where that is the walk's first
-// screen.
-function backAction() {
-  const target = backTo(lastCrumb(true));
-  return target === null ? null : () => leaveTo(() => goTo(target));
+// One answer in the Back panel: its question in quiet text, the answer beneath. A tap asks that question again.
+function answerRow(row) {
+  const go = () => wayTo(row, { source: start, doors: () => doors(), reask });
+  return h(
+    "button",
+    { class: "panel-row answer-row", type: "button", onclick: () => leaveTo(go) },
+    h("span", { class: "row-ask" }, sentenceCase(row.ask)),
+    h("span", { class: "row-say" }, sentenceCase(row.say)),
+  );
+}
+
+// One film the run has shown, in the Back panel: its small poster, title and year. A tap brings it back as the pick;
+// the film showing now is marked as such and does nothing.
+function filmRow(shown) {
+  const { film } = shown;
+  // Fetched as the wall fetches its posters (crossorigin before src), so the two never share a cached copy that one
+  // of them refuses.
+  const thumb = h("img", { class: "thumb", crossorigin: "anonymous", src: wall.posterUrl(film.tmdb, "xs"), alt: "", loading: "lazy", decoding: "async" });
+  thumb.addEventListener("error", () => thumb.setAttribute("src", "/static/blank.svg"), { once: true }); // a plain card
+  const words = [h("span", { class: "row-title" }, film.title), film.year ? h("span", { class: "row-year" }, ` ${film.year}`) : null];
+  if (shown.now) {
+    return h("div", { class: "panel-row film-row now", "aria-current": "true" }, thumb, h("span", {}, words, h("span", { class: "row-now" }, "Showing now")));
+  }
+  return h("button", { class: "panel-row film-row", type: "button", onclick: () => bringBack(shown) }, thumb, h("span", {}, words));
+}
+
+// What the Back panel holds: the viewer's answers, each a way back to its question, then every film this run has
+// shown, newest first, scrolling on its own, then "Start over" at its foot.
+function backPanel() {
+  const rows = answerRows(visit).map(answerRow);
+  const films = newestFirst(visit.run, stage.classList.contains("revealed")); // a film rests on screen
+  const shown = films.length
+    ? [h("p", { class: "panel-section" }, `Shown this run · ${films.length} ${films.length === 1 ? "film" : "films"}`), h("div", { class: "films" }, films.map(filmRow))]
+    : [];
+  const again = h("button", { class: "action cream", type: "button", onclick: () => leaveTo(startOver) }, "Start over");
+  return [rows.length ? h("p", { class: "panel-section" }, "An answer") : null, rows, shown, h("div", { class: "panel-foot" }, again)];
 }
 
 // What the pick screen's controls do.
@@ -647,10 +775,13 @@ function pickActions() {
       lockStage();
       showPicked(held);
     },
-    startOver: () => leaveTo(start),
-    back: backAction(),
+    startOver: () => leaveTo(startOver),
+    backPanel,
+    remember: (shown) => {
+      visit.run = remember(visit.run, shown);
+    },
     failed: (data) => problem(data, start),
-    noteLink: (film) => noteLink({ visit, film, trees: visit.trees }),
+    noteLink: (film, panel, walk) => noteLink({ walk, film, trees: visit.trees, panel }),
   };
 }
 
@@ -665,7 +796,20 @@ async function showPicked(held) {
   const { frame, readUntil } = await openPick(gold, null);
   if (!frame.showing.isConnected || wall.round !== round) return undefined;
   const result = { ...held, film: held.last.film, swapped: null, tired: null, turned_away: [] };
-  return showPick({ stage, wall, result, frame, readUntil, lines, fuse: null, actions: pickActions() });
+  return showPick({ stage, wall, result, frame, readUntil, lines, fuse: null, actions: pickActions(), door: visit.tree, walk: walkOf(visit) });
+}
+
+// A film this run has shown, brought back from the Back panel as the pick: no new pick is asked for. It shows as it
+// was first shown, with its line, its content note and the door and walk it was drawn under; its details, rank,
+// tags and pictures load as on any pick, and nothing of DoesTheDogDie is asked for.
+async function bringBack(shown) {
+  lockStage();
+  await clearForPick(Boolean(stage.querySelector(".slot-poster")));
+  const round = wall.round;
+  const { result, lines, door, walk } = asPick(shown);
+  const { frame, readUntil } = await openPick(lines.gold, null);
+  if (!frame.showing.isConnected || wall.round !== round) return undefined;
+  return showPick({ stage, wall, result, frame, readUntil, lines, fuse: null, actions: pickActions(), door, walk });
 }
 
 boot();

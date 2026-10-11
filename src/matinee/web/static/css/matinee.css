@@ -193,10 +193,17 @@ button {
   line-height: 0;
 }
 
+/* The corner mark stands 64 px tall on a desktop and 40 px on a phone. */
 .corner-mark {
   display: block;
   width: auto;
-  height: 40px;
+  height: 64px;
+}
+
+@media (max-width: 600px) {
+  .corner-mark {
+    height: 40px;
+  }
 }
 
 /* Landed after the name's flight, the mark fades in beneath the name before the name gives way; flight.js's
@@ -258,8 +265,7 @@ a.wordmark:focus-visible {
 }
 
 /* A phone's way back, "Back" and "Start over", stands where a desktop shows the trail. */
-.way-back,
-.aside .choices > .back {
+.way-back {
   display: none;
 }
 
@@ -276,10 +282,6 @@ a.wordmark:focus-visible {
     flex-basis: 100%;
     justify-content: center;
     gap: 12px;
-  }
-
-  .aside .choices > .back {
-    display: inline-flex;
   }
 
   /* After three films trip the list, "Start over" stands beside "Roll again" and the longer action takes a
@@ -395,23 +397,23 @@ a.wordmark:focus-visible {
    it holds, so a box holding wall text near its edge keeps 40 px of room there. */
 .line:not(.locked-line, .viewer-line) > :is(.ack, .ask):not(:empty),
 .countdown,
-.note:not(:empty, .viewer-panel .note, .correct-panel .note),
+.note:not(:empty, .viewer-panel .note, .note-form .note),
 .footnote,
 .count,
 .seat-label,
 .feature-text,
-.correct-panel {
+.rank {
   position: relative;
 }
 
 .line:not(.locked-line, .viewer-line) > :is(.ack, .ask):not(:empty)::before,
 .countdown::before,
-.note:not(:empty, .viewer-panel .note, .correct-panel .note)::before,
+.note:not(:empty, .viewer-panel .note, .note-form .note)::before,
 .footnote::before,
 .count::before,
 .seat-label::before,
 .feature-text::before,
-.correct-panel::before {
+.rank::before {
   content: "";
   position: absolute;
   inset: -16px;
@@ -671,8 +673,7 @@ a.wordmark:focus-visible {
 /* ---------- the pick ---------- */
 
 /* Above the wall. The row fills the screen and everything hangs from its top, so
-   nothing re-centres as the film arrives, and opening the correction panel grows
-   the page downward. */
+   nothing re-centres as the film arrives. */
 .showing {
   position: relative;
   z-index: 1;
@@ -702,8 +703,55 @@ a.wordmark:focus-visible {
 .slot-poster {
   display: block;
   object-fit: cover;
+}
+
+/* The resting poster is the link to the film's page: its warm outline and glow, and a strip on its foot naming the
+   site in petrol words, show once the poster has landed. Hovered or focused, the warm outline strengthens; it
+   never turns petrol. */
+.poster-link {
+  display: flex;
+  flex-direction: column;
   border-radius: 6px;
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--warm) 35%, transparent), 0 24px 60px color-mix(in srgb, var(--black) 60%, transparent);
+  overflow: hidden;
+  text-decoration: none;
+  transition: box-shadow 0.2s ease;
+}
+
+.poster-link.landed {
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--warm) 35%, transparent),
+    var(--poster-glow, 0 0 0 transparent),
+    0 24px 60px color-mix(in srgb, var(--black) 60%, transparent);
+}
+
+.poster-link.landed:is(:hover, :focus-visible) {
+  outline: none;
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--warm) 75%, transparent),
+    var(--poster-glow, 0 0 0 transparent),
+    0 24px 60px color-mix(in srgb, var(--black) 60%, transparent);
+}
+
+/* The strip takes the poster's width and never widens the link: a small poster's strip wraps its words. */
+.poster-strip {
+  width: 0;
+  min-width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 12px;
+  border-top: 1px solid color-mix(in srgb, var(--warm) 25%, transparent);
+  background: url("/static/grain.svg"), var(--enamel);
+  color: var(--petrol-vivid);
+  font: 600 17px/1.2 var(--body);
+  text-align: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.poster-link.landed .poster-strip {
+  opacity: 1;
 }
 
 .aside {
@@ -729,6 +777,11 @@ a.wordmark:focus-visible {
 .pick-line {
   font-size: clamp(28px, min(4vw, 6vh), 40px);
   min-height: calc(4 * 0.98em);
+}
+
+/* At rest on a desktop the line gives up its reserved lines, so what follows stands one gap under its words. */
+.pick-line.rested {
+  min-height: 0;
 }
 
 /* Matinee's words fade out as a pick begins and while the wall hunts. */
@@ -874,6 +927,66 @@ a.wordmark:focus-visible {
   color: var(--text);
 }
 
+/* What the pick says about the film beyond its title: under Matinee's line on a desktop, under the title on a
+   phone. It fades in with the resting page. */
+.facts {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: fade 0.9s ease both;
+}
+
+/* Under the line on a desktop, the facts keep a 24 px gap from the words around them. */
+.aside > .facts {
+  margin-block: 8px;
+}
+
+/* How well audiences regard the film: a line in the display face, in cream, with what it is counted by beside it
+   in quiet text. */
+.rank {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  margin: 0;
+}
+
+.rank-words {
+  text-wrap: balance;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 30px;
+  line-height: 1.05;
+  letter-spacing: 0.02em;
+  color: var(--text);
+}
+
+.rank-by {
+  font-size: 13px;
+  color: var(--dim);
+}
+
+/* The film's tags: outlined chips that wrap, with small corners, each on the scrim's own dark backing; never filled
+   with an accent and never a pill. */
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tag {
+  padding: 5px 12px;
+  border: 1px solid color-mix(in srgb, var(--text) 30%, transparent);
+  border-radius: 6px;
+  background: var(--shade);
+  color: var(--text);
+  font-size: 16px;
+  line-height: 1.2;
+}
+
 .feature {
   grid-column: 2;
   grid-row: 1;
@@ -930,31 +1043,25 @@ a.wordmark:focus-visible {
   color: var(--text);
 }
 
-.correct {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 8px;
-}
-
-.correct-panel {
+/* "Wrong pick?"'s form in the pick's panel: its fields one under another, Save at the panel's foot. */
+.note-form {
+  flex: 1 0 auto;
   display: flex;
   flex-direction: column;
   gap: 10px;
-  align-items: flex-start;
 }
 
-.correct-panel[hidden] {
-  display: none;
+.note-form .panel-section {
+  margin-inline: 0;
 }
 
 /* A saved note's two lines: the first in gold, the second in cream. */
-.correct-panel .note .ack {
+.note-form .note .ack {
   color: var(--gold);
   font-weight: 600;
 }
 
-.correct-panel .note .ask {
+.note-form .note .ask {
   color: var(--text);
 }
 
@@ -1022,13 +1129,8 @@ a.wordmark:focus-visible {
   display: none;
 }
 
-.correct-panel textarea {
-  width: min(420px, 100%);
+.note-form textarea {
   resize: vertical;
-}
-
-.correct-panel textarea,
-.correct-panel input[type="text"] {
   font: inherit;
   font-size: 16px;
   color: var(--text);
@@ -1037,7 +1139,7 @@ a.wordmark:focus-visible {
   border-radius: 10px;
   padding: 10px 14px;
   min-height: 44px;
-  width: min(320px, 100%);
+  width: 100%;
 }
 
 @keyframes rise {
@@ -1052,13 +1154,245 @@ a.wordmark:focus-visible {
   }
 }
 
-/* On a phone Matinee's words keep the foot of the pick: the line, two rows of buttons and the correction
-   link, then DoesTheDogDie's credit line where it has a key; its top never moves from the first word of a
-   pick to the last. Above it the showing scrolls on its own and ends at the foot, so
+/* The pick's panel: a solid panel over the left column, from under the top bar down to the foot's bar, always at that
+   full height (panel.js places it), and above the foot's band; over everything under the top bar on a phone. Its
+   text needs no scrim. */
+.pick-panel {
+  position: fixed;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 0;
+  padding: 16px 16px 14px;
+  border: 1px solid color-mix(in srgb, var(--text) 14%, transparent);
+  border-radius: 12px;
+  background: var(--menu);
+  box-shadow: 0 18px 50px color-mix(in srgb, var(--black) 65%, transparent);
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 4px 0;
+  gap: 12px;
+}
+
+.panel-title {
+  margin: 0;
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 30px;
+  letter-spacing: 0.02em;
+  color: var(--gold);
+}
+
+.panel-close {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--text);
+  font-size: 30px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .panel-close:hover {
+    background: color-mix(in srgb, var(--text) 8%, transparent);
+  }
+}
+
+/* The panel's own room: it scrolls inside the panel when its content is taller, with room inside its edges for a
+   focus ring. */
+.panel-body {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 4px;
+  overflow-y: auto;
+  scrollbar-color: color-mix(in srgb, var(--gold) 45%, transparent) transparent;
+}
+
+/* The left column the panel stands over is not drawn while it is open, so nothing shows through the panel's
+   corners; panel.js makes it inert. The foot's bar stays. */
+.stage:has(> .pick-panel) .pick-left {
+  opacity: 0;
+}
+
+/* Each panel opens with its explanation at the synopsis's size. */
+.panel-lede {
+  margin: 0 0 8px;
+  font-size: 18px;
+  line-height: 1.5;
+  color: var(--text);
+}
+
+/* In a panel with few choices, the choices stand centred in the height below the explanation. */
+.panel-mid {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+}
+
+/* A section of a panel's list, named in quiet text. */
+.panel-section {
+  margin: 6px 12px 2px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--dim);
+}
+
+/* A row a panel lists, such as one of the viewer's answers: plain words that light faintly under the pointer. */
+.panel-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 52px;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--text);
+  font: 400 18px/1.2 var(--body);
+  text-align: left;
+  cursor: pointer;
+}
+
+.panel-row:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+@media (hover: hover) {
+  button.panel-row:hover {
+    background: color-mix(in srgb, var(--text) 6%, transparent);
+  }
+}
+
+/* An answer: its question in quiet text, the answer beneath. */
+.answer-row {
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 2px;
+}
+
+.row-ask {
+  font-size: 13px;
+  color: var(--dim);
+}
+
+/* The films shown this run: a list that scrolls on its own, so the answers and "Start over" stay in place. */
+.films {
+  flex: 1 1 0;
+  min-height: 52px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0 -4px;
+  padding: 4px;
+  overflow-y: auto;
+  scroll-padding-block: 8px 40px;
+  scrollbar-color: color-mix(in srgb, var(--gold) 45%, transparent) transparent;
+  mask-image: linear-gradient(180deg, transparent, var(--black) 8px, var(--black) calc(100% - 40px), transparent);
+}
+
+.film-row {
+  flex: none;
+}
+
+.film-row .thumb {
+  flex: none;
+  width: 34px;
+  height: 51px;
+  border-radius: 3px;
+  object-fit: cover;
+  background: var(--mark);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--warm) 30%, transparent);
+}
+
+.row-year {
+  color: var(--dim);
+}
+
+/* The film showing now, marked as such; it does nothing. */
+.film-row.now {
+  cursor: default;
+}
+
+.row-now {
+  display: block;
+  font-size: 13px;
+  color: var(--dim);
+}
+
+.panel-foot {
+  margin-top: auto;
+  padding-top: 8px;
+  display: flex;
+}
+
+.panel-foot > .action {
+  flex: 1 1 auto;
+}
+
+/* The action whose panel is open shows its thread. */
+.action.open::after {
+  transform: scaleX(1);
+}
+
+/* On a phone Matinee's words keep the foot of the pick: the line, then the foot bar's two rows of actions; its
+   top never moves from the first word of a pick to the last. Above it the showing scrolls on its own and ends at the foot, so
    nothing passes behind the words: the poster fills it first, and the details follow beneath. */
 @media (max-width: 600px) {
+  /* On a phone the panel takes everything under the top bar, to the screen's edges and foot. */
+  .stage:has(> .showing) > .pick-panel {
+    position: relative;
+    grid-row: 2 / -1;
+    margin: 0 calc(-1 * var(--pad)) calc(-1 * var(--pad));
+    padding: 12px calc(var(--pad) - 4px) 16px;
+    border-width: 1px 0 0;
+    border-radius: 0;
+    z-index: 3;
+  }
+
+  /* Each part keeps its cell, so the panel can stand over the rows beneath the top bar. */
+  .stage:has(> .showing) > * {
+    grid-column: 1;
+  }
+
+  .stage:has(> .showing) > .topbar {
+    grid-row: 1;
+  }
+
+  .stage:has(> .showing) > .showing {
+    grid-row: 2;
+  }
+
+  .stage:has(> .showing) > .aside {
+    grid-row: 3;
+  }
+
+  .stage:has(> .showing) > .bottombar {
+    grid-row: 4;
+  }
+
   .stage:has(> .showing) {
-    --pick-talk: 316px; /* the line's four lines, two rows of actions and the correction, without scrolling */
+    --pick-talk: 316px; /* the line's four lines and two rows of actions, with room for a turned-away film's note */
     display: grid;
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: auto minmax(0, 1fr) var(--pick-talk) auto;
@@ -1088,6 +1422,10 @@ a.wordmark:focus-visible {
     align-items: center;
   }
 
+  .poster-strip {
+    font-size: 16px;
+  }
+
   /* Clear of the showing's fades at both ends, so the title and the synopsis's last line read in full. */
   .feature {
     padding: 28px 0 52px;
@@ -1108,6 +1446,14 @@ a.wordmark:focus-visible {
 
   .synopsis {
     font-size: 16px;
+  }
+
+  .rank-words {
+    font-size: 22px;
+  }
+
+  .rank-by {
+    font-size: 11px;
   }
 
   /* The foot scrolls on its own: it reaches the screen's sides, and fades its top and its foot over
@@ -1141,19 +1487,6 @@ a.wordmark:focus-visible {
     top: calc(-1 * var(--band-fade));
   }
 
-  /* DoesTheDogDie's credit takes a line of its own, kept for it whether or not it shows, so the foot never
-     changes height when it appears. */
-  .stage:has(> .showing) .dtdd-credit {
-    display: block;
-  }
-
-  .stage:has(> .showing) .dtdd-credit[hidden] {
-    visibility: hidden;
-  }
-
-  .stage:has(> .showing) .dtdd-credit::before {
-    content: none;
-  }
 }
 
 /* Pinned to the foot of the screen, its band's fade part of it, so nothing rests under the fade and what
@@ -1169,6 +1502,121 @@ a.wordmark:focus-visible {
   align-items: flex-end;
   gap: 16px;
   flex-wrap: wrap;
+}
+
+/* The pick's foot bar, a row of its own across the foot on a desktop: "‹ Back" and "Wrong pick?" at its left, "Not
+   that one" at its exact centre at every width, DoesTheDogDie's credit at its right end when shown. Its row is kept
+   from the start of the pick. */
+.foot-bar {
+  flex-basis: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+}
+
+.bar-left {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+/* DoesTheDogDie's credit stands at the bar's right end, on the band, when a pick's line names one of its topics. */
+.bar-right {
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* A desktop too narrow for one row keeps two from the start: "Not that one" centred on the first, "‹ Back" and
+   "Wrong pick?" side by side at the left of the second, as on a phone. */
+@media (min-width: 601px) and (max-width: 800px) {
+  .foot-bar {
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    grid-template-rows: 44px 44px;
+    min-height: 100px;
+  }
+
+  .foot-bar > .bar-centre {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .foot-bar > .bar-left {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    flex-wrap: nowrap;
+  }
+
+  .foot-bar > .bar-right {
+    grid-column: 3;
+    grid-row: 1;
+  }
+}
+
+/* The foot is pinned and never scrolls, so its controls take no scroll room from the stage. */
+.bottombar :is(a, button) {
+  scroll-margin-bottom: calc(-1 * (var(--band-fade) + 72px));
+}
+
+/* On a phone the bar stands at the foot of Matinee's words in two rows: "Not that one" alone on the first, "‹ Back"
+   and "Wrong pick?" sharing the second. */
+@media (max-width: 600px) {
+  .foot-bar {
+    flex-basis: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    margin-top: auto;
+  }
+
+  .foot-bar > div {
+    display: flex;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .foot-bar > .bar-centre {
+    order: -1;
+  }
+
+  .foot-bar > div:empty {
+    display: none;
+  }
+
+  .foot-bar .action {
+    flex: 1 1 0;
+  }
+
+  /* "‹ Back" alone (before any door, or with no film) keeps the width it has beside "Wrong pick?". */
+  .foot-bar .bar-left > .action:only-child {
+    flex: 0 1 calc(50% - 5px);
+  }
+}
+
+/* On a desktop the pick takes the room between the top bar and the foot's bar exactly: the film's details scroll
+   inside their own column, fading at its foot, so nothing runs under the bar. */
+@media (min-width: 601px) {
+  .showing {
+    min-height: 0;
+    grid-template-rows: minmax(0, 1fr);
+  }
+
+  /* The foot's band fades over the pick's last stretch, and the pick ends one gap above the bar itself. */
+  .stage:has(> .showing) > .bottombar {
+    margin-top: calc(-1 * var(--band-fade));
+  }
+
+  .feature {
+    min-height: 0;
+    max-height: 100%;
+    overflow-y: auto;
+    scrollbar-width: none;
+    padding-bottom: 32px;
+    mask-image: linear-gradient(#000 calc(100% - 32px), transparent);
+  }
 }
 
 /* An action does something: a black-enamel face with a neutral rim, a highlight along its top edge, a slight
@@ -1237,6 +1685,19 @@ a.wordmark:focus-visible {
 .action.cream {
   --words: var(--cream-vivid);
   --thread: var(--cream-thread);
+}
+
+/* "Not that one" stands out by its rose words, its thread drawn at all times and a faint rose glow, never by its size. */
+.action.lead {
+  box-shadow:
+    0 0 0 1px var(--enamel-rim),
+    inset 0 1px 0 color-mix(in srgb, var(--white) 22%, transparent),
+    inset 0 -2px 4px color-mix(in srgb, var(--black) 70%, transparent),
+    0 0 22px color-mix(in srgb, var(--rose-vivid) 22%, transparent);
+}
+
+.action.lead::after {
+  transform: scaleX(1);
 }
 
 /* An action that is a link keeps its accent's words on hover, over the page's link colours. */
@@ -1628,6 +2089,23 @@ a.wordmark:focus-visible {
 
 .credits a {
   color: color-mix(in srgb, var(--gold) 75%, transparent);
+}
+
+/* DoesTheDogDie's credit on the pick, in small text directly beside the content it credits. */
+.beside-credit {
+  margin: 0;
+  font-size: 13px;
+  color: var(--dim);
+}
+
+.beside-credit a {
+  color: color-mix(in srgb, var(--gold) 75%, transparent);
+}
+
+@media (max-width: 600px) {
+  .beside-credit {
+    font-size: 11px;
+  }
 }
 
 /* DoesTheDogDie's credit joins the line on a screen that shows its data. */

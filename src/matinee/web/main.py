@@ -2,8 +2,9 @@
 
 Refuses to start when a setting is missing, the state directory does not exist,
 the film table or reference statistics are absent or too old, or the labels file
-or the pick's lines (data/quips.json) are malformed. Both are read once here;
-replacing either takes a restart. While it serves, it runs the nightly rebuild
+or the pick's lines (data/quips.json) are malformed. Both are read once here, as are
+the films' tags (data/tags.json less data/tag_skip.txt), which picks go without when
+unreadable; replacing any of them takes a restart. While it serves, it runs the nightly rebuild
 beside itself as its own process (`Rebuilds`), so one container holds Matinee.
 """
 
@@ -31,7 +32,7 @@ from matinee.library.choice import open_reader
 from matinee.reference import DATA
 from matinee.store import Store
 from matinee.trees import load_trees
-from matinee.web.app import create_app
+from matinee.web.app import create_app, shipped_tags
 from matinee.web.config import from_env
 from matinee.web.logbook import state_log
 from matinee.web.theatre import BROKEN_DATA, Theatre
@@ -190,4 +191,7 @@ def build() -> FastAPI:
     )
     state = partial(state_log, theatre, config, dtdd_on=dtdd is not None)
     rebuilds = Rebuilds([sys.executable, str(REBUILD), "--daily"])
-    return create_app(config, theatre, store, dtdd, faults=faults, state=state, lifespan=rebuilds.lifespan)
+    film_tags = shipped_tags(faults)
+    return create_app(
+        config, theatre, store, dtdd, tags=film_tags, faults=faults, state=state, lifespan=rebuilds.lifespan
+    )

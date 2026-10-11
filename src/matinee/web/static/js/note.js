@@ -1,4 +1,4 @@
-// The note action on a result: what was wrong with the pick, and why. Every
+// "Wrong pick?" on a result: what was wrong with the pick, and why, in the pick's panel. Every
 // answer is kept as a note, with the path that led to the pick, for whoever runs
 // Matinee; it changes nothing any viewer is shown. The pick always belongs to a profile
 // this device holds. "Not this genre at all" asks where the film belongs, offering every
@@ -6,6 +6,7 @@
 
 import { post } from "./api.js";
 import { h, sentenceCase } from "./dom.js";
+import { panelAction } from "./panel.js";
 
 function treeChoices(trees, current) {
   return trees
@@ -40,14 +41,14 @@ function kindChoices(label, onchange) {
   );
 }
 
-function send(visit, film, kind, belongs, comment) {
+function send(walk, film, kind, belongs, comment) {
   return post("/api/notes", {
-    profile_id: visit.viewer.profile_id,
+    profile_id: walk.profileId,
     tmdb: film.tmdb,
-    tree: visit.tree,
+    tree: walk.tree,
     kind,
-    answers: visit.answers,
-    rushed: visit.rushed,
+    answers: walk.answers,
+    rushed: walk.rushed,
     comment,
     belongs: kind === "genre" ? belongs : [],
   });
@@ -58,79 +59,68 @@ function noted([gold, cream]) {
   return [h("span", { class: "ack" }, gold), " ", h("span", { class: "ask" }, cream)];
 }
 
-export function noteLink({ visit, film, trees }) {
-  if (!visit.tree) return null;
-  const here = trees.find((t) => t.tree === visit.tree);
+// The walk a pick was drawn under, as the note records it: the profile, the door, the answers and their words, and
+// whether "Just pick one!" ended the questions. Taken when the film is shown, so a film brought back later is noted
+// under the walk it first came from.
+export function walkOf(visit) {
+  const { tree, answers, says, rushed, firstSay } = visit;
+  return { profileId: visit.viewer.profile_id, tree, answers: [...answers], says: [...says], rushed, firstSay };
+}
+
+// "Wrong pick?": opens the pick's panel with the note's form. Null on a pick that came through no door. The form is
+// built once per pick, so closing and opening the panel keeps what the viewer chose and wrote.
+export function noteLink({ walk, film, trees, panel }) {
+  if (!walk.tree) return null;
+  const here = trees.find((t) => t.tree === walk.tree);
   const label = here ? here.label.toLowerCase() : "this kind of film";
   const status = h("p", { class: "note", role: "status" });
   const say = (...text) => {
     status.replaceChildren(...text);
   };
-  const panel = h("div", { class: "correct-panel", hidden: true });
-  const open = h(
-    "button",
-    {
-      class: "action cream",
-      type: "button",
-      "aria-expanded": "false",
-      onclick: () => {
-        panel.hidden = !panel.hidden;
-        open.setAttribute("aria-expanded", String(!panel.hidden));
-      },
-    },
-    "Something wrong with this pick?",
-  );
-  const choices = treeChoices(trees, visit.tree);
+  const choices = treeChoices(trees, walk.tree);
   const belongs = h(
     "div",
     { class: "belongs", hidden: true },
     h("p", { class: "note" }, "Where does it belong?"),
     h("div", { class: "tree-choices" }, choices),
   );
-  const picked = () => panel.querySelector("input[name=what-wrong]:checked")?.value;
   const what = h(
     "fieldset",
     { class: "what-wrong" },
-    h("legend", { class: "note" }, "What's wrong with it?"),
+    h("legend", { class: "panel-section" }, "What's wrong with it?"),
     kindChoices(label, () => {
       belongs.hidden = picked() !== "genre";
     }),
   );
+  const picked = () => what.querySelector("input[name=what-wrong]:checked")?.value;
   const why = h("textarea", { maxlength: 500, rows: 3, placeholder: "Why? (optional)", "aria-label": "Why? (optional)" });
-  const save = h(
-    "button",
-    {
-      class: "action gold",
-      type: "button",
-      onclick: async () => {
-        const kind = picked();
-        if (!kind) return say("Tell me what's wrong with it first.");
-        save.disabled = true;
-        const belongsTo = choices.map((c) => c.querySelector("input")).filter((i) => i.checked).map((i) => i.value);
-        const res = await send(visit, film, kind, belongsTo, why.value);
-        if (res.ok) {
-          say(...noted(res.data.lines));
-          open.remove();
-          for (const node of [...panel.children]) if (node !== status) node.remove();
-          return;
-        }
-        say(res.data.message);
-        save.disabled = false;
-      },
-    },
-    "Save",
-  );
-  const said = [visit.firstSay, ...visit.says, visit.rushed ? "Just pick one!" : null].filter(Boolean);
-  const path = said.map((step) => h("li", {}, sentenceCase(step)));
-  const parts = [
-    h("p", { class: "note" }, "How you got here:"),
-    h("ol", { class: "path" }, path),
+  const said = [walk.firstSay, ...walk.says, walk.rushed ? "Just pick one!" : null].filter(Boolean);
+  const form = [
+    h("p", { class: "panel-lede" }, "This goes to whoever runs Matinee as a note. It changes nothing you are shown."),
+    h("p", { class: "panel-section" }, "How you got here"),
+    h("ol", { class: "path" }, said.map((step) => h("li", {}, sentenceCase(step)))),
     what,
     belongs,
     why,
-    save,
-    status,
   ];
-  panel.append(...parts.filter(Boolean)); // append() would print a null as "null"
-  return h("div", { class: "correct" }, open, panel);
+  const save = h("button", { class: "action gold", type: "button" }, "Save");
+  const foot = h("div", { class: "panel-foot" }, save);
+  save.addEventListener("click", async () => {
+    const kind = picked();
+    if (!kind) return say("Tell me what's wrong with it first.");
+    save.disabled = true;
+    const belongsTo = choices.map((c) => c.querySelector("input")).filter((i) => i.checked).map((i) => i.value);
+    const res = await send(walk, film, kind, belongsTo, why.value);
+    if (res.ok) {
+      say(...noted(res.data.lines));
+      for (const node of [...form, foot]) node.remove();
+      return undefined;
+    }
+    say(res.data.message);
+    save.disabled = false;
+    return undefined;
+  });
+  const body = h("div", { class: "note-form" }, form, status, foot);
+  const open = panelAction("Wrong pick?", () => panel.open(open, "Wrong pick?", body));
+  return open;
 }

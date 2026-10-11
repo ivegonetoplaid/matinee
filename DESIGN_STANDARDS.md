@@ -2,7 +2,7 @@
 title: Matinee — Design Standards
 purpose: The visual and copy laws every Matinee surface holds to — colour, type, the two control families, the scrim and the bands, where Matinee speaks, and the copy.
 status: Binding for every surface under `src/matinee/web/static/`. Section 1 says what to do when the code disagrees with a rule here.
-updated: 2026-10-08
+updated: 2026-10-10
 ---
 
 # Matinee — Design Standards
@@ -209,6 +209,11 @@ never filled or lit. Pressed, it sinks 1.5 px. Keyboard focus shows a 2 px outli
 in the words' colour, 2 px outside the edge. A disabled action stands at 45 per
 cent opacity. A petrol action's words always end with ↗.
 
+Two threads stand without a hover. An action whose panel is open shows its
+thread for as long as the panel is open. "Not that one" is the same size as
+every other action and stands out by its rose words, its thread drawn at all
+times, a faint rose glow and its place at the centre of the pick's foot bar.
+
 [The page specification](docs/spec/matinee.md#shared-action-assignments) lists each action's
 accent. New actions follow the meanings above; if none fits, propose a contract
 change under Authority and exceptions instead of inventing a fifth accent.
@@ -218,12 +223,18 @@ change under Authority and exceptions instead of inventing a fifth accent.
 Everything a viewer uses over the poster wall is a letterbox or an action. A bare
 text link stands only in the foot band: the credit line, its "About",
 DoesTheDogDie's credit and the trail's crumbs. About's own prose keeps its
-links, and the corner mark is the brand's link.
+links, and the corner mark is the brand's link. The pick is the exception: it
+shows no trail and no TMDB credit line, at any width. Its poster is the link to
+the film's page, and DoesTheDogDie's credit stands in its foot band.
 
 The page specification owns phone navigation, action order and credit placement.
 
 "Powered by DoesTheDogDie.com" stands in the foot band of every screen that
-shows DoesTheDogDie's data.
+shows DoesTheDogDie's data. On the pick it stands in the foot band whenever
+Matinee's line names one of DoesTheDogDie's topics: at the foot bar's right end
+on a desktop, centred beneath Matinee's words on a phone. On a resting pick it
+also stands directly after an unchecked film's note. It stands nowhere else on
+the pick.
 
 An action that goes to another address is an `<a>` styled as an action, never a
 `<button>`. Every link that leaves Matinee opens in a new tab with
@@ -236,10 +247,30 @@ The profile menu's rows ("Edit my list", "Change avatar", "Switch profiles",
 that answer a question, the pails and the avatars, stay pictures. The locked
 door's eye is part of the door. The wordmark is the corner mark
 (`static/marquee/mark-corner.svg`), the marquee's crown over a small lit sign
-carrying the name, 40 px tall: a picture inside a link, never text styled as a
-mark. About shows the same mark as a picture, not a link. The film-reporting
-form uses labelled native radio buttons and checkboxes as the spec describes;
-these are form fields, not letterbox choices.
+carrying the name, 64 px tall on a desktop and 40 px on a phone: a picture
+inside a link, never text styled as a mark. About shows the same mark as a
+picture, not a link. The film-reporting form uses labelled native radio buttons
+and checkboxes as the spec describes; these are form fields, not letterbox
+choices.
+
+The pick's resting poster is the link to the film's page. A strip on its foot
+names the site in petrol words that end with ↗, "More on Seerr ↗" or "More on
+TMDB ↗". The poster keeps its warm outline and glow; hovered or focused, the
+outline strengthens and never turns petrol. The film's tags stand as outlined
+chips with small corners, never filled and never a pill.
+
+### 5.5 The pick's panel
+
+Every pick action but "Not that one" opens one shared panel: over the left
+column on a desktop, from under the top bar down to the foot bar, always at that
+full height; over everything under the top bar on a phone. The panel is a solid
+`--menu` surface, so its text needs no scrim. It is headed by the action's name
+in the display face, in gold, with a × at its top right, and it opens with its
+explanation at 18 px, the synopsis's size. Its lists are plain rows, like the
+profile menu's: a row lights faintly under the pointer and shows the gold focus
+ring, and a list that scrolls keeps the panel's heading and foot in place. In a
+panel with few choices, the choices stand centred in the height below the
+explanation.
 
 ---
 
@@ -259,14 +290,18 @@ than the wall, shows the look.
 ### 6.2 Size and colour
 
 Text on the wall is at least 16 px and set in cream or gold. Dim text, and text
-from 11 to 15 px, stands only inside a band.
+from 11 to 15 px, stands only inside a band, with one exception: on the resting
+pick, where the wall behind is dimmed, and inside the pick's panel, such text
+may stand directly beside what it describes, as "by audience votes" stands
+beside the rank and DoesTheDogDie's credit after an unchecked film's note.
 
 ### 6.3 The bands
 
 Every screen over the poster wall has a dark band at the top and at the foot.
 Each is the page base at 92 per cent behind its bar, the top bar with the
 corner mark and the viewer, the foot with the credit line (on a phone, its way back
-and DoesTheDogDie's credit), and feathers to nothing
+and DoesTheDogDie's credit; on the pick, its actions and DoesTheDogDie's
+credit), and feathers to nothing
 into the wall over 96 px on a desktop and 48 px on a phone, with no visible
 edge. On the door's screens, the dark fade behind the marquee is the top band,
 at its own depth. The locked door stands on subway tile and has no bands. About
@@ -279,8 +314,14 @@ keeps its own panel, with the bands beneath it.
 Matinee speaks from one place on each screen, and its choices stand in one place
 beneath it. Nothing re-centres while a line types or the choices appear.
 [The page specification](docs/spec/matinee.md#screen-composition) owns the desktop and
-phone composition for each screen. Distinguish the reporting action beneath the
-pick's controls from an unchecked-content warning beneath the film's synopsis.
+phone composition for each screen. On the pick, its actions stand in the foot,
+following the pick-screen decisions at both widths. On a desktop they sit in a
+foot bar kept across the bottom of the screen: "‹ Back" and "Wrong pick?" at
+its left, "Not that one" at its exact centre. On a phone the foot holds
+Matinee's line, then "Not that one", then "‹ Back" and "Wrong pick?". "‹ Back",
+"Wrong pick?", "Rate it" and "Hide film" are cream. When "Hide film" ships, its
+brief plain "Undo" link may stand in the foot bar. Distinguish "Wrong pick?"
+from an unchecked-content warning beneath the film's synopsis.
 
 ---
 

@@ -180,7 +180,7 @@ The source lives in `src/matinee/` (engine, library integration, profiles, conte
 
 **Third-party material keeps its own terms.** AGPL does not make everything in the repository available for commercial use:
 
-- `data/genome.json` and `data/reference.json` are derived from the **MovieLens tag genome** and carry research, non-commercial-use and redistribution conditions in their `licence` fields. Do not assume the AGPL grants you commercial rights to those datasets.
+- `data/genome.json`, `data/reference.json` and `data/tags.json` are derived from the **MovieLens tag genome** and carry research, non-commercial-use and redistribution conditions in their `licence` fields. Do not assume the AGPL grants you commercial rights to those datasets.
 - `src/matinee/web/static/credits/tmdb.svg` is **TMDB's logo**, used under TMDB's terms.
 - Data fetched from **TMDB**, **DoesTheDogDie**, or your media server at runtime is governed by each service's terms. TMDB's default API licence and DoesTheDogDie's free tier are non-commercial.
 - Dependencies retain their own licences.
