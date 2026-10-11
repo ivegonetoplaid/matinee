@@ -179,7 +179,7 @@ export class Door {
   // standing keeps its place, and its letter board turns to the film count.
   build(count, marquee) {
     this.wall = h("div", { class: "door-wall" });
-    const foot = h("footer", { class: "door-foot" }, aboutLink(this), credits({ dtdd: true }));
+    const foot = h("footer", { class: "door-foot" }, aboutLink(this), credits());
     this.dtddCredit = foot.querySelector(".dtdd-credit");
     if (!marquee) {
       this.marquee = buildMarquee(count);

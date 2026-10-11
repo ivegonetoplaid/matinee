@@ -221,11 +221,12 @@ change under Authority and exceptions instead of inventing a fifth accent.
 ### 5.3 Links
 
 Everything a viewer uses over the poster wall is a letterbox or an action. A bare
-text link stands only in the foot band: the credit line, its "About",
-DoesTheDogDie's credit and the trail's crumbs. About's own prose keeps its
-links, and the corner mark is the brand's link. The pick is the exception: it
-shows no trail and no TMDB credit line, at any width. Its poster is the link to
-the film's page, and DoesTheDogDie's credit stands in its foot band.
+text link stands only in the foot band: "About Matinee" and DoesTheDogDie's
+credit. About's own prose keeps its links, and the corner mark is the brand's
+link. No screen shows a trail or a TMDB credit line: the acknowledgements live
+on the About page, and a question screen's way back is one action at the foot's
+left, "‹ Back" or "Start over", where the pick's "‹ Back" stands. The pick's poster is the link to the film's page, and
+DoesTheDogDie's credit stands in its foot band.
 
 The page specification owns phone navigation, action order and credit placement.
 
@@ -299,9 +300,9 @@ beneath the rank and DoesTheDogDie's credit after an unchecked film's note.
 
 Every screen over the poster wall has a dark band at the top and at the foot.
 Each is the page base at 92 per cent behind its bar, the top bar with the
-corner mark and the viewer, the foot with the credit line (on a phone, its way back
-and DoesTheDogDie's credit; on the pick, its actions and DoesTheDogDie's
-credit), and feathers to nothing
+corner mark and the viewer, the foot with its way back or "About Matinee" and
+DoesTheDogDie's credit where it shows (on the pick, its actions and
+DoesTheDogDie's credit), and feathers to nothing
 into the wall over 96 px on a desktop and 48 px on a phone, with no visible
 edge. On the door's screens, the dark fade behind the marquee is the top band,
 at its own depth. The locked door stands on subway tile and has no bands. About

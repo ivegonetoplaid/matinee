@@ -264,97 +264,30 @@ a.wordmark:focus-visible {
   }
 }
 
-/* A phone's way back, "Back" and "Start over", stands where a desktop shows the trail. */
+/* A question screen's way back, "‹ Back" or "Start over", at the pinned bar's left at every width, where the
+   pick's "‹ Back" stands. */
 .way-back {
-  display: none;
+  display: flex;
+  flex-basis: 100%;
+  min-height: 44px;
+  align-items: center;
 }
 
-/* On a phone the trail and the TMDB credit line leave every screen: "Back" and "Start over" take the trail's
-   place, and the About page carries TMDB's logo and notice. DoesTheDogDie's credit stays where its data shows. */
 @media (max-width: 600px) {
-  .bottombar > .trail,
-  .tmdb-credit {
-    display: none;
+  /* On a phone the pick's "‹ Back" stands in its foot, above the foot's 20 px padding and the stage's 12 px gap,
+     half the row wide; the question screens' way back takes the same place and width. */
+  .way-back {
+    margin-bottom: 32px;
   }
 
-  .way-back {
-    display: flex;
-    flex-basis: 100%;
-    justify-content: center;
-    gap: 12px;
+  .way-back .action {
+    flex: 0 1 calc(50% - 5px);
   }
 
   /* After three films trip the list, "Start over" stands beside "Roll again" and the longer action takes a
      row of its own, so the three fit the pick's foot. */
   .aside .choices > .show-picked {
     order: 1;
-  }
-}
-
-/* The way here, bottom centre in the pinned bar: small, gold, one crumb per step. */
-.trail ol {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  align-items: center;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  font-size: 14px;
-  color: var(--gold);
-}
-
-/* A row of its own across the pinned bottom bar, above the credits. */
-.bottombar > .trail {
-  flex-basis: 100%;
-  min-width: 0;
-}
-
-.trail li {
-  display: flex;
-  align-items: center;
-  min-width: 0;
-}
-
-/* The separator stays with the crumb before it, so a wrapped row starts with a crumb. */
-.trail li:not(:last-child)::after {
-  content: "›";
-  margin: 0 10px;
-}
-
-/* "Start" and the door keep their words; the source answer and the answers shorten first. */
-.trail li.keep {
-  flex-shrink: 0;
-}
-
-.crumb {
-  max-width: 26ch;
-  min-height: 32px;
-  padding: 0;
-  overflow: hidden;
-  border: 0;
-  background: none;
-  color: inherit;
-  font: inherit;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  text-decoration: underline;
-  text-decoration-color: color-mix(in srgb, var(--gold) 40%, transparent);
-  cursor: pointer;
-}
-
-/* The crumb for the screen showing now: the same words, not a link. */
-.crumb.here {
-  display: inline-block;
-  line-height: 32px;
-  text-decoration: none;
-  cursor: default;
-}
-
-@media (hover: hover) {
-  button.crumb:hover {
-    color: var(--gold-words);
-    text-decoration-color: currentColor;
   }
 }
 
@@ -2109,18 +2042,6 @@ a.wordmark:focus-visible {
   }
 }
 
-/* DoesTheDogDie's credit joins the line on a screen that shows its data. */
-.dtdd-credit::before {
-  content: " · ";
-}
-
-/* TMDB's logo sits in the credit line at text height, well below Matinee's own mark. */
-.tmdb-logo {
-  height: 0.7em;
-  width: auto;
-  vertical-align: 0;
-}
-
 .bottombar .credits {
   max-width: 560px;
   text-align: right;
@@ -2367,8 +2288,7 @@ a.wordmark:focus-visible {
   pointer-events: none;
 }
 
-.door-foot .credits,
-.bottombar:has(> .about-link) > .credits {
+.door-foot .credits {
   grid-column: 3;
   text-align: right;
 }
@@ -2826,8 +2746,7 @@ a.wordmark:focus-visible {
 
   .door-foot > .about-link,
   .bottombar > .about-link,
-  .door-foot .credits,
-  .bottombar:has(> .about-link) > .credits {
+  .door-foot .credits {
     grid-column: 1;
     text-align: center;
   }

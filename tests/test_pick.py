@@ -249,9 +249,7 @@ def test_a_pool_whose_every_film_was_shown_says_it_is_used_up(site: Any) -> None
     client, _ = site
     body = client.post("/api/pick", json={"tree": "west", "seen": [1, 2, 3], "viewer": seat_for(client)}).json()
     assert body["film"] is None
-    assert (
-        body["exhausted"] == "That's every film I've got for those answers. Step back along the trail, or start over."
-    )
+    assert body["exhausted"] == "That's every film I've got for those answers. Step back, or start over."
 
 
 def test_an_exhausted_pool_says_so_in_words(site: Any) -> None:

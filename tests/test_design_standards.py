@@ -38,17 +38,15 @@ ARTWORK = {
 }
 ARTWORK_KEYFRAMES = {"burn"}  # the fuse's burn on Matinee's line
 
-# Text buttons and links that are not actions or letterboxes: the foot band's crumbs, About link and credits,
+# Text buttons and links that are not actions or letterboxes: the foot band's About link and credits,
 # About's own prose, the wordmark, the pick's poster link, the panel's × and rows, and controls that are pictures
 # or menu rows. Each names its element's tag, script, building function and classes, never a line.
 PERMITTED = {
     ("a", "about.js", "link", frozenset()),
-    ("a", "credits.js", "tmdbLogo", frozenset()),
     ("a", "credits.js", "dtddCredit", frozenset()),
     ("a", "credits.js", "dtddBeside", frozenset()),
     ("a", "credits.js", "dtddFoot", frozenset()),
     ("a", "main.js", "wordmark", frozenset({"wordmark"})),
-    ("button", "main.js", "trail", frozenset({"crumb"})),
     ("button", "credits.js", "aboutLink", frozenset({"inline-link", "about-link"})),
     ("button", "door.js", "tile", frozenset({"seat"})),
     ("button", "door.js", "newTile", frozenset({"seat", "new"})),
