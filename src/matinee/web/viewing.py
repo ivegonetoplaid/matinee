@@ -24,7 +24,8 @@ from matinee.pick import Pick, Picker, candidates
 from matinee.store import Note, Profile, Store
 from matinee.trees import Tree
 from matinee.web.common import COOKIE_AGE_S, Seat, device_tokens, optional_int, over_https, problem, seat
-from matinee.web.setup import fallback_line
+from matinee.web.seerr import SeerrCheck
+from matinee.web.setup import SEERR_AWAY, fallback_line
 from matinee.web.theatre import UNUSABLE, Showing, Theatre
 
 log = logging.getLogger("matinee.web")
@@ -87,7 +88,7 @@ class StepOut(BaseModel):
     pool: list[int]
     prefer: str | None
     self_destruct: int | None = None
-    fallback: str | None = None  # the walk's source answer cannot be kept: the library stopped answering
+    fallback: str | None = None  # the walk's strip: its source answer cannot be kept, or Seerr does not answer
 
 
 class FirstOptionOut(BaseModel):
@@ -226,6 +227,13 @@ def fallback_for(answer: Source | None, showing: Showing, server: str | None) ->
     return fallback_line(server, showing.library == "refused")
 
 
+def walk_notice(answer: Source | None, showing: Showing, server: str | None, seerr: SeerrCheck) -> str | None:
+    """What a walk response's strip says: the library's fallback for its source answer, then that Seerr does not
+    answer while one is configured; None when neither stands, which takes the strip down."""
+    said = [line for line in (fallback_for(answer, showing, server), SEERR_AWAY if seerr.away() else None) if line]
+    return " ".join(said) or None
+
+
 def resolve(
     request: Request, store: Store, v: ViewerIn, topics_on: bool, source: Source = "all"
 ) -> tuple[Viewer, Profile | None]:
@@ -350,7 +358,9 @@ def add_topic_routes(app: FastAPI, store: Store, dtdd: Dtdd) -> None:
         return seat(store.set_topics(profile_id, body.topics, device_tokens(request)))
 
 
-def add_viewing_routes(app: FastAPI, theatre: Theatre, store: Store, topics_on: bool, server: str | None) -> None:
+def add_viewing_routes(
+    app: FastAPI, theatre: Theatre, store: Store, topics_on: bool, server: str | None, seerr: SeerrCheck
+) -> None:
     @app.post("/api/first")
     def first(body: FirstIn, request: Request) -> FirstOut:
         """The first screen of a walk: the source question until it is answered (while it is asked), then the doors
@@ -372,7 +382,7 @@ def add_viewing_routes(app: FastAPI, theatre: Theatre, store: Store, topics_on: 
             pool=everything(cat, viewer),
             checked=bool(viewer.topics),
             source=question,
-            fallback=fallback_for(body.source, showing, server),
+            fallback=walk_notice(body.source, showing, server, seerr),
         )
 
     @app.post("/api/walk")
@@ -395,7 +405,7 @@ def add_viewing_routes(app: FastAPI, theatre: Theatre, store: Store, topics_on: 
             pool=list(step.pool),
             prefer=step.prefer,
             self_destruct=step.self_destruct,
-            fallback=fallback_for(body.source, showing, server),
+            fallback=walk_notice(body.source, showing, server, seerr),
         )
 
 
@@ -450,7 +460,13 @@ def pick_pool(cat: Catalog, viewer: Viewer, body: PickIn) -> tuple[list[int], st
 
 
 def add_pick_routes(
-    app: FastAPI, theatre: Theatre, store: Store, picker: Picker, topics_on: bool, server: str | None
+    app: FastAPI,
+    theatre: Theatre,
+    store: Store,
+    picker: Picker,
+    topics_on: bool,
+    server: str | None,
+    seerr: SeerrCheck,
 ) -> None:
     @app.post("/api/pick")
     def pick(body: PickIn, request: Request, response: Response) -> PickOut:
@@ -462,7 +478,7 @@ def add_pick_routes(
         films = cat.table.films
         ratings = dict(zip(films.index.tolist(), films.rating.fillna(0.0).tolist(), strict=True))
         pool = candidates(left, body.seen, ratings, prefer)
-        note = fallback_for(body.source, showing, server)
+        note = walk_notice(body.source, showing, server, seerr)
         if left and not pool:
             return pick_out(films, Pick(None, used_up=True), note)
         device = device_id(request, response) if viewer.topics else ""

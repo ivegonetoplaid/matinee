@@ -8,6 +8,7 @@ never logged.
 
 from __future__ import annotations
 
+import http.client
 import json
 import logging
 import re
@@ -85,7 +86,7 @@ class JellyfinReader:
         except urllib.error.HTTPError as exc:
             error = LibraryRefused if exc.code in REFUSED_CODES else LibraryError
             raise error(f"Jellyfin answered HTTP {exc.code} to GET {path.split('?')[0]}") from exc
-        except (urllib.error.URLError, TimeoutError) as exc:
+        except (OSError, http.client.HTTPException) as exc:  # refused, timed out, or dropped mid-answer
             raise LibraryError(f"Jellyfin could not be reached: {exc}") from exc
         except json.JSONDecodeError as exc:
             raise LibraryError(f"Jellyfin answered GET {path.split('?')[0]} with something that is not JSON") from exc
@@ -117,7 +118,7 @@ class JellyfinReader:
                 body = resp.read(MAX_IMAGE_BYTES + 1)
         except urllib.error.HTTPError as exc:
             raise LibraryError(f"Jellyfin answered HTTP {exc.code} for a {kind} image") from exc
-        except (urllib.error.URLError, TimeoutError) as exc:
+        except (OSError, http.client.HTTPException) as exc:
             raise LibraryError(f"Jellyfin could not be reached for a {kind} image: {exc}") from exc
         if not content_type.startswith("image/") or len(body) > MAX_IMAGE_BYTES:
             raise LibraryError(f"Jellyfin answered a {kind} image request with {content_type or 'no type'}")

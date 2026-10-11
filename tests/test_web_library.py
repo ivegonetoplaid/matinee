@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+import http.client
 import io
 import itertools
 import json
@@ -13,6 +14,7 @@ import urllib.error
 import urllib.request
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime, timedelta
+from email.message import Message
 from functools import partial
 from pathlib import Path
 from typing import Any
@@ -28,6 +30,7 @@ from matinee.engine import load_catalog
 from matinee.library import Image, LibraryError, LibraryFilm, LibraryRefused
 from matinee.library.choice import MediaServer
 from matinee.library.jellyfin import JellyfinReader
+from matinee.outage import RETRY_S
 from matinee.ranks import VOTE_FLOOR
 from matinee.store import Store
 from matinee.table import FilmTable, write_table
@@ -36,7 +39,7 @@ from matinee.web import app as app_module
 from matinee.web.app import IMAGE_CACHE, STATIC, TMDB_IMAGE_CACHE, create_app
 from matinee.web.config import Config, ConfigError, ImageSource, from_env
 from matinee.web.seerr import SeerrCheck
-from matinee.web.theatre import LIVE_TTL, RETRY_AFTER, Theatre
+from matinee.web.theatre import LIVE_TTL, Theatre
 from test_engine import make_table, reference, write_data
 
 SECRET_URL = "http://media.invalid:8096"
@@ -270,7 +273,7 @@ def test_an_unreachable_library_holds_no_film_and_says_so(world: Any) -> None:
     library.down = False
     assert client.get("/api/film/5").status_code == 404  # still inside the hold-off: no new read
     assert len([c for c in library.calls if c[0] == "films"]) == reads
-    clock.now += RETRY_AFTER + 1
+    clock.now += RETRY_S + 1
     assert client.get("/api/film/5").status_code == 200
     assert client.get("/api/setup").json()["lines"] == []  # the note goes without a restart
 
@@ -468,6 +471,31 @@ def test_the_jellyfin_reader_refuses_odd_answers_and_ids(monkeypatch: pytest.Mon
         reader.synopsis("../Users")
 
 
+@pytest.mark.parametrize("module", ["jellyfin", "plex"])
+def test_a_server_that_drops_the_connection_is_a_library_error_and_a_401_still_a_turned_down_key(
+    monkeypatch: pytest.MonkeyPatch, module: str
+) -> None:
+    from matinee.library.plex import PlexReader
+
+    reader: Any = JellyfinReader(SECRET_URL, SECRET_KEY) if module == "jellyfin" else PlexReader(SECRET_URL, "t")
+    failures: list[Exception] = [
+        http.client.RemoteDisconnected("Remote end closed connection without response"),
+        http.client.IncompleteRead(b""),
+        urllib.error.HTTPError(SECRET_URL, 401, "Unauthorized", Message(), None),
+    ]
+
+    def urlopen(req: Any, timeout: float) -> Any:
+        raise failures.pop(0)
+
+    monkeypatch.setattr(f"matinee.library.{module}.urllib.request.urlopen", urlopen)
+    for _ in range(2):  # a server restarting beside Matinee: the rebuild waits and the theatre retries
+        with pytest.raises(LibraryError) as dropped:
+            reader.films()
+        assert not isinstance(dropped.value, LibraryRefused)
+    with pytest.raises(LibraryRefused):
+        reader.films()
+
+
 def test_every_response_carries_the_security_headers(world: Any) -> None:
     client, _, _, _ = world
     for path in ("/", "/static/css/matinee.css", "/img/poster/5/m", "/api/film/5", "/api/film/12345", "/img/logo/5/m"):
@@ -612,7 +640,7 @@ def test_while_the_library_cannot_be_used_every_picture_and_synopsis_comes_from_
     card = client.get("/api/film/6")
     assert card.status_code == 200 and card.json()["synopsis"] == "TMDB says 6."
     library.down = False
-    clock.now += RETRY_AFTER + 1
+    clock.now += RETRY_S + 1
     assert client.get("/api/film/6").json()["synopsis"] == "A stranger rides into town."  # the library's again
 
 

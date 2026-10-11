@@ -136,9 +136,14 @@ none, so the question is not asked. Matinee types "Right this way, <name>." and
   <server> turned down my key, so I'm picking from every film I know, in your
   library or not, until that's sorted." instead. The page shows
   it in the warning strip (section 12). An answer of `all` loses nothing and
-  carries none, and neither does a walk the source question was not asked of,
-  whose setup note said so. A response without it takes it down, so the strip
-  clears when the library answers again or a new walk starts.
+  carries no library notice, and neither does a walk the source question was not
+  asked of, whose setup note said so.
+- While a configured Seerr does not answer, the same three responses carry, in
+  `fallback` after any library notice, "I can't reach your Seerr right now, so
+  each pick links to TMDB until it's back." (section 5.4), whatever the source
+  answer. A response without `fallback` takes the notice down and leaves the
+  stale-data warning (section 12), so the notice clears once neither the library
+  nor Seerr is away.
 - The wording is data in `data/first_question.json` (`source`). A file whose
   answer names no source is refused.
 
@@ -797,10 +802,12 @@ its vote count in their own columns.
 once and then every day at that local time; `--daily` alone takes the time from
 `REBUILD_TIME`, 04:30 when unset. A time given to `--daily` is validated before
 the first rebuild; a `REBUILD_TIME` that is no `HH:MM` time is logged and the
-rebuild runs at 04:30. A rebuild that fails on an unexpected error puts back the table it
-started with, which it keeps under a second name (`films.sqlite.kept`) while it
-runs; one that stops on TMDB (no key, a refused key, TMDB not answering) keeps
-what it saved.
+rebuild runs at 04:30. A media server that does not answer or turns down the key
+is never a failure: the rebuild waits for it (step 2). A rebuild that fails on an unexpected error
+puts back the table it started with, which it keeps under a second name
+(`films.sqlite.kept`) while it runs, and tries again at the next scheduled time;
+one that stops on TMDB (no key, a refused key, TMDB not answering) keeps what it
+saved.
 
 The server runs it: while the server serves, it keeps `rebuild_table.py --daily`
 running as its own process beside itself (`matinee.web.main.Rebuilds`), so a
@@ -815,7 +822,13 @@ older two-container setup) waits for the first and then runs its own.
    and shelved pictures past 150 days (section 5.2).
 2. It reads the media server's film list, by GET only, when a media server is
    set. With none, or with settings that name both servers or cannot be used
-   (logged), it runs on the labels alone.
+   (logged), it runs on the labels alone. A media server that gives no usable
+   answer, or turns down the key, is never given up on (section 5.4): the
+   rebuild reports `waiting`, reads it again 15 seconds after each failed read
+   with the table in place untouched, and goes on the moment it answers. While
+   it waits it still sweeps the shelved pictures and the cached records past
+   their keep (section 5.2) once a day. Its failures are logged as section 5.4
+   says, the 120 seconds counted from the rebuild process's own start.
 3. It writes the table from the library and the records already held, before
    any fetch, so the library can be picked at once on a first start.
 4. It refreshes the TMDB record of every film the labels name (the shipped
@@ -855,11 +868,13 @@ whole each time, and the server reads it
  "updated_at": "2026-10-05T03:01:40+00:00", "done": 2500, "total": 10327, "reason": null}
 ```
 
-`state` is `running` as it starts and at least every 5 seconds while it
-fetches, with the films this run has fetched or failed out of those it needs
-(`done`, `total`), `finished`, or `stopped` with the reason: "no TMDB key is
-set", "TMDB refused the key", "TMDB is not answering", or "the rebuild failed;
-its log says why". A `running` report that has not
+`state` is `waiting` after each failed read of the media server, 15 seconds
+apart, while it does not answer or turns down the key (step 2), `running` as it fetches, at least every 5 seconds, with the films
+this run has fetched or failed out of those it needs (`done`, `total`),
+`finished`, or `stopped` with the reason: "no TMDB key is set", "TMDB refused
+the key", "TMDB is not answering", or, for an unexpected failure, "the rebuild
+failed: " and the error, so the server's state line names it; the rebuild's log
+holds the traceback. A `running` or `waiting` report that has not
 changed for 120 seconds means the rebuild died, and the setup note says the
 last rebuild failed. A report
 that cannot be read, or whose fields are not of their kind (a known state, text
@@ -941,6 +956,18 @@ finished.
   HTTP 401 or 403 is a turned-down key, told apart from a server that gives no
   usable answer: its warning says to check the key, the other's to check that
   the server runs and its address.
+- The media server and Seerr run on the household's network, so neither is
+  ever given up on: each is asked again at most every **15 seconds** while it
+  does not answer, with no backoff (the server on its next request, the rebuild
+  on its own; `src/matinee/outage.py`). A connection refused, timed out or
+  dropped mid-answer counts as no answer. TMDB and DoesTheDogDie are outside
+  services and keep their own limits. Each run of failures is logged at most
+  once at each level: at INFO, as a service that may still be starting, while
+  it falls in the first **120 seconds** after Matinee starts, and as a warning
+  once it fails after that or begins later. A turned-down key is warned at once.
+  An answer that ends a run is logged.
+- Seerr is checked at most every 15 seconds, answering or not, on the next
+  request; section 2.0 says what the walk shows while it does not answer.
 - The table file is reloaded when the nightly rebuild replaces it.
 - The sign's "Now showing N films" counts every film Matinee offers: the
   library's and the films the labels name.
@@ -955,7 +982,8 @@ offered, and the rebuild's last report with its progress. The rebuild logs the
 same way: a line as it starts (the library, the films the labels name, the records
 held and to fetch, the pace) and its progress at every save. Every warning and
 error either one logs says what failed, what Matinee does meanwhile, and a step
-to recover. A warning one bad answer per picture would repeat is logged at most
+to recover; a household service not answering just after start is said at INFO
+first (section 5.4). A warning one bad answer per picture would repeat is logged at most
 once a minute, with a count of those held back. No log line carries a key, token
 or door word.
 
@@ -993,8 +1021,9 @@ show." and says, one paragraph each, what Matinee sees:
 - a household override file that cannot be used (section 2.6), with what is
   wrong in it;
 - a rebuild whose report stood still for 120 seconds, as a failed rebuild;
-- when there is no film to recommend, why: the rebuild is still fetching, or no
-  film details exist and nothing is fetching them.
+- when there is no film to recommend, why: the rebuild is still fetching, it is
+  waiting for the media server before it fetches, or no film details exist and
+  nothing is fetching them.
 
 While the library cannot be used, because both servers are set, its settings
 cannot be used or it does not answer, the note also says Matinee is picking from
@@ -1930,8 +1959,8 @@ the film information area on both desktop and phone.
   page loads or returns to the door. Before the door word is given, the page
   asks for neither.
   (`src/matinee/web/static/js/main.js::showWarning`)
-- **The fallback notice** (section 2.0) stands in the same strip, after the
-  stale-data warning when both stand. Each walk response sets it: one carrying
+- **The fallback notice** (section 2.0), the library's and Seerr's, stands in
+  the same strip, after the stale-data warning when both stand. Each walk response sets it: one carrying
   `fallback` shows it, one without takes it down and leaves the stale-data
   warning as it was.
   (`src/matinee/web/static/js/main.js::showFallback`)
@@ -2610,7 +2639,8 @@ symbol when one does not match.
 | `src/matinee/engine.py::_asked` / `Asked.footnote` (footnote and asterisks dropped with the apart answer) | `src/matinee/engine.py:467` | 2026-10-05 |
 | `src/matinee/web/viewing.py::asks_source` (asked while the library can be used and both pools hold a film) | `src/matinee/web/viewing.py:205` | 2026-10-05 |
 | `src/matinee/web/viewing.py::source_for` (before an answer, the library's films; unasked, every film) | `src/matinee/web/viewing.py:212` | 2026-10-05 |
-| `src/matinee/web/viewing.py::fallback_for` (`held` or `new` while the library does not answer or turned down the key) | `src/matinee/web/viewing.py:220` | 2026-10-05 |
+| `src/matinee/web/viewing.py::fallback_for` (`held` or `new` while the library does not answer or turned down the key) | `src/matinee/web/viewing.py:221` | 2026-10-11 |
+| `src/matinee/web/viewing.py::walk_notice` (the walk's strip: the library's fallback, then Seerr not answering) | `src/matinee/web/viewing.py:230` | 2026-10-11 |
 | `src/matinee/web/setup.py::fallback_line` (the fallback notice's wording) | `src/matinee/web/setup.py:69` | 2026-10-05 |
 | `src/matinee/web/viewing.py::SourceQuestionOut` / `SourceOptionOut` | `src/matinee/web/viewing.py:105` | 2026-10-05 |
 | `src/matinee/web/viewing.py::everything` (the first question's pool) | `src/matinee/web/viewing.py:186` | 2026-10-05 |
@@ -2752,14 +2782,15 @@ symbol when one does not match.
 | `tools/rebuild_table.py::rebuild_time` / `DEFAULT_DAILY` (`REBUILD_TIME` for `--daily` alone; 04:30 when unset or not a time, logged) | `tools/rebuild_table.py:265` | 2026-10-09 |
 | `tools/rebuild_table.py::one_at_a_time` / `LOCK` (`rebuild.lock`; a second rebuild waits) | `tools/rebuild_table.py:282` | 2026-10-09 |
 | `src/matinee/web/main.py::Rebuilds` / `REBUILD` / `RESTART_AFTER_S` (the server runs the rebuild beside itself; restarted five minutes after it exits) | `src/matinee/web/main.py:95` | 2026-10-10 |
-| `tools/rebuild_table.py::rebuild` (no key: compact and stop; an unexpected failure puts the kept table back) | `tools/rebuild_table.py:78` | 2026-10-09 |
-| `tools/rebuild_table.py::_keep` / `_compact_without_key` (`films.sqlite.kept`) | `tools/rebuild_table.py:135` | 2026-10-09 |
+| `tools/rebuild_table.py::rebuild` (no key: compact and stop; an unexpected failure puts the kept table back and reports its error) | `tools/rebuild_table.py:84` | 2026-10-11 |
+| `tools/rebuild_table.py::library_films` / `_say_waiting` / `_keep_terms` / `BEGAN` / `KEEP_EVERY_S` (a media server that does not answer is waited for, reporting `waiting`; the retention sweeps still run daily) | `tools/rebuild_table.py:216` | 2026-10-11 |
+| `tools/rebuild_table.py::_keep` / `_compact_cache` (`films.sqlite.kept`) | `tools/rebuild_table.py:108` | 2026-10-11 |
 | `tools/rebuild_table.py::_sweep_pictures` (every rebuild sweeps the picture shelf) | `tools/rebuild_table.py:117` | 2026-10-09 |
 | `tools/rebuild_table.py::_rebuild` (the start line; save before any fetch; most-voted order) | `tools/rebuild_table.py:149` | 2026-10-09 |
 | `tools/rebuild_table.py::_Run` / `save` / `tick` (a save every `SAVE_EVERY` records) | `tools/rebuild_table.py:182` | 2026-10-09 |
-| `tools/rebuild_table.py::SAVE_EVERY` / `FAILED` | `tools/rebuild_table.py:68` | 2026-10-09 |
+| `tools/rebuild_table.py::SAVE_EVERY` / `FAILED` | `tools/rebuild_table.py:71` | 2026-10-11 |
 | `tools/rebuild_table.py::tmdb_rate` (any positive number; anything else the default, logged) | `tools/rebuild_table.py:230` | 2026-10-09 |
-| `src/matinee/progress.py::RebuildStatus` / `STATUS_FILE` (`rebuild.json`) | `src/matinee/progress.py:24` | 2026-10-05 |
+| `src/matinee/progress.py::RebuildStatus` / `State` / `STATUS_FILE` (`rebuild.json`; `waiting`, `running`, `finished`, `stopped`) | `src/matinee/progress.py:21` | 2026-10-11 |
 | `src/matinee/progress.py::write_status` / `read_status` / `_well_formed` | `src/matinee/progress.py:33` | 2026-10-05 |
 | `src/matinee/tmdb.py::refresh` (one shared pacer; compaction in `finally`) | `src/matinee/tmdb.py:494` | 2026-10-05 |
 | `src/matinee/tmdb.py::fetch_order` (held vote counts, else TMDB's list) | `src/matinee/tmdb.py:473` | 2026-10-05 |
@@ -2909,7 +2940,7 @@ symbol when one does not match.
 | `src/matinee/web/viewing.py::LastOut` / `PickOut` (`last`, `dtdd_item`) | `src/matinee/web/viewing.py:164` | 2026-10-05 |
 | `src/matinee/web/viewing.py::_swap_out` / `_last_out` / `pick_out` | `src/matinee/web/viewing.py:291` | 2026-10-05 |
 | `src/matinee/web/viewing.py::pick_pool` | `src/matinee/web/viewing.py:442` | 2026-10-05 |
-| `src/matinee/web/viewing.py::add_pick_routes` | `src/matinee/web/viewing.py:452` | 2026-10-05 |
+| `src/matinee/web/viewing.py::add_pick_routes` | `src/matinee/web/viewing.py:462` | 2026-10-11 |
 | `tests/test_pick.py::test_three_in_a_row_hold_the_third_film_with_its_own_topic` / `test_a_pick_that_asks_to_skip_the_check_is_still_checked` | `tests/test_pick.py:553` | 2026-10-10 |
 | `tests/test_without_dtdd.py::test_stored_topics_stay_in_the_store_and_change_no_walk_or_pick` | `tests/test_without_dtdd.py:59` | 2026-10-05 |
 
@@ -2922,15 +2953,16 @@ symbol when one does not match.
 | `src/matinee/web/config.py::_server` / `_seerr` / `_images` | `src/matinee/web/config.py:107` | 2026-10-05 |
 | `src/matinee/web/config.py::ImageSource` (`POSTERS_FROM`: `server` or `tmdb`) | `src/matinee/web/config.py:29` | 2026-10-05 |
 | `src/matinee/web/setup.py::SetupNote` (`warning` while the data is stale) | `src/matinee/web/setup.py:49` | 2026-10-05 |
-| `src/matinee/web/setup.py::note` / `library_away` / `rebuild_lines` / `stalled` | `src/matinee/web/setup.py:109` | 2026-10-05 |
+| `src/matinee/web/setup.py::note` / `library_away` / `rebuild_lines` / `stalled` (a waiting report stalls like a running one) | `src/matinee/web/setup.py:84` | 2026-10-11 |
 | `src/matinee/web/setup.py::HEADING` / `MEANWHILE` / `STOPPED` / `STALE` / `STALLED_AFTER` (every line's words) | `src/matinee/web/setup.py:20` | 2026-10-05 |
 | `src/matinee/web/app.py::setup_faults` (the configured, start-up and run-time faults) | `src/matinee/web/app.py:510` | 2026-10-10 |
 | `src/matinee/web/app.py::add_setup_route` (`GET /api/setup`) | `src/matinee/web/app.py:524` | 2026-10-10 |
 | `src/matinee/web/theatre.py::NothingToShow` (shipped data that cannot make a catalog) | `src/matinee/web/theatre.py:61` | 2026-10-05 |
 | `src/matinee/web/theatre.py::Theatre._catalog` | `src/matinee/web/theatre.py:150` | 2026-10-05 |
-| `src/matinee/web/theatre.py::Showing.library` / `UNUSABLE` / `warn_library` (`none`, `usable`, `unreachable`, `refused`) | `src/matinee/web/theatre.py:70` | 2026-10-05 |
+| `src/matinee/web/theatre.py::Showing.library` / `UNUSABLE` / `warn_library` (`none`, `usable`, `unreachable`, `refused`; INFO while Matinee has just started) | `src/matinee/web/theatre.py:46` | 2026-10-11 |
 | `src/matinee/web/theatre.py::Theatre.table_films` / `stale` / `oldest_tmdb` | `src/matinee/web/theatre.py:201` | 2026-10-05 |
-| `src/matinee/web/seerr.py::SeerrCheck` (`CHECK_EVERY`; picks link to TMDB while it does not answer) | `src/matinee/web/seerr.py:25` | 2026-10-05 |
+| `src/matinee/web/seerr.py::SeerrCheck` / `away` / `say_away` (checked every `outage.RETRY_S`; picks link to TMDB while it does not answer) | `src/matinee/web/seerr.py:28` | 2026-10-11 |
+| `src/matinee/outage.py::Outage` / `RETRY_S` / `STARTING_S` (household services never given up on; INFO just after start, warned once after) | `src/matinee/outage.py:18` | 2026-10-11 |
 | `src/matinee/web/logbook.py::describe` / `StateLog` / `state_log` / `CHECK_EVERY` (the state line) | `src/matinee/web/logbook.py:72` | 2026-10-05 |
 | `src/matinee/web/logbook.py::Quiet` / `QUIET_FOR` / `SERVER_NAMES` (a repeating warning once a minute, with a count) | `src/matinee/web/logbook.py:116` | 2026-10-05 |
 | `src/matinee/web/app.py::add_state_log` / `QUIET` | `src/matinee/web/app.py:532` | 2026-10-10 |
@@ -2957,7 +2989,7 @@ symbol when one does not match.
 | `src/matinee/tmdb.py::ImageGate` / `IMAGE_GATE` / `IMAGE_RATE` (50 a second, 20,000 an hour, a hold after a 429 or 503) | `src/matinee/tmdb.py:236` | 2026-10-05 |
 | `src/matinee/web/app.py::add_error_handlers` | `src/matinee/web/app.py:143` | 2026-10-10 |
 | `src/matinee/web/common.py::Problem` | `src/matinee/web/common.py:134` | 2026-10-10 |
-| `src/matinee/web/viewing.py::add_viewing_routes` (`POST /api/first` with the source question, `POST /api/walk`) | `src/matinee/web/viewing.py:353` | 2026-10-05 |
+| `src/matinee/web/viewing.py::add_viewing_routes` (`POST /api/first` with the source question, `POST /api/walk`) | `src/matinee/web/viewing.py:361` | 2026-10-11 |
 | `src/matinee/web/viewing.py::WalkIn` / `PickIn` / `FirstIn` (request caps; no field skips the check) | `src/matinee/web/viewing.py:45` | 2026-10-05 |
 | `tests/test_user_agent.py::test_every_outbound_request_names_matinee` | `tests/test_user_agent.py:36` | 2026-10-05 |
 

@@ -282,8 +282,8 @@ function showWarning(text) {
   strip.textContent = text;
 }
 
-// The strip during a walk: the stale-data warning, then the walk's own notice when the library stopped
-// answering and its source answer can no longer be kept. A response with no notice takes it down again.
+// The strip during a walk: the stale-data warning, then the walk's own notice: the library stopped answering
+// and its source answer can no longer be kept, or Seerr does not answer. A response with no notice takes it down.
 function showFallback(fallback) {
   showWarning([staleWarning, fallback].filter(Boolean).join(" "));
 }

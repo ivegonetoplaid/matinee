@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import threading
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -12,7 +13,7 @@ import pytest
 
 import rebuild_table
 from matinee.labels import load_labels
-from matinee.library import LibraryFilm
+from matinee.library import LibraryError, LibraryFilm, LibraryRefused
 from matinee.library.choice import MediaServer
 from matinee.progress import RebuildStatus, read_status
 from matinee.tmdb import KEY_REFUSED, NO_KEY, Refreshed, load_cache
@@ -116,7 +117,8 @@ def test_an_unexpected_failure_still_ends_the_report_and_is_raised(
     monkeypatch.setattr(rebuild_table, "build_table", broken)
     with pytest.raises(ValueError):
         rebuild_table.rebuild(None, tmp_path, "t")
-    assert (read_status(tmp_path).state, read_status(tmp_path).reason) == ("stopped", rebuild_table.FAILED)  # type: ignore[union-attr]
+    said = (read_status(tmp_path).state, read_status(tmp_path).reason)  # type: ignore[union-attr]
+    assert said == ("stopped", f"{rebuild_table.FAILED}: a code fault")  # the report names the error
 
 
 def test_without_a_key_records_past_six_months_are_still_dropped(tmp_path: Path) -> None:
@@ -158,6 +160,60 @@ def test_the_rebuild_fetches_the_labels_and_the_library_once_each(
     monkeypatch.setattr(rebuild_table, "refresh", refresh)
     rebuild_table.rebuild(MediaServer("jellyfin", "http://jf.invalid", "k"), tmp_path, "t")
     assert sorted(asked[0]) == sorted(load_labels().films() | {outside})
+
+
+def test_a_media_server_that_does_not_answer_is_waited_for_with_the_table_in_place(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(rebuild_table, "RETRY_S", 0)
+    table = tmp_path / "films.sqlite"
+    table.write_bytes(b"the table in place")
+    seen: list[tuple[str, bytes]] = []
+
+    class Starting:
+        tries = 0
+
+        def films(self) -> list[LibraryFilm]:
+            self.tries += 1
+            if self.tries < 3:
+                raise LibraryError("Jellyfin could not be reached: connection refused")
+            seen.append((read_status(tmp_path).state, table.read_bytes()))  # type: ignore[union-attr]
+            return []
+
+    swept: list[Path] = []
+    monkeypatch.setattr(rebuild_table, "_sweep_pictures", swept.append)
+    monkeypatch.setattr(rebuild_table, "open_reader", lambda server: Starting())
+    monkeypatch.setattr(rebuild_table, "refresh", lambda ids, cache, token, **_: Refreshed(0, 0))
+    status = rebuild_table.rebuild(MediaServer("jellyfin", "http://jf.invalid", "k"), tmp_path, "t")
+    assert seen == [("waiting", b"the table in place")]  # never a failed rebuild, never a touched table
+    assert status.state == "finished"
+    assert len(swept) == 1  # the start's sweep alone: a short wait sweeps nothing more
+
+
+def test_a_long_wait_still_sweeps_what_tmdbs_terms_age_out_and_names_a_turned_down_key(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    monkeypatch.setattr(rebuild_table, "RETRY_S", 0)
+    monkeypatch.setattr(rebuild_table, "KEEP_EVERY_S", 0)  # every wait counts as a day
+    monkeypatch.setattr(rebuild_table, "BEGAN", -1e9)  # long past start: every failure is warned
+    failures: list[LibraryError] = [LibraryError("Jellyfin could not be reached"), LibraryRefused("HTTP 401")]
+
+    class Away:
+        def films(self) -> list[LibraryFilm]:
+            if failures:
+                raise failures.pop(0)
+            return []
+
+    swept: list[Path] = []
+    compacted: list[Path] = []
+    monkeypatch.setattr(rebuild_table, "_sweep_pictures", swept.append)
+    monkeypatch.setattr(rebuild_table, "_compact_cache", compacted.append)
+    monkeypatch.setattr(rebuild_table, "open_reader", lambda server: Away())
+    with caplog.at_level(logging.WARNING, logger="rebuild_table"):
+        rebuild_table.library_films(MediaServer("jellyfin", "http://jf.invalid", "k"), tmp_path, "")
+    assert (len(swept), len(compacted)) == (2, 2)  # once for each waited day
+    warned = [r.getMessage() for r in caplog.records]
+    assert len(warned) == 2 and "check the key in its settings" in warned[1]  # a new kind is said afresh
 
 
 def test_a_one_shot_rebuild_that_stopped_exits_one(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -306,7 +362,7 @@ def test_an_unexpected_failure_puts_back_the_table_the_run_started_with(
         rebuild_table.rebuild(None, tmp_path, "t")
     assert list(load_table(table).films.index) == before
     assert not (tmp_path / "films.sqlite.kept").exists() and not (tmp_path / "films.sqlite.partial").exists()
-    assert read_status(tmp_path).reason == rebuild_table.FAILED  # type: ignore[union-attr]
+    assert read_status(tmp_path).reason.startswith(rebuild_table.FAILED)  # type: ignore[union-attr]
     monkeypatch.setattr(rebuild_table, "refresh", lambda ids, cache, token, **_: Refreshed(1, 0, KEY_REFUSED))
     rebuild_table.rebuild(None, tmp_path, "t")  # a stop on TMDB keeps what it saved, and leaves no second name
     assert not (tmp_path / "films.sqlite.kept").exists()

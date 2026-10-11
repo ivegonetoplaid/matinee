@@ -10,10 +10,13 @@ nothing. With `--daily HH:MM` it rebuilds now and then every day at that local
 time, which is how the server runs it beside itself; `--daily` alone takes
 the time from REBUILD_TIME, 04:30 when unset. A second rebuild on the same state
 directory waits for the first (`rebuild.lock`). It reports itself in
-`rebuild.json` (`matinee.progress`): running, with its progress at least every few
-seconds while it fetches, finished, or stopped with the reason, such as no TMDB
-key, a refused key, or TMDB not answering. Without a key it
-fetches nothing and writes no table.
+`rebuild.json` (`matinee.progress`): waiting while the media server does not
+answer, running, with its progress at least every few seconds while it fetches,
+finished, or stopped with the reason, such as no TMDB key, a refused key, TMDB not
+answering, or an unexpected failure and its error. Without a key it fetches
+nothing and writes no table. A media server that does not answer is never given
+up on (`matinee.outage`): the rebuild reads it again every few seconds, keeping
+the table in place, and goes on once it answers.
 
 Settings come from the environment: DATA_DIR (or `--state`), the media server
 (JELLYFIN_URL and JELLYFIN_API_KEY, or PLEX_URL and PLEX_TOKEN), TMDB_TOKEN,
@@ -42,8 +45,9 @@ from pathlib import Path
 from matinee.genome import Scores
 from matinee.genome_file import load_scores
 from matinee.labels import LabelsError, load_labels, load_overrides
-from matinee.library import LibraryFilm
+from matinee.library import LibraryError, LibraryFilm, LibraryRefused
 from matinee.library.choice import MediaServer, ServerChoiceError, configured_server, open_reader
+from matinee.outage import RETRY_S, STARTING_S, Outage
 from matinee.progress import RebuildStatus, write_status
 from matinee.table import BuildReport, build_table, write_table
 from matinee.tmdb import (
@@ -64,11 +68,13 @@ from matinee.tmdb import (
 
 log = logging.getLogger("rebuild_table")
 DEFAULT_STATE = Path.home() / ".local/share/matinee"
-FAILED = "the rebuild failed; its log says why"
+FAILED = "the rebuild failed"  # the report's reason for an unexpected failure, followed by its error
 SAVE_EVERY = 500  # new records between saves of the film table while the rebuild fetches
 DEFAULT_DAILY = "04:30"  # the nightly rebuild's time when REBUILD_TIME is unset
 FROM_SETTING = "REBUILD_TIME"  # what `--daily` given alone stands for
 LOCK = "rebuild.lock"  # held in the state directory for each rebuild
+BEGAN = time.monotonic()  # when this process started: a media server failing soon after may still be starting
+KEEP_EVERY_S = 24 * 3600.0  # seconds of waiting for the media server between sweeps of what TMDB's terms age out
 
 
 def _now() -> str:
@@ -81,25 +87,25 @@ def rebuild(server: MediaServer | None, state: Path, token: str, rate: float = D
     cache = state / "tmdb" / "films.jsonl"
     _sweep_pictures(state / "tmdb" / "pictures")
     if not token:
-        _compact_without_key(cache)
+        _compact_cache(cache)
         log.error("no TMDB key is set, so no film table can be built. Set TMDB_TOKEN and run the rebuild again.")
         return _report(state, RebuildStatus("stopped", started, _now(), reason=NO_KEY))
     table = state / "films.sqlite"
     kept = _keep(table)
     try:
         status = _rebuild(server, state, cache, token, started, rate)
-    except Exception:
+    except Exception as exc:
         if kept is not None:
             os.replace(kept, table)  # an unexpected failure puts back the table this run started with
             log.warning("the rebuild failed, so the film table it started with is back in place")
-        _report(state, RebuildStatus("stopped", started, _now(), reason=FAILED))
+        _report(state, RebuildStatus("stopped", started, _now(), reason=f"{FAILED}: {exc}"))
         raise
     if kept is not None:
         kept.unlink(missing_ok=True)
     return status
 
 
-def _compact_without_key(cache: Path) -> None:
+def _compact_cache(cache: Path) -> None:
     """The six-month limit holds even when nothing can be fetched; a cache that cannot be rewritten is logged."""
     if not cache.exists():
         return
@@ -149,7 +155,7 @@ def _keep(table: Path) -> Path | None:
 def _rebuild(
     server: MediaServer | None, state: Path, cache: Path, token: str, started: str, rate: float
 ) -> RebuildStatus:
-    films = open_reader(server).films() if server is not None else []
+    films = library_films(server, state, started) if server is not None else []
     listed = load_labels().films() | household_films(state)
     ids = listed | {f.tmdb for f in films if f.tmdb is not None}
     have = load_cache(cache)
@@ -205,6 +211,69 @@ class _Run:
                 log.info("rebuild progress: %d of %d films fetched or failed (%d%%)", done, total, 100 * done // total)
             self.save(records)
             self.saved_at = so_far.fetched
+
+
+def library_films(server: MediaServer, state: Path, started: str) -> list[LibraryFilm]:
+    """The media server's film list, read again RETRY_S seconds after each failed read until it answers: the server
+    runs on the household's network, so it is never given up on. Meanwhile the report says the rebuild waits, the
+    table in place stands, and what TMDB's terms age out is still swept every KEEP_EVERY_S seconds."""
+    reader = open_reader(server)
+    outage = Outage(BEGAN)
+    was_refused = False
+    kept_at = time.monotonic()
+    while True:
+        try:
+            films = reader.films()
+        except LibraryError as exc:
+            refused = isinstance(exc, LibraryRefused)
+            if refused != was_refused:
+                outage.answered()  # a new kind of failure is said afresh
+            was_refused = refused
+            level = outage.failed(time.monotonic(), may_be_starting=not refused)
+            if level is not None:
+                _say_waiting(exc, level, refused)
+            _report(state, RebuildStatus("waiting", started, _now()))
+            kept_at = _keep_terms(state, kept_at)
+            time.sleep(RETRY_S)
+            continue
+        if outage.answered():
+            log.info("the media server answers; the rebuild goes on")
+        return films
+
+
+def _keep_terms(state: Path, kept_at: float) -> float:
+    """TMDB's six-month limit holds while the rebuild waits: once every KEEP_EVERY_S seconds the picture shelf is
+    swept and the cache compacted, as every rebuild does at its start. Returns when they last ran."""
+    now = time.monotonic()
+    if now - kept_at < KEEP_EVERY_S:
+        return kept_at
+    _sweep_pictures(state / "tmdb" / "pictures")
+    _compact_cache(state / "tmdb" / "films.jsonl")
+    return now
+
+
+def _say_waiting(exc: LibraryError, level: int, refused: bool) -> None:
+    """Say that the rebuild waits for the media server, with the check that fits; at INFO, just after the rebuild
+    started, as a server that may still be starting."""
+    if level < logging.WARNING:
+        log.log(
+            level,
+            "the media server is not answering yet: %s. The rebuild has just started, so the server may still be"
+            " starting too. The rebuild waits for it, reading again %d seconds after each try, and warns if it still"
+            " does not answer %d seconds after the rebuild started. Meanwhile the film table in place stays.",
+            exc,
+            int(RETRY_S),
+            int(STARTING_S),
+        )
+        return
+    check = "check the key in its settings" if refused else "check that it is running and its address"
+    log.warning(
+        "the media server could not be read: %s. The rebuild waits for it, reading again %d seconds after each try,"
+        " and goes on once it answers. Meanwhile the film table in place stays; %s.",
+        exc,
+        int(RETRY_S),
+        check,
+    )
 
 
 def household_films(state: Path) -> frozenset[int]:
@@ -286,7 +355,10 @@ def one_at_a_time(state: Path) -> Iterator[None]:
         try:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
-            log.info("another rebuild is writing the film table; this one waits for it to finish")
+            log.info(
+                "another rebuild holds the film table, writing it or waiting for the media server; this one waits"
+                " for it to finish"
+            )
             fcntl.flock(lock, fcntl.LOCK_EX)
         yield
 

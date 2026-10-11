@@ -12,6 +12,7 @@ with a US one.
 
 from __future__ import annotations
 
+import http.client
 import json
 import logging
 import re
@@ -127,7 +128,7 @@ class PlexReader:
         except urllib.error.HTTPError as exc:
             error = LibraryRefused if exc.code in REFUSED_CODES else LibraryError
             raise error(f"Plex answered HTTP {exc.code} to GET {where}") from exc
-        except (urllib.error.URLError, TimeoutError, OSError) as exc:
+        except (OSError, http.client.HTTPException) as exc:  # refused, timed out, or dropped mid-answer
             raise LibraryError(f"Plex could not be reached for GET {where}: {type(exc).__name__}") from exc
 
     def _get_json(self, path: str) -> Any:
