@@ -61,7 +61,7 @@ class Rank(NamedTuple):
 def band(place: float, door: str | None) -> Rank:
     """The pick's rank for `place`, a share of the door's films (0 to 1), behind `door` or before any door."""
     where = f"in {DOOR_WORDS[door]}" if door is not None else "overall"
-    edge, words, share = next(b for b in BANDS if place <= b[0])
+    words, share = next((words, share) for edge, words, share in BANDS if place <= edge)
     return Rank(f"{words} {where}", f"{share} {BASIS}")
 
 

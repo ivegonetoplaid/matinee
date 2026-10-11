@@ -92,6 +92,7 @@ def test_forms_of_one_word_share_a_stem_and_distinct_words_do_not() -> None:
     assert forms("spies") & forms("spying") and forms("teen") & forms("teenagers")
     assert forms("super hero") & forms("superheroes") and forms("video game") & forms("videogame")
     assert not forms("dark") & forms("dark hero") and not forms("art") & forms("artist")
+    assert not forms("ties") & forms("tying")  # no stem shorter than three letters: both would share "ty"
 
 
 def test_written_tags_pair_word_forms_and_words_that_move_together_and_the_pick_shows_one_of_each(
@@ -136,10 +137,12 @@ def test_written_tags_pair_word_forms_and_words_that_move_together_and_the_pick_
         ({"1": [0]}, [[0, 5]]),
         ({"1": [0]}, [[True, 1]]),
         ({"1": [0]}, "x"),
+        ({"1": [0]}, None),  # no alike pairs at all: a file from before them
     ],
 )
 def test_malformed_tags_and_a_missing_skip_list_are_refused(tmp_path: Path, films: object, alike: object) -> None:
-    (tmp_path / "t.json").write_text(json.dumps({"source": "s", "words": ["a", "b"], "alike": alike, "films": films}))
+    doc = {"source": "s", "words": ["a", "b"], "films": films} | ({} if alike is None else {"alike": alike})
+    (tmp_path / "t.json").write_text(json.dumps(doc))
     (tmp_path / "skip.txt").write_text("", encoding="utf-8")
     with pytest.raises(TagsError):
         load_tags(tmp_path / "t.json", tmp_path / "skip.txt")

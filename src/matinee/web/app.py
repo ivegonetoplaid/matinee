@@ -94,7 +94,7 @@ class FilmCard(BaseModel):
     backdrop_path: str | None  # TMDB's path for the backdrop, given only when TMDB is the image source
     rank: str | None  # how well audiences regard the film among the door's films, in words; None under the vote floor
     standing: str | None  # the rank's band as a share of the door's films and what it is measured by; None with no rank
-    tags: list[str]  # the film's strongest genome words less the skip list, strongest first; none when not covered
+    tags: list[str]  # its strongest genome words less the skip list and words alike to one shown; none when not covered
 
 
 class Pictures(BaseModel):
