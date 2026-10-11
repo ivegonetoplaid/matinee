@@ -140,24 +140,24 @@ function walkSteps() {
   return ["Start", visit.sourceSay, visit.firstSay, ...visit.says].filter((say) => say !== null);
 }
 
-// Where a question screen's "Back" leads, as a step: the screen before the one showing, whose step is `here`.
-// None where that is the walk's first screen, which "Start over" reaches.
+// Where a question screen's "‹ Back" leads, as a step: the screen before the one showing, whose step is `here`.
+// None where that is the walk's first screen: one step back there is the same as starting over.
 function backTo(here) {
   const target = here - 1;
   return target > 0 ? target : null;
 }
 
-// A question screen's way back, at the foot of the screen at every width: "Back", where there is a screen before
-// this one other than the first, and "Start over". None on the walk's first screen.
+// A question screen's way back: one action at the foot's left at every width, where the pick's "‹ Back" stands.
+// "‹ Back" where there is a screen before this one other than the first; "Start over" where one step back would
+// reach the walk's first screen. None on the walk's first screen.
 function wayBack(here) {
   if (!visit.tree && !visit.sourceSay) return null;
   const target = backTo(here);
-  const back =
+  const action =
     target === null
-      ? null
-      : h("button", { class: "action cream", type: "button", onclick: () => leaveTo(() => goTo(target)) }, "Back");
-  const again = h("button", { class: "action cream", type: "button", onclick: () => leaveTo(startOver) }, "Start over");
-  return h("nav", { class: "way-back", "aria-label": "Way back" }, back, again);
+      ? h("button", { class: "action cream", type: "button", onclick: () => leaveTo(startOver) }, "Start over")
+      : h("button", { class: "action cream", type: "button", onclick: () => leaveTo(() => goTo(target)) }, "‹ Back");
+  return h("nav", { class: "way-back", "aria-label": "Way back" }, action);
 }
 
 // The last step, which led to the screen showing now.

@@ -224,8 +224,8 @@ Everything a viewer uses over the poster wall is a letterbox or an action. A bar
 text link stands only in the foot band: "About Matinee" and DoesTheDogDie's
 credit. About's own prose keeps its links, and the corner mark is the brand's
 link. No screen shows a trail or a TMDB credit line: the acknowledgements live
-on the About page, and a question screen's way back is its "Back" and "Start
-over" actions. The pick's poster is the link to the film's page, and
+on the About page, and a question screen's way back is one action at the foot's
+left, "‹ Back" or "Start over", where the pick's "‹ Back" stands. The pick's poster is the link to the film's page, and
 DoesTheDogDie's credit stands in its foot band.
 
 The page specification owns phone navigation, action order and credit placement.

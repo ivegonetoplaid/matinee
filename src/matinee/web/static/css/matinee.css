@@ -264,15 +264,26 @@ a.wordmark:focus-visible {
   }
 }
 
-/* A question screen's way back, "Back" and "Start over", centred in the pinned bar at every width. */
+/* A question screen's way back, "‹ Back" or "Start over", at the pinned bar's left at every width, where the
+   pick's "‹ Back" stands. */
 .way-back {
   display: flex;
   flex-basis: 100%;
-  justify-content: center;
-  gap: 12px;
+  min-height: 44px;
+  align-items: center;
 }
 
 @media (max-width: 600px) {
+  /* On a phone the pick's "‹ Back" stands in its foot, above the foot's 20 px padding and the stage's 12 px gap,
+     half the row wide; the question screens' way back takes the same place and width. */
+  .way-back {
+    margin-bottom: 32px;
+  }
+
+  .way-back .action {
+    flex: 0 1 calc(50% - 5px);
+  }
+
   /* After three films trip the list, "Start over" stands beside "Roll again" and the longer action takes a
      row of its own, so the three fit the pick's foot. */
   .aside .choices > .show-picked {

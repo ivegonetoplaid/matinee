@@ -118,8 +118,8 @@ none, so the question is not asked. Matinee types "Right this way, <name>." and
 - The answer is never carried into the next walk: every start asks again. It is
   sent with each request of the walk (`source` on `/api/first`, `/api/walk` and
   `/api/pick`) and never stored.
-- No screen shows a trail. A question screen's way back is "Back" and
-  `Start over` (section 2.4); the pick's is "‹ Back" (section 12).
+- No screen shows a trail. A question screen's way back is one action, "‹ Back"
+  or `Start over` (section 2.4); the pick's is "‹ Back" (section 12).
 - Before it is answered, the wall behind the front door and behind the source
   question shows the library's films, and `Just pick one!` there picks from
   them. The wall re-sorts to the answer's films.
@@ -148,7 +148,7 @@ The poster wall opens by typing "Right this way." and "What are we in the
 mood for?". Every viewing runs under a profile, so the first line carries its
 name: "Right this way, <name>.". After the source question the doors type the
 source answer's reply in gold, then "What are we in the mood for?"; a return
-to the doors through "Back" or the pick's Back panel types the same reply. Each answer is a door, offered by its plain name.
+to the doors through "‹ Back" or the pick's Back panel types the same reply. Each answer is a door, offered by its plain name.
 The answers, their order and the tree each leads to are data in
 `data/first_question.json`:
 
@@ -370,14 +370,15 @@ offered after "the little ones. nothing scary.".
   door's pool for this viewer before any answer, less the flavour that door's
   tree holds apart.
 - **The way back.** Once the walk holds a source answer or a door, each
-  question screen shows "Back" and `Start over` at the bottom centre, at every
-  width. The walk's steps are `Start`, the source answer when the source
-  question was asked, the door, then each answer so far. "Back" goes to the
-  screen before this one and forgets every answer after it: the source
-  answer's step shows the doors within it, the door's step asks the door's
-  first question, and an answer's step asks the question that followed it.
-  Where "Back" would lead to the walk's first screen, only `Start over` shows;
-  the walk's first screen shows neither. No screen shows a trail.
+  question screen shows one action at the foot's left, in the place the pick's
+  "‹ Back" holds, at every width (on a phone, half the row wide). The walk's
+  steps are `Start`, the source answer when the source question was asked, the
+  door, then each answer so far. "‹ Back" goes to the screen before this one and
+  forgets every answer after it: the source answer's step shows the doors
+  within it, the door's step asks the door's first question, and an answer's
+  step asks the question that followed it. Where one step back would reach the
+  walk's first screen, the action is `Start over` instead, since the two are
+  the same. The walk's first screen shows neither. No screen shows a trail.
 - **The pick's way back** is "‹ Back", which
   opens the Back panel: every answer of the walk, each a way back to its
   question, the films shown this run, and `Start over` (section 12). The
@@ -1597,7 +1598,7 @@ page's actions. New actions follow those meanings.
 | "Read about these on DoesTheDogDie ↗" | petrol |
 | "Look it up on DoesTheDogDie ↗" | petrol |
 | "Start over" | cream |
-| "Back" (a question screen's way back) | cream |
+| "‹ Back" (a question screen's way back) | cream |
 | "‹ Back" (the pick) | cream |
 | "Never mind", "Never mind, show me everything", "Never mind, keep my list", "That's not me" | cream |
 | "Try again" (a problem screen and the topic list) | cream |
@@ -2953,7 +2954,7 @@ symbol when one does not match.
 | `src/matinee/web/static/js/main.js::start` / `freshWalk` (the source question, or the doors; nothing carried from the last walk) | `src/matinee/web/static/js/main.js:409` | 2026-10-10 |
 | `src/matinee/web/static/js/main.js::chooseSource` / `doors` / `showFirst` | `src/matinee/web/static/js/main.js:430` | 2026-10-10 |
 | `src/matinee/web/static/js/main.js::walkSteps` / `lastStep` (the walk's steps, which "Back" counts) | `src/matinee/web/static/js/main.js:139` | 2026-10-10 |
-| `src/matinee/web/static/js/main.js::backTo` / `wayBack` (a question screen's "Back" and `Start over`, every width) | `src/matinee/web/static/js/main.js:145` | 2026-10-10 |
+| `src/matinee/web/static/js/main.js::backTo` / `wayBack` (a question screen's one action, "‹ Back" or `Start over`, at the foot's left) | `src/matinee/web/static/js/main.js:145` | 2026-10-10 |
 | `src/matinee/web/static/js/main.js::goTo` / `reask` / `step` (`Start` asks again; the source answer shows the doors) | `src/matinee/web/static/js/main.js:454` | 2026-10-10 |
 | `src/matinee/web/static/js/main.js::lockStage` / `leaveTo` (drops the pick's history entries) | `src/matinee/web/static/js/main.js:81` | 2026-10-10 |
 | `src/matinee/web/static/js/main.js::frame` / `ask` (the footnote) | `src/matinee/web/static/js/main.js:170` | 2026-10-10 |
@@ -3085,7 +3086,7 @@ symbol when one does not match.
 | `src/matinee/web/static/css/matinee.css` `.warning-strip` (the stale-data warning) | `src/matinee/web/static/css/matinee.css:1990` | 2026-10-10 |
 | `src/matinee/web/static/css/matinee.css` `.talk > .setup-lines`, `.talk.setup` (the setup note) | `src/matinee/web/static/css/matinee.css:469` | 2026-10-10 |
 | `src/matinee/web/static/css/matinee.css` `.door-foot > .about-link`, `.bottombar > .about-link` ("About Matinee" at the foot's middle) | `src/matinee/web/static/css/matinee.css:1846` | 2026-10-05 |
-| `src/matinee/web/static/css/matinee.css` `.way-back` (a question screen's way back, every width) | `src/matinee/web/static/css/matinee.css:268` | 2026-10-10 |
+| `src/matinee/web/static/css/matinee.css` `.way-back` (a question screen's way back, at the foot's left; the pick's place on a phone) | `src/matinee/web/static/css/matinee.css:269` | 2026-10-10 |
 | `src/matinee/web/static/css/matinee.css` `.action`, `.action.rose`, `.action.petrol`, `.action.cream` (gold is the base rule) | `src/matinee/web/static/css/matinee.css:1119` | 2026-10-05 |
 | `src/matinee/web/static/css/matinee.css` `.letterbox` (one size) | `src/matinee/web/static/css/matinee.css:430` | 2026-10-05 |
 | `src/matinee/web/static/css/matinee.css` `.answers`, `.answers.many` (the doors run across and wrap) | `src/matinee/web/static/css/matinee.css:348` | 2026-10-10 |
