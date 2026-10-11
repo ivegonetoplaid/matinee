@@ -1,5 +1,6 @@
 # Every pull request runs the project's checks, then builds the image and starts it on both CPU types.
-# Publishing a GitHub release tagged vX.Y.Z does the same, then each machine pushes the image it tested
+# Publishing a GitHub release tagged vX.Y.Z writes X.Y.Z into pyproject.toml (0.0.0 in the repository) and
+# does the same, then each machine pushes the image it tested
 # and the publish job joins the two under one name. Nothing is published unless every check passed and
 # the image answered on both. No step downloads from Docker Hub: its anonymous limit and outages failed
 # CI at random, so builds use Docker's built-in builder and the base image comes from ECR Public.
@@ -46,6 +47,13 @@ jobs:
       packages: write # a release pushes the image this job tested
     steps:
       - uses: actions/checkout@v7
+      - name: Write the release's version into pyproject.toml
+        if: github.event_name == 'release'
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "release tag $GITHUB_REF_NAME is not vX.Y.Z"; exit 1; }
+          sed -i "s/^version = \"0\.0\.0\"$/version = \"$version\"/" pyproject.toml
+          grep -qx "version = \"$version\"" pyproject.toml || { echo "pyproject.toml has no version = \"0.0.0\" line"; exit 1; }
       - run: docker build --label "org.opencontainers.image.source=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" -t matinee:smoke .
       - name: Start the image and fetch its page
         run: |
@@ -59,7 +67,6 @@ jobs:
           TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           version="${GITHUB_REF_NAME#v}"
-          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "release tag $GITHUB_REF_NAME is not vX.Y.Z"; exit 1; }
           echo "$TOKEN" | docker login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
           docker tag matinee:smoke "$IMAGE:$version-${{ matrix.arch }}"
           docker push "$IMAGE:$version-${{ matrix.arch }}"

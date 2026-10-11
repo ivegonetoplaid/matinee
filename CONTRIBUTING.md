@@ -41,11 +41,11 @@ whatever wrote it, you're the one standing behind it.
 
 ## Releases
 
-Maintainers release from GitHub: bump `version` in `pyproject.toml` through a
-pull request, then draft a release with a new tag `vX.Y.Z` on `main`, generate
-its notes from the merged pull requests, and add any upgrade steps by hand.
-Publishing it runs the checks, starts the image on both CPU types, and pushes
-the image to GHCR. While Matinee is 0.x, bump `Z` for anything an installation
+Maintainers release from GitHub: draft a release with a new tag `vX.Y.Z` on
+`main`, generate its notes from the merged pull requests, and add any upgrade
+steps by hand. Publishing it writes `X.Y.Z` into `pyproject.toml` (which holds
+`0.0.0` in the repository), runs the checks, starts the image on both CPU
+types, and pushes the image to GHCR. While Matinee is 0.x, bump `Z` for anything an installation
 can take without steps, and `Y` for anything that needs them.
 
 ## Where films belong
