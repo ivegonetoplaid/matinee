@@ -1283,12 +1283,25 @@ a.wordmark:focus-visible {
   }
 }
 
-/* An answer: its question in quiet text, the answer beneath. */
+/* An answer, outlined as the way back to its question: "‹" at its left, the question in quiet text, the answer
+   beneath. */
 .answer-row {
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: center;
-  gap: 2px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 2px 12px;
+  border: 1px solid color-mix(in srgb, var(--text) 18%, transparent);
+}
+
+.answer-row::before {
+  content: "‹";
+  grid-row: 1 / span 2;
+  font-size: 22px;
+  color: var(--gold);
+}
+
+.answer-row > span {
+  grid-column: 2;
 }
 
 .row-ask {
@@ -1296,23 +1309,31 @@ a.wordmark:focus-visible {
   color: var(--dim);
 }
 
-/* The films shown this run: a list that scrolls on its own, so the answers and "Start over" stay in place. */
+/* The films shown this run stand apart from the answers, under a rule. */
+.panel-section.apart {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid color-mix(in srgb, var(--text) 14%, transparent);
+}
+
+/* The films shown this run: room for three rows, scrolling on its own past them with its scrollbar showing, so the
+   answers and "Start over" stay in place. */
 .films {
-  flex: 1 1 0;
-  min-height: 52px;
+  --film-row: 63px; /* a 51 px poster and the row's 6 px padding above and below */
+  flex: none;
+  max-height: calc(3 * var(--film-row) + 2 * 2px + 2 * 4px);
   display: flex;
   flex-direction: column;
   gap: 2px;
   margin: 0 -4px;
   padding: 4px;
   overflow-y: auto;
-  scroll-padding-block: 8px 40px;
   scrollbar-color: color-mix(in srgb, var(--gold) 45%, transparent) transparent;
-  mask-image: linear-gradient(180deg, transparent, var(--black) 8px, var(--black) calc(100% - 40px), transparent);
 }
 
 .film-row {
   flex: none;
+  height: var(--film-row);
 }
 
 .film-row .thumb {
