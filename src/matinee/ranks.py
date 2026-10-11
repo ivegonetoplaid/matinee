@@ -43,16 +43,17 @@ BANDS = (
     (0.05, "A crowd favourite", "Top 5%"),
     (0.10, "Very well received", "Top 10%"),
     (0.25, "Well liked", "Top 25%"),
-    (0.50, "A solid showing", "Top half"),
-    (0.90, "A tougher sell", "Bottom half"),
+    (0.40, "Above the middle", "Top 40%"),
+    (0.60, "Middle of the pack", "Middle 20%"),
+    (0.90, "A tougher sell", "Bottom 40%"),
     (1.00, "Bringing up the rear", "Bottom 10%"),
 )
 BASIS = "by TMDB audience rating"
 
 
 class Rank(NamedTuple):
-    """The rank as the pick says it: its words, such as "A solid showing in horror", and its standing, such as
-    "Top half by TMDB audience rating"."""
+    """The rank as the pick says it: its words, such as "A tougher sell in horror", and its standing, such as
+    "Bottom 40% by TMDB audience rating"."""
 
     words: str
     standing: str

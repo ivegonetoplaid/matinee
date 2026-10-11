@@ -42,10 +42,12 @@ EVERY = np.ones(100, dtype=bool)
         (10, "Very well received in horror", "Top 10%"),
         (11, "Well liked in horror", "Top 25%"),
         (25, "Well liked in horror", "Top 25%"),
-        (26, "A solid showing in horror", "Top half"),
-        (50, "A solid showing in horror", "Top half"),
-        (51, "A tougher sell in horror", "Bottom half"),
-        (90, "A tougher sell in horror", "Bottom half"),  # on the bottom-10% edge: the higher band
+        (26, "Above the middle in horror", "Top 40%"),
+        (40, "Above the middle in horror", "Top 40%"),
+        (41, "Middle of the pack in horror", "Middle 20%"),
+        (60, "Middle of the pack in horror", "Middle 20%"),
+        (61, "A tougher sell in horror", "Bottom 40%"),
+        (90, "A tougher sell in horror", "Bottom 40%"),  # on the bottom-10% edge: the higher band
         (91, "Bringing up the rear in horror", "Bottom 10%"),
         (100, "Bringing up the rear in horror", "Bottom 10%"),
     ],
@@ -89,9 +91,9 @@ def test_the_rank_counts_only_the_doors_films_plus_the_film_itself() -> None:
 
 
 def test_before_any_door_the_line_says_overall_and_the_media_servers_rating_is_never_read() -> None:
-    assert said(rank_among(HUNDRED, EVERY, 30, None)) == "A solid showing overall"
+    assert said(rank_among(HUNDRED, EVERY, 30, None)) == "Above the middle overall"
     library = HUNDRED.assign(rating=np.linspace(0, 10, 100))
-    assert said(rank_among(library, EVERY, 30, None)) == "A solid showing overall"
+    assert said(rank_among(library, EVERY, 30, None)) == "Above the middle overall"
 
 
 def test_every_door_the_first_question_offers_has_its_rank_word() -> None:
@@ -111,7 +113,7 @@ def test_a_door_ranks_among_its_own_pool_and_before_a_door_among_every_doors_poo
             first_options=(FirstOption("Horror", "horror", "Horror"), FirstOption("War", "war", "War")),
         ),
     )
-    assert said(rank(cat, 95, "war")) == "A solid showing in war films"  # 5th of the door's 10
+    assert said(rank(cat, 95, "war")) == "Middle of the pack in war films"  # 5th of the door's 10
     assert said(rank(cat, 95, "horror")) == "Bringing up the rear in horror"  # behind all ten of horror's
     assert said(rank(cat, 95, None)) == "A tougher sell overall"  # 15th of the 20 behind either door
     assert rank(cat, 95, "west") is None  # a door with no word has no rank

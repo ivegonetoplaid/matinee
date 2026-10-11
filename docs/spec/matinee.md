@@ -580,8 +580,9 @@ why a film was picked: the labels alone place films (section 2.6).
   | Top 5% | A crowd favourite in horror | Top 5% by TMDB audience rating |
   | Top 10% | Very well received in horror | Top 10% by TMDB audience rating |
   | Top 25% | Well liked in horror | Top 25% by TMDB audience rating |
-  | Top half | A solid showing in horror | Top half by TMDB audience rating |
-  | Below the middle, above the bottom 10% | A tougher sell in horror | Bottom half by TMDB audience rating |
+  | Top 40%, below the top 25% | Above the middle in horror | Top 40% by TMDB audience rating |
+  | The middle 20% (40% to 60%) | Middle of the pack in horror | Middle 20% by TMDB audience rating |
+  | Below 60%, above the bottom 10% | A tougher sell in horror | Bottom 40% by TMDB audience rating |
   | Bottom 10% | Bringing up the rear in horror | Bottom 10% by TMDB audience rating |
 
 - **The door's words**, by tree: comedy "comedy", action "action and
@@ -1459,7 +1460,7 @@ would hand one device's profiles to another.
 | GET | `/static/…` | scripts, styles, self-hosted fonts, icons, pails, avatars, the locked door's art, manifest (`Cache-Control: no-cache`, so a deploy is never seen half-applied) |
 | GET | `/img/{kind}/{tmdb}/{size}` | a poster or backdrop: from the media server for a film the library holds, else from TMDB's image server through Matinee |
 | GET | `/api/pictures` | the image source, and under `tmdb` the TMDB poster path of every live film that has one (section 11.5) |
-| GET | `/api/film/{tmdb}?door=` | one film's card (`src/matinee/web/app.py::FilmCard`): `tmdb`, `title`, `year`, `runtime_min`, `synopsis`, the pick's link (`link`, and `link_to`: `seerr` or `tmdb`), under the `tmdb` image source its TMDB backdrop path (`backdrop_path`, else null), `rank` (the film's rank line among the films behind `door`, the tree its pick came through, or overall without `door`; null under the vote floor, without a TMDB score, or for a tree with no rank word; section 2.8), `standing` (the rank's band share and basis, such as "Top half by TMDB audience rating"; null whenever `rank` is) and `tags` (up to four, strongest first; empty for a film the genome does not cover). A `door` that names no tree is refused (400 `refused`) |
+| GET | `/api/film/{tmdb}?door=` | one film's card (`src/matinee/web/app.py::FilmCard`): `tmdb`, `title`, `year`, `runtime_min`, `synopsis`, the pick's link (`link`, and `link_to`: `seerr` or `tmdb`), under the `tmdb` image source its TMDB backdrop path (`backdrop_path`, else null), `rank` (the film's rank line among the films behind `door`, the tree its pick came through, or overall without `door`; null under the vote floor, without a TMDB score, or for a tree with no rank word; section 2.8), `standing` (the rank's band share and basis, such as "Middle 20% by TMDB audience rating"; null whenever `rank` is) and `tags` (up to four, strongest first; empty for a film the genome does not cover). A `door` that names no tree is refused (400 `refused`) |
 | GET | `/api/door` | the film count, every profile (marking those this device holds), the avatars offered, whether a DoesTheDogDie key is set, and `posters_from` (`server` or `tmdb`) |
 | POST | `/api/profiles` | create a profile and issue this device a token |
 | POST | `/api/profiles/{id}/open` | open a profile by PIN, or at once when held or PIN-less |
