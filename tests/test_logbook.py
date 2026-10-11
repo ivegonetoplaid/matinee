@@ -56,7 +56,7 @@ def test_the_state_line_names_every_part_and_no_secret(tmp_path: Path) -> None:
 
     write_status(tmp_path, RebuildStatus("waiting", "2026-10-11T11:19:05+00:00", "2026-10-11T11:19:20+00:00"))
     _, line = describe(theatre, config, SeerrCheck(config.seerr_url, opener=answers), False, datetime.now(UTC))
-    assert "rebuild waiting for the media server to answer since 2026-10-11T11:19 UTC" in line
+    assert "rebuild waiting for the media server since 2026-10-11T11:19 UTC" in line
 
 
 def test_a_repeating_warning_is_said_once_a_minute_with_a_count(caplog: pytest.LogCaptureFixture) -> None:

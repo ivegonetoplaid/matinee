@@ -13,7 +13,7 @@ import logging
 import os
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Literal
+from typing import Literal, get_args
 
 STATUS_FILE = "rebuild.json"
 log = logging.getLogger("matinee.progress")
@@ -71,7 +71,7 @@ def _count(value: object) -> bool:
 def _well_formed(status: RebuildStatus) -> bool:
     """Every field of the kind the report promises: a known state, text times, counts, and text or no reason."""
     return (
-        status.state in ("waiting", "running", "finished", "stopped")
+        status.state in get_args(State)
         and isinstance(status.started_at, str)
         and isinstance(status.updated_at, str)
         and _count(status.done)

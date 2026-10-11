@@ -52,7 +52,7 @@ def _rebuild(status: RebuildStatus | None) -> str:
     if status.state == "stopped":
         return f"rebuild stopped at {status.updated_at[:16]} UTC: {status.reason}"
     if status.state == "waiting":
-        return f"rebuild waiting for the media server to answer since {status.started_at[:16]} UTC"
+        return f"rebuild waiting for the media server since {status.started_at[:16]} UTC"
     return f"rebuild finished at {status.updated_at[:16]} UTC"
 
 

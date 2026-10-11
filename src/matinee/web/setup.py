@@ -32,7 +32,9 @@ STOPPED = {
 SEERR_AWAY = "I can't reach your Seerr right now, so each pick links to TMDB until it's back."
 FAILED = "My last rebuild of the film details failed. Its log says why; run it again once that's fixed."
 FETCHING = "I'm still fetching film details from TMDB. Give me a minute and try again."
-WAITING = "I'm waiting for your media server to answer before I fetch any film details. Give me a minute and try again."
+WAITING = (
+    "I don't have any film details yet. I fetch them once I can read your media server, so try again when it's back."
+)
 NEVER_BUILT = (
     "I don't have any film details yet, and nothing is fetching them. Run the rebuild (tools/rebuild_table.py)."
 )

@@ -1,7 +1,8 @@
 """How Matinee keeps asking the household's own services, the media server and Seerr, and when it says they fail.
 
 They run beside Matinee on the household's network, so Matinee never gives up on one and never backs off: it asks
-again every `RETRY_S` seconds for as long as one does not answer, to see it back as soon as it is. A failure in the
+again every `RETRY_S` seconds for as long as one does not answer, so a service that comes back is seen within
+`RETRY_S` seconds. A failure in the
 first `STARTING_S` seconds after Matinee starts is said at INFO, as a service that may still be starting beside it;
 one still failing after that, or beginning later, is warned. Each run of failures is said once at each level. TMDB
 and DoesTheDogDie are outside services and keep their own limits.

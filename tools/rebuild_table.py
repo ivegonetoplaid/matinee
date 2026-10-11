@@ -74,6 +74,7 @@ DEFAULT_DAILY = "04:30"  # the nightly rebuild's time when REBUILD_TIME is unset
 FROM_SETTING = "REBUILD_TIME"  # what `--daily` given alone stands for
 LOCK = "rebuild.lock"  # held in the state directory for each rebuild
 BEGAN = time.monotonic()  # when this process started: a media server failing soon after may still be starting
+KEEP_EVERY_S = 24 * 3600.0  # seconds of waiting for the media server between sweeps of what TMDB's terms age out
 
 
 def _now() -> str:
@@ -86,7 +87,7 @@ def rebuild(server: MediaServer | None, state: Path, token: str, rate: float = D
     cache = state / "tmdb" / "films.jsonl"
     _sweep_pictures(state / "tmdb" / "pictures")
     if not token:
-        _compact_without_key(cache)
+        _compact_cache(cache)
         log.error("no TMDB key is set, so no film table can be built. Set TMDB_TOKEN and run the rebuild again.")
         return _report(state, RebuildStatus("stopped", started, _now(), reason=NO_KEY))
     table = state / "films.sqlite"
@@ -104,7 +105,7 @@ def rebuild(server: MediaServer | None, state: Path, token: str, rate: float = D
     return status
 
 
-def _compact_without_key(cache: Path) -> None:
+def _compact_cache(cache: Path) -> None:
     """The six-month limit holds even when nothing can be fetched; a cache that cannot be rewritten is logged."""
     if not cache.exists():
         return
@@ -213,19 +214,26 @@ class _Run:
 
 
 def library_films(server: MediaServer, state: Path, started: str) -> list[LibraryFilm]:
-    """The media server's film list, read again every RETRY_S seconds until it answers: the server runs on the
-    household's network, so it is never given up on. Meanwhile the report says the rebuild waits and the table in
-    place stands."""
+    """The media server's film list, read again RETRY_S seconds after each failed read until it answers: the server
+    runs on the household's network, so it is never given up on. Meanwhile the report says the rebuild waits, the
+    table in place stands, and what TMDB's terms age out is still swept every KEEP_EVERY_S seconds."""
     reader = open_reader(server)
     outage = Outage(BEGAN)
+    was_refused = False
+    kept_at = time.monotonic()
     while True:
         try:
             films = reader.films()
         except LibraryError as exc:
-            level = outage.failed(time.monotonic(), may_be_starting=not isinstance(exc, LibraryRefused))
+            refused = isinstance(exc, LibraryRefused)
+            if refused != was_refused:
+                outage.answered()  # a new kind of failure is said afresh
+            was_refused = refused
+            level = outage.failed(time.monotonic(), may_be_starting=not refused)
             if level is not None:
-                _say_waiting(exc, level)
+                _say_waiting(exc, level, refused)
             _report(state, RebuildStatus("waiting", started, _now()))
+            kept_at = _keep_terms(state, kept_at)
             time.sleep(RETRY_S)
             continue
         if outage.answered():
@@ -233,26 +241,38 @@ def library_films(server: MediaServer, state: Path, started: str) -> list[Librar
         return films
 
 
-def _say_waiting(exc: LibraryError, level: int) -> None:
-    """Say that the rebuild waits for the media server; at INFO, just after start, as one that may still be
-    starting."""
+def _keep_terms(state: Path, kept_at: float) -> float:
+    """TMDB's six-month limit holds while the rebuild waits: once every KEEP_EVERY_S seconds the picture shelf is
+    swept and the cache compacted, as every rebuild does at its start. Returns when they last ran."""
+    now = time.monotonic()
+    if now - kept_at < KEEP_EVERY_S:
+        return kept_at
+    _sweep_pictures(state / "tmdb" / "pictures")
+    _compact_cache(state / "tmdb" / "films.jsonl")
+    return now
+
+
+def _say_waiting(exc: LibraryError, level: int, refused: bool) -> None:
+    """Say that the rebuild waits for the media server, with the check that fits; at INFO, just after the rebuild
+    started, as a server that may still be starting."""
     if level < logging.WARNING:
         log.log(
             level,
-            "the media server is not answering yet: %s. Matinee has just started, so it may still be starting too."
-            " The rebuild waits for it, reading again every %d seconds, and warns if it still does not answer %d"
-            " seconds after start. Meanwhile the film table in place stays.",
+            "the media server is not answering yet: %s. The rebuild has just started, so the server may still be"
+            " starting too. The rebuild waits for it, reading again %d seconds after each try, and warns if it still"
+            " does not answer %d seconds after the rebuild started. Meanwhile the film table in place stays.",
             exc,
             int(RETRY_S),
             int(STARTING_S),
         )
         return
+    check = "check the key in its settings" if refused else "check that it is running and its address"
     log.warning(
-        "the media server could not be read: %s. The rebuild waits for it, reading again every %d seconds, and goes"
-        " on once it answers. Meanwhile the film table in place stays; check that the server runs, its address and"
-        " its key.",
+        "the media server could not be read: %s. The rebuild waits for it, reading again %d seconds after each try,"
+        " and goes on once it answers. Meanwhile the film table in place stays; %s.",
         exc,
         int(RETRY_S),
+        check,
     )
 
 
@@ -335,7 +355,10 @@ def one_at_a_time(state: Path) -> Iterator[None]:
         try:
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
-            log.info("another rebuild is writing the film table; this one waits for it to finish")
+            log.info(
+                "another rebuild holds the film table, writing it or waiting for the media server; this one waits"
+                " for it to finish"
+            )
             fcntl.flock(lock, fcntl.LOCK_EX)
         yield
 

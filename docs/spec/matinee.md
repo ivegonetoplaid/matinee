@@ -136,13 +136,14 @@ none, so the question is not asked. Matinee types "Right this way, <name>." and
   <server> turned down my key, so I'm picking from every film I know, in your
   library or not, until that's sorted." instead. The page shows
   it in the warning strip (section 12). An answer of `all` loses nothing and
-  carries none, and neither does a walk the source question was not asked of,
-  whose setup note said so.
+  carries no library notice, and neither does a walk the source question was not
+  asked of, whose setup note said so.
 - While a configured Seerr does not answer, the same three responses carry, in
   `fallback` after any library notice, "I can't reach your Seerr right now, so
   each pick links to TMDB until it's back." (section 5.4), whatever the source
-  answer. A response without `fallback` takes the strip down, so it clears when
-  the library and Seerr answer again or a new walk starts.
+  answer. A response without `fallback` takes the notice down and leaves the
+  stale-data warning (section 12), so the notice clears once neither the library
+  nor Seerr is away.
 - The wording is data in `data/first_question.json` (`source`). A file whose
   answer names no source is refused.
 
@@ -801,8 +802,8 @@ its vote count in their own columns.
 once and then every day at that local time; `--daily` alone takes the time from
 `REBUILD_TIME`, 04:30 when unset. A time given to `--daily` is validated before
 the first rebuild; a `REBUILD_TIME` that is no `HH:MM` time is logged and the
-rebuild runs at 04:30. A media server that does not answer is never a failure:
-the rebuild waits for it (step 2). A rebuild that fails on an unexpected error
+rebuild runs at 04:30. A media server that does not answer or turns down the key
+is never a failure: the rebuild waits for it (step 2). A rebuild that fails on an unexpected error
 puts back the table it started with, which it keeps under a second name
 (`films.sqlite.kept`) while it runs, and tries again at the next scheduled time;
 one that stops on TMDB (no key, a refused key, TMDB not answering) keeps what it
@@ -823,11 +824,11 @@ older two-container setup) waits for the first and then runs its own.
    set. With none, or with settings that name both servers or cannot be used
    (logged), it runs on the labels alone. A media server that gives no usable
    answer, or turns down the key, is never given up on (section 5.4): the
-   rebuild reports `waiting`, reads it again every 15 seconds with the table in
-   place untouched, and goes on the moment it answers. Its failure is logged
-   once at INFO in the first 120 seconds after the process starts (a server
-   starting beside Matinee) and warned once after; a turned-down key is warned
-   at once.
+   rebuild reports `waiting`, reads it again 15 seconds after each failed read
+   with the table in place untouched, and goes on the moment it answers. While
+   it waits it still sweeps the shelved pictures and the cached records past
+   their keep (section 5.2) once a day. Its failures are logged as section 5.4
+   says, the 120 seconds counted from the rebuild process's own start.
 3. It writes the table from the library and the records already held, before
    any fetch, so the library can be picked at once on a first start.
 4. It refreshes the TMDB record of every film the labels name (the shipped
@@ -867,8 +868,8 @@ whole each time, and the server reads it
  "updated_at": "2026-10-05T03:01:40+00:00", "done": 2500, "total": 10327, "reason": null}
 ```
 
-`state` is `waiting` every 15 seconds while the media server does not answer
-(step 2), `running` as it fetches, at least every 5 seconds, with the films
+`state` is `waiting` after each failed read of the media server, 15 seconds
+apart, while it does not answer or turns down the key (step 2), `running` as it fetches, at least every 5 seconds, with the films
 this run has fetched or failed out of those it needs (`done`, `total`),
 `finished`, or `stopped` with the reason: "no TMDB key is set", "TMDB refused
 the key", "TMDB is not answering", or, for an unexpected failure, "the rebuild
@@ -951,21 +952,22 @@ finished.
 - While the media server cannot be read, or with no media server configured,
   no film is held: Matinee offers the films the labels name alone, with their
   TMDB facts. The last list read stands until a read fails. For **15 seconds**
-  after a failed read no new read is attempted; then it is read again, for as
-  long as it fails, with no backoff and no giving up. A read the server answers with
+  after a failed read no new read is attempted. A read the server answers with
   HTTP 401 or 403 is a turned-down key, told apart from a server that gives no
   usable answer: its warning says to check the key, the other's to check that
   the server runs and its address.
 - The media server and Seerr run on the household's network, so neither is
-  ever given up on: each is asked again every **15 seconds** while it does not
-  answer (`src/matinee/outage.py`). TMDB and DoesTheDogDie are outside services
-  and keep their own limits. Each run of failures is logged once: at INFO, as a
-  service that may still be starting, in the first **120 seconds** after
-  Matinee starts, and as a warning after that or when it begins later. A
-  turned-down key is warned at once. An answer that ends a run is logged.
+  ever given up on: each is asked again at most every **15 seconds** while it
+  does not answer, with no backoff (the server on its next request, the rebuild
+  on its own; `src/matinee/outage.py`). A connection refused, timed out or
+  dropped mid-answer counts as no answer. TMDB and DoesTheDogDie are outside
+  services and keep their own limits. Each run of failures is logged at most
+  once at each level: at INFO, as a service that may still be starting, while
+  it falls in the first **120 seconds** after Matinee starts, and as a warning
+  once it fails after that or begins later. A turned-down key is warned at once.
+  An answer that ends a run is logged.
 - Seerr is checked at most every 15 seconds, answering or not, on the next
-  request. While it does not answer every pick links to TMDB and the walk's
-  strip says so (section 2.0).
+  request; section 2.0 says what the walk shows while it does not answer.
 - The table file is reloaded when the nightly rebuild replaces it.
 - The sign's "Now showing N films" counts every film Matinee offers: the
   library's and the films the labels name.
@@ -1020,10 +1022,8 @@ show." and says, one paragraph each, what Matinee sees:
   wrong in it;
 - a rebuild whose report stood still for 120 seconds, as a failed rebuild;
 - when there is no film to recommend, why: the rebuild is still fetching, it is
-  waiting for the media server to answer before it fetches, or no film details
-  exist and nothing is fetching them. A rebuild waiting for the media server
-  adds no line while there are films: the library's own line says it does not
-  answer.
+  waiting for the media server before it fetches, or no film details exist and
+  nothing is fetching them.
 
 While the library cannot be used, because both servers are set, its settings
 cannot be used or it does not answer, the note also says Matinee is picking from
@@ -2782,9 +2782,9 @@ symbol when one does not match.
 | `tools/rebuild_table.py::rebuild_time` / `DEFAULT_DAILY` (`REBUILD_TIME` for `--daily` alone; 04:30 when unset or not a time, logged) | `tools/rebuild_table.py:265` | 2026-10-09 |
 | `tools/rebuild_table.py::one_at_a_time` / `LOCK` (`rebuild.lock`; a second rebuild waits) | `tools/rebuild_table.py:282` | 2026-10-09 |
 | `src/matinee/web/main.py::Rebuilds` / `REBUILD` / `RESTART_AFTER_S` (the server runs the rebuild beside itself; restarted five minutes after it exits) | `src/matinee/web/main.py:95` | 2026-10-10 |
-| `tools/rebuild_table.py::rebuild` (no key: compact and stop; an unexpected failure puts the kept table back and reports its error) | `tools/rebuild_table.py:83` | 2026-10-11 |
-| `tools/rebuild_table.py::library_films` / `_say_waiting` / `BEGAN` (a media server that does not answer is waited for, reporting `waiting`) | `tools/rebuild_table.py:215` | 2026-10-11 |
-| `tools/rebuild_table.py::_keep` / `_compact_without_key` (`films.sqlite.kept`) | `tools/rebuild_table.py:135` | 2026-10-09 |
+| `tools/rebuild_table.py::rebuild` (no key: compact and stop; an unexpected failure puts the kept table back and reports its error) | `tools/rebuild_table.py:84` | 2026-10-11 |
+| `tools/rebuild_table.py::library_films` / `_say_waiting` / `_keep_terms` / `BEGAN` / `KEEP_EVERY_S` (a media server that does not answer is waited for, reporting `waiting`; the retention sweeps still run daily) | `tools/rebuild_table.py:216` | 2026-10-11 |
+| `tools/rebuild_table.py::_keep` / `_compact_cache` (`films.sqlite.kept`) | `tools/rebuild_table.py:108` | 2026-10-11 |
 | `tools/rebuild_table.py::_sweep_pictures` (every rebuild sweeps the picture shelf) | `tools/rebuild_table.py:117` | 2026-10-09 |
 | `tools/rebuild_table.py::_rebuild` (the start line; save before any fetch; most-voted order) | `tools/rebuild_table.py:149` | 2026-10-09 |
 | `tools/rebuild_table.py::_Run` / `save` / `tick` (a save every `SAVE_EVERY` records) | `tools/rebuild_table.py:182` | 2026-10-09 |

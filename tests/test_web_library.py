@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import contextlib
+import http.client
 import io
 import itertools
 import json
@@ -13,6 +14,7 @@ import urllib.error
 import urllib.request
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime, timedelta
+from email.message import Message
 from functools import partial
 from pathlib import Path
 from typing import Any
@@ -467,6 +469,31 @@ def test_the_jellyfin_reader_refuses_odd_answers_and_ids(monkeypatch: pytest.Mon
             reader.image(item(5), "poster", 320)
     with pytest.raises(LibraryError):
         reader.synopsis("../Users")
+
+
+@pytest.mark.parametrize("module", ["jellyfin", "plex"])
+def test_a_server_that_drops_the_connection_is_a_library_error_and_a_401_still_a_turned_down_key(
+    monkeypatch: pytest.MonkeyPatch, module: str
+) -> None:
+    from matinee.library.plex import PlexReader
+
+    reader: Any = JellyfinReader(SECRET_URL, SECRET_KEY) if module == "jellyfin" else PlexReader(SECRET_URL, "t")
+    failures: list[Exception] = [
+        http.client.RemoteDisconnected("Remote end closed connection without response"),
+        http.client.IncompleteRead(b""),
+        urllib.error.HTTPError(SECRET_URL, 401, "Unauthorized", Message(), None),
+    ]
+
+    def urlopen(req: Any, timeout: float) -> Any:
+        raise failures.pop(0)
+
+    monkeypatch.setattr(f"matinee.library.{module}.urllib.request.urlopen", urlopen)
+    for _ in range(2):  # a server restarting beside Matinee: the rebuild waits and the theatre retries
+        with pytest.raises(LibraryError) as dropped:
+            reader.films()
+        assert not isinstance(dropped.value, LibraryRefused)
+    with pytest.raises(LibraryRefused):
+        reader.films()
 
 
 def test_every_response_carries_the_security_headers(world: Any) -> None:
