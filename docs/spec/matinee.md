@@ -2194,8 +2194,9 @@ the film information area on both desktop and phone.
   quiet text.
 - **The Back panel.** "‹ Back" opens the panel headed "Go back to…". It holds,
   from the top:
-  - under "An answer", every answer of the walk in the order given, each a row
-    with its question in quiet text and the answer beneath: the source answer
+  - under "Change an answer", every answer of the walk in the order given, each
+    an outlined row with a gold "‹" at its left, its question in quiet text and
+    the answer beneath: the source answer
     when the source question was asked, the door, then each later answer. A
     pick that "Just pick one!" made before any door lists only the answers
     given before it. With no answer to list, neither the rows nor the heading
@@ -2204,12 +2205,14 @@ the film information area on both desktop and phone.
     every later one: the source answer asks the source question again, the door
     shows the doors (with the source answer's reply), and a later answer asks
     its question again;
-  - "Shown this run · <N> films" ("1 film" for one), then every film the run
+  - at the panel's foot above `Start over`, under a 3 px gold rule when answers
+    are listed above it, "Shown this run · <N> films" ("1 film" for one), then
+    every film the run
     has shown on screen, newest first, each a row with its small poster
     (34 by 51 px, a plain card when the picture fails), title and year. The
     film showing now is marked "Showing now" and does nothing. The list has no
-    limit and scrolls on its own, fading at its ends, while the answers and
-    `Start over` stay in place. With no film shown yet the section does not show;
+    limit; it is three rows tall and scrolls on its own past them, its scrollbar
+    showing, while the answers and `Start over` stay in place. With no film shown yet the section does not show;
   - `Start over` at the panel's foot.
 
   A run starts when the viewer goes in from the door. `Start over` (in the

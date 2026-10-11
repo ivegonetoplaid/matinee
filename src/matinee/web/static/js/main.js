@@ -732,16 +732,16 @@ function filmRow(shown) {
   return h("button", { class: "panel-row film-row", type: "button", onclick: () => bringBack(shown) }, thumb, h("span", {}, words));
 }
 
-// What the Back panel holds: the viewer's answers, each a way back to its question, then every film this run has
-// shown, newest first, scrolling on its own, then "Start over" at its foot.
+// What the Back panel holds: the viewer's answers, each a way back to its question, then, under a rule, every film
+// this run has shown, newest first, three at a time and scrolling past them, then "Start over" at its foot.
 function backPanel() {
   const rows = answerRows(visit).map(answerRow);
   const films = newestFirst(visit.run, stage.classList.contains("revealed")); // a film rests on screen
   const shown = films.length
-    ? [h("p", { class: "panel-section" }, `Shown this run · ${films.length} ${films.length === 1 ? "film" : "films"}`), h("div", { class: "films" }, films.map(filmRow))]
+    ? [h("p", { class: rows.length ? "panel-section apart" : "panel-section" }, `Shown this run · ${films.length} ${films.length === 1 ? "film" : "films"}`), h("div", { class: "films" }, films.map(filmRow))]
     : [];
   const again = h("button", { class: "action cream", type: "button", onclick: () => leaveTo(startOver) }, "Start over");
-  return [rows.length ? h("p", { class: "panel-section" }, "An answer") : null, rows, shown, h("div", { class: "panel-foot" }, again)];
+  return [rows.length ? h("p", { class: "panel-section" }, "Change an answer") : null, rows, shown, h("div", { class: "panel-foot" }, again)];
 }
 
 // What the pick screen's controls do.

@@ -93,7 +93,7 @@ marquee is the drawing in `static/marquee/`, Matinee's mark, with no glow behind
 
 On a control or a line of text, gold means two things only: the first part
 Matinee speaks, and carry on. Gold is also the theatre's dressing: the
-corner mark, the marquee, About's headings, a profile's initials, a field's
+corner mark, the marquee, About's headings, the rule that divides a panel, a profile's initials, a field's
 caret, bare links and the keyboard focus ring. Rose means turn something down or take it
 away. Petrol means leave Matinee. Cream is the rest of what Matinee speaks, and
 a neutral utility. Dim is for quiet text inside a band and for disabled
