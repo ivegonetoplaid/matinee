@@ -12,7 +12,7 @@ import pandas as pd
 import pytest
 
 from matinee.engine import Catalog, FirstOption
-from matinee.ranks import BOTTOM, DOOR_WORDS, VOTE_FLOOR, rank, rank_among
+from matinee.ranks import DOOR_WORDS, VOTE_FLOOR, Rank, rank, rank_among
 from matinee.reference import DATA
 
 
@@ -34,32 +34,40 @@ EVERY = np.ones(100, dtype=bool)
 
 
 @pytest.mark.parametrize(
-    ("position", "words"),
+    ("position", "words", "standing"),
     [
-        (1, "A crowd favourite in horror"),
-        (5, "A crowd favourite in horror"),  # on the 5% edge: the higher band
-        (6, "Very well received in horror"),
-        (10, "Very well received in horror"),
-        (11, "Well liked in horror"),
-        (25, "Well liked in horror"),
-        (26, "Holds its own in horror"),
-        (50, "Holds its own in horror"),
-        (51, "Mixed reviews in horror"),
-        (90, "Mixed reviews in horror"),  # on the bottom-10% edge: the higher band
-        (91, BOTTOM),
-        (100, BOTTOM),
+        (1, "A crowd favourite in horror", "Top 5%"),
+        (5, "A crowd favourite in horror", "Top 5%"),  # on the 5% edge: the higher band
+        (6, "Very well received in horror", "Top 10%"),
+        (10, "Very well received in horror", "Top 10%"),
+        (11, "Well liked in horror", "Top 25%"),
+        (25, "Well liked in horror", "Top 25%"),
+        (26, "A solid showing in horror", "Top half"),
+        (50, "A solid showing in horror", "Top half"),
+        (51, "A tougher sell in horror", "Bottom half"),
+        (90, "A tougher sell in horror", "Bottom half"),  # on the bottom-10% edge: the higher band
+        (91, "Bringing up the rear in horror", "Bottom 10%"),
+        (100, "Bringing up the rear in horror", "Bottom 10%"),
     ],
 )
-def test_a_film_reads_the_band_its_place_falls_in_and_an_edge_reads_as_the_higher(position: int, words: str) -> None:
-    assert rank_among(HUNDRED, EVERY, position, "horror") == words
+def test_a_film_reads_the_band_its_place_falls_in_and_an_edge_reads_as_the_higher(
+    position: int, words: str, standing: str
+) -> None:
+    assert rank_among(HUNDRED, EVERY, position, "horror") == Rank(words, f"{standing} by TMDB audience rating")
+
+
+def said(found: Rank | None) -> str | None:
+    """The rank's words, or None for no rank."""
+    return found.words if found else None
 
 
 def test_films_with_the_same_score_share_the_better_place() -> None:
     scores = [float(100 - i) for i in range(100)]
     scores[3:6] = [96.5] * 3  # films 4, 5 and 6 tie: they share place 4, inside the top 5%
     tied = films(scores)
-    assert {rank_among(tied, EVERY, t, "drama") for t in (4, 5, 6)} == {"A crowd favourite in drama"}
-    assert rank_among(tied, EVERY, 7, "drama") == "Very well received in drama"  # each tied film counts ahead of it
+    assert {said(rank_among(tied, EVERY, t, "drama")) for t in (4, 5, 6)} == {"A crowd favourite in drama"}
+    # Each tied film counts ahead of film 7.
+    assert said(rank_among(tied, EVERY, 7, "drama")) == "Very well received in drama"
 
 
 def test_a_film_under_the_vote_floor_or_without_a_score_has_no_rank_and_is_not_counted() -> None:
@@ -69,21 +77,21 @@ def test_a_film_under_the_vote_floor_or_without_a_score_has_no_rank_and_is_not_c
     votes[:4] = [VOTE_FLOOR - 1] * 4
     table = films(scores, votes)
     assert [rank_among(table, EVERY, t, "horror") for t in (1, 5)] == [None, None]
-    assert rank_among(table, EVERY, 6, "horror") == "A crowd favourite in horror"  # first of 95 counted
+    assert said(rank_among(table, EVERY, 6, "horror")) == "A crowd favourite in horror"  # first of 95 counted
 
 
 def test_the_rank_counts_only_the_doors_films_plus_the_film_itself() -> None:
     door = np.zeros(100, dtype=bool)
     door[[0, *range(2, 40)]] = True  # 39 films; film 2, second best of all, stands outside the door
-    assert rank_among(HUNDRED, door, 3, "war") == "Very well received in war films"  # 2nd of the door's 39
-    assert rank_among(HUNDRED, door, 2, "war") == "A crowd favourite in war films"  # 2nd of 39 and itself: 2/40
-    assert rank_among(HUNDRED, door, 100, "war") == BOTTOM
+    assert said(rank_among(HUNDRED, door, 3, "war")) == "Very well received in war films"  # 2nd of the door's 39
+    assert said(rank_among(HUNDRED, door, 2, "war")) == "A crowd favourite in war films"  # 2nd of 39 and itself: 2/40
+    assert said(rank_among(HUNDRED, door, 100, "war")) == "Bringing up the rear in war films"
 
 
 def test_before_any_door_the_line_says_overall_and_the_media_servers_rating_is_never_read() -> None:
-    assert rank_among(HUNDRED, EVERY, 30, None) == "Holds its own overall"
+    assert said(rank_among(HUNDRED, EVERY, 30, None)) == "A solid showing overall"
     library = HUNDRED.assign(rating=np.linspace(0, 10, 100))
-    assert rank_among(library, EVERY, 30, None) == "Holds its own overall"
+    assert said(rank_among(library, EVERY, 30, None)) == "A solid showing overall"
 
 
 def test_every_door_the_first_question_offers_has_its_rank_word() -> None:
@@ -103,7 +111,7 @@ def test_a_door_ranks_among_its_own_pool_and_before_a_door_among_every_doors_poo
             first_options=(FirstOption("Horror", "horror", "Horror"), FirstOption("War", "war", "War")),
         ),
     )
-    assert rank(cat, 95, "war") == "Holds its own in war films"  # 5th of the door's 10
-    assert rank(cat, 95, "horror") == BOTTOM  # behind all ten of horror's
-    assert rank(cat, 95, None) == "Mixed reviews overall"  # 15th of the 20 behind either door
+    assert said(rank(cat, 95, "war")) == "A solid showing in war films"  # 5th of the door's 10
+    assert said(rank(cat, 95, "horror")) == "Bringing up the rear in horror"  # behind all ten of horror's
+    assert said(rank(cat, 95, None)) == "A tougher sell overall"  # 15th of the 20 behind either door
     assert rank(cat, 95, "west") is None  # a door with no word has no rank

@@ -100,11 +100,11 @@ function settle(poster, from, slot, link, glow) {
   );
 }
 
-// How well audiences regard the film, as its card ranks it: a line in the display face, with what it is counted by
-// beside it in quiet text. Null when the film has no rank.
+// How well audiences regard the film, as its card ranks it: a line in the display face, with its standing beneath
+// it in quiet text. Null when the film has no rank.
 function rankLine(card) {
   if (!card.rank) return null;
-  return h("p", { class: "rank" }, h("span", { class: "rank-words" }, card.rank), " ", h("span", { class: "rank-by" }, "by audience votes"));
+  return h("p", { class: "rank" }, h("span", { class: "rank-words" }, card.rank), " ", h("span", { class: "rank-by" }, card.standing));
 }
 
 // The film's tags, its strongest genome words, as outlined chips; null when it has none. They describe the film

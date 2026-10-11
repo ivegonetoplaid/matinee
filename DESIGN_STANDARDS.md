@@ -292,8 +292,9 @@ than the wall, shows the look.
 Text on the wall is at least 16 px and set in cream or gold. Dim text, and text
 from 11 to 15 px, stands only inside a band, with one exception: on the resting
 pick, where the wall behind is dimmed, and inside the pick's panel, such text
-may stand directly beside what it describes, as "by audience votes" stands
-beside the rank and DoesTheDogDie's credit after an unchecked film's note.
+may stand directly beside what it describes, as the rank's standing ("Top half
+by TMDB audience rating") stands beneath the rank and DoesTheDogDie's credit
+after an unchecked film's note.
 
 ### 6.3 The bands
 

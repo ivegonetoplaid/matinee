@@ -569,26 +569,28 @@ why a film was picked: the labels alone place films (section 2.6).
   one): its position from the top, as a share of the counted films and itself.
   Films with the same score share the better place, so they share a band.
 - **The bands.** The place reads as one of these lines, with the door's word in
-  place of "horror". A place exactly on an edge reads as the higher band.
+  place of "horror", and a standing that names the band's share of the door's
+  films and what it is measured by (`BANDS`, `BASIS`). A place exactly on an
+  edge reads as the higher band.
 
-  | The film's place among the door's films | The rank reads |
-  |---|---|
-  | Top 5% | A crowd favourite in horror |
-  | Top 10% | Very well received in horror |
-  | Top 25% | Well liked in horror |
-  | Top half | Holds its own in horror |
-  | Below the middle, above the bottom 10% | Mixed reviews in horror |
-  | Bottom 10% | Not genuinely liked by anybody |
+  | The film's place among the door's films | The rank reads | Its standing |
+  |---|---|---|
+  | Top 5% | A crowd favourite in horror | Top 5% by TMDB audience rating |
+  | Top 10% | Very well received in horror | Top 10% by TMDB audience rating |
+  | Top 25% | Well liked in horror | Top 25% by TMDB audience rating |
+  | Top half | A solid showing in horror | Top half by TMDB audience rating |
+  | Below the middle, above the bottom 10% | A tougher sell in horror | Bottom half by TMDB audience rating |
+  | Bottom 10% | Bringing up the rear in horror | Bottom 10% by TMDB audience rating |
 
 - **The door's words**, by tree: comedy "comedy", action "action and
   adventure", drama "drama", thriller "thrillers", crime "crime", horror
   "horror", scifi "sci-fi", fantasy "fantasy", romance "romance", animation
   "animation", western "westerns", war "war films", kids "kids' films",
   nonfiction "documentaries" (`DOOR_WORDS`). Before any door, "overall" stands
-  in for "in horror": "Well liked overall". The bottom band names no door. A
+  in for "in horror": "Well liked overall". A
   tree with no word has no rank; a test holds every door the first question
   offers to having one.
-- The page sets "by audience votes" beside the rank in small quiet text
+- The page sets the standing beneath the rank in small quiet text
   (section 12).
 
 **The tags** (`src/matinee/tags.py`).
@@ -599,7 +601,12 @@ why a film was picked: the labels alone place films (section 2.6).
   first one wins, as in the shipped scores (section 5.3). The file names each
   word once, in its own word list, and gives each film its words as positions
   in that list. It carries the dataset's conditions in its `licence` field and
-  the release in `source` (section 14). `tools/build_genome.py` writes it from
+  the release in `source` (section 14). It also lists, in `alike`, every pair
+  of words that say nearly the same thing, as two positions: two forms of one
+  word (letters and digits only, with one of the endings `ENDINGS` lists taken
+  off, such as "spies" and "spying"), or two words whose relevance correlates at
+  0.78 or more across the genome's films (`ALIKE`), such as "espionage" and
+  "spying". It holds 252 pairs. `tools/build_genome.py` writes it from
   the same release as `data/genome.json`, after the same release check
   (`--tags-out` names another path). It holds 16,353 films.
 - `data/tag_skip.txt` lists the words the pick never shows: one word per line,
@@ -610,16 +617,20 @@ why a film was picked: the labels alone place films (section 2.6).
   screen. A test in `./check.sh` fails when an entry is not a genome word, and
   when a skip-list word reaches any film's tags.
 - The pick shows a film's first four words not on the skip list, strongest
-  first (`SHOWN`); fewer when fewer remain, and none for a film the genome
-  does not cover. Every covered film shows four with the shipped list; the 40
-  shipped words leave room for a longer list.
+  first (`SHOWN`), passing over a word that is alike to one already shown, so it
+  never shows both words of a pair; fewer when fewer remain, and none for a film
+  the genome does not cover. The skip list applies first, so a skipped word never
+  keeps its pair off a film. Every covered film shows four with the shipped
+  list, reaching no deeper than its 34th word; the 40 shipped words leave room
+  for a longer list.
 - The server reads both files once at start-up and applies the skip list then,
   so an edit to the list takes effect at the next start. An image built from a
   source checkout carries the edit; a pulled image carries its own copy, which
   an update replaces. A skip-list word that is not a genome word is logged as a
   warning naming it, since it skips nothing.
 - Either file that cannot be read (absent, not UTF-8, malformed, or giving a
-  film anything but whole-number positions in its word list) leaves every pick
+  film anything but whole-number positions in its word list, or an `alike`
+  entry that is not two such positions) leaves every pick
   without tags and puts the fault on the setup note (section 5.6).
 
 ## 3. Pools and reference statistics
@@ -1422,7 +1433,7 @@ would hand one device's profiles to another.
 | GET | `/static/…` | scripts, styles, self-hosted fonts, icons, pails, avatars, the locked door's art, manifest (`Cache-Control: no-cache`, so a deploy is never seen half-applied) |
 | GET | `/img/{kind}/{tmdb}/{size}` | a poster or backdrop: from the media server for a film the library holds, else from TMDB's image server through Matinee |
 | GET | `/api/pictures` | the image source, and under `tmdb` the TMDB poster path of every live film that has one (section 11.5) |
-| GET | `/api/film/{tmdb}?door=` | one film's card (`src/matinee/web/app.py::FilmCard`): `tmdb`, `title`, `year`, `runtime_min`, `synopsis`, the pick's link (`link`, and `link_to`: `seerr` or `tmdb`), under the `tmdb` image source its TMDB backdrop path (`backdrop_path`, else null), `rank` (the film's rank line among the films behind `door`, the tree its pick came through, or overall without `door`; null under the vote floor, without a TMDB score, or for a tree with no rank word; section 2.8) and `tags` (up to four, strongest first; empty for a film the genome does not cover). A `door` that names no tree is refused (400 `refused`) |
+| GET | `/api/film/{tmdb}?door=` | one film's card (`src/matinee/web/app.py::FilmCard`): `tmdb`, `title`, `year`, `runtime_min`, `synopsis`, the pick's link (`link`, and `link_to`: `seerr` or `tmdb`), under the `tmdb` image source its TMDB backdrop path (`backdrop_path`, else null), `rank` (the film's rank line among the films behind `door`, the tree its pick came through, or overall without `door`; null under the vote floor, without a TMDB score, or for a tree with no rank word; section 2.8), `standing` (the rank's band share and basis, such as "Top half by TMDB audience rating"; null whenever `rank` is) and `tags` (up to four, strongest first; empty for a film the genome does not cover). A `door` that names no tree is refused (400 `refused`) |
 | GET | `/api/door` | the film count, every profile (marking those this device holds), the avatars offered, whether a DoesTheDogDie key is set, and `posters_from` (`server` or `tmdb`) |
 | POST | `/api/profiles` | create a profile and issue this device a token |
 | POST | `/api/profiles/{id}/open` | open a profile by PIN, or at once when held or PIN-less |
@@ -2045,8 +2056,9 @@ the film information area on both desktop and phone.
   exactly as a library film does: the same layout, words and actions.
 
   The rank stands in Matinee's display face, in cream (30 px on a desktop,
-  22 px on a phone), with "by audience votes" beside it in small quiet text
-  (13 px, 11 px on a phone). The tags stand beneath it as outlined chips that
+  22 px on a phone), with its standing on a line of its own beneath it in small
+  quiet text (13 px, 11 px on a phone), such as "Top half by TMDB audience
+  rating". The tags stand beneath it as outlined chips that
   wrap, 16 px, in sentence case, with small corners, each on a dark backing of
   its own (the page base at 92 per cent) in place of a scrim; never filled with
   an accent and never a pill. A film with no rank or no tags shows none, and the layout closes up.
@@ -2658,25 +2670,29 @@ symbol when one does not match.
 
 | Handle | Where | Verified |
 |---|---|---|
-| `src/matinee/ranks.py::VOTE_FLOOR` (200 votes) | `src/matinee/ranks.py:18` | 2026-10-10 |
-| `src/matinee/ranks.py::DOOR_WORDS` (each door's word, by tree) | `src/matinee/ranks.py:21` | 2026-10-10 |
-| `src/matinee/ranks.py::BANDS` / `BOTTOM` / `band` (a place to its words; an edge reads as the higher band) | `src/matinee/ranks.py:39` | 2026-10-10 |
-| `src/matinee/ranks.py::door_films` (the door's pool, or every door's before one) | `src/matinee/ranks.py:58` | 2026-10-10 |
-| `src/matinee/ranks.py::rank_among` / `rank` (None under the floor, without a score, or for a tree with no word) | `src/matinee/ranks.py:69` | 2026-10-10 |
+| `src/matinee/ranks.py::VOTE_FLOOR` (200 votes) | `src/matinee/ranks.py:20` | 2026-10-10 |
+| `src/matinee/ranks.py::DOOR_WORDS` (each door's word, by tree) | `src/matinee/ranks.py:23` | 2026-10-10 |
+| `src/matinee/ranks.py::BANDS` / `BASIS` / `Rank` / `band` (a place to its words and standing; an edge reads as the higher band) | `src/matinee/ranks.py:42` | 2026-10-10 |
+| `src/matinee/ranks.py::door_films` (the door's pool, or every door's before one) | `src/matinee/ranks.py:68` | 2026-10-10 |
+| `src/matinee/ranks.py::rank_among` / `rank` (None under the floor, without a score, or for a tree with no word) | `src/matinee/ranks.py:79` | 2026-10-10 |
 | `tests/test_ranks.py::test_a_film_reads_the_band_its_place_falls_in_and_an_edge_reads_as_the_higher` | `tests/test_ranks.py:53` | 2026-10-10 |
-| `tests/test_ranks.py::test_every_door_the_first_question_offers_has_its_rank_word` | `tests/test_ranks.py:89` | 2026-10-10 |
-| `src/matinee/tags.py::TAGS_FILE` / `SKIP_FILE` / `WORDS_PER_FILM` / `SHOWN` (40 shipped, 4 shown) | `src/matinee/tags.py:29` | 2026-10-10 |
-| `src/matinee/tags.py::Tags` / `Tags.of` | `src/matinee/tags.py:40` | 2026-10-10 |
-| `src/matinee/tags.py::strongest` / `write_tags` (the first MovieLens film wins) | `src/matinee/tags.py:50` | 2026-10-10 |
-| `src/matinee/tags.py::read_skip` / `load_tags` / `TagsError` (the skip list applied once at load; a warning for a word no film carries) | `src/matinee/tags.py:72` | 2026-10-10 |
+| `tests/test_ranks.py::test_every_door_the_first_question_offers_has_its_rank_word` | `tests/test_ranks.py:96` | 2026-10-10 |
+| `src/matinee/tags.py::TAGS_FILE` / `SKIP_FILE` / `WORDS_PER_FILM` / `SHOWN` (40 shipped, 4 shown) | `src/matinee/tags.py:34` | 2026-10-10 |
+| `src/matinee/tags.py::Tags` / `Tags.of` | `src/matinee/tags.py:52` | 2026-10-10 |
+| `src/matinee/tags.py::strongest` / `write_tags` (the first MovieLens film wins; `alike` on one line) | `src/matinee/tags.py:62` | 2026-10-10 |
+| `src/matinee/tags.py::ALIKE` / `ENDINGS` / `forms` / `alike_pairs` (words that say nearly the same thing) | `src/matinee/tags.py:41` | 2026-10-10 |
+| `src/matinee/tags.py::_first_distinct` (four words, passing over one alike to a word already shown) | `src/matinee/tags.py:126` | 2026-10-10 |
+| `src/matinee/tags.py::read_skip` / `load_tags` / `TagsError` (the skip list applied once at load; a warning for a word no film carries) | `src/matinee/tags.py:107` | 2026-10-10 |
 | `data/tags.json` (`licence`, `source`, `words`, `films` as positions) | `data/tags.json:1` | 2026-10-10 |
 | `data/tag_skip.txt` (four groups) | `data/tag_skip.txt:1` | 2026-10-10 |
 | `tools/build_genome.py::main` (`--tags-out`, after the release check) | `tools/build_genome.py:29` | 2026-10-10 |
-| `src/matinee/web/app.py::shipped_tags` / `NO_TAGS` (an unreadable file is a setup fault; picks go without tags) | `src/matinee/web/app.py:543` | 2026-10-10 |
-| `tests/test_tags.py::test_no_skip_list_word_reaches_any_films_tags_and_every_covered_film_shows_four` | `tests/test_tags.py:16` | 2026-10-10 |
-| `tests/test_tags.py::test_every_skip_list_entry_is_a_genome_word_so_none_is_a_silent_typo` | `tests/test_tags.py:37` | 2026-10-10 |
-| `tests/test_web_library.py::test_the_film_card_ranks_among_the_door_it_names_and_overall_without_one` | `tests/test_web_library.py:218` | 2026-10-10 |
-| `tests/test_web_library.py::test_unreadable_tags_leave_picks_without_them_and_say_so_in_the_setup_note` | `tests/test_web_library.py:208` | 2026-10-10 |
+| `src/matinee/web/app.py::shipped_tags` / `NO_TAGS` (an unreadable file is a setup fault; picks go without tags) | `src/matinee/web/app.py:546` | 2026-10-10 |
+| `tests/test_tags.py::test_no_skip_list_word_reaches_any_films_tags_and_every_covered_film_shows_four` | `tests/test_tags.py:26` | 2026-10-10 |
+| `tests/test_tags.py::test_no_film_shows_two_words_that_say_nearly_the_same_thing` | `tests/test_tags.py:35` | 2026-10-10 |
+| `tests/test_tags.py::test_every_skip_list_entry_is_a_genome_word_so_none_is_a_silent_typo` | `tests/test_tags.py:55` | 2026-10-10 |
+| `tests/test_tags.py::test_written_tags_pair_word_forms_and_words_that_move_together_and_the_pick_shows_one_of_each` | `tests/test_tags.py:97` | 2026-10-10 |
+| `tests/test_web_library.py::test_the_film_card_ranks_among_the_door_it_names_and_overall_without_one` | `tests/test_web_library.py:219` | 2026-10-10 |
+| `tests/test_web_library.py::test_unreadable_tags_leave_picks_without_them_and_say_so_in_the_setup_note` | `tests/test_web_library.py:209` | 2026-10-10 |
 | `tests/test_setup.py::test_the_server_hands_the_shipped_tags_to_the_app_with_the_setup_notes_faults` | `tests/test_setup.py:194` | 2026-10-10 |
 
 ### Labels and the household override file
@@ -2808,9 +2824,9 @@ symbol when one does not match.
 | `src/matinee/web/common.py::Seat` / `Tile` / `Deleted` / `Door` (what the page is told of a profile) | `src/matinee/web/common.py:38` | 2026-10-05 |
 | `src/matinee/web/common.py::NewProfile` / `AvatarChoice` / `PinEntry` (request caps) | `src/matinee/web/common.py:72` | 2026-10-05 |
 | `src/matinee/web/common.py::over_https` / `set_tokens` / `with_token` | `src/matinee/web/common.py:104` | 2026-10-10 |
-| `src/matinee/web/app.py::add_door_routes` (`GET /api/door`, create, open) | `src/matinee/web/app.py:323` | 2026-10-10 |
-| `src/matinee/web/app.py::add_avatar_route` (`PUT /api/profiles/{id}/avatar`) | `src/matinee/web/app.py:362` | 2026-10-10 |
-| `src/matinee/web/app.py::add_delete_route` (`DELETE /api/profiles/{id}`) | `src/matinee/web/app.py:371` | 2026-10-10 |
+| `src/matinee/web/app.py::add_door_routes` (`GET /api/door`, create, open) | `src/matinee/web/app.py:326` | 2026-10-10 |
+| `src/matinee/web/app.py::add_avatar_route` (`PUT /api/profiles/{id}/avatar`) | `src/matinee/web/app.py:365` | 2026-10-10 |
+| `src/matinee/web/app.py::add_delete_route` (`DELETE /api/profiles/{id}`) | `src/matinee/web/app.py:374` | 2026-10-10 |
 | `src/matinee/web/viewing.py::ViewerIn` (a profile id only) | `src/matinee/web/viewing.py:36` | 2026-10-05 |
 | `src/matinee/web/viewing.py::held_profile` | `src/matinee/web/viewing.py:197` | 2026-10-05 |
 | `src/matinee/web/viewing.py::resolve` (no profile: the front door's pool; no key: stored topics ignored) | `src/matinee/web/viewing.py:229` | 2026-10-05 |
@@ -2844,9 +2860,9 @@ symbol when one does not match.
 | `src/matinee/web/admission.py::Admission` (`issue`, `admits`, `matches`) | `src/matinee/web/admission.py:88` | 2026-10-05 |
 | `src/matinee/web/config.py::GREETINGS` | `src/matinee/web/config.py:24` | 2026-10-05 |
 | `src/matinee/web/config.py::_door` (a wrong lock refuses the start; with no word, a bad mode is a fault) | `src/matinee/web/config.py:72` | 2026-10-05 |
-| `src/matinee/web/app.py::AdmissionOut` / `WordIn` | `src/matinee/web/app.py:390` | 2026-10-10 |
-| `src/matinee/web/app.py::open_before_admission` | `src/matinee/web/app.py:402` | 2026-10-10 |
-| `src/matinee/web/app.py::add_admission` (the gate, `GET`/`POST /api/admission`, the 2-second wait) | `src/matinee/web/app.py:407` | 2026-10-10 |
+| `src/matinee/web/app.py::AdmissionOut` / `WordIn` | `src/matinee/web/app.py:393` | 2026-10-10 |
+| `src/matinee/web/app.py::open_before_admission` | `src/matinee/web/app.py:405` | 2026-10-10 |
+| `src/matinee/web/app.py::add_admission` (the gate, `GET`/`POST /api/admission`, the 2-second wait) | `src/matinee/web/app.py:410` | 2026-10-10 |
 | `tests/test_admission.py` | `tests/test_admission.py:83` | 2026-10-05 |
 
 ### Notes and the notes tool
@@ -2873,7 +2889,7 @@ symbol when one does not match.
 | Handle | Where | Verified |
 |---|---|---|
 | `src/matinee/web/config.py::Config.dtdd_key` (optional) | `src/matinee/web/config.py:44` | 2026-10-05 |
-| `src/matinee/web/app.py::create_app` (one `topics_on`; a picker that disagrees is refused) | `src/matinee/web/app.py:554` | 2026-10-10 |
+| `src/matinee/web/app.py::create_app` (one `topics_on`; a picker that disagrees is refused) | `src/matinee/web/app.py:557` | 2026-10-10 |
 | `src/matinee/web/viewing.py::add_topic_routes` (`GET /api/topics`, `PUT /api/profiles/{id}/topics`, only with a key) | `src/matinee/web/viewing.py:324` | 2026-10-05 |
 | `src/matinee/web/viewing.py::save_topics` | `src/matinee/web/viewing.py:348` | 2026-10-05 |
 | `src/matinee/web/viewing.py::FirstOut.checked` (whether this viewer's picks are checked) | `src/matinee/web/viewing.py:115` | 2026-10-05 |
@@ -2915,8 +2931,8 @@ symbol when one does not match.
 | `src/matinee/web/setup.py::SetupNote` (`warning` while the data is stale) | `src/matinee/web/setup.py:49` | 2026-10-05 |
 | `src/matinee/web/setup.py::note` / `library_away` / `rebuild_lines` / `stalled` | `src/matinee/web/setup.py:109` | 2026-10-05 |
 | `src/matinee/web/setup.py::HEADING` / `MEANWHILE` / `STOPPED` / `STALE` / `STALLED_AFTER` (every line's words) | `src/matinee/web/setup.py:20` | 2026-10-05 |
-| `src/matinee/web/app.py::setup_faults` (the configured, start-up and run-time faults) | `src/matinee/web/app.py:507` | 2026-10-10 |
-| `src/matinee/web/app.py::add_setup_route` (`GET /api/setup`) | `src/matinee/web/app.py:521` | 2026-10-10 |
+| `src/matinee/web/app.py::setup_faults` (the configured, start-up and run-time faults) | `src/matinee/web/app.py:510` | 2026-10-10 |
+| `src/matinee/web/app.py::add_setup_route` (`GET /api/setup`) | `src/matinee/web/app.py:524` | 2026-10-10 |
 | `src/matinee/web/theatre.py::NothingToShow` (shipped data that cannot make a catalog) | `src/matinee/web/theatre.py:61` | 2026-10-05 |
 | `src/matinee/web/theatre.py::Theatre._catalog` | `src/matinee/web/theatre.py:150` | 2026-10-05 |
 | `src/matinee/web/theatre.py::Showing.library` / `UNUSABLE` / `warn_library` (`none`, `usable`, `unreachable`, `refused`) | `src/matinee/web/theatre.py:70` | 2026-10-05 |
@@ -2924,7 +2940,7 @@ symbol when one does not match.
 | `src/matinee/web/seerr.py::SeerrCheck` (`CHECK_EVERY`; picks link to TMDB while it does not answer) | `src/matinee/web/seerr.py:25` | 2026-10-05 |
 | `src/matinee/web/logbook.py::describe` / `StateLog` / `state_log` / `CHECK_EVERY` (the state line) | `src/matinee/web/logbook.py:72` | 2026-10-05 |
 | `src/matinee/web/logbook.py::Quiet` / `QUIET_FOR` / `SERVER_NAMES` (a repeating warning once a minute, with a count) | `src/matinee/web/logbook.py:116` | 2026-10-05 |
-| `src/matinee/web/app.py::add_state_log` / `QUIET` | `src/matinee/web/app.py:529` | 2026-10-10 |
+| `src/matinee/web/app.py::add_state_log` / `QUIET` | `src/matinee/web/app.py:532` | 2026-10-10 |
 | `tests/test_setup.py::test_only_a_wrong_lock_and_a_missing_data_directory_refuse_to_start` | `tests/test_setup.py:110` | 2026-10-10 |
 | `tests/test_logbook.py::test_the_state_line_names_every_part_and_no_secret` | `tests/test_logbook.py:30` | 2026-10-05 |
 
@@ -2933,20 +2949,20 @@ symbol when one does not match.
 | Handle | Where | Verified |
 |---|---|---|
 | `src/matinee/web/main.py::build` (reads the labels, the household file and the film tags; faults go on the note) | `src/matinee/web/main.py:143` | 2026-10-10 |
-| `src/matinee/web/app.py::create_app` (docs disabled) | `src/matinee/web/app.py:554` | 2026-10-10 |
-| `src/matinee/web/app.py::security_headers` / `CONTENT_SECURITY_POLICY` | `src/matinee/web/app.py:463` | 2026-10-10 |
-| `src/matinee/web/app.py::add_page` | `src/matinee/web/app.py:469` | 2026-10-10 |
-| `src/matinee/web/app.py::add_quip_routes` (`GET /api/quips`; 503 when the lines cannot be read) | `src/matinee/web/app.py:495` | 2026-10-10 |
-| `src/matinee/web/app.py::add_film_routes` / `IMAGE_WIDTHS` / `IMAGE_CACHE` (`GET /api/pictures`; `GET /api/film/{tmdb}?door=`, a door naming no tree refused) | `src/matinee/web/app.py:280` | 2026-10-10 |
-| `src/matinee/web/app.py::film_link` / `FilmCard` (Seerr, else TMDB; `rank`, `tags`) | `src/matinee/web/app.py:183` | 2026-10-10 |
-| `src/matinee/web/app.py::Held` / `held` / `stored_path` | `src/matinee/web/app.py:107` | 2026-10-10 |
-| `src/matinee/web/app.py::film_image` / `tmdb_image` / `TMDB_IMAGE_CACHE` (the media server's, else TMDB's; 30 days for a film the library does not hold) | `src/matinee/web/app.py:190` | 2026-10-10 |
-| `src/matinee/web/app.py::Shelf` / `from_shelf` (each TMDB picture fetched once for every viewer) | `src/matinee/web/app.py:212` | 2026-10-10 |
+| `src/matinee/web/app.py::create_app` (docs disabled) | `src/matinee/web/app.py:557` | 2026-10-10 |
+| `src/matinee/web/app.py::security_headers` / `CONTENT_SECURITY_POLICY` | `src/matinee/web/app.py:466` | 2026-10-10 |
+| `src/matinee/web/app.py::add_page` | `src/matinee/web/app.py:472` | 2026-10-10 |
+| `src/matinee/web/app.py::add_quip_routes` (`GET /api/quips`; 503 when the lines cannot be read) | `src/matinee/web/app.py:498` | 2026-10-10 |
+| `src/matinee/web/app.py::add_film_routes` / `IMAGE_WIDTHS` / `IMAGE_CACHE` (`GET /api/pictures`; `GET /api/film/{tmdb}?door=`, a door naming no tree refused) | `src/matinee/web/app.py:281` | 2026-10-10 |
+| `src/matinee/web/app.py::film_link` / `FilmCard` (Seerr, else TMDB; `rank`, `tags`) | `src/matinee/web/app.py:184` | 2026-10-10 |
+| `src/matinee/web/app.py::Held` / `held` / `stored_path` | `src/matinee/web/app.py:108` | 2026-10-10 |
+| `src/matinee/web/app.py::film_image` / `tmdb_image` / `TMDB_IMAGE_CACHE` (the media server's, else TMDB's; 30 days for a film the library does not hold) | `src/matinee/web/app.py:191` | 2026-10-10 |
+| `src/matinee/web/app.py::Shelf` / `from_shelf` (each TMDB picture fetched once for every viewer) | `src/matinee/web/app.py:213` | 2026-10-10 |
 | `src/matinee/tmdb.py::shelf_file` / `read_shelf` / `shelve` / `sweep_shelf` / `PICTURE_KEEP` (150 days) | `src/matinee/tmdb.py:324` | 2026-10-05 |
-| `src/matinee/web/app.py::film_synopsis` (the media server's, else TMDB's) | `src/matinee/web/app.py:269` | 2026-10-10 |
+| `src/matinee/web/app.py::film_synopsis` (the media server's, else TMDB's) | `src/matinee/web/app.py:270` | 2026-10-10 |
 | `src/matinee/tmdb.py::fetch_picture` / `IMAGES` / `IMAGE_SIZES` / `TmdbImageError` | `src/matinee/tmdb.py:292` | 2026-10-05 |
 | `src/matinee/tmdb.py::ImageGate` / `IMAGE_GATE` / `IMAGE_RATE` (50 a second, 20,000 an hour, a hold after a 429 or 503) | `src/matinee/tmdb.py:236` | 2026-10-05 |
-| `src/matinee/web/app.py::add_error_handlers` | `src/matinee/web/app.py:142` | 2026-10-10 |
+| `src/matinee/web/app.py::add_error_handlers` | `src/matinee/web/app.py:143` | 2026-10-10 |
 | `src/matinee/web/common.py::Problem` | `src/matinee/web/common.py:134` | 2026-10-10 |
 | `src/matinee/web/viewing.py::add_viewing_routes` (`POST /api/first` with the source question, `POST /api/walk`) | `src/matinee/web/viewing.py:353` | 2026-10-05 |
 | `src/matinee/web/viewing.py::WalkIn` / `PickIn` / `FirstIn` (request caps; no field skips the check) | `src/matinee/web/viewing.py:45` | 2026-10-05 |

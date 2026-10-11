@@ -941,8 +941,8 @@ a.wordmark:focus-visible {
   margin-block: 8px;
 }
 
-/* How well audiences regard the film: a line in the display face, in cream, with what it is counted by beside it
-   in quiet text. */
+/* How well audiences regard the film: a line in the display face, in cream, with its standing beneath it in quiet
+   text, such as "Top half by TMDB audience rating". */
 .rank {
   display: flex;
   flex-wrap: wrap;
@@ -962,6 +962,7 @@ a.wordmark:focus-visible {
 }
 
 .rank-by {
+  flex-basis: 100%;
   font-size: 13px;
   color: var(--dim);
 }

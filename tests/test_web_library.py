@@ -197,6 +197,7 @@ def test_film_card_reads_the_synopsis_live(world: Any) -> None:
         "link_to": "seerr",
         "backdrop_path": None,  # the media server is the image source
         "rank": None,  # the film has no TMDB score
+        "standing": None,
         "tags": ["lone hero", "small town"],
     }
     assert ("synopsis", "f" * 32) in library.calls
@@ -221,9 +222,11 @@ def test_the_film_card_ranks_among_the_door_it_names_and_overall_without_one(
     monkeypatch.setitem(ranks.DOOR_WORDS, "west", "westerns")
     client, _, _, _ = make_world(tmp_path, scores={t: 10.0 - t / 10 for t in range(1, 41) if t != 6})
     # Film 5 is the fifth best of the rated westerns.
-    assert client.get("/api/film/5?door=west").json()["rank"] == "Well liked in westerns"
+    card = client.get("/api/film/5?door=west").json()
+    assert (card["rank"], card["standing"]) == ("Well liked in westerns", "Top 25% by TMDB audience rating")
     assert client.get("/api/film/5").json()["rank"] == "Well liked overall"
-    assert client.get("/api/film/6?door=west").json()["rank"] is None  # no TMDB score: no rank
+    unranked = client.get("/api/film/6?door=west").json()  # no TMDB score: no rank
+    assert (unranked["rank"], unranked["standing"]) == (None, None)
 
 
 def test_a_film_new_to_the_library_is_offered_by_its_tags(world: Any) -> None:
