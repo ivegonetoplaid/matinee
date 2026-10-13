@@ -37,6 +37,8 @@ PROFILE_LINES = {
     "not_rated": "Rate it first, then tell me why.",
     "bad_length": "Pick how long: 3 months, 6 months, 1 year or for good.",
     "bad_run": "I lost track of this run. Start over and I'll keep up.",
+    "bad_setting": "That isn't one of the choices.",
+    "bad_language": "I don't have any films in that language.",
 }
 
 

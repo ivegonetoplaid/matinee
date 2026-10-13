@@ -66,6 +66,11 @@ AVATARS = (
     "vhs",
 )
 Status = Literal["open", "accepted", "rejected"]
+# The rating floor's choices, loosest first: every film; above the bottom 10%; the bottom 40% kept out; only the top
+# 40%; only the top 25% (`matinee.ranks` bands).
+FLOORS = ("anything", "above_bottom", "middle", "above_middle", "well_liked")
+# The rated-films setting: films rated this or lower stay out of the profile's picks; 0 keeps every rated film in.
+RATED_OUT = range(0, 6)
 NOTE_SELECT = "SELECT n.*, p.name AS profile FROM notes AS n LEFT JOIN profiles AS p ON p.id = n.profile_id"
 
 
@@ -117,13 +122,32 @@ class Locked(StoreError):
         self.until = until
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, kw_only=True)
 class Profile:
+    """A profile and its tailoring settings: the rating floor (one of FLOORS), the languages it watches in (none
+    ticked: any language), the rated-films setting (RATED_OUT), whether it shares its ratings with the household, and
+    whether it has seen this feature's welcome."""
+
     id: int
     name: str
     has_pin: bool
     topics: frozenset[int]
     avatar: str | None = None
+    floor: str
+    languages: frozenset[str]
+    rated_out: int
+    sharing: bool
+    welcomed: bool
+
+
+@dataclass(frozen=True)
+class Settings:
+    """A change to a profile's settings; None leaves that setting as it is."""
+
+    floor: str | None = None
+    languages: frozenset[str] | None = None
+    rated_out: int | None = None
+    sharing: bool | None = None
 
 
 def name_key(name: str) -> str:
@@ -223,6 +247,11 @@ class Store:
             has_pin=row["pin_hash"] is not None,
             topics=frozenset(int(t) for t in json.loads(row["topics"])),
             avatar=row["avatar"] if row["avatar"] in AVATARS else None,
+            floor=str(row["floor"]),
+            languages=frozenset(str(code) for code in json.loads(row["languages"])),
+            rated_out=int(row["rated_out"]),
+            sharing=bool(row["sharing"]),
+            welcomed=bool(row["welcomed"]),
         )
 
     def _issue(self, db: sqlite3.Connection, profile_id: int) -> str:
@@ -344,6 +373,49 @@ class Store:
         with closing(self._connect()) as db, db:
             self._held(db, profile_id, by)
             db.execute("UPDATE profiles SET avatar = ? WHERE id = ?", (avatar, profile_id))
+            row = db.execute("SELECT * FROM profiles WHERE id = ?", (profile_id,)).fetchone()
+        return self._profile(row)
+
+    def profile(self, profile_id: int, by: Sequence[str]) -> Profile:
+        """The profile with its settings, when one of the tokens `by` is issued for it; not_held otherwise."""
+        with closing(self._connect()) as db:
+            row = self._issued(db, profile_id, by)
+        if row is None:
+            raise StoreError("not_held", "this device holds no token for that profile")
+        return self._profile(row)
+
+    def set_settings(self, profile_id: int, change: Settings, known: frozenset[str], by: Sequence[str]) -> Profile:
+        """Change the settings of a profile `by` holds. Refuses a floor or rated-films choice that is not offered, and a
+        newly ticked language that is not in `known` (the languages the film table holds); a language already ticked
+        stays kept whether or not the table still holds it."""
+        if change.floor is not None and change.floor not in FLOORS:
+            raise StoreError("bad_setting", f"the rating floor is one of {', '.join(FLOORS)}")
+        if change.rated_out is not None and change.rated_out not in RATED_OUT:
+            raise StoreError("bad_setting", "the rated-films setting is a rating from 0 to 5")
+        with closing(self._connect()) as db, db:
+            row = self._held(db, profile_id, by)
+            kept = frozenset(str(code) for code in json.loads(row["languages"]))
+            if change.languages is not None and change.languages - known - kept:
+                raise StoreError("bad_language", "that language is not one the film table holds")
+            languages = kept if change.languages is None else change.languages
+            db.execute(
+                "UPDATE profiles SET floor = ?, languages = ?, rated_out = ?, sharing = ? WHERE id = ?",
+                (
+                    row["floor"] if change.floor is None else change.floor,
+                    json.dumps(sorted(languages)),
+                    row["rated_out"] if change.rated_out is None else change.rated_out,
+                    row["sharing"] if change.sharing is None else int(change.sharing),
+                    profile_id,
+                ),
+            )
+            row = db.execute("SELECT * FROM profiles WHERE id = ?", (profile_id,)).fetchone()
+        return self._profile(row)
+
+    def welcome(self, profile_id: int, by: Sequence[str]) -> Profile:
+        """Mark a profile `by` holds as having seen this feature's welcome; it never shows again."""
+        with closing(self._connect()) as db, db:
+            self._held(db, profile_id, by)
+            db.execute("UPDATE profiles SET welcomed = 1 WHERE id = ?", (profile_id,))
             row = db.execute("SELECT * FROM profiles WHERE id = ?", (profile_id,)).fetchone()
         return self._profile(row)
 

@@ -1,4 +1,5 @@
-"""Routes for what a profile keeps of its own: its ratings and their short reviews, its hidden films and its runs.
+"""Routes for what a profile keeps of its own: its ratings and their short reviews, its hidden films, its runs, and
+its tailoring settings and welcome mark; and the languages the film table holds.
 
 Every route here answers only a device holding the profile, checked by the
 store in the same transaction as any write; any other device is refused as
@@ -10,7 +11,9 @@ from __future__ import annotations
 from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field
 
+from matinee.languages import held
 from matinee.records import Hidden, Mark, Rating, Records, Run, Walk
+from matinee.store import Profile, Settings, Store
 from matinee.web.common import device_tokens
 from matinee.web.theatre import Theatre
 from matinee.web.viewing import AnswerIn, answer_says
@@ -204,3 +207,65 @@ def add_run_routes(app: FastAPI, theatre: Theatre, records: Records) -> None:
     def runs(profile_id: int, request: Request) -> list[RunOut]:
         """The held profile's kept runs, newest first."""
         return [run_out(r) for r in records.history(profile_id, device_tokens(request))]
+
+
+class SettingsIn(BaseModel):
+    """A change to the viewer's settings; a field left out (or null) stays as it is. "Any language" is
+    `languages: []`, which clears every tick."""
+
+    model_config = ConfigDict(extra="forbid")
+    floor: str | None = Field(default=None, max_length=20)
+    languages: list[str] | None = Field(default=None, max_length=200)
+    rated_out: int | None = None
+    sharing: bool | None = None
+
+
+class SettingsOut(BaseModel):
+    """The viewer's tailoring settings and whether they have seen this feature's welcome. `languages` empty means
+    any language; `rated_out` 0 keeps every rated film in the picks."""
+
+    floor: str
+    languages: list[str]
+    rated_out: int
+    sharing: bool
+    welcomed: bool
+
+
+class LanguageOut(BaseModel):
+    code: str  # the two-letter code TMDB gives a film's original language
+    films: int
+
+
+def settings_out(p: Profile) -> SettingsOut:
+    return SettingsOut(
+        floor=p.floor, languages=sorted(p.languages), rated_out=p.rated_out, sharing=p.sharing, welcomed=p.welcomed
+    )
+
+
+def add_settings_routes(app: FastAPI, theatre: Theatre, store: Store) -> None:
+    def known() -> frozenset[str]:
+        return frozenset(code for code, _ in held(theatre.showing().catalog.table.films))
+
+    @app.get("/api/languages")
+    def languages() -> list[LanguageOut]:
+        """Every language the film table holds, with its count of films, most first. The page names each one and
+        puts the browser's own language first."""
+        return [LanguageOut(code=code, films=n) for code, n in held(theatre.showing().catalog.table.films)]
+
+    @app.get("/api/profiles/{profile_id}/settings")
+    def settings(profile_id: int, request: Request) -> SettingsOut:
+        """The held profile's settings and welcome mark."""
+        return settings_out(store.profile(profile_id, device_tokens(request)))
+
+    @app.put("/api/profiles/{profile_id}/settings")
+    def change(profile_id: int, body: SettingsIn, request: Request) -> SettingsOut:
+        """Change the held profile's settings; each takes effect on its next request."""
+        languages = None if body.languages is None else frozenset(body.languages)
+        wanted = Settings(floor=body.floor, languages=languages, rated_out=body.rated_out, sharing=body.sharing)
+        offered = frozenset() if languages is None else known()  # the catalogue is read only for a language change
+        return settings_out(store.set_settings(profile_id, wanted, offered, device_tokens(request)))
+
+    @app.post("/api/profiles/{profile_id}/welcomed")
+    def welcomed(profile_id: int, request: Request) -> SettingsOut:
+        """Mark the held profile as having seen this feature's welcome."""
+        return settings_out(store.welcome(profile_id, device_tokens(request)))
