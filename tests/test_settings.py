@@ -109,7 +109,7 @@ def test_another_device_reads_and_changes_no_setting(ada: Any) -> None:
 
 
 def test_the_languages_held_are_counted_most_first_and_never_the_placeholder() -> None:
-    films = pd.DataFrame({"language": ["ja", "fr", "ja", None, "xx", "en", "fr", "ja", "", "de"]})
+    films = pd.DataFrame({"language": ["ja", "fr", "ja", None, "xx", "en", "fr", "ja", "", "de"], "audio": [None] * 10})
     assert held(films) == [("ja", 3), ("fr", 2), ("de", 1), ("en", 1)]
 
 

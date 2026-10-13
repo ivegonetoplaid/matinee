@@ -28,7 +28,10 @@ class LibraryFilm:
     """One film file the media server holds, as far as Matinee needs it.
 
     `path_tmdb` is the TMDB id written in the file's folder name as `{tmdb-N}`,
-    when there is one; the path itself never leaves the reader.
+    when there is one; the path itself never leaves the reader. `audio` is the
+    two-letter languages its audio tracks are tagged with (`matinee.languages`),
+    read only when asked for, and None when not read or when every track is
+    untagged.
     """
 
     item_id: str
@@ -40,6 +43,7 @@ class LibraryFilm:
     runtime_min: float | None
     rating: float | None
     path_tmdb: int | None
+    audio: frozenset[str] | None = None
 
 
 @dataclass(frozen=True)
@@ -49,8 +53,9 @@ class Image:
 
 
 class Library(Protocol):
-    def films(self) -> list[LibraryFilm]:
-        """Every film the library holds, one entry per file."""
+    def films(self, audio: bool = False) -> list[LibraryFilm]:
+        """Every film the library holds, one entry per file; with `audio`, each with its audio tracks' languages,
+        which costs the server more and is asked for only by the nightly rebuild."""
         ...
 
     def synopsis(self, item_id: str) -> str | None:

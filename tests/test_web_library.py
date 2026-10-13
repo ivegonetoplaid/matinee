@@ -71,8 +71,8 @@ class FakeLibrary:
     no_synopsis: bool = False
     calls: list[tuple[str, Any]] = field(default_factory=list)
 
-    def films(self) -> list[LibraryFilm]:
-        self.calls.append(("films", None))
+    def films(self, audio: bool = False) -> list[LibraryFilm]:
+        self.calls.append(("films", audio))
         if self.down:
             raise LibraryError(f"Jellyfin could not be reached at {SECRET_URL}")
         if self.refused:
@@ -282,7 +282,7 @@ def test_the_film_list_is_reread_only_after_its_time(world: Any) -> None:
     client, library, clock, _ = world
     client.get("/api/film/5")
     client.get("/api/film/6")
-    assert [c for c in library.calls if c[0] == "films"] == [("films", None)]
+    assert [c for c in library.calls if c[0] == "films"] == [("films", False)]  # the live read never asks for audio
     clock.now += LIVE_TTL + 1
     client.get("/api/film/5")
     assert len([c for c in library.calls if c[0] == "films"]) == 2

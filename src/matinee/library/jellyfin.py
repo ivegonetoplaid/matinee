@@ -18,9 +18,12 @@ from collections.abc import Mapping
 from typing import Any
 
 from matinee import USER_AGENT
+from matinee.languages import audio_languages
 from matinee.library import REFUSED_CODES, Image, ImageKind, LibraryError, LibraryFilm, LibraryRefused
 
 FIELDS = "Genres,ProviderIds,ProductionYear,OfficialRating,RunTimeTicks,CommunityRating,Path"
+AUDIO_FIELDS = f"{FIELDS},MediaStreams"  # the film list with each item's streams: about five times the bytes
+AUDIO_PAGE = 5000  # items to a request when streams are read: a 4,124-film library is one request of 34 MB
 TICKS_PER_MINUTE = 600_000_000
 PATH_TMDB = re.compile(r"\{tmdb-(\d+)\}")
 TIMEOUT_S = 60
@@ -47,8 +50,17 @@ def _float_or_none(value: object) -> float | None:
     return float(value) if isinstance(value, int | float) else None
 
 
+def _audio(item: Mapping[str, Any]) -> frozenset[str] | None:
+    streams = item.get("MediaStreams")
+    tracks = (
+        [s for s in streams if isinstance(s, dict) and s.get("Type") == "Audio"] if isinstance(streams, list) else []
+    )
+    return audio_languages(t.get("Language") for t in tracks)
+
+
 def parse_film(item: Mapping[str, Any]) -> LibraryFilm:
-    """One Jellyfin movie item as a LibraryFilm; raises LibraryError when it has no id or name."""
+    """One Jellyfin movie item as a LibraryFilm, with its audio languages when the item carries its streams; raises
+    LibraryError when it has no id or name."""
     item_id, name = item.get("Id"), item.get("Name")
     if not isinstance(item_id, str) or not isinstance(name, str):
         raise LibraryError(f"a Jellyfin movie item has no Id or Name: keys {sorted(item)}")
@@ -64,6 +76,7 @@ def parse_film(item: Mapping[str, Any]) -> LibraryFilm:
         runtime_min=None if ticks is None else ticks / TICKS_PER_MINUTE,
         rating=_float_or_none(item.get("CommunityRating")),
         path_tmdb=int(tags[-1]) if tags else None,
+        audio=_audio(item),
     )
 
 
@@ -124,15 +137,12 @@ class JellyfinReader:
             raise LibraryError(f"Jellyfin answered a {kind} image request with {content_type or 'no type'}")
         return Image(body, content_type)
 
-    def films(self) -> list[LibraryFilm]:
+    def films(self, audio: bool = False) -> list[LibraryFilm]:
         """Every movie item, each film inside a collection included: Jellyfin 12 folds a collection's films into
         one collection item unless asked not to. An item that is not a movie is left out and counted in a warning,
-        since its TMDB id names something other than a film."""
-        query = f"IncludeItemTypes=Movie&Recursive=true&CollapseBoxSetItems=false&Fields={FIELDS}"
-        body = self._get_json(f"/Items?{query}")
-        items = body.get("Items") if isinstance(body, dict) else None
-        if not isinstance(items, list):
-            raise LibraryError("Jellyfin's film list has no Items array")
+        since its TMDB id names something other than a film. With `audio`, the list carries each item's streams and
+        is read AUDIO_PAGE items to a request, so a large library is never held in memory as one answer."""
+        items = self._items(AUDIO_FIELDS, AUDIO_PAGE) if audio else self._page(FIELDS, "")
         movies = [it for it in items if it.get("Type", "Movie") == "Movie"]
         if len(movies) < len(items):
             kinds = sorted({str(it.get("Type")) for it in items} - {"Movie"})
@@ -142,3 +152,21 @@ class JellyfinReader:
                 ", ".join(kinds),
             )
         return [parse_film(it) for it in movies]
+
+    def _page(self, fields: str, window: str) -> list[Mapping[str, Any]]:
+        """One answer of the film list, `window` its paging (empty for the whole list)."""
+        query = f"IncludeItemTypes=Movie&Recursive=true&CollapseBoxSetItems=false&Fields={fields}{window}"
+        body = self._get_json(f"/Items?{query}")
+        items = body.get("Items") if isinstance(body, dict) else None
+        if not isinstance(items, list):
+            raise LibraryError("Jellyfin's film list has no Items array")
+        return items
+
+    def _items(self, fields: str, size: int) -> list[Mapping[str, Any]]:
+        """The whole film list, `size` items to a request; a page shorter than `size` is the last."""
+        items: list[Mapping[str, Any]] = []
+        while True:
+            page = self._page(fields, f"&StartIndex={len(items)}&Limit={size}")
+            items += page
+            if len(page) < size:
+                return items

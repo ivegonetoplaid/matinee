@@ -1,20 +1,63 @@
-"""The languages the film table holds, which the language preference offers.
+"""The languages a film is in, and the languages the film table holds, which the language preference offers.
 
-A film holds its TMDB original language, a two-letter code. TMDB's own
-placeholder for a film with no language (`xx`) is never offered as a language,
-and a film carrying only it holds no known language.
+A film's TMDB original language is a two-letter code. A library copy's audio
+tracks carry their own tags, read by the nightly rebuild: a three-letter ISO
+639-2 code in either of its forms ("fre" and "fra" both), which `two_letter`
+turns into the two-letter code TMDB uses, from the shipped table
+(`data/languages.json`). A tag with no two-letter form, among them the
+placeholders "und" (undetermined), "zxx" (no linguistic content), "mul" and
+"mis", or a code the table does not hold, counts as untagged, and so does a
+track with no tag at all. TMDB's own placeholder for a film with no language
+(`xx`) is never offered as a language, and a film carrying only it holds no
+known language.
 """
 
 from __future__ import annotations
 
+import json
 from collections import Counter
+from collections.abc import Iterable
+from functools import cache
+from pathlib import Path
 
 import pandas as pd
+
+from matinee.reference import DATA
 
 PLACEHOLDERS = frozenset({"xx"})
 
 
+@cache
+def codes(path: Path = DATA / "languages.json") -> dict[str, str]:
+    """Each three-letter code with a two-letter form, and that form."""
+    found = json.loads(path.read_text(encoding="utf-8"))["codes"]
+    return {str(three): str(two) for three, two in found.items()}
+
+
+def two_letter(tag: object) -> str | None:
+    """The two-letter code an audio track's language tag names; None for an untagged track or a tag with no
+    two-letter form."""
+    if not isinstance(tag, str):
+        return None
+    word = tag.strip().lower()
+    if len(word) == 2 and word in codes().values():
+        return word
+    return codes().get(word)
+
+
+def audio_languages(tags: Iterable[object]) -> frozenset[str] | None:
+    """The languages a copy's audio tracks are tagged with; None when every track is untagged, or there are none."""
+    found = frozenset(code for code in map(two_letter, tags) if code is not None)
+    return found or None
+
+
 def held(films: pd.DataFrame) -> list[tuple[str, int]]:
-    """Each language the films hold, with how many films hold it: most films first, then by code."""
-    counts = Counter(str(code) for code in films["language"].dropna() if str(code) and str(code) not in PLACEHOLDERS)
+    """Each language the films are in, with how many films are in it, most films first, then by code. A film is in
+    its original language and in each language its library copy's audio tracks are tagged with, once for each."""
+    counts: Counter[str] = Counter()
+    for original, tracks in zip(films["language"], films["audio"], strict=True):
+        known = set(tracks) if isinstance(tracks, frozenset) else set()
+        if isinstance(original, str) and original and original not in PLACEHOLDERS:
+            known.add(original)
+        counts.update(known)
     return sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))

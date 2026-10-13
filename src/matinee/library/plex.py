@@ -19,9 +19,11 @@ import re
 import urllib.error
 import urllib.request
 from collections.abc import Iterator, Mapping
+from dataclasses import replace
 from typing import Any
 
 from matinee import USER_AGENT
+from matinee.languages import audio_languages
 from matinee.library import REFUSED_CODES, Image, ImageKind, LibraryError, LibraryFilm, LibraryRefused
 
 TIMEOUT_S = 60
@@ -38,6 +40,9 @@ IMAGE_SHAPES = {"poster": 1.5, "backdrop": 0.5625}  # height over width
 SMALL_IMAGE_PX = 160  # an image this wide or narrower is a wall tile, shown dimmed, so it is fetched lighter
 SMALL_IMAGE_QUALITY = 60
 IMAGE_QUALITY = 80
+AUDIO_STREAM = 2  # a stream's streamType for audio
+# Films whose details one request reads for their audio: measured on a 4,140-film library, 42 requests and 12.5 s.
+DETAILS_BATCH = 100
 
 
 log = logging.getLogger("matinee.library")
@@ -75,6 +80,13 @@ def _files(item: Mapping[str, Any]) -> Iterator[str]:
     for media in _tags(item, "Media"):
         for part in _tags(media, "Part"):
             yield str(part.get("file") or "")
+
+
+def audio_of(item: Mapping[str, Any]) -> frozenset[str] | None:
+    """The languages a Plex item's audio streams are tagged with, over every file it has; None when all are
+    untagged. Only an item's own details carry its streams; the section's film list never does."""
+    streams = (s for m in _tags(item, "Media") for p in _tags(m, "Part") for s in _tags(p, "Stream"))
+    return audio_languages(s.get("languageCode") for s in streams if s.get("streamType") == AUDIO_STREAM)
 
 
 def certificate(raw: object) -> str:
@@ -151,9 +163,10 @@ class PlexReader:
             raise LibraryError(f"not a Plex item id: {item_id!r}")
         return item_id
 
-    def films(self) -> list[LibraryFilm]:
+    def films(self, audio: bool = False) -> list[LibraryFilm]:
         """Every movie in every movie section. An item that is not a movie (a collection, which a section set to
-        show collections lists among its films) is left out and counted in a warning."""
+        show collections lists among its films) is left out and counted in a warning. With `audio`, each film's
+        details are read too, DETAILS_BATCH films to a request, for their audio streams."""
         sections = [d for d in self._container("/library/sections", "Directory") if d.get("type") == "movie"]
         films: list[LibraryFilm] = []
         for section in sections:
@@ -171,7 +184,17 @@ class PlexReader:
                     ", ".join(kinds),
                 )
             films.extend(parse_film(it) for it in movies)
-        return films
+        return self._with_audio(films) if audio else films
+
+    def _with_audio(self, films: list[LibraryFilm]) -> list[LibraryFilm]:
+        """The films, each with its audio languages from its details, read DETAILS_BATCH at a time."""
+        heard: dict[str, frozenset[str] | None] = {}
+        keys = [f.item_id for f in films]
+        for start in range(0, len(keys), DETAILS_BATCH):
+            batch = ",".join(self._item(k) for k in keys[start : start + DETAILS_BATCH])
+            for item in self._container(f"/library/metadata/{batch}", "Metadata"):
+                heard[str(item.get("ratingKey"))] = audio_of(item)
+        return [replace(f, audio=heard.get(f.item_id)) for f in films]
 
     def synopsis(self, item_id: str) -> str | None:
         items = self._container(f"/library/metadata/{self._item(item_id)}", "Metadata")
