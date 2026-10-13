@@ -2,7 +2,9 @@
 
 A profile holds a display name, an optional four-digit PIN, an optional avatar
 (one of `AVATARS`; two profiles may share one) and the DoesTheDogDie topics the
-viewer steers around. The store's `exclusions` column is no longer read or
+viewer steers around, its tailoring settings and whether it has seen the welcome,
+and it keeps ratings, hidden films and its last runs, all of which go with it.
+The store's `exclusions` column is no longer read or
 written; a new row takes its empty default. An
 avatar Matinee does not offer is refused when set and reads as none when found
 in the store. A note is a viewer's complaint about a pick, kept for whoever runs
@@ -233,7 +235,9 @@ class Store:
     def create(
         self, name: str, pin: str | None, topics: Iterable[int], avatar: str | None = None
     ) -> tuple[Profile, str]:
-        """A new profile and a device token for it; refuses a taken name, a bad PIN or avatar, or a full store."""
+        """A new profile and a device token for it; refuses a taken name, a bad PIN or avatar, or a full store.
+
+        A profile made now is marked as having seen the welcome: making it already offers the tailoring steps."""
         display, pin, avatar = clean_name(name), clean_pin(pin), clean_avatar(avatar)
         salt = secrets.token_bytes(16) if pin else None
         with closing(self._connect()) as db, db:
@@ -242,8 +246,8 @@ class Store:
                 raise StoreError("full", f"Matinee holds at most {MAX_PROFILES} profiles")
             try:
                 cur = db.execute(
-                    "INSERT INTO profiles (name, name_key, pin_salt, pin_hash, topics, created_at, avatar)"
-                    " VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    "INSERT INTO profiles (name, name_key, pin_salt, pin_hash, topics, created_at, avatar, welcomed)"
+                    " VALUES (?, ?, ?, ?, ?, ?, ?, 1)",
                     (
                         display,
                         name_key(display),
@@ -375,7 +379,8 @@ class Store:
         return _filed(row)
 
     def delete(self, profile_id: int, by: Sequence[str]) -> Profile:
-        """Delete a profile `by` holds, its topics and every device token issued for it; its notes stay."""
+        """Delete a profile `by` holds with everything it keeps: its settings, every device token issued for it, its
+        ratings, hidden films and runs. Its notes stay."""
         with closing(self._connect()) as db, db:
             row = self._held(db, profile_id, by)
             db.execute("DELETE FROM profiles WHERE id = ?", (profile_id,))
