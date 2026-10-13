@@ -44,6 +44,7 @@ from matinee.web.common import (
     AvatarChoice,
     Deleted,
     Door,
+    NameChoice,
     NewProfile,
     PinEntry,
     Seat,
@@ -373,6 +374,13 @@ def add_avatar_route(app: FastAPI, store: Store) -> None:
         return seat(store.set_avatar(profile_id, body.avatar, device_tokens(request)))
 
 
+def add_rename_route(app: FastAPI, store: Store) -> None:
+    @app.put("/api/profiles/{profile_id}/name")
+    def rename(profile_id: int, body: NameChoice, request: Request) -> Seat:
+        """A device holding the profile renames it, under the rules a new profile's name follows."""
+        return seat(store.rename(profile_id, body.name, device_tokens(request)))
+
+
 def add_delete_route(app: FastAPI, store: Store) -> None:
     @app.delete("/api/profiles/{profile_id}")
     def delete_profile(profile_id: int, request: Request, response: Response) -> Deleted:
@@ -602,6 +610,7 @@ def create_app(
     add_door_routes(app, theatre, store, clock, dtdd is not None, config.images)
     add_delete_route(app, store)
     add_avatar_route(app, store)
+    add_rename_route(app, store)
     topics_on = dtdd is not None
     picker = picker or Picker(dtdd, DeviceCap())
     if (picker.dtdd is None) != (dtdd is None):

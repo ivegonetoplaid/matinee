@@ -345,3 +345,32 @@ def test_a_write_never_lands_on_a_new_profile_that_reuses_a_deleted_ones_id(tmp_
     [left] = [p for p in store.everyone() if p.id == victim.id]
     assert (left.name, left.avatar, left.topics) == (victim.name, victim.avatar, victim.topics)
     assert store.notes() == []
+
+
+def test_a_profile_is_renamed_under_the_rules_of_a_new_name(store: Store) -> None:
+    ada, token = store.create("Ada", None, [])
+    store.create("Bo", None, [])
+    assert store.rename(ada.id, "  Ada   Lovelace ", [token]).name == "Ada Lovelace"
+    assert store.rename(ada.id, "ADA LOVELACE", [token]).name == "ADA LOVELACE"  # its own name in another case
+    for bad, code in (("bo", "name_taken"), ("", "bad_name"), ("x" * 41, "bad_name"), ("bell\x07", "bad_name")):
+        with pytest.raises(StoreError) as refused:
+            store.rename(ada.id, bad, [token])
+        assert refused.value.code == code
+    assert [p.name for p in store.everyone()] == ["ADA LOVELACE", "Bo"]
+
+
+def test_a_renamed_profile_is_named_anew_everywhere_and_only_its_holder_renames_it(door: Any) -> None:
+    client, store = door
+    me = client.post("/api/profiles", json={"name": "Ada"}).json()
+    client.post("/api/profiles", json={"name": "Bo"})
+    renamed = client.put(f"/api/profiles/{me['id']}/name", json={"name": "Grace"})
+    assert renamed.status_code == 200 and renamed.json()["name"] == "Grace"
+    assert sorted(p["name"] for p in client.get("/api/door").json()["profiles"]) == ["Bo", "Grace"]
+    assert client.post("/api/first", json={"viewer": {"profile_id": me["id"]}}).json()["name"] == "Grace"
+    taken = client.put(f"/api/profiles/{me['id']}/name", json={"name": "bo"})
+    assert (
+        taken.status_code == 409 and taken.json()["message"] == "Someone already goes by that name here. Try another?"
+    )
+    elsewhere = TestClient(client.app, base_url="https://testserver")
+    assert elsewhere.put(f"/api/profiles/{me['id']}/name", json={"name": "Mine"}).status_code == 403
+    assert held_names(client) == ["Bo", "Grace"]

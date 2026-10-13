@@ -6,7 +6,7 @@ from typing import Literal
 
 from fastapi import Request, Response
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from matinee.store import Profile
 
@@ -81,6 +81,11 @@ class NewProfile(BaseModel):
     pin: str | None = Field(default=None, max_length=8)
     avatar: str | None = Field(default=None, max_length=40)
     topics: list[int] = Field(default=[], max_length=400)
+
+
+class NameChoice(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    name: str = Field(max_length=80)
 
 
 class AvatarChoice(BaseModel):

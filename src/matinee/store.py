@@ -367,6 +367,21 @@ class Store:
         with closing(self._connect()) as db, db:
             return db.execute("UPDATE profiles SET topics = '[]' WHERE topics != '[]'").rowcount
 
+    def rename(self, profile_id: int, name: str, by: Sequence[str]) -> Profile:
+        """Rename a profile `by` holds, under the rules a new profile's name follows; its own name in another case is
+        allowed, and another profile's is refused as name_taken."""
+        display = clean_name(name)
+        with closing(self._connect()) as db, db:
+            self._held(db, profile_id, by)
+            try:
+                db.execute(
+                    "UPDATE profiles SET name = ?, name_key = ? WHERE id = ?", (display, name_key(display), profile_id)
+                )
+            except sqlite3.IntegrityError as exc:
+                raise StoreError("name_taken", "that name is already a profile") from exc
+            row = db.execute("SELECT * FROM profiles WHERE id = ?", (profile_id,)).fetchone()
+        return self._profile(row)
+
     def set_avatar(self, profile_id: int, avatar: str | None, by: Sequence[str]) -> Profile:
         """Set the avatar of a profile `by` holds, or clear it for initials; refuses an avatar not offered."""
         avatar = clean_avatar(avatar)
