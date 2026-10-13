@@ -57,7 +57,7 @@ from matinee.web.common import (
 )
 from matinee.web.config import Config, ImageSource
 from matinee.web.logbook import SERVER_NAMES, Quiet, StateLog
-from matinee.web.mine import add_rating_routes
+from matinee.web.mine import add_hide_routes, add_rating_routes
 from matinee.web.seerr import SeerrCheck
 from matinee.web.setup import BROKEN, SEERR_AWAY, SetupNote, library_away, note, rebuild_lines
 from matinee.web.theatre import UNUSABLE, NothingToShow, Theatre
@@ -615,6 +615,8 @@ def create_app(
     add_pick_routes(app, theatre, store, picker, topics_on, server, seerr)
     add_note_routes(app, theatre, store)
     add_quip_routes(app, lines)
-    add_rating_routes(app, theatre, Records(store))
+    records = Records(store)
+    add_rating_routes(app, theatre, records)
+    add_hide_routes(app, theatre, records)
     app.state.config = config
     return app

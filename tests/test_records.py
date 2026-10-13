@@ -1,9 +1,10 @@
-"""What a profile keeps of its own: the store's rules for ratings and short reviews, and their routes."""
+"""What a profile keeps of its own: the store's rules for ratings, short reviews and hidden films, and their routes."""
 
 from __future__ import annotations
 
 import sqlite3
 from collections.abc import Callable, Iterator
+from datetime import datetime
 from itertools import count
 from pathlib import Path
 from typing import Any
@@ -227,3 +228,120 @@ def test_another_device_is_refused_every_rating_route(door: Any) -> None:  # noq
     ]
     assert [(r.status_code, r.json()["code"]) for r in refusals] == [(403, "not_held")] * 4
     assert [(r["score"], r["review"]) for r in client.get(f"/api/profiles/{pid}/ratings").json()] == [(5, None)]
+
+
+@pytest.mark.parametrize(
+    ("at", "months", "until"),
+    [
+        ("2026-08-31T20:00:00+00:00", 6, "2027-02-28T20:00:00+00:00"),  # no 31st: the month's last day
+        ("2027-11-30T09:30:00+00:00", 3, "2028-02-29T09:30:00+00:00"),  # a leap February
+        ("2026-12-10T00:00:00+00:00", 3, "2027-03-10T00:00:00+00:00"),  # across the year
+        ("2026-01-15T12:00:00.250000+00:00", 12, "2027-01-15T12:00:00.250000+00:00"),
+    ],
+)
+def test_a_hide_ends_whole_calendar_months_later(at: str, months: int, until: str) -> None:
+    assert records_module.months_on(datetime.fromisoformat(at), months).isoformat() == until
+
+
+class Moment:
+    """The store's clock, set by the test."""
+
+    def __init__(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        self.at = "2026-10-13T18:00:00+00:00"
+        monkeypatch.setattr(records_module, "now", lambda: self.at)
+
+
+def test_a_film_is_hidden_for_each_length_and_read_back_with_its_return(two: Any, monkeypatch: Any) -> None:
+    records, _, (ada, token), _ = two
+    moment = Moment(monkeypatch)
+    for tmdb, length in ((5, "3m"), (6, "6m"), (7, "1y"), (8, "good")):
+        records.hide(ada, tmdb, length, [token])
+    assert [(h.tmdb, h.length, h.until) for h in records.hidden(ada, [token])] == [
+        (5, "3m", "2027-01-13T18:00:00+00:00"),
+        (6, "6m", "2027-04-13T18:00:00+00:00"),
+        (7, "1y", "2027-10-13T18:00:00+00:00"),
+        (8, "good", None),
+    ]
+    assert {h.at for h in records.hidden(ada, [token])} == {moment.at}
+
+
+@pytest.mark.parametrize("length", ["", "2y", "forever", "3M"])
+def test_a_hide_without_a_known_length_is_refused(two: Any, length: str) -> None:
+    records, _, (ada, token), _ = two
+    with pytest.raises(StoreError) as refused:
+        records.hide(ada, 5, length, [token])
+    assert refused.value.code == "bad_length"
+    assert records.hidden(ada, [token]) == []
+
+
+def test_hiding_a_hidden_film_again_replaces_its_length(two: Any, monkeypatch: Any) -> None:
+    records, _, (ada, token), _ = two
+    moment = Moment(monkeypatch)
+    records.hide(ada, 5, "good", [token])
+    moment.at = "2026-11-01T08:00:00+00:00"
+    assert records.hide(ada, 5, "3m", [token]).until == "2027-02-01T08:00:00+00:00"
+    assert [(h.tmdb, h.length, h.at, h.until) for h in records.hidden(ada, [token])] == [
+        (5, "3m", "2026-11-01T08:00:00+00:00", "2027-02-01T08:00:00+00:00")
+    ]
+
+
+def test_a_film_whose_hide_has_ended_drops_off_the_list(two: Any, monkeypatch: Any) -> None:
+    records, _, (ada, token), _ = two
+    moment = Moment(monkeypatch)
+    records.hide(ada, 5, "3m", [token])
+    moment.at = "2026-10-14T09:00:00+00:00"
+    records.hide(ada, 6, "good", [token])
+    moment.at = "2027-01-13T17:59:59+00:00"
+    assert [h.tmdb for h in records.hidden(ada, [token])] == [6, 5]  # newest hide first
+    moment.at = "2027-01-13T18:00:00+00:00"
+    assert [h.tmdb for h in records.hidden(ada, [token])] == [6]
+
+
+def test_a_film_brought_back_is_no_longer_hidden(two: Any) -> None:
+    records, _, (ada, token), _ = two
+    records.hide(ada, 5, "1y", [token])
+    records.hide(ada, 6, "good", [token])
+    assert records.unhide(ada, 5, [token]) is True
+    assert [h.tmdb for h in records.hidden(ada, [token])] == [6]
+    assert records.unhide(ada, 5, [token]) is False
+
+
+def test_one_profiles_hides_never_touch_or_reach_another(two: Any) -> None:
+    records, _, (ada, ada_token), (bo, bo_token) = two
+    records.hide(bo, 5, "good", [bo_token])
+    records.hide(ada, 5, "3m", [ada_token])
+    records.unhide(ada, 5, [ada_token])
+    assert [(h.tmdb, h.length) for h in records.hidden(bo, [bo_token])] == [(5, "good")]
+    assert records.hidden(ada, [ada_token]) == []
+    attempts: list[Callable[[], object]] = [
+        lambda: records.hide(bo, 6, "3m", [ada_token]),
+        lambda: records.unhide(bo, 5, [ada_token]),
+        lambda: records.hidden(bo, [ada_token]),
+    ]
+    for attempt in attempts:
+        with pytest.raises(StoreError) as refused:
+            attempt()
+        assert refused.value.code == "not_held"
+    assert [(h.tmdb, h.length) for h in records.hidden(bo, [bo_token])] == [(5, "good")]
+
+
+def test_the_hide_routes_hide_read_and_bring_back(door: Any) -> None:  # noqa: F811
+    client, _ = door
+    pid = me(client)
+    hid = client.put(f"/api/profiles/{pid}/hidden/5", json={"length": "good"})
+    assert hid.status_code == 200 and (hid.json()["length"], hid.json()["until"]) == ("good", None)
+    assert [h["tmdb"] for h in client.get(f"/api/profiles/{pid}/hidden").json()] == [5]
+    assert client.delete(f"/api/profiles/{pid}/hidden/5").json() == {"tmdb": 5, "cleared": True}
+    assert client.delete(f"/api/profiles/{pid}/hidden/5").json() == {"tmdb": 5, "cleared": False}
+    assert client.get(f"/api/profiles/{pid}/hidden").json() == []
+    for_now = client.put(f"/api/profiles/{pid}/hidden/6", json={"length": "6m"}).json()
+    assert for_now["until"] > for_now["at"]
+    assert [h["until"] for h in client.get(f"/api/profiles/{pid}/hidden").json()] == [for_now["until"]]
+    client.delete(f"/api/profiles/{pid}/hidden/6")
+    assert client.put(f"/api/profiles/{pid}/hidden/5", json={}).status_code == 422
+    assert client.put(f"/api/profiles/{pid}/hidden/5", json={"length": "2y"}).json()["code"] == "bad_length"
+    assert client.put(f"/api/profiles/{pid}/hidden/999999", json={"length": "3m"}).status_code == 404
+    elsewhere = TestClient(client.app, base_url="https://testserver")
+    assert elsewhere.put(f"/api/profiles/{pid}/hidden/5", json={"length": "3m"}).status_code == 403
+    assert elsewhere.get(f"/api/profiles/{pid}/hidden").status_code == 403
+    assert client.get(f"/api/profiles/{pid}/hidden").json() == []

@@ -1,4 +1,4 @@
-"""What a profile keeps of its own: its ratings and their short reviews.
+"""What a profile keeps of its own: its ratings and their short reviews, and the films it has hidden.
 
 Everything here is private to the profile. Only a device holding one of its
 tokens reads or writes it, and every write checks that in the same store
@@ -13,14 +13,22 @@ so a later sync never sends a rating that did not change. A rating may carry a
 short review: one line of plain text, at most `MAX_REVIEW` characters. A longer
 one is refused, never cut. Changing only the short review does not change the
 rating's time. A rating does not, by itself, keep a film out of any pick.
+
+A hidden film is one the profile asked Matinee not to pick, for a length the
+viewer chose each time: three months, six months, a year (calendar months from
+the moment it was hidden, the day clamped to the month's last) or for good.
+Hiding a film already hidden replaces its length. A hide whose end has passed
+no longer hides the film, and the film drops off the profile's list.
 """
 
 from __future__ import annotations
 
+import calendar
 import sqlite3
 import unicodedata
 from collections.abc import Sequence
 from dataclasses import dataclass
+from datetime import datetime
 
 from matinee.store import Store, StoreError, now
 
@@ -30,6 +38,20 @@ SCORES = range(1, 6)
 # A short review is one line: control characters (tab, newline, carriage return, next line) and the line and
 # paragraph separators are refused. Format characters stay, since every joined emoji carries one.
 LINE_BREAKING = frozenset({"Cc", "Zl", "Zp"})
+
+
+# Each hide length, as the store keeps it, and how many months it lasts; None lasts for good.
+LENGTHS: dict[str, int | None] = {"3m": 3, "6m": 6, "1y": 12, "good": None}
+
+
+@dataclass(frozen=True)
+class Hidden:
+    """A film the profile has hidden: the length chosen, when, and when it comes back (None for good)."""
+
+    tmdb: int
+    length: str
+    at: str
+    until: str | None
 
 
 @dataclass(frozen=True)
@@ -58,6 +80,26 @@ def clean_review(raw: str | None) -> str | None:
     if len(text) > MAX_REVIEW or any(unicodedata.category(c) in LINE_BREAKING for c in text):
         raise StoreError("bad_review", f"a short review is one line of at most {MAX_REVIEW} characters")
     return text
+
+
+def months_on(at: datetime, months: int) -> datetime:
+    """The same moment `months` calendar months later; a day the later month lacks becomes its last day."""
+    total = at.month - 1 + months
+    year, month = at.year + total // 12, total % 12 + 1
+    return at.replace(year=year, month=month, day=min(at.day, calendar.monthrange(year, month)[1]))
+
+
+def hide_until(at: str, length: str) -> str | None:
+    """When a hide of `length` made at `at` ends, in the store's time format; None for good. Refuses an unknown
+    length, so a hide always names one."""
+    if length not in LENGTHS:
+        raise StoreError("bad_length", "a hide lasts 3 months, 6 months, 1 year or for good")
+    months = LENGTHS[length]
+    return None if months is None else months_on(datetime.fromisoformat(at), months).isoformat()
+
+
+def _hidden(row: sqlite3.Row) -> Hidden:
+    return Hidden(tmdb=int(row["tmdb"]), length=str(row["length"]), at=str(row["at"]), until=row["until"])
 
 
 def _rating(row: sqlite3.Row) -> Rating:
@@ -120,3 +162,31 @@ class Records:
                 "SELECT * FROM ratings WHERE profile_id = ? ORDER BY at DESC, tmdb", (profile_id,)
             ).fetchall()
         return [_rating(r) for r in rows]
+
+    def hide(self, profile_id: int, tmdb: int, length: str, by: Sequence[str]) -> Hidden:
+        """Hide a film from the profile's picks for `length`, replacing any hide it already has."""
+        at = now()
+        until = hide_until(at, length)
+        with self._store.writing(profile_id, by) as db:
+            db.execute(
+                "INSERT INTO hidden (profile_id, tmdb, length, at, until) VALUES (?, ?, ?, ?, ?)"
+                " ON CONFLICT (profile_id, tmdb) DO UPDATE"
+                " SET length = excluded.length, at = excluded.at, until = excluded.until",
+                (profile_id, tmdb, length, at, until),
+            )
+        return Hidden(tmdb=tmdb, length=length, at=at, until=until)
+
+    def unhide(self, profile_id: int, tmdb: int, by: Sequence[str]) -> bool:
+        """Bring a hidden film back to the profile's picks; False when it was not hidden."""
+        with self._store.writing(profile_id, by) as db:
+            gone = db.execute("DELETE FROM hidden WHERE profile_id = ? AND tmdb = ?", (profile_id, tmdb)).rowcount
+        return gone > 0
+
+    def hidden(self, profile_id: int, by: Sequence[str]) -> list[Hidden]:
+        """The films the profile has hidden whose hide has not ended, newest hide first."""
+        with self._store.reading(profile_id, by) as db:
+            rows = db.execute(
+                "SELECT * FROM hidden WHERE profile_id = ? AND (until IS NULL OR until > ?) ORDER BY at DESC, tmdb",
+                (profile_id, now()),
+            ).fetchall()
+        return [_hidden(r) for r in rows]

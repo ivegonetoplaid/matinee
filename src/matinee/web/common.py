@@ -35,6 +35,7 @@ PROFILE_LINES = {
     "bad_score": "I only know five answers, from Loved it! down to Hated it.",
     "bad_review": "Short and sweet, please. About 20 words.",
     "not_rated": "Rate it first, then tell me why.",
+    "bad_length": "Pick how long: 3 months, 6 months, 1 year or for good.",
 }
 
 
