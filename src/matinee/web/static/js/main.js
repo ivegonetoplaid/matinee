@@ -8,7 +8,7 @@ import { LockedDoor, WALL_FADE_MS } from "./locked.js";
 import { clear, h, isPhone, prefersLessMotion, sentenceCase, wait } from "./dom.js";
 import { cornerMark } from "./flight.js";
 import { pickPanel } from "./panel.js";
-import { asPick, newestFirst, remember } from "./run.js";
+import { asPick, newestFirst, remember, runKey, shownBody } from "./run.js";
 import { answerRows, forget, stepBack, wayTo } from "./way-back.js";
 import { showPick } from "./pick.js";
 import { posterPaths } from "./pictures.js";
@@ -43,6 +43,7 @@ const visit = {
   pool: [],
   trees: [],
   run: [], // the films this run has shown on screen, oldest first (run.js)
+  runKey: null, // the key the server keeps this run's history under, new at every run's start
 };
 
 const CHECKING = "Let me check this one against your list.";
@@ -371,7 +372,7 @@ function lockedDoor(greeting) {
 // Going in: the start is asked for at once, while the door's name flies to the wordmark's place, and the
 // first question types once it has landed.
 async function enter({ viewer, name, avatar, profileTopics, door }) {
-  Object.assign(visit, { viewer, name, avatar, profileTopics, run: [] });
+  Object.assign(visit, { viewer, name, avatar, profileTopics, run: [], runKey: runKey() });
   const request = post("/api/first", { viewer });
   landing = door;
   await door.leave([nameTag()].filter(Boolean));
@@ -399,7 +400,7 @@ function freshWalk(first) {
 
 // "Start over" and the wordmark: a new run, which forgets the films shown, from the walk's first screen.
 function startOver() {
-  visit.run = [];
+  Object.assign(visit, { run: [], runKey: runKey() });
   return start();
 }
 
@@ -744,6 +745,17 @@ function backPanel() {
   return [rows.length ? h("p", { class: "panel-section" }, "Change an answer") : null, rows, shown, h("div", { class: "panel-foot" }, again)];
 }
 
+// Keeps a film shown on screen in the profile's history, under the run its walk names. A failure costs only the
+// history line, so it is logged and the pick goes on.
+function keepShown(shown) {
+  const run = shown.walk.run;
+  const body = shownBody(shown);
+  if (!run || !body) return;
+  post(`/api/profiles/${shown.walk.profileId}/runs/${run}/films`, body).then((res) => {
+    if (!res.ok) console.warn("a film shown could not be kept in the history", res.data);
+  });
+}
+
 // What the pick screen's controls do.
 function pickActions() {
   return {
@@ -763,6 +775,7 @@ function pickActions() {
     backPanel,
     remember: (shown) => {
       visit.run = remember(visit.run, shown);
+      keepShown(shown);
     },
     failed: (data) => problem(data, start),
     noteLink: (film, panel, walk) => noteLink({ walk, film, trees: visit.trees, panel }),

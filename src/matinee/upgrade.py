@@ -31,8 +31,10 @@ SHAPE = 2
 
 # What a profile keeps of its own, from shape 2. A rating is 1 ("Hated it") to 5 ("Loved it!") with when and where it
 # was made, the outside service's own value for an imported one, and an optional short review. A hidden film's `until`
-# is empty when it is hidden for good. A run keeps its door and answers as a note takes them, and the films it showed:
-# a film shown again in the same run moves to the end and loses its mark (its row's `seq` and `mark` are rewritten).
+# is empty when it is hidden for good. A run keeps when it began and the films it showed, each with the walk that
+# reached it (its door and answers as a note takes them, what each said, whether "Just pick one!" ended them) and what
+# the viewer did with it there; `before` holds the mark a hide replaced, which its "Undo" restores. A film shown again
+# in the same run moves to the end and keeps its mark (its row's `seq` and walk are rewritten).
 RECORDS = (
     """CREATE TABLE ratings (
     profile_id INTEGER NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
@@ -59,9 +61,6 @@ RECORDS = (
     profile_id INTEGER NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
     run_key TEXT NOT NULL,
     began TEXT NOT NULL,
-    tree TEXT,
-    answers TEXT NOT NULL DEFAULT '[]',
-    says TEXT NOT NULL DEFAULT '[]',
     UNIQUE (profile_id, run_key)
 )""",
     """CREATE TABLE run_films (
@@ -69,6 +68,11 @@ RECORDS = (
     seq INTEGER NOT NULL,
     tmdb INTEGER NOT NULL,
     mark TEXT CHECK (mark IS NULL OR mark IN ('rated', 'hid', 'reported')),
+    before TEXT CHECK (before IS NULL OR before IN ('rated', 'reported')),
+    tree TEXT,
+    answers TEXT NOT NULL DEFAULT '[]',
+    says TEXT NOT NULL DEFAULT '[]',
+    rushed INTEGER NOT NULL DEFAULT 0 CHECK (rushed IN (0, 1)),
     PRIMARY KEY (run_id, tmdb)
 )""",
 )

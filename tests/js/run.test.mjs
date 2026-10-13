@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { asPick, kept, newestFirst, remember } from "../../src/matinee/web/static/js/run.js";
+import { asPick, kept, newestFirst, remember, runKey, shownBody } from "../../src/matinee/web/static/js/run.js";
 
 const shown = (tmdb) => ({ film: { tmdb, title: `Film ${tmdb}`, year: 2000 } });
 
@@ -56,4 +56,35 @@ test("a kept film comes back exactly as first shown: its line and credit, note, 
   // Brought back, shown again and kept again, it still comes back with its credit.
   const twice = asPick(kept({ film: first.film, result: again.result, door: again.door, walk: again.walk, said: { ...first.said } }));
   assert.equal(twice.lines.credit, true);
+});
+
+test("each run's key is 32 hex digits and new every time", () => {
+  const keys = new Set(Array.from({ length: 50 }, () => runKey()));
+  assert.equal(keys.size, 50);
+  for (const key of keys) assert.match(key, /^[0-9a-f]{32}$/);
+});
+
+test("the history keeps a shown film with its walk, never its words or its line", () => {
+  const walk = { profileId: 3, run: "k", tree: "west", answers: [{ question: "era", option: 0 }], says: ["old."], rushed: true, firstSay: "Cowboys." };
+  assert.deepEqual(shownBody({ film: { tmdb: 5, title: "Five" }, walk, said: { gold: "x" } }), {
+    tmdb: 5,
+    tree: "west",
+    answers: [{ question: "era", option: 0 }],
+    rushed: true,
+  });
+});
+
+const ordinary = { film: { tmdb: 7, title: "Seven" }, result: { link: "l" }, door: "west", walk: { tree: "west", answers: [], rushed: false }, said: {} };
+
+test("a film the check turned away, shown on asking, stays out of the history even when brought back", () => {
+  const asked = kept({ ...ordinary, result: { link: "l", last: { film: { tmdb: 7 } } } });
+  assert.equal(shownBody(asked), null);
+  const again = kept({ ...ordinary, result: asPick(asked).result });
+  assert.equal(shownBody(again), null);
+});
+
+test("an ordinary film brought back from the Back panel is kept again", () => {
+  const first = kept(ordinary);
+  assert.deepEqual(shownBody(first), { tmdb: 7, tree: "west", answers: [], rushed: false });
+  assert.deepEqual(shownBody(kept({ ...ordinary, result: asPick(first).result })), shownBody(first));
 });

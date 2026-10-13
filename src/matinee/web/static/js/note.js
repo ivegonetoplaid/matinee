@@ -51,6 +51,7 @@ function send(walk, film, kind, belongs, comment) {
     rushed: walk.rushed,
     comment,
     belongs: kind === "genre" ? belongs : [],
+    run: walk.run ?? null,
   });
 }
 
@@ -59,12 +60,12 @@ function noted([gold, cream]) {
   return [h("span", { class: "ack" }, gold), " ", h("span", { class: "ask" }, cream)];
 }
 
-// The walk a pick was drawn under, as the note records it: the profile, the door, the answers and their words, and
-// whether "Just pick one!" ended the questions. Taken when the film is shown, so a film brought back later is noted
-// under the walk it first came from.
+// The walk a pick was drawn under, as the note records it: the profile, the run, the door, the answers and their
+// words, and whether "Just pick one!" ended the questions. Taken when the film is shown, so a film brought back later
+// is noted under the walk it first came from.
 export function walkOf(visit) {
-  const { tree, answers, says, rushed, firstSay } = visit;
-  return { profileId: visit.viewer.profile_id, tree, answers: [...answers], says: [...says], rushed, firstSay };
+  const { tree, answers, says, rushed, firstSay, runKey } = visit;
+  return { profileId: visit.viewer.profile_id, run: runKey, tree, answers: [...answers], says: [...says], rushed, firstSay };
 }
 
 // "Wrong pick?": opens the pick's panel with the note's form. Null on a pick that came through no door. The form is

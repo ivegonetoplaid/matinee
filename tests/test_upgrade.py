@@ -275,14 +275,14 @@ REFUSED_ROWS = [
     "INSERT INTO ratings VALUES (1, 5, 2, 'later', 'matinee', NULL, NULL)",
     "INSERT INTO hidden VALUES (1, 5, 'good', 'later', NULL)",
     "INSERT INTO runs (profile_id, run_key, began) VALUES (1, 'r1', 'later')",
-    "INSERT INTO run_films VALUES (1, 1, 6, 'liked')",
+    "INSERT INTO run_films (run_id, seq, tmdb, mark) VALUES (1, 1, 6, 'liked')",
 ]
 # Rows the refusals above stand beside: one rating, one hidden film and one run, all Ada's.
 KEPT_ROWS = [
     "INSERT INTO ratings VALUES (1, 5, 3, 'now', 'matinee', NULL, NULL)",
     "INSERT INTO hidden VALUES (1, 5, '3m', 'now', 'later')",
     "INSERT INTO runs (id, profile_id, run_key, began) VALUES (1, 1, 'r1', 'now')",
-    "INSERT INTO run_films VALUES (1, 0, 5, 'rated')",
+    "INSERT INTO run_films (run_id, seq, tmdb, mark) VALUES (1, 0, 5, 'rated')",
 ]
 
 
@@ -316,7 +316,7 @@ def keep_records(path: Path, profile_id: int, tmdb: int) -> None:
         run = db.execute(
             "INSERT INTO runs (profile_id, run_key, began) VALUES (?, ?, 'now')", (profile_id, f"run-{profile_id}")
         ).lastrowid
-        db.execute("INSERT INTO run_films VALUES (?, 0, ?, NULL)", (run, tmdb))
+        db.execute("INSERT INTO run_films (run_id, seq, tmdb) VALUES (?, 0, ?)", (run, tmdb))
 
 
 def test_deleting_a_profile_takes_everything_it_keeps_but_its_notes(tmp_path: Path) -> None:

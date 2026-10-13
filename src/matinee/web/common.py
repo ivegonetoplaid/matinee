@@ -36,6 +36,7 @@ PROFILE_LINES = {
     "bad_review": "Short and sweet, please. About 20 words.",
     "not_rated": "Rate it first, then tell me why.",
     "bad_length": "Pick how long: 3 months, 6 months, 1 year or for good.",
+    "bad_run": "I lost track of this run. Start over and I'll keep up.",
 }
 
 

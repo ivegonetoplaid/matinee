@@ -21,6 +21,7 @@ from pydantic import BaseModel, Field
 from matinee.dtdd import Dtdd, DtddError
 from matinee.engine import Answer, Catalog, Source, Viewer, first_question, gentlest, opening_pool, walk
 from matinee.pick import Pick, Picker, candidates
+from matinee.records import Records, clean_run
 from matinee.store import Note, Profile, Store
 from matinee.trees import Tree
 from matinee.web.common import COOKIE_AGE_S, Seat, device_tokens, optional_int, over_https, problem, seat
@@ -147,6 +148,7 @@ class NoteIn(BaseModel):
     rushed: bool = False
     comment: str = Field(default="", max_length=500)
     belongs: list[str] = Field(default=[], max_length=32)  # "Not <genre> at all": where the film belongs
+    run: str | None = Field(default=None, max_length=64)  # the run the pick showed it in, where it is marked reported
 
 
 class FilmRef(BaseModel):
@@ -432,11 +434,13 @@ def check_belongs(cat: Catalog, body: NoteIn) -> None:
         raise HTTPException(status_code=400, detail="refused")
 
 
-def add_note_routes(app: FastAPI, theatre: Theatre, store: Store) -> None:
+def add_note_routes(app: FastAPI, theatre: Theatre, store: Store, records: Records) -> None:
     @app.post("/api/notes")
     def note(body: NoteIn, request: Request) -> NoteOut:
         """Keep a viewer's note on a pick for whoever runs Matinee; it changes nothing any viewer is shown."""
         held_profile(request, store, body.profile_id)
+        if body.run is not None:
+            clean_run(body.run)  # refused before the note is kept, never after
         cat = theatre.showing().catalog
         tree = cat.trees.get(body.tree)
         if tree is None or body.tmdb not in cat.table.films.index:
@@ -446,6 +450,7 @@ def add_note_routes(app: FastAPI, theatre: Theatre, store: Store) -> None:
         comment, belongs = body.comment.strip(), tuple(body.belongs)
         note = Note(body.profile_id, body.tmdb, body.tree, body.kind, path, body.rushed, comment, belongs)
         store.note(note, device_tokens(request))
+        records.report(body.profile_id, body.run, body.tmdb, device_tokens(request))
         return NoteOut(lines=NOTED)
 
 
