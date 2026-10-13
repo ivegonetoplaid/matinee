@@ -32,8 +32,8 @@ import json
 import secrets
 import sqlite3
 import unicodedata
-from collections.abc import Iterable, Sequence
-from contextlib import closing
+from collections.abc import Iterable, Iterator, Sequence
+from contextlib import closing, contextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -197,7 +197,8 @@ def _pin_digest(pin: str, salt: bytes) -> bytes:
     return hashlib.scrypt(pin.encode(), salt=salt, **SCRYPT)
 
 
-def _now() -> str:
+def now() -> str:
+    """The time as the store keeps it: ISO 8601 in UTC."""
     return datetime.now(UTC).isoformat()
 
 
@@ -229,7 +230,7 @@ class Store:
         cutoff = datetime.fromtimestamp(datetime.now(UTC).timestamp() - TOKEN_LIFE_S, UTC).isoformat()
         db.execute("DELETE FROM tokens WHERE created_at < ?", (cutoff,))
         token = secrets.token_urlsafe(32)
-        db.execute("INSERT INTO tokens VALUES (?, ?, ?)", (_digest(token), profile_id, _now()))
+        db.execute("INSERT INTO tokens VALUES (?, ?, ?)", (_digest(token), profile_id, now()))
         return token
 
     def create(
@@ -254,7 +255,7 @@ class Store:
                         salt,
                         _pin_digest(pin, salt) if pin and salt else None,
                         json.dumps(sorted(set(topics))),
-                        _now(),
+                        now(),
                         avatar,
                     ),
                 )
@@ -285,7 +286,16 @@ class Store:
         return [self._profile(r) for r in rows]
 
     @staticmethod
-    def _held(db: sqlite3.Connection, profile_id: int, tokens: Sequence[str]) -> sqlite3.Row:
+    def _issued(db: sqlite3.Connection, profile_id: int, tokens: Sequence[str]) -> sqlite3.Row | None:
+        """The profile, when one of these device tokens is issued for it; None otherwise."""
+        issued = {str(r[0]) for r in db.execute("SELECT token_hash FROM tokens WHERE profile_id = ?", (profile_id,))}
+        held: sqlite3.Row | None = db.execute("SELECT * FROM profiles WHERE id = ?", (profile_id,)).fetchone()
+        if held is None or not issued & {_digest(t) for t in tokens}:
+            return None
+        return held
+
+    @classmethod
+    def _held(cls, db: sqlite3.Connection, profile_id: int, tokens: Sequence[str]) -> sqlite3.Row:
         """The profile, inside the caller's write transaction, when one of these device tokens is issued for it.
 
         Checking and writing in one transaction means a profile deleted, and its id reused by a new profile,
@@ -293,11 +303,27 @@ class Store:
         device's tokens.
         """
         db.execute("BEGIN IMMEDIATE")
-        issued = {str(r[0]) for r in db.execute("SELECT token_hash FROM tokens WHERE profile_id = ?", (profile_id,))}
-        held: sqlite3.Row | None = db.execute("SELECT * FROM profiles WHERE id = ?", (profile_id,)).fetchone()
-        if held is None or not issued & {_digest(t) for t in tokens}:
+        held = cls._issued(db, profile_id, tokens)
+        if held is None:
             raise StoreError("not_held", "this device holds no token for that profile")
         return held
+
+    @contextmanager
+    def writing(self, profile_id: int, by: Sequence[str]) -> Iterator[sqlite3.Connection]:
+        """One write transaction on what a profile keeps, opened only for a profile one of the tokens `by` is issued
+        for, and committed when the block ends without an error."""
+        with closing(self._connect()) as db, db:
+            self._held(db, profile_id, by)
+            yield db
+
+    @contextmanager
+    def reading(self, profile_id: int, by: Sequence[str]) -> Iterator[sqlite3.Connection]:
+        """A connection that reads what a profile keeps, opened only for a profile one of the tokens `by` is issued
+        for."""
+        with closing(self._connect()) as db:
+            if self._issued(db, profile_id, by) is None:
+                raise StoreError("not_held", "this device holds no token for that profile")
+            yield db
 
     def set_topics(self, profile_id: int, topics: Iterable[int], by: Sequence[str]) -> Profile:
         """Replace the saved DoesTheDogDie topics of a profile one of the device tokens `by` is issued for."""
@@ -336,7 +362,7 @@ class Store:
                     json.dumps(list(n.path)),
                     int(n.rushed),
                     n.comment,
-                    _now(),
+                    now(),
                     json.dumps(sorted(set(n.belongs))),
                 ),
             )
@@ -374,7 +400,7 @@ class Store:
                 raise StoreError("no_note", f"no note {note_id}")
             db.execute(
                 "UPDATE notes SET status = ?, reason = ?, ruling = ?, ruled_at = ? WHERE id = ?",
-                (status, reason, kept, _now(), note_id),
+                (status, reason, kept, now(), note_id),
             )
         return _filed(row)
 

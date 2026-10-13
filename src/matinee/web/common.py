@@ -32,6 +32,9 @@ PROFILE_LINES = {
     "not_held": "I can't find that one any more.",
     "wrong_pin": "That PIN isn't right.",
     "locked": "Too many wrong PINs. That profile is locked for {minutes} minutes.",
+    "bad_score": "I only know five answers, from Loved it! down to Hated it.",
+    "bad_review": "Short and sweet, please. About 20 words.",
+    "not_rated": "Rate it first, then tell me why.",
 }
 
 
