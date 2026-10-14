@@ -1,7 +1,7 @@
 // "Rate it": the pick's panel with the five answers, best first, and beneath them one line for a short review. An
 // answer saves at once. The short review waits for a rating, takes at most MAX_REVIEW characters (counted as the
 // store counts them, by code point, so an emoji is one), shows how many remain over the last REVIEW_WARN, and saves
-// on Enter or its own Save. A keystroke past the limit is refused: the field's edge turns rose and fades, it shakes
+// itself: PAUSE_MS after typing stops, on leaving the field, or on Enter, then says "✓ Saved" in the field. A keystroke past the limit is refused: the field's edge turns rose and fades, it shakes
 // (not under reduced motion), and a line asks for about 20 words. A review is shown and kept as plain text.
 
 import { put } from "./api.js";
@@ -14,6 +14,7 @@ const REVIEW_WARN = 20;
 const TRIP_MS = 2200; // how long the rose edge and the line stay before they fade
 const FADE_MS = 400;
 const TOO_LONG = "Short and sweet, please. About 20 words.";
+const PAUSE_MS = 1000; // how long typing must stop before the short review saves itself
 
 // The length of a short review as the store counts it.
 export const length = (text) => [...text].length;
@@ -28,6 +29,29 @@ export function fitted(value, before) {
 export function roomLeft(value) {
   const left = MAX_REVIEW - length(value);
   return left <= REVIEW_WARN ? `${left} left` : "";
+}
+
+// The short review's saving. `soon(text)` after each keystroke saves once typing has paused for `wait`; `now(text)`
+// (leaving the field, Enter) saves at once. Saves run one at a time in the order asked, and a text the store already
+// holds is not sent again. `save(text)` resolves to the page's { ok, data } answer, which `done(res, text)` hears.
+export function autosaver(save, done, kept, wait = PAUSE_MS) {
+  let timer = 0;
+  let queue = Promise.resolve();
+  const now = (text) => {
+    clearTimeout(timer);
+    queue = queue.then(async () => {
+      if (text === kept) return;
+      const res = await save(text);
+      if (res.ok) kept = text;
+      done(res, text);
+    });
+    return queue;
+  };
+  const soon = (text) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => now(text), wait);
+  };
+  return { soon, now };
 }
 
 function answerButtons(current, onPick) {
@@ -53,8 +77,8 @@ export function ratePanel({ film, rating, save, onSaved }) {
   input.value = rating?.review ?? "";
   const room = h("span", { class: "review-room", id: "review-room" });
   const trip = h("p", { class: "review-trip", id: "review-trip", role: "alert" });
-  const send = h("button", { class: "action gold", type: "button" }, "Save");
-  const box = h("div", { class: "review-field" }, input, room, send);
+  const saved = h("span", { class: "review-saved", role: "status" });
+  const box = h("div", { class: "review-field" }, input, room, saved);
   let typed = input.value;
   let tripTimer = 0;
   const say = (text) => {
@@ -63,7 +87,6 @@ export function ratePanel({ film, rating, save, onSaved }) {
   const ready = () => {
     const off = !current;
     input.disabled = off;
-    send.disabled = off;
     box.classList.toggle("off", off);
   };
   const tripped = () => {
@@ -90,6 +113,8 @@ export function ratePanel({ film, rating, save, onSaved }) {
     }
     typed = input.value;
     room.textContent = roomLeft(typed);
+    saved.textContent = "";
+    if (current) review.soon(typed);
   });
   input.addEventListener("beforeinput", (e) => {
     if (e.inputType.startsWith("insert") && e.data && length(typed) + length(e.data) > MAX_REVIEW && input.selectionStart === input.selectionEnd) {
@@ -97,19 +122,19 @@ export function ratePanel({ film, rating, save, onSaved }) {
       tripped();
     }
   });
-  let saving = false; // Save stays enabled while a save runs, so the keyboard's focus stays on it
-  const saveReview = async () => {
-    if (saving || !current) return undefined;
-    saving = true;
-    const res = await save.review(input.value);
-    saving = false;
-    if (!res.ok) return say(res.data.message);
-    current = res.data;
-    onSaved(current);
-    clearTimeout(tripTimer);
-    box.classList.remove("tripped");
-    trip.textContent = "";
-    return say(current.review ? "Short review saved." : "Short review cleared.");
+  const review = autosaver(
+    save.review,
+    (res, text) => {
+      if (!res.ok) return say(res.data.message);
+      current = res.data;
+      onSaved(current);
+      if (text === input.value) saved.textContent = text ? "✓ Saved" : "✓ Cleared"; // not over newer typing
+      return say("");
+    },
+    input.value,
+  );
+  const saveReview = () => {
+    if (current) review.now(input.value);
   };
   // A phone's keyboard can cover the field: it scrolls into the panel's view as it takes the focus.
   input.addEventListener("focus", () => box.scrollIntoView({ block: "nearest" }));
@@ -119,7 +144,7 @@ export function ratePanel({ film, rating, save, onSaved }) {
       saveReview();
     }
   });
-  send.addEventListener("click", saveReview);
+  input.addEventListener("blur", saveReview);
   const answers = answerButtons(current?.score ?? null, async (score) => {
     const res = await save.score(score);
     if (!res.ok) return say(res.data.message);

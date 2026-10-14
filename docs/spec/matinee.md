@@ -1997,7 +1997,7 @@ page's actions. New actions follow those meanings.
 | "Just pick one!" (the questions) | gold |
 | "Roll again" | gold |
 | "Just show me what you picked" | gold |
-| "Save" (a note, a short review) | gold |
+| "Save" (a note) | gold |
 | "Show me" (the welcome), "Let's go" (what's new) | gold |
 | "Change my settings" (the empty pool) | gold |
 | "‹ Back to picking" (My profile) | gold |
@@ -2857,10 +2857,12 @@ the film information area on both desktop and phone.
   kept on My profile, where you can change it.", then the five answers stacked
   best first, "Loved it!" at the top, the viewer's current one checked; then
   "Short review (optional)" over a single-line field ("This movie will melt
-  your brain" until written in) with its own "Save". An answer saves at once
+  your brain" until written in), with no Save of its own. An answer saves at once
   and says "Saved. Add a short review if you like.". The field waits for a
-  rating, inactive until the film has one. It saves on Enter or "Save" ("Short
-  review saved.", or "Short review cleared." when emptied), and holds the
+  rating, inactive until the film has one. It saves itself one second after
+  typing stops, on leaving the field, and on Enter, one save at a time and never
+  a text already saved; "✓ Saved" (or "✓ Cleared" when emptied) then shows in
+  the field until typing resumes. It holds the
   viewer's short review when the panel opens, so it can be changed or cleared.
   It counts as the store does (section 7.4) and never takes a 141st character:
   over the last 20 it says how many are left ("12 left"), and a keystroke past
@@ -3890,7 +3892,7 @@ describing it wrongly, never by naming something gone.
 - `src/matinee/web/static/js/overlay.js::openOverlay` / `load` / `overlayPanel` / `posterSide` / `aboutFilm` / `overlayActions` (the poster overlay)
 - `src/matinee/web/static/js/overlay.js::keptWalk` / `noteWalk` / `FROM_PICKS` (how a film was found; a note from the overlay names no run)
 - `src/matinee/web/static/js/tailor.js::tailorSteps` / `OFFER` / `STEPS` / `stepKeys` / `stepFor` / `singleStep` / `languagesStep` / `topicsStep` / `WELCOME` / `WHATS_NEW` (the tailoring steps and the welcome's words)
-- `src/matinee/web/static/js/rate.js::rateLink` / `ratePanel` / `fitted` / `roomLeft` / `length` / `MAX_REVIEW` ("Rate it" and its field's rules)
+- `src/matinee/web/static/js/rate.js::rateLink` / `ratePanel` / `fitted` / `roomLeft` / `length` / `MAX_REVIEW` / `autosaver` / `PAUSE_MS` ("Rate it" and its field's rules; the review saves itself)
 - `src/matinee/web/static/js/hide.js::hideLink` / `undoLink` / `LENGTHS` ("Hide film" and "Undo")
 - `src/matinee/web/static/js/household.js::householdLine` / `nameButton` / `readingPanel` / `personRow` / `focusShown` (the household's line and reading panel)
 - `src/matinee/web/static/js/ratings.js::ANSWERS` / `said` / `answerOf` (the five answers; the shared sentence)

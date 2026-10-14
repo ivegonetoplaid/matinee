@@ -1442,7 +1442,8 @@ a.wordmark:focus-visible {
   color: var(--dim);
 }
 
-/* The short review's line: the field, how many characters remain over the last twenty, and its own Save. A
+/* The short review's line: the field, how many characters remain over the last twenty, and "✓ Saved" once it has
+   saved itself. A
    keystroke past the limit gives it a rose edge that fades, and a shake, which reduced motion leaves out. */
 .review-field {
   display: flex;
@@ -1510,6 +1511,13 @@ a.wordmark:focus-visible {
   flex: none;
   font-size: 13px;
   color: var(--dim);
+}
+
+.review-saved {
+  flex: none;
+  padding-right: 8px;
+  font-size: 14px;
+  color: var(--gold);
 }
 
 .review-trip {
