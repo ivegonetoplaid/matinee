@@ -1171,7 +1171,9 @@ check, `/api/admission`. Every other route answers `401 not_admitted`, with the
 usual headers. The protection is sized for a household film picker.
 
 - **Admission.** The right word sets the cookie `matinee_admit` (`HttpOnly`,
-  `Secure`, `SameSite=Lax`, path `/`, 400 days). Its value is the time it was
+  `SameSite=Lax`, path `/`, 400 days, and `Secure` over HTTPS exactly as the
+  token cookie is: over plain `http://` a `Secure` admission would be discarded
+  and the door would never open). Its value is the time it was
   issued and an HMAC-SHA256 over that time, the match mode and the door word,
   keyed by the installation's secret. Only the server can make or check one: a
   value set by hand admits nothing, and holding one gives no way of testing

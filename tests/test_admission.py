@@ -105,6 +105,14 @@ def test_the_right_word_admits_the_device_for_400_days(tmp_path: Path) -> None:
     assert client.get("/api/admission").json() == {"locked": True, "admitted": True, "greeting": GREETINGS["gin"]}
 
 
+def test_the_right_word_over_plain_http_admits_on_the_next_request(tmp_path: Path) -> None:
+    """A LAN installation on http:// keeps its admission cookie; a Secure one is dropped and the door never opens."""
+    client = TestClient(make_app(tmp_path), base_url="http://testserver")
+    resp = client.post("/api/admission", json={"word": WORD})
+    assert "Secure" not in resp.headers["set-cookie"]
+    assert client.get("/api/door").status_code == 200
+
+
 def test_an_admission_ends_after_400_days(tmp_path: Path) -> None:
     clock = Clock()
     client = client_of(make_app(tmp_path, clock=clock))

@@ -49,6 +49,7 @@ from matinee.web.common import (
     Tile,
     device_tokens,
     optional_int,
+    over_https,
     problem,
     seat,
     set_tokens,
@@ -439,7 +440,7 @@ def add_admission(app: FastAPI, admission: Admission, greeting: str, clock: Call
                     admission.issue(clock()),
                     max_age=ADMISSION_LIFE_S,
                     path="/",
-                    secure=True,
+                    secure=over_https(request),
                     httponly=True,
                     samesite="lax",
                 )

@@ -101,5 +101,5 @@ missing decisions rather than choosing silently:
 `TMDB_TOKEN` and `DATA_DIR` are required; the shipped Compose file supplies
 `DATA_DIR=/state`. Keep persistent storage mounted at that path. Matinee
 reads the process environment, not `.env` directly; the installation guide
-explains how it receives it. Use HTTPS for the admission cookie and
-follow the guide's proxy precautions when exposing the site.
+explains how it receives it. Use HTTPS and follow the guide's proxy precautions
+when exposing the site to the internet.
