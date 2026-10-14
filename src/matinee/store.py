@@ -207,6 +207,11 @@ def _filed(row: sqlite3.Row) -> FiledNote:
     )
 
 
+def shown_avatar(stored: object) -> str | None:
+    """An avatar as the page shows it: one Matinee offers, or None (the initials) for anything else found stored."""
+    return stored if isinstance(stored, str) and stored in AVATARS else None
+
+
 def clean_avatar(avatar: str | None) -> str | None:
     if avatar is not None and avatar not in AVATARS:
         raise StoreError("bad_avatar", "that avatar is not one Matinee offers")
@@ -246,7 +251,7 @@ class Store:
             name=str(row["name"]),
             has_pin=row["pin_hash"] is not None,
             topics=frozenset(int(t) for t in json.loads(row["topics"])),
-            avatar=row["avatar"] if row["avatar"] in AVATARS else None,
+            avatar=shown_avatar(row["avatar"]),
             floor=str(row["floor"]),
             languages=frozenset(str(code) for code in json.loads(row["languages"])),
             rated_out=int(row["rated_out"]),

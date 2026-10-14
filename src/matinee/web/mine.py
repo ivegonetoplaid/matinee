@@ -12,7 +12,7 @@ from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field
 
 from matinee.languages import held
-from matinee.records import Hidden, Mark, Rating, Records, Run, Walk
+from matinee.records import Hidden, Mark, Rating, Records, Run, Shared, Walk
 from matinee.store import Profile, Settings, Store
 from matinee.web.common import device_tokens
 from matinee.web.theatre import Theatre
@@ -61,6 +61,19 @@ class RatingOut(BaseModel):
     review: str | None
 
 
+class SharedOut(BaseModel):
+    """Another profile's shared rating of a film: its name, avatar (null for initials), answer and short review."""
+
+    name: str
+    avatar: str | None
+    score: int
+    review: str | None
+
+
+def shared_out(r: Shared) -> SharedOut:
+    return SharedOut(name=r.name, avatar=r.avatar, score=r.score, review=r.review)
+
+
 class Cleared(BaseModel):
     tmdb: int
     cleared: bool  # False when there was nothing to clear
@@ -82,6 +95,12 @@ def add_rating_routes(app: FastAPI, theatre: Theatre, records: Records) -> None:
     def ratings(profile_id: int, request: Request) -> list[RatingOut]:
         """Every rating the held profile has made, newest first."""
         return [rating_out(r) for r in records.ratings(profile_id, device_tokens(request))]
+
+    @app.get("/api/profiles/{profile_id}/shared/{tmdb}")
+    def shared(profile_id: int, tmdb: int, request: Request) -> list[SharedOut]:
+        """The household's shared ratings of a film, newest first, for a device holding the asking profile; never
+        that profile's own, and nothing of a profile whose sharing is off."""
+        return [shared_out(r) for r in records.shared(profile_id, tmdb, device_tokens(request))]
 
     @app.put("/api/profiles/{profile_id}/ratings/{tmdb}")
     def rate(profile_id: int, tmdb: int, body: ScoreIn, request: Request) -> RatingOut:

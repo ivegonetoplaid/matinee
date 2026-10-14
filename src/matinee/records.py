@@ -12,7 +12,9 @@ Saving the answer a film already has records nothing and keeps the first time,
 so a later sync never sends a rating that did not change. A rating may carry a
 short review: one line of plain text, at most `MAX_REVIEW` characters. A longer
 one is refused, never cut. Changing only the short review does not change the
-rating's time. A rating does not, by itself, keep a film out of any pick.
+rating's time. A rating does not, by itself, keep a film out of any pick. While
+a profile's sharing is on, its every rating and short review reach the other
+profiles of the household (`Records.shared`); while it is off, none does.
 
 A hidden film is one the profile asked Matinee not to pick, for a length the
 viewer chose each time: three months, six months, a year (calendar months from
@@ -43,7 +45,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Literal, cast, get_args
 
-from matinee.store import Store, StoreError, now
+from matinee.store import Store, StoreError, now, shown_avatar
 
 SOURCE = "matinee"
 MAX_RUNS = 50
@@ -68,6 +70,17 @@ class Hidden:
     length: str
     at: str
     until: str | None
+
+
+@dataclass(frozen=True)
+class Shared:
+    """Another profile's rating of a film, as the household sees it: who, their avatar, the answer and the short
+    review."""
+
+    name: str
+    avatar: str | None
+    score: int
+    review: str | None
 
 
 @dataclass(frozen=True)
@@ -245,6 +258,26 @@ class Records:
                 raise StoreError("not_rated", "a short review needs a rating of the film first")
             row = db.execute(RATING, (profile_id, tmdb)).fetchone()
         return _rating(row)
+
+    def shared(self, profile_id: int, tmdb: int, by: Sequence[str]) -> list[Shared]:
+        """The ratings of a film by every other profile whose sharing is on, newest first, for a device holding
+        `profile_id`; never that profile's own rating, and nothing of a profile whose sharing is off."""
+        with self._store.reading(profile_id, by) as db:
+            rows = db.execute(
+                "SELECT p.name, p.avatar, r.score, r.review"
+                " FROM ratings AS r JOIN profiles AS p ON p.id = r.profile_id"
+                " WHERE r.tmdb = ? AND p.sharing = 1 AND p.id != ? ORDER BY r.at DESC, p.name_key",
+                (tmdb, profile_id),
+            ).fetchall()
+        return [
+            Shared(
+                name=str(r["name"]),
+                avatar=shown_avatar(r["avatar"]),
+                score=int(r["score"]),
+                review=r["review"],
+            )
+            for r in rows
+        ]
 
     def ratings(self, profile_id: int, by: Sequence[str]) -> list[Rating]:
         """Every rating the profile has made, newest first."""
