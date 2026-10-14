@@ -118,7 +118,7 @@ export function noteLink({ walk, film, trees, panel }) {
       return undefined;
     }
     say(res.data.message);
-    save.disabled = false;
+    save.disabled = res.data.error === "walk_gone"; // the walk has gone for good, so the note can never be taken
     return undefined;
   });
   const body = h("div", { class: "note-form" }, form, status, foot);

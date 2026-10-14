@@ -41,6 +41,7 @@ export const PARTS = [
     short: "Past picks",
     title: "Films I've picked for you",
     meta: "Your last 50 picks, by day. Open a day to see the films.",
+    phoneMeta: "Last 50 picks",
     empty: "No picks yet. Once I pick something for you, it shows up here.",
     count: (mine) => mine.runs.length,
   },
@@ -53,7 +54,7 @@ const LONG_NAME = 14; // a name longer than this is set smaller in the menu, so 
 export const DELETE_LINE = "Your ratings, hidden films, history and settings go with it. Any notes you sent stay with whoever runs Matinee.";
 const TAKEN = "name_taken";
 
-let shown = null; // { layer, opener, then } while My profile is open
+let shown = null; // { layer, opener, then, page, fills } while My profile is open
 
 // Closes My profile and shows the theatre as it stood. Runs on the browser's back, which "‹ Back to picking" and
 // Escape also go through; `then` is what the viewer chose to do next (switching profiles, after a delete).
@@ -285,28 +286,33 @@ function frame({ viewer, avatars, actions, phone }) {
 
 // Each part's count in its jump, and each part's body, from the viewer's records. A phone's jump bar names past picks
 // without a count, as its board draws it. A part that loses records as the viewer acts calls `recount(n)`, which
-// sets its jump's count and, at none, puts back its empty line.
-function fill({ built, jumps, notice }, mine, { parts, viewer, phone }) {
+// sets its jump's count and, at none, puts back its empty line. `only` names the parts to fill, all when null.
+function fill({ built, jumps, notice }, mine, { parts, viewer, phone }, only = null) {
   if (mine.problem) {
     notice.textContent = sentenceCase(mine.problem);
     notice.hidden = false;
   }
   PARTS.forEach((p, i) => {
-    const n = p.count?.(mine) ?? 0;
-    if (p.count && !(phone && p.id === "shown")) jumps[i].count.textContent = String(n);
-    if (n) built[i].body.querySelector(".part-empty")?.remove(); // the part has records, though no body shows them yet
-    const recount = (left) => {
-      if (p.count && !(phone && p.id === "shown")) jumps[i].count.textContent = String(left);
-      if (!left && p.empty) built[i].body.replaceChildren(h("p", { class: "part-empty" }, p.empty));
-    };
-    parts[p.id]?.(built[i].body, mine, { viewer, recount });
+    if (!only || only.includes(p.id)) fillPart(p, built[i].body, jumps[i], mine, { parts, viewer, phone });
   });
+}
+
+function fillPart(p, body, jump, mine, { parts, viewer, phone }) {
+  const counted = p.count && !(phone && p.id === "shown");
+  const recount = (left) => {
+    if (counted) jump.count.textContent = String(left);
+    if (!left && p.empty) body.replaceChildren(h("p", { class: "part-empty" }, p.empty));
+  };
+  const n = p.count?.(mine) ?? 0;
+  if (counted) jump.count.textContent = String(n);
+  if (n) body.querySelector(".part-empty")?.remove(); // the part has records, though no body shows them yet
+  parts[p.id]?.(body, mine, { viewer, recount });
 }
 
 // Puts the page over the theatre, on an entry of its own in the browser's history, at the part `at` when one is named.
 function showPage(page, opener, at, then) {
   listen();
-  shown = { layer: page.layer, opener, then };
+  shown = { layer: page.layer, opener, then, page, fills: null };
   history.pushState({ profile: true }, "");
   document.body.append(page.layer);
   cover(true);
@@ -324,5 +330,24 @@ export async function openProfile({ viewer, avatars, actions, parts = {}, at = n
   const page = frame({ viewer, avatars, actions, phone });
   showPage(page, opener, at, then);
   const mine = await records(viewer.id);
-  if (shown?.layer === page.layer) fill(page, mine, { parts, viewer, phone });
+  if (shown?.layer !== page.layer) return;
+  shown.fills = { parts, viewer, phone };
+  fill(page, mine, shown.fills);
 }
+
+// The films parts drawn again from the viewer's records, read afresh, as after a rating or hide made from the overlay;
+// the settings stay as they stand.
+const FILMS = ["rated", "hidden", "shown"];
+export async function refreshFilms() {
+  if (!shown?.fills) return;
+  const { page, fills } = shown;
+  const mine = await records(fills.viewer.id);
+  if (shown?.page !== page) return;
+  PARTS.forEach((p, i) => {
+    if (FILMS.includes(p.id)) page.built[i].body.replaceChildren(p.empty ? h("p", { class: "part-empty" }, p.empty) : "");
+  });
+  fill(page, mine, fills, FILMS);
+}
+
+// The layer My profile stands on, for a surface that opens over it; null while it is closed.
+export const profileLayer = () => shown?.layer ?? null;

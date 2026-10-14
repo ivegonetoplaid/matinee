@@ -58,8 +58,8 @@ function glowUnder(box) {
 }
 
 // A film's case. `score` picks a rating's case, or none for a bare frame; `poster` is the poster's address; `label`
-// is what a screen reader hears. With `onOpen` the case is a button that opens the film; without, a picture.
-export function filmCase({ title, poster, score = null, label, onOpen = null }) {
+// is what a screen reader hears. With `onOpen(opener)` the case is a button that opens the film; without, a picture.
+export function filmCase({ tmdb = null, title, poster, score = null, label, onOpen = null }) {
   const kind = CASES[score] ? `case case-${CASES[score]}` : "case bare";
   const parts = [
     h("span", { class: "plate", "aria-hidden": "true" }, title),
@@ -67,7 +67,7 @@ export function filmCase({ title, poster, score = null, label, onOpen = null }) 
     score === 5 ? ["sheen", "edge warm", "edge cool", "bloom"].map((light) => h("span", { class: light })) : null,
   ];
   const box = onOpen
-    ? h("button", { class: kind, type: "button", "aria-label": label, onclick: onOpen }, parts)
+    ? h("button", { class: kind, type: "button", "aria-label": label, "data-tmdb": tmdb, onclick: (e) => onOpen(e.currentTarget) }, parts)
     : h("div", { class: kind, role: "img", "aria-label": label }, parts);
   if (score === 5) {
     shimmerOnce(box);
@@ -89,8 +89,8 @@ const filmsCount = (n) => `${n} ${n === 1 ? "film" : "films"}`;
 export function ratedPart(body, ratings, { poster, phone, onOpen = null }) {
   const rows = tiers(ratings).map((t) => {
     const cases = t.films.map((r) => {
-      const open = onOpen ? () => onOpen(r) : null;
-      const box = filmCase({ title: r.title, poster: poster(r.tmdb), score: r.score, label: `${r.title}, ${t.say}`, onOpen: open });
+      const open = onOpen ? (opener) => onOpen(r, opener) : null;
+      const box = filmCase({ tmdb: r.tmdb, title: r.title, poster: poster(r.tmdb), score: r.score, label: `${r.title}, ${t.say}`, onOpen: open });
       return h("div", { class: "rated-film" }, box, !phone && r.review ? h("p", { class: "rated-review" }, r.review) : null);
     });
     return h(
@@ -113,8 +113,8 @@ export function hiddenUntil(until, today = new Date()) {
 }
 
 // "Films you've hidden": each film in a bare case, greyed, with when it comes back and "Bring back", which brings it
-// back at once and takes it off the part. `recount(n)` hears how many are left.
-export function hiddenPart(body, hidden, { id, poster, recount }) {
+// back at once and takes it off the part. `recount(n)` hears how many are left; `onOpen(film, opener)` opens a film.
+export function hiddenPart(body, hidden, { id, poster, recount, onOpen }) {
   const row = h("div", { class: "hidden-films" });
   const status = h("p", { class: "set-status", role: "status" });
   const items = hidden.map((f) => {
@@ -122,7 +122,7 @@ export function hiddenPart(body, hidden, { id, poster, recount }) {
     const item = h(
       "div",
       { class: "hidden-film" },
-      filmCase({ title: f.title, poster: poster(f.tmdb), label: `${f.title}, hidden` }),
+      filmCase({ tmdb: f.tmdb, title: f.title, poster: poster(f.tmdb), label: `${f.title}, ${hiddenUntil(f.until)}`, onOpen: (opener) => onOpen(f, opener) }),
       h("p", { class: "hidden-until" }, hiddenUntil(f.until)),
       back,
     );

@@ -143,15 +143,15 @@ export function ratePanel({ film, rating, save, onSaved }) {
 
 // "Rate it" on the pick: opens the panel for `film`. `household` is the pick's shared ratings and the viewer's own
 // (`mine`), kept current as the viewer rates, so the reading panel shows the new rating. A rating made here names the
-// run, where the film is marked rated.
-export function rateLink({ film, panel, profileId, run, household }) {
+// run, where the film is marked rated; My profile's overlay names none. `saved(rating)` hears each saved change.
+export function rateLink({ film, panel, profileId, run, household, saved = () => {} }) {
   const path = `/api/profiles/${profileId}/ratings/${film.tmdb}`;
   const save = {
     score: (score) => put(path, { score, run }),
     review: (text) => put(`${path}/review`, { review: text }),
   };
   const open = panelAction("Rate it", () =>
-    panel.open(open, "Rate it", ...ratePanel({ film, rating: household.mine, save, onSaved: (r) => Object.assign(household, { mine: r }) })),
+    panel.open(open, "Rate it", ...ratePanel({ film, rating: household.mine, save, onSaved: (r) => saved(Object.assign(household, { mine: r }).mine) })),
   );
   return open;
 }

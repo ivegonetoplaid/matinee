@@ -8,6 +8,8 @@ store in the same transaction as any write; any other device is refused as
 
 from __future__ import annotations
 
+from typing import Any
+
 from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -204,6 +206,8 @@ class WalkOut(BaseModel):
 
 class ShownOut(BaseModel):
     tmdb: int
+    title: str
+    year: int | None
     mark: Mark | None  # rated, hid or reported on the pick; null when the viewer did none of those
     walk: WalkOut
 
@@ -237,9 +241,15 @@ def walk_out(walk: Walk) -> WalkOut:
     return WalkOut(tree=walk.tree, answers=answers, says=list(walk.says), rushed=walk.rushed)
 
 
-def run_out(run: Run) -> RunOut:
-    films = [ShownOut(tmdb=f.tmdb, mark=f.mark, walk=walk_out(f.walk)) for f in run.films]
-    return RunOut(began=run.began, walk=walk_out(run.walk), films=films)
+def run_out(run: Run, table_films: Any) -> RunOut | None:
+    """A kept run with each film's title and year; a film that has left the film table stays stored and is not
+    shown, and a run left with no film is not shown either."""
+    films = [
+        ShownOut(**film_ref(table_films, f.tmdb).model_dump(), mark=f.mark, walk=walk_out(f.walk))
+        for f in run.films
+        if f.tmdb in table_films.index
+    ]
+    return RunOut(began=run.began, walk=walk_out(run.walk), films=films) if films else None
 
 
 def add_run_routes(app: FastAPI, theatre: Theatre, records: Records) -> None:
@@ -253,7 +263,9 @@ def add_run_routes(app: FastAPI, theatre: Theatre, records: Records) -> None:
     @app.get("/api/profiles/{profile_id}/runs")
     def runs(profile_id: int, request: Request) -> list[RunOut]:
         """The held profile's kept runs, newest first."""
-        return [run_out(r) for r in records.history(profile_id, device_tokens(request))]
+        films = theatre.showing().catalog.table.films
+        kept = (run_out(r, films) for r in records.history(profile_id, device_tokens(request)))
+        return [r for r in kept if r is not None]
 
 
 class SettingsIn(BaseModel):

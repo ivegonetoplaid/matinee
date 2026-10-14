@@ -18,6 +18,7 @@ ErrorCode = Literal[
     "topics_unavailable",
     "not_admitted",
     "wrong_word",
+    "walk_gone",
 ]
 TOKENS_COOKIE = "matinee_tokens"
 MAX_TOKENS = 8

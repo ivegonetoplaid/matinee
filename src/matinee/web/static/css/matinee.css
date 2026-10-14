@@ -4305,6 +4305,514 @@ button.case {
   outline-offset: 4px;
 }
 
+/* "Films I've picked for you": a shelf per day, a ticket stub beside a head that opens and folds it. */
+.day {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr);
+  gap: 0 20px;
+  padding: 12px 0;
+  border-top: 1px solid color-mix(in srgb, var(--gold) 22%, transparent);
+}
+
+.day:first-child {
+  border-top: 0;
+}
+
+.day-stub {
+  position: relative;
+  display: block;
+  width: 84px;
+  padding: 10px 8px 8px;
+  border-radius: 6px;
+  background: var(--strip);
+  box-shadow: inset 0 -3px 0 var(--strip-lo);
+  color: var(--strip-ink);
+  text-align: center;
+  cursor: pointer;
+}
+
+.day-stub::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 26px;
+  left: 0;
+  border-top: 2px dashed var(--cream-thread);
+}
+
+.stub-dow {
+  display: block;
+  font: 800 14px var(--display);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.stub-date {
+  display: block;
+  font: 900 36px/1 var(--display);
+}
+
+.stub-month {
+  display: block;
+  margin-top: 14px;
+  font-size: 12px;
+}
+
+.day-body {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-width: 0;
+}
+
+.day-head {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  min-height: 56px;
+  padding: 10px 16px;
+  border: 1px solid var(--enamel-rim);
+  border-radius: 10px;
+  background: var(--enamel);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.day-head:hover {
+  border-color: color-mix(in srgb, var(--gold) 60%, transparent);
+}
+
+.day-head:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+.day-words {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+
+.day-long {
+  font: 800 20px var(--display);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--cream-vivid);
+}
+
+.day-long .day-count {
+  color: var(--gold-words);
+  white-space: nowrap;
+}
+
+.day-caps {
+  overflow: hidden;
+  font-size: 14px;
+  color: color-mix(in srgb, var(--text) 75%, transparent);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.day-peek {
+  display: flex;
+  flex: none;
+  gap: 4px;
+}
+
+.day-peek img {
+  width: 30px;
+  height: 45px;
+  border-radius: 2px;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--black) 60%, transparent);
+  object-fit: cover;
+}
+
+.day.open .day-peek {
+  display: none;
+}
+
+.day-toggle {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--gold-words);
+}
+
+/* The chevron: two strokes of a turned square, pointing down while the day is folded and up while it is open. */
+.chev {
+  width: 9px;
+  height: 9px;
+  margin-top: -4px;
+  border-right: 2.4px solid currentcolor;
+  border-bottom: 2.4px solid currentcolor;
+  transform: rotate(45deg);
+  transition: transform 0.25s ease;
+}
+
+.day.open .chev {
+  margin-top: 4px;
+  transform: rotate(-135deg);
+}
+
+.day-runs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px 0;
+}
+
+.day-runs[hidden] {
+  display: none;
+}
+
+.run {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 0 22px;
+  border-left: 1px solid color-mix(in srgb, var(--gold) 55%, transparent);
+}
+
+.run-asked {
+  margin: 0;
+  font-size: 14px;
+  color: color-mix(in srgb, var(--text) 80%, transparent);
+}
+
+.run-asked-lead {
+  color: var(--gold-words);
+}
+
+.run-films {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.shown-film {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 118px;
+}
+
+.shown-film .case {
+  width: 100%;
+}
+
+.shown-did {
+  margin: 0;
+  text-wrap: pretty;
+  font-size: 12px;
+  line-height: 1.35;
+  color: color-mix(in srgb, var(--text) 75%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chev {
+    transition: none;
+  }
+}
+
+/* The poster overlay: one wide surface over My profile, the film in its case at full height on the left, its words
+   and actions on the right. A sheet over the whole screen on a phone. */
+.overlay-back {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  background: color-mix(in srgb, var(--base) 86%, transparent);
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 21;
+  display: flex;
+  gap: 40px;
+  width: min(1120px, 92vw);
+  height: min(700px, 90vh);
+  margin: auto;
+  padding: 28px;
+  border: 1px solid var(--enamel-rim);
+  border-radius: 14px;
+  background: linear-gradient(180deg, var(--menu), var(--panel));
+  box-shadow: 0 30px 80px color-mix(in srgb, var(--black) 70%, transparent);
+  animation: grow 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes grow {
+  from {
+    opacity: 0;
+    scale: 0.93;
+  }
+}
+
+/* The poster side is as wide as a case standing the overlay's full height, less the link beneath it (a case is 600
+   by 932), and never more than two fifths of the overlay; past that its case is narrower and shorter. */
+.overlay-poster {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  width: min(40%, (min(700px, 90vh) - 56px - 52px) * 600 / 932);
+  height: 100%;
+}
+
+.overlay-poster .case {
+  width: 100%;
+  height: auto;
+}
+
+.overlay-link {
+  display: block;
+  padding: 10px;
+  border: 1px solid var(--strip-edge);
+  border-radius: 8px;
+  background: var(--base);
+  color: var(--petrol-vivid);
+  font-size: 15px;
+  font-weight: 600;
+  text-align: center;
+  text-decoration: none;
+}
+
+.overlay-link:hover,
+.overlay-link:focus-visible {
+  color: var(--petrol-vivid);
+  text-decoration: underline;
+}
+
+.overlay-words {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+  padding: 6px 44px 0 0;
+  overflow: auto;
+}
+
+.overlay-title {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font: 900 clamp(34px, 4vw, 58px) / 0.95 var(--display);
+  color: var(--cream-vivid);
+}
+
+/* The overlay's rank is plain words, as the board draws it: none of the pick's display face or wall scrim. */
+.overlay .rank::before {
+  content: none;
+}
+
+.overlay .rank-words {
+  font: 600 18px var(--body);
+  letter-spacing: 0;
+}
+
+.overlay-status {
+  margin: 0;
+  font-size: 15px;
+  color: var(--gold-words);
+}
+
+.overlay-status:empty {
+  display: none;
+}
+
+.overlay-title .film-year {
+  font-size: 28px;
+  color: color-mix(in srgb, var(--text) 60%, transparent);
+}
+
+.overlay-title:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 4px;
+}
+
+.overlay-synopsis {
+  margin: 0;
+  font-size: 18px;
+  line-height: 1.55;
+  color: color-mix(in srgb, var(--text) 92%, transparent);
+}
+
+.overlay-rule {
+  height: 1px;
+  margin: 4px 0;
+  background: color-mix(in srgb, var(--gold) 45%, transparent);
+}
+
+.overlay-said {
+  margin: 0;
+  font-size: 15px;
+  color: color-mix(in srgb, var(--text) 80%, transparent);
+}
+
+.overlay-lead {
+  color: var(--gold-words);
+}
+
+/* The actions stay at the words' foot while the words scroll above them. */
+.overlay-actions {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: auto;
+  padding: 10px 0 2px;
+  background: var(--panel);
+}
+
+/* On a desktop the words and × the panel stands over are not drawn while it is open, as on the pick. */
+@media (min-width: 601px) {
+  .overlay:has(> .pick-panel) > :is(.overlay-words, .overlay-close) {
+    opacity: 0;
+  }
+}
+
+/* The note's "Save" keeps the panel's foot while the form scrolls. */
+.note-form .panel-foot {
+  position: sticky;
+  bottom: 0;
+  background: var(--menu);
+}
+
+.overlay-close {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: 28px;
+  cursor: pointer;
+}
+
+.overlay-close:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: -4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .overlay {
+    animation: none;
+  }
+}
+
+@media (max-width: 600px) {
+  .overlay {
+    flex-direction: column;
+    gap: 0;
+    width: auto;
+    height: auto;
+    padding: 0;
+    overflow-y: auto;
+    border: 0;
+    border-radius: 0;
+    background: var(--panel);
+  }
+
+  .overlay-poster {
+    align-items: center;
+    gap: 8px;
+    width: auto;
+    height: auto;
+    padding: 14px 0 0;
+  }
+
+  .overlay-poster .case {
+    width: min(250px, 64vw);
+    height: auto;
+  }
+
+  .overlay-link {
+    width: min(250px, 64vw);
+    padding: 9px;
+    font-size: 13px;
+  }
+
+  .overlay-words {
+    flex: 1 0 auto;
+    gap: 8px;
+    padding: 12px 18px 0;
+    overflow: visible;
+  }
+
+  .overlay-title {
+    font-size: 34px;
+  }
+
+  .overlay-title .film-year {
+    font-size: 20px;
+  }
+
+  .overlay-synopsis {
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .overlay-said {
+    font-size: 13px;
+  }
+
+  /* The actions stay at the sheet's foot while the words scroll above them. */
+  .overlay-actions {
+    position: sticky;
+    bottom: 0;
+    flex-wrap: nowrap;
+    gap: 8px;
+    margin: auto -18px 0;
+    padding: 10px 16px 16px;
+    border-top: 1px solid var(--strip-edge);
+    background: var(--panel);
+  }
+
+  .overlay-actions > .action {
+    flex: 1;
+    padding-inline: 4px;
+    white-space: nowrap;
+  }
+
+  /* The × stays at the sheet's top right on a small backing while the sheet scrolls. */
+  .overlay-close {
+    position: sticky;
+    top: 6px;
+    align-self: flex-end;
+    order: -1;
+    margin: 6px 6px -50px 0;
+    border-radius: 8px;
+    background: var(--shade);
+    z-index: 1;
+  }
+
+  .overlay .rank-words {
+    font-size: 15px;
+  }
+
+  .overlay {
+    animation-name: rise-in;
+    animation-duration: 0.3s;
+  }
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    translate: 0 40px;
+  }
+}
+
 /* "Films you've rated": a row per rating, its words and count beside its films. */
 .tier {
   display: grid;
@@ -4409,6 +4917,92 @@ button.case {
     scrollbar-width: none;
   }
 
+  /* A phone's day: the stub inside the head, the films of each run in a row to swipe. */
+  .day {
+    display: block;
+  }
+
+  .day:first-child {
+    padding-top: 0;
+  }
+
+  .day-head {
+    gap: 12px;
+    min-height: 64px;
+    padding: 8px 12px 8px 8px;
+  }
+
+  .day-head .day-stub {
+    flex: none;
+    width: 56px;
+    padding: 6px 4px 4px;
+  }
+
+  .day-head .day-stub::after {
+    bottom: 16px;
+  }
+
+  .day-head .stub-dow {
+    font-size: 11px;
+  }
+
+  .day-head .stub-date {
+    font-size: 26px;
+  }
+
+  .day-head .stub-month {
+    margin-top: 6px;
+    font-size: 9px;
+  }
+
+  .day-words {
+    gap: 4px;
+  }
+
+  .day-words .day-count {
+    font: 800 16px var(--display);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--gold-words);
+  }
+
+  .day-words .day-long {
+    font: 12px var(--body);
+    letter-spacing: 0;
+    text-transform: none;
+    color: color-mix(in srgb, var(--text) 75%, transparent);
+  }
+
+  .day-peek {
+    gap: 3px;
+  }
+
+  .day-peek img {
+    width: 22px;
+    height: 33px;
+  }
+
+  .day-toggle {
+    gap: 6px;
+    font-size: 14px;
+  }
+
+  .day-runs {
+    flex-flow: column nowrap;
+    gap: 10px;
+    padding-top: 12px;
+  }
+
+  .run.run-phone {
+    padding: 0;
+    border-left: 0;
+  }
+
+  .run-asked {
+    font-size: 12px;
+  }
+
+  .run-films,
   .hidden-films {
     flex-wrap: nowrap;
     gap: 12px;
@@ -4426,6 +5020,12 @@ button.case {
 
   /* Part of the next case shows at the row's edge, so a row with more films than fit reads as one to swipe. A hidden
      film's column is a little wider, to hold "Bring back" on one line. */
+  .shown-film {
+    flex: none;
+    width: min(96px, calc((100% - 20px) / 3.33));
+    scroll-snap-align: start;
+  }
+
   .hidden-film {
     flex: none;
     width: min(124px, calc((100% - 20px) / 2.6));

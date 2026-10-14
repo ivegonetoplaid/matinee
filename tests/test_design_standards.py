@@ -69,7 +69,12 @@ PERMITTED = {
     ("button", "profile.js", "avatarEditor", frozenset({"avatar-button"})),
     ("button", "profile.js", "showName", frozenset({"name-button"})),
     ("a", "credits.js", "dtddSetting", frozenset({"set-credit"})),
-    ("button", "cases.js", "filmCase", frozenset()),  # a film's case, a picture that opens the film
+    # My profile: a film's case, a picture that opens the film; a day's row, which opens and folds it; the overlay's
+    # "More on" link and ×, as the pick's poster link and the panel's ×.
+    ("button", "cases.js", "filmCase", frozenset()),
+    ("button", "shelves.js", "dayShelf", frozenset({"day-head"})),
+    ("a", "overlay.js", "posterSide", frozenset({"overlay-link"})),
+    ("button", "overlay.js", "openOverlay", frozenset({"overlay-close"})),
 }
 
 # Every CSS named colour.

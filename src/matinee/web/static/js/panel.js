@@ -32,17 +32,27 @@ function place(stage, frame, node) {
   Object.assign(node.style, { top: `${top}px`, left: `${column.left}px`, width: `${column.width}px`, height: `${foot - top}px` });
 }
 
+// Where the pick's panel stands: `covers()` are the parts it stands over, out of reach while it is open (the left
+// column on a desktop; on a phone everything under the top bar, where the stylesheet places it); `place(node)` sets
+// its box on a desktop. On a desktop the stylesheet also stops drawing the column.
+function onThePick(stage, frame) {
+  return {
+    covers: () => (isPhone() ? [frame.showing, frame.aside, stage.querySelector(".bottombar")] : [frame.left]),
+    place: (node) => {
+      if (!isPhone()) place(stage, frame, node);
+    },
+  };
+}
+
 // `frame` is the pick screen's. The panel joins `stage`; while it is open the parts it covers are hidden, so focus
 // never walks under it. `entries.opened()` runs as a panel opens where none was, on the tap that opens it, and
 // `entries.closed()` as it closes by any way but the browser's back, which closes it through `closedByBack()`.
-export function pickPanel(stage, frame, entries = { opened() {}, closed() {} }) {
+// `where` is where it stands (`onThePick` unless another surface, such as My profile's overlay, gives its own).
+export function pickPanel(stage, frame, entries = { opened() {}, closed() {} }, where = onThePick(stage, frame)) {
   let shown = null; // { node, opener } while a panel is open
 
-  // The parts the panel stands over, out of reach while it is open: the left column on a desktop; on a phone
-  // everything under the top bar. On a desktop the stylesheet also stops drawing the column.
   const cover = (on) => {
-    const parts = isPhone() ? [frame.showing, frame.aside, stage.querySelector(".bottombar")] : [frame.left];
-    for (const part of parts) if (part) part.inert = on;
+    for (const part of where.covers()) if (part) part.inert = on;
   };
 
   const outside = (e) => {
@@ -61,7 +71,7 @@ export function pickPanel(stage, frame, entries = { opened() {}, closed() {} }) 
     const was = phone;
     phone = isPhone();
     if (phone && !was) close();
-    else if (shown && !phone) place(stage, frame, shown.node);
+    else if (shown && !phone) where.place(shown.node);
   };
   function listen(on) {
     const how = on ? "addEventListener" : "removeEventListener";
@@ -113,7 +123,7 @@ export function pickPanel(stage, frame, entries = { opened() {}, closed() {} }) 
     );
     stage.append(node);
     cover(true);
-    if (!isPhone()) place(stage, frame, node);
+    where.place(node);
     shown = { node, opener };
     opener.classList.add("open");
     opener.setAttribute("aria-expanded", "true");

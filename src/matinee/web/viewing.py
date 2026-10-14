@@ -46,6 +46,8 @@ log = logging.getLogger("matinee.web")
 DTDD_CREDIT = "Powered by DoesTheDogDie.com"
 DTDD_LINK = "https://www.doesthedogdie.com"
 TOPICS_UNAVAILABLE = "I can't load the list of topics right now."
+# A note from My profile on a film whose door or answers have since changed or gone.
+WALK_GONE = "My questions have changed since I showed you this film, so I can't take a note on how you got there."
 
 
 class ViewerIn(BaseModel):
@@ -485,18 +487,25 @@ def check_belongs(cat: Catalog, body: NoteIn) -> None:
 
 
 def add_note_routes(app: FastAPI, theatre: Theatre, store: Store, records: Records) -> None:
-    @app.post("/api/notes")
-    def note(body: NoteIn, request: Request) -> NoteOut:
-        """Keep a viewer's note on a pick for whoever runs Matinee; it changes nothing any viewer is shown."""
+    @app.post("/api/notes", response_model=None)
+    def note(body: NoteIn, request: Request) -> NoteOut | JSONResponse:
+        """Keep a viewer's note on a pick for whoever runs Matinee; it changes nothing any viewer is shown. A walk
+        whose door or answers the catalogue no longer holds (a note from My profile after an update) is refused in
+        words."""
         held_profile(request, store, body.profile_id)
         if body.run is not None:
             clean_run(body.run)  # refused before the note is kept, never after
         cat = theatre.showing().catalog
-        tree = cat.trees.get(body.tree)
-        if tree is None or body.tmdb not in cat.table.films.index:
+        if body.tmdb not in cat.table.films.index:
             raise HTTPException(status_code=400, detail="refused")
+        tree = cat.trees.get(body.tree)
+        try:
+            path = tuple(answer_says(tree, body.answers)) if tree else None
+        except HTTPException:
+            path = None
+        if tree is None or path is None:
+            return problem(400, "walk_gone", WALK_GONE)
         check_belongs(cat, body)
-        path = tuple(answer_says(tree, body.answers))
         comment, belongs = body.comment.strip(), tuple(body.belongs)
         note = Note(body.profile_id, body.tmdb, body.tree, body.kind, path, body.rushed, comment, belongs)
         store.note(note, device_tokens(request))

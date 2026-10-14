@@ -15,8 +15,12 @@ export const LENGTHS = [
 
 const UNDO_FADE_MS = 400;
 
-// "Hide film" for `film`; `hide(length)` hides it and rolls again, resolving to the page's { ok, data } answer.
-export function hideLink({ film, panel, hide }) {
+// The pick's words above the lengths: a hide there rolls again.
+const ROLLS = (title) => `Matinee won't pick ${title} for you until then, and rolls again now. You can bring it back any time from My profile.`;
+
+// "Hide film" for `film`; `hide(length)` hides it (and on the pick rolls again), resolving to the page's { ok, data }
+// answer. `lede(title)` gives the words above the lengths.
+export function hideLink({ film, panel, hide, lede = ROLLS }) {
   const open = panelAction("Hide film", () => {
     const status = h("p", { class: "rate-status", role: "status" });
     const choices = LENGTHS.map((l) =>
@@ -40,7 +44,7 @@ export function hideLink({ film, panel, hide }) {
     panel.open(
       open,
       "Hide film",
-      h("p", { class: "panel-lede" }, `Matinee won't pick ${film.title} for you until then, and rolls again now. You can bring it back any time from My profile.`),
+      h("p", { class: "panel-lede" }, lede(film.title)),
       h("div", { class: "panel-mid" }, choices, status),
     );
   });

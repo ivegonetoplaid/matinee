@@ -18,9 +18,12 @@ import { lightFuse } from "./fuse.js";
 import { typeLine } from "./type.js";
 import { Wall } from "./wall.js";
 import { viewerTag } from "./viewer.js";
-import { openProfile } from "./profile.js";
+import { openProfile, profileLayer, refreshFilms } from "./profile.js";
+import { keptWalk, openOverlay } from "./overlay.js";
+import { answerOf } from "./ratings.js";
 import { settingsPart } from "./settings.js";
-import { hiddenPart, ratedPart } from "./cases.js";
+import { hiddenPart, hiddenUntil, ratedPart } from "./cases.js";
+import { shownPart } from "./shelves.js";
 import { learnOffers, offers } from "./offers.js";
 
 const stage = document.getElementById("stage");
@@ -143,6 +146,8 @@ function redrawTag() {
 function myProfile(opener = null, at = null, then = null) {
   const id = visit.viewer.profile_id;
   const viewer = { id, name: visit.name, avatar: visit.avatar };
+  const openFilm = (from, film, did, walk) =>
+    openOverlay({ layer: profileLayer(), film, did, walk, opener: from, viewer, poster: (tmdb, size) => wall.posterUrl(tmdb, size), trees: () => visit.trees, changed: refreshFilms });
   return openProfile({
     viewer,
     avatars: avatarsOffered,
@@ -151,8 +156,25 @@ function myProfile(opener = null, at = null, then = null) {
     then,
     parts: {
       tailor: (body) => settingsPart(body, { id, dtdd: offers.dtdd, credit: dtddSetting }),
-      rated: (body, mine) => ratedPart(body, mine.ratings, { poster: (tmdb) => wall.posterUrl(tmdb, "m"), phone: isPhone() }),
-      hidden: (body, mine, { recount }) => hiddenPart(body, mine.hidden, { id, poster: (tmdb) => wall.posterUrl(tmdb, "m"), recount }),
+      rated: (body, mine) =>
+        ratedPart(body, mine.ratings, {
+          poster: (tmdb) => wall.posterUrl(tmdb, "m"),
+          phone: isPhone(),
+          onOpen: (r, opener) => openFilm(opener, r, `You rated it: ${answerOf(r.score)}`, keptWalk(r.tmdb, mine.runs)),
+        }),
+      shown: (body, mine) =>
+        shownPart(body, mine.runs, mine.ratings, {
+          poster: (tmdb, size) => wall.posterUrl(tmdb, size),
+          phone: isPhone(),
+          onOpen: (f, did, opener) => openFilm(opener, f, did, f.walk),
+        }),
+      hidden: (body, mine, { recount }) =>
+        hiddenPart(body, mine.hidden, {
+          id,
+          poster: (tmdb) => wall.posterUrl(tmdb, "m"),
+          recount,
+          onOpen: (f, opener) => openFilm(opener, f, hiddenUntil(f.until), keptWalk(f.tmdb, mine.runs)),
+        }),
     },
     actions: {
       saveAvatar: async (avatar) => {

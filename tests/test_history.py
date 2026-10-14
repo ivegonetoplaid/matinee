@@ -175,7 +175,15 @@ def test_the_routes_keep_a_shown_film_with_the_words_of_its_walk(door: Any) -> N
         "rushed": True,
     }
     assert run["walk"] == walk_out
-    assert run["films"] == [{"tmdb": 5, "mark": "rated", "walk": walk_out}]
+    assert run["films"] == [
+        {
+            "tmdb": 5,
+            "title": "Film 5",
+            "year": client.get("/api/film/5").json()["year"],
+            "mark": "rated",
+            "walk": walk_out,
+        }
+    ]
     client.put(f"/api/profiles/{pid}/hidden/5", json={"length": "3m", "run": KEY})
     assert client.get(f"/api/profiles/{pid}/runs").json()[0]["films"][0]["mark"] == "hid"
     client.delete(f"/api/profiles/{pid}/hidden/5", params={"run": KEY})
@@ -217,6 +225,17 @@ def test_just_pick_one_before_any_door_is_kept_with_no_answers(door: Any) -> Non
     client.post(f"/api/profiles/{pid}/runs/{KEY}/films", json={"tmdb": 5, "rushed": True})
     [run] = client.get(f"/api/profiles/{pid}/runs").json()
     assert run["walk"] == {"tree": None, "answers": [], "says": [], "rushed": True}
+
+
+def test_a_film_no_longer_listed_leaves_its_run_and_an_emptied_run_is_not_shown(door: Any) -> None:  # noqa: F811
+    client, store = door
+    pid = me(client)
+    tokens = list(client.cookies.values())
+    client.post(f"/api/profiles/{pid}/runs/{KEY}/films", json={"tmdb": 5, "rushed": True})
+    Records(store).show(pid, KEY, 999999, Walk(None, (), (), True), tokens)  # a film since gone from the film table
+    Records(store).show(pid, "gone-run-1", 999999, Walk(None, (), (), True), tokens)
+    assert [[f["tmdb"] for f in r["films"]] for r in client.get(f"/api/profiles/{pid}/runs").json()] == [[5]]
+    assert len(Records(store).history(pid, tokens)) == 2  # both runs are kept
 
 
 def test_a_door_with_no_tree_behind_it_is_refused(door: Any) -> None:  # noqa: F811
