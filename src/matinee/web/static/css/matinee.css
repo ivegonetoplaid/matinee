@@ -44,6 +44,7 @@
   --white: #fff;
   --glow: #ffecbe;
   --warm: #ffd68c;
+  --house: #b7c4e0; /* the household's shared ratings and their reading panel, and nothing else */
   --mark: #151827;
   --menu: #12141f;
   --panel: #0e101a;
@@ -335,7 +336,8 @@ a.wordmark:focus-visible {
 .count,
 .seat-label,
 .feature-text,
-.rank {
+.rank,
+.facts .household {
   position: relative;
 }
 
@@ -346,7 +348,8 @@ a.wordmark:focus-visible {
 .count::before,
 .seat-label::before,
 .feature-text::before,
-.rank::before {
+.rank::before,
+.facts .household::before {
   content: "";
   position: absolute;
   inset: -16px;
@@ -900,6 +903,71 @@ a.wordmark:focus-visible {
   color: var(--dim);
 }
 
+/* The household's shared ratings under the rank, in the household's colour: each name a sentence ("Alex loved it")
+   that opens the reading panel, then "+ N more". */
+.household {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 6px;
+  margin: 0;
+  font: 600 16px/1.4 var(--body);
+  color: var(--house);
+}
+
+/* A separator stays with the name after it, so a wrapped line never starts or ends on one. */
+.household-part {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.household-name,
+.household-more {
+  padding: 8px 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: start;
+  text-decoration: underline dotted;
+  text-underline-offset: 4px;
+  cursor: pointer;
+}
+
+@media (hover: hover) {
+  .household-name:hover {
+    text-decoration-style: solid;
+  }
+}
+
+/* On a phone each sentence takes its own row, so no row starts or ends on a separator. */
+@media (max-width: 600px) {
+  .household {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .household-part > [aria-hidden="true"] {
+    display: none;
+  }
+
+  .household-name,
+  .household-more {
+    padding-block: 6px;
+  }
+}
+
+.household-more {
+  text-decoration-style: solid;
+}
+
+.household-name:focus-visible,
+.household-more:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
 /* The film's tags: outlined chips that wrap, with small corners, each on the scrim's own dark backing; never filled
    with an accent and never a pill. */
 .tags {
@@ -1298,6 +1366,79 @@ a.wordmark:focus-visible {
   display: block;
   font-size: 13px;
   color: var(--dim);
+}
+
+/* The reading panel: the chosen profile's mark, name, rating as a sentence and short review, then a row for each
+   profile that shared one, "My review" first. */
+.reading-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 10px;
+  padding: 18px;
+  border: 1px solid color-mix(in srgb, var(--house) 22%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--text) 3%, transparent);
+}
+
+.mark.panel {
+  width: 64px;
+  height: 64px;
+  border-radius: 14px;
+  font-size: 30px;
+}
+
+.reading-words {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.reading-name {
+  font-family: var(--display);
+  font-weight: 800;
+  font-size: 28px;
+  line-height: 1.05;
+}
+
+.reading-said {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--house);
+}
+
+.reading-review {
+  font-size: 18px;
+  font-style: italic;
+  overflow-wrap: anywhere;
+  color: var(--text);
+}
+
+.reading-empty {
+  font-size: 15px;
+  color: var(--dim);
+}
+
+.people {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.person-row {
+  border: 1px solid color-mix(in srgb, var(--house) 22%, transparent);
+}
+
+.person-row[aria-current="true"] {
+  border-color: var(--gold);
+}
+
+.person-said {
+  margin-left: auto;
+  white-space: nowrap;
+  font-size: 14px;
+  color: var(--house);
 }
 
 .panel-foot {

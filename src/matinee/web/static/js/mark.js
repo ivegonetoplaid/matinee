@@ -4,7 +4,7 @@
 import { h } from "./dom.js";
 
 // The image width for each size: twice the size it is shown at, for high-density screens.
-const PIXELS = { door: 256, bar: 80 };
+const PIXELS = { door: 256, panel: 256, bar: 80 }; // the panel shows the door's picture smaller
 
 // The first letter of each word of a name, at most three, as a capital.
 export function initials(name) {

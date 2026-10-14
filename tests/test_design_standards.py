@@ -59,6 +59,9 @@ PERMITTED = {
     ("button", "main.js", "answerRow", frozenset({"panel-row", "answer-row"})),
     ("a", "pick.js", "posterLink", frozenset({"poster-link"})),
     ("button", "main.js", "filmRow", frozenset({"panel-row", "film-row"})),
+    ("button", "household.js", "nameButton", frozenset({"household-name"})),
+    ("button", "household.js", "householdLine", frozenset({"household-more"})),
+    ("button", "household.js", "personRow", frozenset({"panel-row", "person-row"})),
 }
 
 # Every CSS named colour.

@@ -756,6 +756,19 @@ function keepShown(shown) {
   });
 }
 
+// The household's shared ratings of a film, the viewer's own rating of it, and the viewer, for the pick's line and
+// reading panel. A failure costs only the line: none is shown.
+async function household(tmdb) {
+  const id = visit.viewer.profile_id;
+  const [shared, mine] = await Promise.all([get(`/api/profiles/${id}/shared/${tmdb}`), get(`/api/profiles/${id}/ratings`)]);
+  if (!shared.ok || !mine.ok) console.warn("the household's ratings could not be read; the pick shows none", shared.data, mine.data);
+  return {
+    shared: shared.ok ? shared.data : [],
+    mine: mine.ok ? (mine.data.find((r) => r.tmdb === tmdb) ?? null) : null,
+    viewer: { name: visit.name, avatar: visit.avatar },
+  };
+}
+
 // What the pick screen's controls do.
 function pickActions() {
   return {
@@ -778,6 +791,7 @@ function pickActions() {
       keepShown(shown);
     },
     failed: (data) => problem(data, start),
+    household,
     noteLink: (film, panel, walk) => noteLink({ walk, film, trees: visit.trees, panel }),
   };
 }

@@ -81,6 +81,7 @@ tokens. Use the token appropriate to the role, not a hard-coded colour.
 | `--black`, `--white` | Shadows, ruled lines, highlights and field edges |
 | `--glow` | Letterbox glow |
 | `--warm` | Resting poster ring |
+| `--house` | The household's shared ratings on the pick and their reading panel, and nothing else |
 | `--mark`, `--menu`, `--panel`, `--about-panel` | Profile mark, menu and panel backgrounds |
 
 A shade is its token mixed toward transparent
