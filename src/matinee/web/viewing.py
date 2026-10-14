@@ -11,6 +11,7 @@ from __future__ import annotations
 import logging
 import secrets
 from collections.abc import Sequence
+from dataclasses import dataclass
 from typing import Any, Literal
 
 import numpy as np
@@ -19,7 +20,18 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from matinee.dtdd import Dtdd, DtddError
-from matinee.engine import Answer, Catalog, Source, Viewer, first_question, gentlest, opening_pool, walk
+from matinee.engine import (
+    Answer,
+    Catalog,
+    Mask,
+    Source,
+    Viewer,
+    allowed_films,
+    first_question,
+    gentlest,
+    opening_pool,
+    walk,
+)
 from matinee.pick import Pick, Picker, candidates
 from matinee.records import Records, clean_run
 from matinee.store import Note, Profile, Store
@@ -237,24 +249,43 @@ def walk_notice(answer: Source | None, showing: Showing, server: str | None, see
 
 
 def resolve(
-    request: Request, store: Store, v: ViewerIn, topics_on: bool, source: Source = "all"
+    request: Request, seat: Seating, v: ViewerIn, topics_on: bool, source: Source = "all"
 ) -> tuple[Viewer, Profile | None]:
-    """The engine's viewer within `source`: a held profile's saved topics, or none when no profile is named.
+    """The engine's viewer within `source`: a held profile's saved topics, its settings and its hidden and rated
+    films, read afresh on every request; or none when no profile is named.
 
     Without a DoesTheDogDie key (`topics_on` false) a profile's stored topics stay in the store and have no effect.
     """
     if v.profile_id is None:
         return Viewer(source=source), None
-    profile = held_profile(request, store, v.profile_id)
-    return Viewer(topics=profile.topics if topics_on else frozenset(), source=source), profile
+    profile = held_profile(request, seat.store, v.profile_id)
+    topics = profile.topics if topics_on else frozenset()
+    allowed = seat.allowed(profile, device_tokens(request))
+    return Viewer(topics=topics, source=source, allowed=allowed, floor=profile.floor), profile
 
 
-def resolve_held(request: Request, store: Store, v: ViewerIn, topics_on: bool, source: Source = "all") -> Viewer:
+def resolve_held(request: Request, seat: Seating, v: ViewerIn, topics_on: bool, source: Source = "all") -> Viewer:
     """The engine's viewer for a walk or a pick, which runs only under a profile this device holds; 403 otherwise."""
-    viewer, profile = resolve(request, store, v, topics_on, source)
+    viewer, profile = resolve(request, seat, v, topics_on, source)
     if profile is None:
         raise HTTPException(status_code=403, detail="refused")
     return viewer
+
+
+@dataclass(frozen=True)
+class Seating:
+    """Where a request's viewer is read from: the store, the profiles' own records, and the catalogue in use."""
+
+    store: Store
+    records: Records
+    cat: Catalog
+
+    def allowed(self, profile: Profile, tokens: Sequence[str]) -> Mask | None:
+        """The films the profile may be offered: not hidden, not rated at or below its rated-films setting, and in a
+        ticked language; None when nothing narrows."""
+        hidden = {h.tmdb for h in self.records.hidden(profile.id, tokens)}
+        rated = {r.tmdb for r in self.records.ratings(profile.id, tokens) if r.score <= profile.rated_out}
+        return allowed_films(self.cat.table, frozenset(hidden | rated), profile.languages)
 
 
 DEVICE_COOKIE = "matinee_device"
@@ -361,7 +392,13 @@ def add_topic_routes(app: FastAPI, store: Store, dtdd: Dtdd) -> None:
 
 
 def add_viewing_routes(
-    app: FastAPI, theatre: Theatre, store: Store, topics_on: bool, server: str | None, seerr: SeerrCheck
+    app: FastAPI,
+    theatre: Theatre,
+    store: Store,
+    records: Records,
+    topics_on: bool,
+    server: str | None,
+    seerr: SeerrCheck,
 ) -> None:
     @app.post("/api/first")
     def first(body: FirstIn, request: Request) -> FirstOut:
@@ -369,7 +406,8 @@ def add_viewing_routes(
         within its answer, and the films the wall shows behind them."""
         showing = theatre.showing()
         cat = showing.catalog
-        viewer, profile = resolve(request, store, body.viewer, topics_on, source_for(body.source, showing))
+        seat = Seating(store, records, cat)
+        viewer, profile = resolve(request, seat, body.viewer, topics_on, source_for(body.source, showing))
         options = [FirstOptionOut(say=o.say, tree=o.tree, label=o.label) for o in first_question(cat, viewer)]
         question = None
         if body.source is None and asks_source(showing):
@@ -391,7 +429,8 @@ def add_viewing_routes(
     def walk_tree(body: WalkIn, request: Request) -> StepOut:
         showing = theatre.showing()
         cat = showing.catalog
-        viewer = resolve_held(request, store, body.viewer, topics_on, source_for(body.source, showing))
+        seat = Seating(store, records, cat)
+        viewer = resolve_held(request, seat, body.viewer, topics_on, source_for(body.source, showing))
         step = walk(cat, body.tree, viewer, [Answer(a.question, a.option) for a in body.answers])
         question = None
         if step.question is not None:
@@ -468,6 +507,7 @@ def add_pick_routes(
     app: FastAPI,
     theatre: Theatre,
     store: Store,
+    records: Records,
     picker: Picker,
     topics_on: bool,
     server: str | None,
@@ -478,7 +518,8 @@ def add_pick_routes(
         """One film from the pool the answers leave, checked against the viewer's topics before it is shown."""
         showing = theatre.showing()
         cat = showing.catalog
-        viewer = resolve_held(request, store, body.viewer, topics_on, source_for(body.source, showing))
+        seat = Seating(store, records, cat)
+        viewer = resolve_held(request, seat, body.viewer, topics_on, source_for(body.source, showing))
         left, prefer = pick_pool(cat, viewer, body)
         films = cat.table.films
         ratings = dict(zip(films.index.tolist(), films.rating.fillna(0.0).tolist(), strict=True))

@@ -11,8 +11,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from matinee.engine import Catalog, FirstOption
-from matinee.ranks import DOOR_WORDS, VOTE_FLOOR, Rank, rank, rank_among
+from matinee.engine import VOTE_FLOOR, Catalog, FirstOption
+from matinee.ranks import DOOR_WORDS, Rank, rank, rank_among
 from matinee.reference import DATA
 
 

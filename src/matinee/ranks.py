@@ -15,9 +15,7 @@ from typing import NamedTuple
 import numpy as np
 import pandas as pd
 
-from matinee.engine import Catalog, Mask
-
-VOTE_FLOOR = 200  # TMDB votes a film needs before its average is ranked or counted
+from matinee.engine import VOTE_FLOOR, Catalog, Mask
 
 # The word each door's rank names, by tree id; "overall" stands in before any door.
 DOOR_WORDS = {

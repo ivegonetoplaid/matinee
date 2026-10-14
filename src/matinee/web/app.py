@@ -620,9 +620,9 @@ def create_app(
     server = None
     if config.server is not None:
         server = SERVER_NAMES[config.server.kind]
-    add_viewing_routes(app, theatre, store, topics_on, server, seerr)
-    add_pick_routes(app, theatre, store, picker, topics_on, server, seerr)
     records = Records(store)
+    add_viewing_routes(app, theatre, store, records, topics_on, server, seerr)
+    add_pick_routes(app, theatre, store, records, picker, topics_on, server, seerr)
     add_note_routes(app, theatre, store, records)
     add_quip_routes(app, lines)
     add_rating_routes(app, theatre, records)

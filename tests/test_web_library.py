@@ -26,12 +26,11 @@ from fastapi.testclient import TestClient
 
 from matinee import ranks
 from matinee.dtdd import Dtdd
-from matinee.engine import load_catalog
+from matinee.engine import VOTE_FLOOR, load_catalog
 from matinee.library import Image, LibraryError, LibraryFilm, LibraryRefused
 from matinee.library.choice import MediaServer
 from matinee.library.jellyfin import JellyfinReader
 from matinee.outage import RETRY_S
-from matinee.ranks import VOTE_FLOOR
 from matinee.store import Store
 from matinee.table import FilmTable, write_table
 from matinee.tags import Tags, load_tags
