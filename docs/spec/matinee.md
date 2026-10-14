@@ -1168,7 +1168,11 @@ The door word is optional. With none set (`DOOR_WORD` unset, empty or
 only spaces), every device is admitted. With one set, a device that is not admitted reaches
 only the page, its static files (the locked door's art among them) and the word
 check, `/api/admission`. Every other route answers `401 not_admitted`, with the
-usual headers. The protection is sized for a household film picker.
+usual headers. The protection is sized for a household film picker. A page whose
+device stops being admitted while it is open (the word changed, or the cookie
+is gone) is sent back to the door: the first `401 not_admitted` any of its
+requests meets reloads the page, which opens on the locked door, and that
+request never answers, so no half-done screen is drawn first.
 
 - **Admission.** The right word sets the cookie `matinee_admit` (`HttpOnly`,
   `SameSite=Lax`, path `/`, 400 days, and `Secure` over HTTPS exactly as the
@@ -3111,7 +3115,8 @@ symbol when one does not match.
 | `src/matinee/web/static/js/wall.js::Wall.frame` (the drift, `DRIFT_PX_S`) | `src/matinee/web/static/js/wall.js:607` | 2026-10-05 |
 | `src/matinee/web/static/js/wall.js::Wall.place` / `lay` / `picture` / `request` (`BLANK`) | `src/matinee/web/static/js/wall.js:618` | 2026-10-05 |
 | `src/matinee/web/static/js/wall.js::Wall.resort` / `slide` / `depart` | `src/matinee/web/static/js/wall.js:702` | 2026-10-05 |
-| `src/matinee/web/static/js/api.js::del` | `src/matinee/web/static/js/api.js:27` | 2026-10-05 |
+| `src/matinee/web/static/js/api.js::del` | `src/matinee/web/static/js/api.js:34` | 2026-10-05 |
+| `src/matinee/web/static/js/api.js::call` (a device no longer admitted goes back to the door) | `src/matinee/web/static/js/api.js:6` | 2026-10-14 |
 | `src/matinee/web/static/js/pick.js::showPick` / `huntLift` | `src/matinee/web/static/js/pick.js:363` | 2026-10-10 |
 | `src/matinee/web/static/js/pick.js::goldLine` | `src/matinee/web/static/js/pick.js:300` | 2026-10-10 |
 | `src/matinee/web/static/js/pick.js::bringOut` | `src/matinee/web/static/js/pick.js:339` | 2026-10-10 |
