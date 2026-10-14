@@ -897,6 +897,11 @@ actually has.
 - A track with no tag, a placeholder tag (`und`, `zxx`, `mul`, `mis`) and a code
   the table does not hold count as untagged. A copy whose tracks are all
   untagged keeps no languages, and neither does a film with no copy.
+- A track whose name (Jellyfin's `Title`, Plex's `title`) says `commentary`,
+  `descripti…`, `isolated` or `music only`, in any case, is a commentary, an
+  audio description or the score alone, not the film in a language, and is
+  passed over as an untagged track is: a Thai film with an English commentary
+  has no English copy.
 - A film held as several copies keeps every copy's languages together.
 - A rebuild with no media server records no audio languages.
 
@@ -3556,6 +3561,7 @@ describing it wrongly, never by naming something gone.
 - `src/matinee/web/mine.py::add_settings_routes` / `SettingsIn` / `SettingsOut` / `settings_out` / `LanguageOut` (`GET /api/languages`, the settings, the welcome mark)
 - `src/matinee/languages.py::held` / `PLACEHOLDERS` (the languages the films are in, most first; never `xx`)
 - `src/matinee/languages.py::codes` / `two_letter` / `audio_languages` (a tag to TMDB's two-letter code, or untagged)
+- `src/matinee/languages.py::extra_track` / `EXTRA_TRACK` (a commentary, description or score track names no language)
 - `data/languages.json` / `codes` (ISO 639-2 to TMDB's codes)
 - `src/matinee/library/__init__.py::LibraryFilm.audio` / `Library.films` (read only when asked)
 - `src/matinee/engine.py::Viewer.allowed` / `Viewer.floor` / `Catalog.places` (a viewer's narrowing; door places worked out once per catalogue)

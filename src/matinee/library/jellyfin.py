@@ -18,7 +18,7 @@ from collections.abc import Mapping
 from typing import Any
 
 from matinee import USER_AGENT
-from matinee.languages import audio_languages
+from matinee.languages import audio_languages, extra_track
 from matinee.library import REFUSED_CODES, Image, ImageKind, LibraryError, LibraryFilm, LibraryRefused
 
 FIELDS = "Genres,ProviderIds,ProductionYear,OfficialRating,RunTimeTicks,CommunityRating,Path"
@@ -55,7 +55,7 @@ def _audio(item: Mapping[str, Any]) -> frozenset[str] | None:
     tracks = (
         [s for s in streams if isinstance(s, dict) and s.get("Type") == "Audio"] if isinstance(streams, list) else []
     )
-    return audio_languages(t.get("Language") for t in tracks)
+    return audio_languages(t.get("Language") for t in tracks if not extra_track(t.get("Title")))
 
 
 def parse_film(item: Mapping[str, Any]) -> LibraryFilm:

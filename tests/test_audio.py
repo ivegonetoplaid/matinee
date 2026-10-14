@@ -14,9 +14,10 @@ import pandas as pd
 import pytest
 
 from matinee.genome import Scores
-from matinee.languages import audio_languages, codes, held, two_letter
+from matinee.languages import audio_languages, codes, extra_track, held, two_letter
 from matinee.library import LibraryFilm
 from matinee.library.jellyfin import JellyfinReader, parse_film
+from matinee.library.plex import audio_of
 from matinee.reference import DATA
 from matinee.table import build_table, load_table, with_live, write_table
 from test_plex import ITEM, SECTIONS, reader
@@ -87,6 +88,33 @@ def test_a_jellyfin_item_carries_its_audio_languages_and_never_its_subtitles() -
     assert parse_film(jellyfin_item("eng", "fra")).audio == frozenset({"en", "fr"})
     assert parse_film(jellyfin_item(None, "und")).audio is None
     assert parse_film({"Id": "a" * 32, "Name": "Film"}).audio is None  # streams not asked for
+
+
+def test_a_commentary_description_or_score_is_no_copy_in_its_language() -> None:
+    """Shutter (2004) is Thai with an English commentary; counting the commentary put it before English-only viewers."""
+    jellyfin = jellyfin_item("tha")
+    jellyfin["MediaStreams"].append({"Type": "Audio", "Language": "eng", "Title": "Commentary by film critics"})
+    assert parse_film(jellyfin).audio == frozenset({"th"})
+    commentary = {"streamType": 2, "languageCode": "eng", "title": "Commentary by film critics"}
+    thai = {"streamType": 2, "languageCode": "tha", "title": "5.1 Surround Mix"}
+    assert audio_of({"Media": [{"Part": [{"Stream": [thai, commentary]}]}]}) == frozenset({"th"})
+
+
+# Track names from the measured library: the first four are extras, the rest are the film itself.
+@pytest.mark.parametrize(
+    ("name", "extra"),
+    [
+        ("Commentary by Director Gabe Ibanez", True),
+        ("English / DD 2.0 / 48 kHz / 192 kbps / 16-bit (Audio Descriptive)", True),
+        ("Isolated Score & Effects", True),
+        ("FLAC / 1.0 / 48 kHz / 717 kbps / 24-bit (Music Only Track)", True),
+        ("5.1 Surround Mix", False),
+        ("English / DTS-HD MA 2.0 / 48 kHz", False),
+        (None, False),
+    ],
+)
+def test_a_track_name_marks_an_extra_by_its_words(name: object, extra: bool) -> None:
+    assert extra_track(name) is extra
 
 
 def test_the_jellyfin_film_list_asks_for_streams_only_when_audio_is_asked_for(monkeypatch: pytest.MonkeyPatch) -> None:

@@ -23,7 +23,7 @@ from dataclasses import replace
 from typing import Any
 
 from matinee import USER_AGENT
-from matinee.languages import audio_languages
+from matinee.languages import audio_languages, extra_track
 from matinee.library import REFUSED_CODES, Image, ImageKind, LibraryError, LibraryFilm, LibraryRefused
 
 TIMEOUT_S = 60
@@ -83,10 +83,15 @@ def _files(item: Mapping[str, Any]) -> Iterator[str]:
 
 
 def audio_of(item: Mapping[str, Any]) -> frozenset[str] | None:
-    """The languages a Plex item's audio streams are tagged with, over every file it has; None when all are
-    untagged. Only an item's own details carry its streams; the section's film list never does."""
+    """The languages a Plex item's audio streams are tagged with, over every file it has, passing over commentaries,
+    descriptions and scores; None when all are untagged. Only an item's own details carry its streams; the
+    section's film list never does."""
     streams = (s for m in _tags(item, "Media") for p in _tags(m, "Part") for s in _tags(p, "Stream"))
-    return audio_languages(s.get("languageCode") for s in streams if s.get("streamType") == AUDIO_STREAM)
+    return audio_languages(
+        s.get("languageCode")
+        for s in streams
+        if s.get("streamType") == AUDIO_STREAM and not extra_track(s.get("title"))
+    )
 
 
 def certificate(raw: object) -> str:
