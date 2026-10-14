@@ -9,10 +9,12 @@ import { answerOf } from "./ratings.js";
 
 const PEEK = 6; // posters a folded day's head shows
 
-// What a run asked for: the door's and each answer's words, "Cowboys › Old", or "Just pick one!" with none.
+// What a run asked for: the door's and each answer's words, "Cowboys › Old", ending "Just pick one!" when that ended
+// the questions; "Just pick one!" alone with no words.
 export function runCaption(walk) {
   const words = walk.says.map((say) => say.trim().replace(/\.+$/, "")).filter(Boolean);
-  return words.length ? words.map((w) => w[0].toUpperCase() + w.slice(1)).join(" › ") : "Just pick one!";
+  const said = words.map((w) => w[0].toUpperCase() + w.slice(1));
+  return said.length && walk.rushed ? [...said, "Just pick one!"].join(" › ") : said.join(" › ") || "Just pick one!";
 }
 
 // What the viewer did with a film a run showed: its mark, else whether the run stopped on it. A film marked rated

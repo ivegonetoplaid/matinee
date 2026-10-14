@@ -5,6 +5,7 @@ import { byDay, dayCount, didWith, runCaption, runGroups } from "../../src/matin
 
 test("a run is captioned with what its door and answers said, or Just pick one! when it asked nothing", () => {
   assert.equal(runCaption({ says: ["Cowboys.", "old."], rushed: false }), "Cowboys › Old");
+  assert.equal(runCaption({ says: ["Cowboys."], rushed: true }), "Cowboys › Just pick one!"); // rushed after the door
   assert.equal(runCaption({ says: [], rushed: true }), "Just pick one!");
 });
 

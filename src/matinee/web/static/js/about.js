@@ -132,7 +132,7 @@ function keeps() {
     h(
       "p",
       {},
-      `Kept on this computer: ${profile}; any note you leave about a pick, for whoever runs this Matinee; and cookies in your browser that remember which profiles this device has opened and that it gave the door word, for up to 400 days.`,
+      `Kept on this computer: ${profile}; each profile's settings for how Matinee picks, its ratings and short reviews (which others in the house see only if it shares them), the films it has hidden and its last 50 runs of picks; any note you leave about a pick, for whoever runs this Matinee; and cookies in your browser that remember which profiles this device has opened and that it gave the door word, for up to 400 days.`,
     ),
     h(
       "p",
