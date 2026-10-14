@@ -508,8 +508,7 @@ def add_note_routes(app: FastAPI, theatre: Theatre, store: Store, records: Recor
         check_belongs(cat, body)
         comment, belongs = body.comment.strip(), tuple(body.belongs)
         note = Note(body.profile_id, body.tmdb, body.tree, body.kind, path, body.rushed, comment, belongs)
-        store.note(note, device_tokens(request))
-        records.report(body.profile_id, body.run, body.tmdb, device_tokens(request))
+        records.report(note, body.run, device_tokens(request))
         return NoteOut(lines=NOTED)
 
 

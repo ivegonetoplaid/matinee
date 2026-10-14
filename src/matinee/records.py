@@ -45,7 +45,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Literal, cast, get_args
 
-from matinee.store import Store, StoreError, now, shown_avatar
+from matinee.store import Note, Store, StoreError, now, shown_avatar
 
 SOURCE = "matinee"
 MAX_RUNS = 50
@@ -341,10 +341,10 @@ class Records:
                 (run_id, run_id, tmdb, *way),
             )
 
-    def report(self, profile_id: int, run_key: str | None, tmdb: int, by: Sequence[str]) -> None:
-        """Mark a film the profile's run showed as reported, once its note is kept."""
-        with self._store.writing(profile_id, by) as db:
-            mark_in_run(db, profile_id, run_key, tmdb, "reported")
+    def report(self, n: Note, run_key: str | None, by: Sequence[str]) -> None:
+        """Keep the note and mark its film reported in the profile's run `run_key`, in one write: a failure keeps
+        neither, so the history never disagrees with the notes and a retry files no second note."""
+        self._store.note(n, by, also=lambda db: mark_in_run(db, n.profile_id, run_key, n.tmdb, "reported"))
 
     def history(self, profile_id: int, by: Sequence[str]) -> list[Run]:
         """The profile's kept runs, newest first, each with its films in the order shown."""

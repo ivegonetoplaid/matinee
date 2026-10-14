@@ -13,7 +13,7 @@ from fastapi.testclient import TestClient
 
 from matinee import records as records_module
 from matinee.records import MAX_RUNS, Records, Walk
-from matinee.store import Store, StoreError
+from matinee.store import Note, Store, StoreError
 from test_profiles import door  # noqa: F401  (the web fixture)
 
 WEST = Walk("west", (("era", 0),), ("Cowboys.", "old."), False)
@@ -71,8 +71,32 @@ def test_a_rating_hide_or_note_on_the_pick_marks_the_film_in_its_run(two: Any) -
         records.show(ada, KEY, tmdb, WEST, [token])
     records.rate(ada, 5, 5, [token], run=KEY)
     records.hide(ada, 6, "3m", [token], run=KEY)
-    records.report(ada, KEY, 7, [token])
+    records.report(note(ada, 7), KEY, [token])
     assert films(records.history(ada, [token])[0]) == [(5, "rated"), (6, "hid"), (7, "reported"), (8, None)]
+
+
+def note(profile_id: int, tmdb: int) -> Note:
+    return Note(profile_id, tmdb, "west", "quality", (), False, "")
+
+
+@pytest.mark.parametrize("fails", ["before the mark", "after the mark"])
+def test_a_note_and_its_reported_mark_are_kept_together_or_not_at_all(two: Any, monkeypatch: Any, fails: str) -> None:
+    records, store, (ada, token), _ = two
+    records.show(ada, KEY, 7, WEST, [token])
+    real = records_module.mark_in_run
+
+    def broken(*args: Any) -> None:
+        if fails == "after the mark":
+            real(*args)
+        raise sqlite3.OperationalError("disk I/O error")
+
+    monkeypatch.setattr(records_module, "mark_in_run", broken)
+    with pytest.raises(sqlite3.OperationalError):
+        records.report(note(ada, 7), KEY, [token])
+    assert store.notes() == [] and films(records.history(ada, [token])[0]) == [(7, None)]
+    monkeypatch.setattr(records_module, "mark_in_run", real)
+    records.report(note(ada, 7), KEY, [token])
+    assert len(store.notes()) == 1 and films(records.history(ada, [token])[0]) == [(7, "reported")]
 
 
 def test_undo_of_a_hide_clears_its_mark(two: Any) -> None:
@@ -109,7 +133,7 @@ def test_a_rating_or_hide_made_elsewhere_marks_nothing(two: Any) -> None:
     records.show(ada, "run-other-run", 6, WEST, [token])
     records.rate(ada, 5, 3, [token])  # from My profile: no run named
     records.hide(ada, 5, "3m", [token], run="run-other-run")  # a run that never showed it
-    records.report(ada, None, 5, [token])
+    records.report(note(ada, 5), None, [token])
     assert [films(r) for r in records.history(ada, [token])] == [[(6, None)], [(5, None)]]
 
 
@@ -144,7 +168,7 @@ def test_another_device_reads_and_writes_no_history(two: Any) -> None:
     records.show(ada, KEY, 5, WEST, [ada_token])
     attempts: list[Callable[[], object]] = [
         lambda: records.show(ada, KEY, 6, WEST, [bo_token]),
-        lambda: records.report(ada, KEY, 5, [bo_token]),
+        lambda: records.report(note(ada, 5), KEY, [bo_token]),
         lambda: records.history(ada, [bo_token]),
     ]
     for attempt in attempts:

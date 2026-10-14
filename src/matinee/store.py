@@ -32,7 +32,7 @@ import json
 import secrets
 import sqlite3
 import unicodedata
-from collections.abc import Iterable, Iterator, Sequence
+from collections.abc import Callable, Iterable, Iterator, Sequence
 from contextlib import closing, contextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -439,8 +439,9 @@ class Store:
             row = db.execute("SELECT * FROM profiles WHERE id = ?", (profile_id,)).fetchone()
         return self._profile(row)
 
-    def note(self, n: Note, by: Sequence[str]) -> None:
-        """Keep one viewer's note on a pick for review, filed by a profile `by` holds: what was wrong and why."""
+    def note(self, n: Note, by: Sequence[str], also: Callable[[sqlite3.Connection], None] | None = None) -> None:
+        """Keep one viewer's note on a pick for review, filed by a profile `by` holds: what was wrong and why. `also`
+        runs inside the same write, so what it records stands or falls with the note."""
         with closing(self._connect()) as db, db:
             self._held(db, n.profile_id, by)
             db.execute(
@@ -458,6 +459,8 @@ class Store:
                     json.dumps(sorted(set(n.belongs))),
                 ),
             )
+            if also is not None:
+                also(db)
 
     def notes(self, status: Status = "open") -> list[FiledNote]:
         """Every note with this status, oldest first."""
