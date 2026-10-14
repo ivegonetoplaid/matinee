@@ -261,14 +261,19 @@ def test_the_pick_draws_from_the_narrowed_pool(world: Any) -> None:
         assert picked["film"]["tmdb"] == 10, tree
 
 
-def test_settings_that_leave_nothing_offer_no_door(world: Any) -> None:
+def test_settings_that_leave_nothing_offer_no_door_and_count_what_they_left_out(world: Any) -> None:
     client, _ = world
     pid = client.post("/api/profiles", json={"name": "Ada"}).json()["id"]
     every = first_pool(client, {"profile_id": pid})
-    for t in sorted(every):
+    client.put(f"/api/profiles/{pid}/settings", json={"floor": "well_liked"})
+    for t in sorted(every)[:-1]:
         client.put(f"/api/profiles/{pid}/hidden/{t}", json={"length": "good"})
+    one_left = client.post("/api/first", json={"viewer": {"profile_id": pid}, "source": "all"}).json()
+    assert one_left["options"] and one_left["unsettled"] is None  # a pool holding any film never says it
+    client.put(f"/api/profiles/{pid}/hidden/{max(every)}", json={"length": "good"})
     first = client.post("/api/first", json={"viewer": {"profile_id": pid}, "source": "all"}).json()
     assert first["options"] == [] and first["pool"] == []
+    assert first["unsettled"] == len(every)  # counted with no setting applied and nothing hidden
     picked = client.post("/api/pick", json={"viewer": {"profile_id": pid}, "source": "all"}).json()
     assert picked["film"] is None and picked["exhausted"] == USED_UP  # never "trips something on your list"
 

@@ -149,8 +149,8 @@ function redrawTag() {
   if (old) old.replaceWith(nameTag());
 }
 
-// My profile, over the theatre as it stands; `at` opens it at one of its parts.
-function myProfile(opener = null, at = null) {
+// My profile, over the theatre as it stands; `at` opens it at one of its parts, and `then` runs as it closes.
+function myProfile(opener = null, at = null, then = null) {
   const id = visit.viewer.profile_id;
   const viewer = { id, name: visit.name, avatar: visit.avatar };
   return openProfile({
@@ -158,6 +158,7 @@ function myProfile(opener = null, at = null) {
     avatars: avatarsOffered,
     opener,
     at,
+    then,
     parts: { tailor: (body) => settingsPart(body, { id, dtdd: offers.dtdd, credit: dtddSetting }) },
     actions: {
       saveAvatar: async (avatar) => {
@@ -484,9 +485,21 @@ async function doors(res = null, ack = visit.sourceReply) {
   const got = res ?? (await post("/api/first", { viewer: visit.viewer, source: visit.source }));
   if (!got.ok) return problem(got.data, start);
   showFirst(got);
+  if (got.data.unsettled) return nothingLeft(got.data.unsettled);
   visit.doorAsk = got.data.lines[1];
   const options = got.data.options.map((o) => ({ say: o.say, go: () => chooseTree(o) }));
   await ask({ ack, question: got.data.lines[1], options, count: countText(visit.pool.length), many: true });
+}
+
+// The viewer's settings and hidden films leave no door: say how many films there would have been without them,
+// and open My profile at the settings. Closing it asks for the doors afresh.
+function nothingLeft(n) {
+  const line = h("h1", { class: "line", "aria-live": "polite" });
+  line.append(h("span", { class: "ack" }, `Your settings leave me nothing to pick. Without them, I'd have had ${n.toLocaleString("en")} ${n === 1 ? "film" : "films"} to choose from.`));
+  const change = h("button", { class: "action gold", type: "button" }, "Change my settings");
+  change.addEventListener("click", () => myProfile(change, "tailor", () => start()));
+  clear(stage).append(topbar(nameTag()), h("section", { class: "talk" }, line, change), h("footer", { class: "bottombar" }, aboutLink()));
+  change.focus({ preventScroll: true });
 }
 
 function chooseTree(option) {

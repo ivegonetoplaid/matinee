@@ -296,9 +296,9 @@ function fill({ built, jumps, notice }, mine, { parts, viewer, phone }) {
 }
 
 // Puts the page over the theatre, on an entry of its own in the browser's history, at the part `at` when one is named.
-function showPage(page, opener, at) {
+function showPage(page, opener, at, then) {
   listen();
-  shown = { layer: page.layer, opener, then: null };
+  shown = { layer: page.layer, opener, then };
   history.pushState({ profile: true }, "");
   document.body.append(page.layer);
   cover(true);
@@ -309,12 +309,12 @@ function showPage(page, opener, at) {
 // Opens My profile for `viewer` ({ id, name, avatar }) over the theatre. `actions` holds saveAvatar(avatar),
 // deleteProfile({ leaving }), switchProfiles() and renamed(seat), as the top bar's menu has them. `parts` maps a
 // part's id to a function that fills its body from the viewer's records; `at` is the part to open at, if any.
-// `opener` gets the focus back when the page closes.
-export async function openProfile({ viewer, avatars, actions, parts = {}, at = null, opener = null }) {
+// `opener` gets the focus back when the page closes, unless `then` is given, which runs instead.
+export async function openProfile({ viewer, avatars, actions, parts = {}, at = null, opener = null, then = null }) {
   if (shown) return;
   const phone = isPhone();
   const page = frame({ viewer, avatars, actions, phone });
-  showPage(page, opener, at);
+  showPage(page, opener, at, then);
   const mine = await records(viewer.id);
   if (shown?.layer === page.layer) fill(page, mine, { parts, viewer, phone });
 }

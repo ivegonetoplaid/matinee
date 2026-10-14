@@ -130,6 +130,9 @@ class FirstOut(BaseModel):
     checked: bool  # this viewer's picks are checked against DoesTheDogDie: a key is set and they hold topics
     source: SourceQuestionOut | None = None  # asked first, before the doors; None when it is not asked
     fallback: str | None = None
+    # When a profile's settings and hidden films leave no door: the films the first question would hold with none of
+    # them (no settings, no topics, nothing hidden), which the page says. None whenever a door is offered.
+    unsettled: int | None = None
 
 
 class TopicOut(BaseModel):
@@ -208,6 +211,12 @@ def everything(cat: Catalog, viewer: Viewer) -> list[int]:
     for option in first_question(cat, viewer):
         every |= opening_pool(cat, option.tree, viewer)
     return [int(t) for t in cat.ids[every]]
+
+
+def unsettled(cat: Catalog, viewer: Viewer) -> int | None:
+    """The films the first question would hold within the viewer's source with none of their settings, topics or
+    hidden films; None when there are none, since then it is not the settings that leave nothing (§21)."""
+    return len(everything(cat, Viewer(source=viewer.source))) or None
 
 
 def held_profile(request: Request, store: Store, profile_id: int) -> Profile:
@@ -424,6 +433,7 @@ def add_viewing_routes(
             checked=bool(viewer.topics),
             source=question,
             fallback=walk_notice(body.source, showing, server, seerr),
+            unsettled=None if options or profile is None else unsettled(cat, viewer),
         )
 
     @app.post("/api/walk")
