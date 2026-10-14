@@ -433,3 +433,11 @@ def test_the_wordmark_link_carries_the_corner_mark_named_matinee() -> None:
     body = main[main.index("function wordmark()") :]
     body = body[: body.index("\n}\n")]
     assert 'h("a", { class: "wordmark", href: "/", onclick: go }, cornerMark("Matinee"))' in body
+
+
+def test_the_poster_link_clips_only_once_landed_so_the_flight_shows() -> None:
+    """The landed poster flies inside its link; a link that clips before it lands hides the flight from the wall."""
+    flying = re.search(r"^\.poster-link \{(.*?)^\}", CSS, re.M | re.S)
+    landed = re.search(r"^\.poster-link\.landed \{(.*?)^\}", CSS, re.M | re.S)
+    assert flying and landed
+    assert "overflow" not in flying.group(1) and "overflow: hidden" in landed.group(1)
