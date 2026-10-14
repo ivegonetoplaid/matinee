@@ -48,7 +48,6 @@ STOCK = re.compile(
 # Literals in the page and server source that take the form but are not Matinee speaking.
 NOT_SPOKEN = {
     "button, input",  # CSS selectors and media queries
-    "input, button",
     "(pointer: coarse)",
     "(hover: hover)",
     "private, max-age={}",  # a response header
@@ -58,13 +57,12 @@ NOT_SPOKEN = {
     "No, someone else",
     "No PIN",
     "PIN, four digits",
-    "Yes, let me pick from a list",
-    "No, show me everything",
     "Search, like spiders or needles",  # a field's placeholder
     "Yes, delete it",
     "No, keep it",
-    "Never mind, show me everything",
     "None, keep them coming",
+    "Yes, let's do it",
+    "No, just show me movies",
 }
 
 

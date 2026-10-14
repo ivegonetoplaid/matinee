@@ -2584,6 +2584,80 @@ a.wordmark:focus-visible {
   align-self: center;
 }
 
+/* A tailoring step: its answers, then its actions in a row (a refusal's line above them). A ladder's answers stand
+   as wide as My profile's, and the chosen one is ringed as there. */
+.door-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.door-actions[hidden] {
+  display: none;
+}
+
+.door-actions > .set-status {
+  flex-basis: 100%;
+}
+
+.door-talk.tailoring .set-choices.column {
+  width: 100%;
+  max-width: 620px;
+}
+
+.door-talk.tailoring .set-choices.column > .letterbox {
+  align-self: stretch;
+}
+
+.door-talk.tailoring [aria-pressed="true"].letterbox {
+  box-shadow:
+    0 0 0 2px var(--gold),
+    0 0 18px color-mix(in srgb, var(--glow) 50%, transparent),
+    inset 0 3px 3px -1px color-mix(in srgb, var(--black) 22%, transparent);
+}
+
+@media (min-width: 601px) {
+  .door-talk.tailoring > .door-line {
+    min-height: auto;
+    font-size: clamp(28px, 4.5vh, 40px);
+  }
+}
+
+/* A short desktop window gives a tailoring step the room a ladder of answers needs: the marquee stands smaller. */
+@media (min-width: 601px) and (max-height: 800px) {
+  .marquee.compact {
+    zoom: 0.75;
+  }
+}
+
+/* On a wide desktop the title, explanation and actions take a left column and the answers the right, as the topic
+   picker lays out, so a ladder of answers stands under the marquee without scrolling. */
+@media (min-width: 960px) {
+  .door-talk.tailoring {
+    display: grid;
+    grid-template-columns: 360px minmax(0, 1fr);
+    grid-template-rows: auto auto auto 1fr;
+    gap: 14px 44px;
+    align-items: start;
+    width: min(1000px, 100%);
+  }
+
+  .door-talk.tailoring > .door-controls {
+    grid-row: 1 / span 4;
+    grid-column: 2;
+  }
+
+  .door-talk.tailoring > .door-detail {
+    margin-top: 0;
+  }
+
+  .door-talk.tailoring > .door-actions {
+    grid-row: 3;
+    grid-column: 1;
+  }
+}
+
 /* The credit line on the door: the last row of the door's column, below the wall, so a long list of
    tiles scrolls above it and never under it. The bottom right on a desktop. */
 /* The door's foot band lies behind the wall's last row, so the door's controls never move for it. */
@@ -2998,7 +3072,7 @@ a.wordmark:focus-visible {
   gap: 10px 16px;
 }
 
-@media (min-width: 761px) {
+@media (min-width: 960px) {
   .topic-foot {
     flex-wrap: nowrap;
   }
@@ -5182,6 +5256,7 @@ button.case {
 }
 
 .set-band {
+  white-space: nowrap;
   align-self: center;
   margin-left: auto;
   padding-left: 16px;
