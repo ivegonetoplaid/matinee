@@ -81,7 +81,7 @@ tokens. Use the token appropriate to the role, not a hard-coded colour.
 | `--black`, `--white` | Shadows, ruled lines, highlights and field edges |
 | `--glow` | Letterbox glow |
 | `--warm` | Resting poster ring |
-| `--house` | The household's shared ratings on the pick and their reading panel, and nothing else |
+| `--house` | One job: the household's shared ratings (on the pick and in My profile's overlay) and their reading panel, and nothing else |
 | `--felt`, `--felt-lo` | My profile's pinned menu and phone jump bar: a felt letter board's ribs |
 | `--placard`, `--placard-lo` | My profile's part headings: a placard's ribs |
 | `--mark`, `--menu`, `--panel`, `--about-panel` | Profile mark, menu and panel backgrounds |
@@ -177,14 +177,17 @@ at rest brightens on hover, as the glass brightens toward `--strip`; pressed, it
 sinks 1 px. Keyboard focus shows a 2 px gold outline 2 px outside the bezel.
 
 Letterboxes carry the text choices in Matinee's questions, doors and kinds,
-profile-making steps, trigger topics and "Delete <name>?". Picture choices and
+profile-making steps (the tailoring offer and each tailoring step), trigger
+topics, My profile's settings and "Delete <name>?". Picture choices and
 report-form fields use the exceptions under Everything else. "Yes, delete it"
-keeps its rose words. Inside the profile menu's panels ("Delete <name>?" and
-"Change avatar") a letterbox has no glow at
-rest and glows on hover.
+keeps its rose words. Inside My profile's own panels (its picture's choices and
+"Delete <name>?") a letterbox has no glow at rest and glows on hover.
 
-A letterbox that toggles, as a trigger topic does, shows a check mark before
-its words when chosen. Its face, glow and size do not change.
+A letterbox that toggles, as a trigger topic or a language does, shows a check
+mark before its words when chosen. Its face, glow and size do not change. A
+setting's chosen answer, on My profile and in the tailoring steps, shows the
+check mark too, as "Rate it" marks its chosen answer, and is ringed in gold, so
+the keyboard's focus ring is never the only ring.
 
 The page specification owns the trigger picker's column layout and scrolling.
 A long topic wraps without shrinking the standard letterbox type.
@@ -225,7 +228,10 @@ change under Authority and exceptions instead of inventing a fifth accent.
 
 Everything a viewer uses over the poster wall is a letterbox or an action. A bare
 text link stands only in the foot band: "About Matinee" and DoesTheDogDie's
-credit. About's own prose keeps its links, and the corner mark is the brand's
+credit. Two text buttons stand beside them: the household's line under the
+pick's rank (each name a sentence, "Alex loved it", and "+ N more"), set in
+`--house` with a tap target at least 44 px tall, and the plain "Undo" of
+section 7. About's own prose keeps its links, and the corner mark is the brand's
 link. No screen shows a trail or a TMDB credit line: the acknowledgements live
 on the About page, and a question screen's way back is one action at the foot's
 left, "‹ Back" or "Start over", where the pick's "‹ Back" stands. The pick's poster is the link to the film's page, and
@@ -240,15 +246,23 @@ on a desktop, centred beneath Matinee's words on a phone. On a resting pick it
 also stands directly after an unchecked film's note. It stands nowhere else on
 the pick.
 
+On My profile, DoesTheDogDie's credit is a small text link under "Scenes you
+don't want to see", and the poster overlay's "More on Seerr ↗" or "More on TMDB
+↗" stands beneath its poster as the pick's strip does.
+
 An action that goes to another address is an `<a>` styled as an action, never a
 `<button>`. Every link that leaves Matinee opens in a new tab with
 `rel="noopener noreferrer"`.
 
 ### 5.4 Everything else
 
-The profile menu's rows ("Edit my list", "Change avatar", "Switch profiles",
-"Delete profile") are plain menu rows; "Delete profile" is set in rose. Pictures
-that answer a question, the pails and the avatars, stay pictures. The locked
+The profile menu holds three plain rows, in this order: "My profile",
+"Switch profiles" and "About Matinee". The picture, the name, the topics and
+deleting the profile live on My profile. Pictures that answer a question, the
+pails and the avatars, stay pictures. On My profile a film stands in its case
+(its rating's, or a bare frame), a picture that opens the poster overlay; a
+day's row of past picks is a plain row that opens and folds the day; a name
+longer than 14 characters is set at 26 px in the menu and wraps between words. The locked
 door's eye is part of the door. The wordmark is the corner mark
 (`static/marquee/mark-corner.svg`), the marquee's crown over a small lit sign
 carrying the name, 64 px tall on a desktop and 40 px on a phone: a picture
@@ -323,8 +337,9 @@ following the pick-screen decisions at both widths. On a desktop they sit in a
 foot bar kept across the bottom of the screen: "‹ Back" and "Wrong pick?" at
 its left, "Not that one" at its exact centre. On a phone the foot holds
 Matinee's line, then "Not that one", then "‹ Back" and "Wrong pick?". "‹ Back",
-"Wrong pick?", "Rate it" and "Hide film" are cream. When "Hide film" ships, its
-brief plain "Undo" link may stand in the foot bar. Distinguish "Wrong pick?"
+"Wrong pick?", "Rate it" and "Hide film" are cream. After "Hide film" a plain
+"Undo" link stands in the foot bar while the next pick hunts and fades as it
+lands; it brings the hidden film back as the pick. Distinguish "Wrong pick?"
 from an unchecked-content warning beneath the film's synopsis.
 
 ---
@@ -334,8 +349,13 @@ from an unchecked-content warning beneath the film's synopsis.
 - **Short big lines.** Matinee's lines stay short; detail goes in a body-type
   line beneath, on the wall's rules (section 6).
 - **Safety copy is gentle.** Copy about a viewer's trigger list names mild
-  examples, spiders and needles, never an upsetting one. Its question asks what
-  a viewer would rather not see happen on screen.
+  examples, spiders and needles, never an upsetting one: "Choose topics like
+  spiders or needles."
+- **Tailoring is offered, not imposed.** After the PIN, Matinee types "Want me
+  to tailor picks to you?" in gold and "It's a few quick questions." in cream,
+  with two letterboxes: "Yes, let's do it" and "No, just show me movies". Each
+  tailoring step uses its setting's title, explanation and answers from My
+  profile, and each can be skipped. There is no "One more question.".
 - **The credits are fixed wording.** TMDB's notice and logo, "Powered by
   DoesTheDogDie.com" wherever its data shows, and the MovieLens credit on About
   are set by the README and the page spec; do not reword them.
