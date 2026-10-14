@@ -45,6 +45,7 @@ export function viewerTag(viewer, avatars, actions) {
   const menu = h(
     "div",
     { class: "viewer-menu", role: "menu", "aria-label": "Profile", hidden: true },
+    item("My profile", choose(() => actions.myProfile(button))),
     actions.editList ? item("Edit my list", choose(actions.editList)) : null,
     item("Change avatar", choose(() => openPanel(changeAvatar()))),
     item("Switch profiles", choose(actions.switchProfiles)),

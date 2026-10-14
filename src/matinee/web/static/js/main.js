@@ -18,6 +18,7 @@ import { lightFuse } from "./fuse.js";
 import { typeLine } from "./type.js";
 import { Wall } from "./wall.js";
 import { viewerTag } from "./viewer.js";
+import { openProfile } from "./profile.js";
 import { learnOffers, offers } from "./offers.js";
 
 const stage = document.getElementById("stage");
@@ -120,18 +121,58 @@ function nameTag() {
   if (!visit.name) return null;
   const leave = (opts) => leaveTo(() => boot(opts));
   const id = visit.viewer.profile_id;
-  return viewerTag({ name: visit.name, avatar: visit.avatar }, avatarsOffered, {
+  const deleted = (name) => ({ said: [`${name}'s seat is empty.`, "Who's watching?"] });
+  const tag = viewerTag({ name: visit.name, avatar: visit.avatar }, avatarsOffered, {
     editList: offers.dtdd ? () => leave({ screen: "list", profileId: id }) : null,
+    myProfile: (opener) => myProfile(opener),
     switchProfiles: () => leave({}),
     deleteProfile: async () => {
       const res = await del(`/api/profiles/${id}`);
-      if (res.ok) leave({ said: [`${res.data.name}'s seat is empty.`, "Who's watching?"] });
+      if (res.ok) leave(deleted(res.data.name));
       return res;
     },
-    saveAvatar: async (avatar) => {
-      const res = await put(`/api/profiles/${id}/avatar`, { avatar });
-      if (res.ok) visit.avatar = res.data.avatar;
-      return res;
+    saveAvatar: (avatar) => saveAvatar(id, avatar),
+  });
+  return tag;
+}
+
+async function saveAvatar(id, avatar) {
+  const res = await put(`/api/profiles/${id}/avatar`, { avatar });
+  if (res.ok) visit.avatar = res.data.avatar;
+  return res;
+}
+
+// The top bar's viewer, drawn again with the name and avatar the viewer now has.
+function redrawTag() {
+  const old = stage.querySelector(".topbar .viewer");
+  if (old) old.replaceWith(nameTag());
+}
+
+// My profile, over the theatre as it stands; `at` opens it at one of its parts.
+function myProfile(opener = null, at = null) {
+  const id = visit.viewer.profile_id;
+  const viewer = { id, name: visit.name, avatar: visit.avatar };
+  return openProfile({
+    viewer,
+    avatars: avatarsOffered,
+    opener,
+    at,
+    actions: {
+      saveAvatar: async (avatar) => {
+        const res = await saveAvatar(id, avatar);
+        if (res.ok) redrawTag();
+        return res;
+      },
+      renamed: (seat) => {
+        visit.name = seat.name;
+        redrawTag();
+      },
+      switchProfiles: () => leaveTo(() => boot({})),
+      deleteProfile: async ({ leaving }) => {
+        const res = await del(`/api/profiles/${id}`);
+        if (res.ok) leaving(() => leaveTo(() => boot({ said: [`${res.data.name}'s seat is empty.`, "Who's watching?"] })));
+        return res;
+      },
     },
   });
 }

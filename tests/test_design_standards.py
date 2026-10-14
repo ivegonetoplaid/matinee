@@ -63,6 +63,9 @@ PERMITTED = {
     ("button", "household.js", "householdLine", frozenset({"household-more"})),
     ("button", "household.js", "personRow", frozenset({"panel-row", "person-row"})),
     ("button", "hide.js", "undoLink", frozenset({"undo-link"})),
+    ("button", "profile.js", "jump", frozenset({"jump"})),
+    ("button", "profile.js", "avatarEditor", frozenset({"avatar-button"})),
+    ("button", "profile.js", "showName", frozenset({"name-button"})),
 }
 
 # Every CSS named colour.

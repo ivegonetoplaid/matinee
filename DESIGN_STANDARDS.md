@@ -82,6 +82,8 @@ tokens. Use the token appropriate to the role, not a hard-coded colour.
 | `--glow` | Letterbox glow |
 | `--warm` | Resting poster ring |
 | `--house` | The household's shared ratings on the pick and their reading panel, and nothing else |
+| `--felt`, `--felt-lo` | My profile's pinned menu and phone jump bar: a felt letter board's ribs |
+| `--placard`, `--placard-lo` | My profile's part headings: a placard's ribs |
 | `--mark`, `--menu`, `--panel`, `--about-panel` | Profile mark, menu and panel backgrounds |
 
 A shade is its token mixed toward transparent

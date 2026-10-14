@@ -45,6 +45,10 @@
   --glow: #ffecbe;
   --warm: #ffd68c;
   --house: #b7c4e0; /* the household's shared ratings and their reading panel, and nothing else */
+  --felt: #111217; /* My profile's pinned menu: a felt letter board's ribs */
+  --felt-lo: #08090c;
+  --placard: #15161c; /* My profile's part headings: a placard's ribs */
+  --placard-lo: #0c0d12;
   --mark: #151827;
   --menu: #12141f;
   --panel: #0e101a;
@@ -3340,13 +3344,14 @@ a.wordmark:focus-visible {
   color: var(--velvet);
 }
 
-/* Inside the profile menu's panels a letterbox has no glow at rest; it glows on hover. */
-.viewer-panel .letterbox {
+/* Inside the profile menu's panels, and My profile's own avatar and delete panels, a letterbox has no glow at rest;
+   it glows on hover. */
+:is(.viewer-panel, .avatar-picker, .delete-ask) .letterbox {
   --lb-glow: 0 0 0 transparent;
 }
 
 @media (hover: hover) {
-  .viewer-panel .letterbox:hover {
+  :is(.viewer-panel, .avatar-picker, .delete-ask) .letterbox:hover {
     --lb-glow: 0 0 18px color-mix(in srgb, var(--glow) 55%, transparent);
   }
 }
@@ -3776,3 +3781,449 @@ a.wordmark:focus-visible {
     transition: none;
   }
 }
+
+/* ---------- My profile ---------- */
+
+/* My profile: a full page over the theatre, which stands covered, inert and unchanged beneath it. The curtains stand
+   behind at full brightness and never move; the parts scroll over them as panels. */
+.my-profile {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  color: var(--text);
+  font-family: var(--body);
+  scrollbar-color: color-mix(in srgb, var(--gold) 45%, transparent) transparent;
+}
+
+.my-profile .curtain {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(color-mix(in srgb, var(--base) 10%, transparent), color-mix(in srgb, var(--base) 10%, transparent)),
+    url("../profile/curtain-wide.webp") center / cover no-repeat,
+    var(--base);
+}
+
+.mine-top {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 32px;
+  background: linear-gradient(color-mix(in srgb, var(--base) 92%, transparent), color-mix(in srgb, var(--base) 55%, transparent));
+}
+
+.my-profile .shell {
+  position: relative;
+  display: grid;
+  grid-template-columns: 256px minmax(0, 1fr);
+  align-items: start;
+  gap: 32px;
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: 24px 32px 90px;
+}
+
+/* The pinned menu: a felt letter board that follows the scroll, scrolling on its own when its panels make it
+   taller than the screen. */
+.pin {
+  position: sticky;
+  top: 24px;
+  max-height: calc(100vh - 48px);
+  overflow-y: auto;
+  scrollbar-color: color-mix(in srgb, var(--gold) 45%, transparent) transparent;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 16px 12px 18px;
+  border: 6px solid var(--strip-edge);
+  border-radius: 6px;
+  background: repeating-linear-gradient(180deg, var(--felt) 0 9px, var(--felt-lo) 9px 10px);
+  box-shadow:
+    inset 0 0 40px var(--black),
+    0 20px 40px color-mix(in srgb, var(--black) 55%, transparent);
+}
+
+.pin .action {
+  width: 100%;
+}
+
+.who {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 8px;
+  padding: 18px 0 16px;
+  border-bottom: 1px solid color-mix(in srgb, var(--gold) 45%, transparent);
+}
+
+.avatar-holder,
+.name-holder,
+.who-words {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.avatar-button {
+  padding: 0;
+  border: 0;
+  border-radius: 18px;
+  background: none;
+  cursor: pointer;
+}
+
+.avatar-button .mark.panel {
+  width: 80px;
+  height: 80px;
+  border: 2px solid var(--gold);
+  border-radius: 18px;
+  font-size: 40px;
+  box-shadow: 0 0 24px color-mix(in srgb, var(--gold) 22%, transparent);
+}
+
+.avatar-button:focus-visible,
+.name-button:focus-visible,
+.jump:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+.avatar-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.avatar-picker .avatar-choices {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.avatar-picker .mark.door {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+}
+
+.name-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  max-width: 100%;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--cream-vivid);
+  font: 900 36px/1 var(--display);
+  text-align: center;
+  overflow-wrap: break-word;
+  cursor: pointer;
+}
+
+.name-button.long {
+  font-size: 26px;
+}
+
+@media (hover: hover) {
+  .name-button:hover {
+    background: color-mix(in srgb, var(--gold) 10%, transparent);
+  }
+
+  .jump:hover {
+    background: color-mix(in srgb, var(--gold) 12%, transparent);
+    color: var(--gold-words);
+  }
+}
+
+.name-pencil {
+  font-size: 18px;
+  color: var(--gold-words);
+}
+
+.name-field {
+  width: 200px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--gold);
+  border-radius: 8px;
+  background: var(--base);
+  color: var(--text);
+  text-align: center;
+  font: 900 30px var(--display);
+}
+
+.name-status {
+  margin: 0;
+  font-size: 14px;
+  text-align: center;
+  color: var(--text);
+}
+
+.name-status:empty {
+  display: none;
+}
+
+.who-hint {
+  margin: 0;
+  font-size: 13px;
+  color: var(--dim);
+}
+
+/* A jump to a part: its name in the display face, its count beside it. */
+.jump {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 44px;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: 4px;
+  background: none;
+  cursor: pointer;
+  color: var(--cream-vivid);
+  text-decoration: none;
+  font: 800 18px var(--display);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.jump-count {
+  font-size: 15px;
+  letter-spacing: 0.04em;
+  opacity: 0.75;
+}
+
+.pin-rule {
+  height: 1px;
+  margin: 10px 0;
+  background: color-mix(in srgb, var(--gold) 30%, transparent);
+}
+
+.pin .delete-holder {
+  margin-top: 22px;
+  display: flex;
+  justify-content: center;
+}
+
+.pin .delete-holder > .action {
+  width: auto;
+}
+
+.delete-ask {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.line.delete-line {
+  margin: 0 0 6px;
+  font-size: 26px;
+}
+
+.line.delete-line .ask {
+  font-size: 18px;
+  line-height: 1.15;
+}
+
+/* The four parts, each a panel over the curtains, headed by a placard. */
+.parts {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  min-width: 0;
+}
+
+.part {
+  padding: 22px 28px 14px;
+  border: 1px solid color-mix(in srgb, var(--gold) 20%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--panel) 90%, transparent);
+  box-shadow: 0 20px 50px color-mix(in srgb, var(--black) 50%, transparent);
+  scroll-margin-top: 24px;
+}
+
+.placard {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 16px;
+  padding: 8px 16px;
+  border: 1px solid var(--strip-edge);
+  border-radius: 4px;
+  background: repeating-linear-gradient(180deg, var(--placard) 0 7px, var(--placard-lo) 7px 8px);
+}
+
+.placard h2 {
+  margin: 0;
+  font: 800 24px var(--display);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--cream-vivid);
+}
+
+.placard-meta {
+  font-size: 14px;
+  color: var(--dim);
+}
+
+.part-rule {
+  height: 1px;
+  margin: 10px 0 4px;
+  background: linear-gradient(90deg, transparent, var(--gold) 10%, var(--gold) 90%, transparent);
+  opacity: 0.8;
+}
+
+.part-empty {
+  margin: 14px 0 10px;
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--text);
+}
+
+/* A narrow desktop gives the menu its own row above the parts. */
+@media (min-width: 601px) and (max-width: 900px) {
+  .my-profile .shell {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
+  }
+
+  .pin {
+    position: static;
+  }
+}
+
+/* On a phone the page's head holds the picture, the name and the ways out, and a jump bar is pinned to the top of
+   the screen. */
+@media (max-width: 600px) {
+  .my-profile .curtain {
+    background:
+      linear-gradient(color-mix(in srgb, var(--base) 10%, transparent), color-mix(in srgb, var(--base) 10%, transparent)),
+      url("../profile/curtain-tall.webp") center top / cover no-repeat,
+      var(--base);
+  }
+
+  .mine-top {
+    padding: 10px 16px;
+  }
+
+  .my-profile .shell {
+    display: block;
+    padding: 0 0 40px;
+  }
+
+  .mine-head {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 18px 16px;
+  }
+
+  .mine-head .who {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+  }
+
+  .mine-head .avatar-holder,
+  .mine-head .name-holder,
+  .mine-head .who-words {
+    align-items: flex-start;
+    min-width: 0;
+  }
+
+  .mine-head .who-words {
+    gap: 2px;
+    padding: 4px 8px 6px;
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--base) 70%, transparent);
+  }
+
+  .mine-head .avatar-button .mark.panel {
+    width: 64px;
+    height: 64px;
+    border-radius: 14px;
+    font-size: 32px;
+  }
+
+  .mine-head .name-button {
+    font-size: 30px;
+  }
+
+  .mine-ways {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .mine-ways > .action {
+    width: 100%;
+  }
+
+  .jump-bar {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    display: flex;
+    gap: 6px;
+    padding: 8px 16px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    border-block: 1px solid var(--strip-edge);
+    background: repeating-linear-gradient(180deg, var(--felt) 0 7px, var(--felt-lo) 7px 8px);
+    box-shadow: 0 8px 18px color-mix(in srgb, var(--black) 45%, transparent);
+  }
+
+  .jump-bar .jump {
+    flex: none;
+    gap: 4px;
+    font-size: 16px;
+  }
+
+  .mine-head .name-status {
+    text-align: start;
+  }
+
+  .jump-bar .jump-count:not(:empty)::before {
+    content: "· ";
+  }
+
+  .parts {
+    gap: 22px;
+    padding: 16px 12px;
+  }
+
+  .part {
+    padding: 16px 14px 10px;
+    scroll-margin-top: 72px;
+  }
+
+  .placard {
+    padding: 8px 12px;
+  }
+
+  .placard h2 {
+    font-size: 22px;
+  }
+
+  .placard-meta {
+    font-size: 12px;
+  }
+}
+
