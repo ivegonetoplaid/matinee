@@ -2584,6 +2584,117 @@ a.wordmark:focus-visible {
   align-self: center;
 }
 
+/* The one-time welcome: the page dims but for the viewer's button, lit above the dimming, and a line with its two
+   actions stands beside it. */
+.welcome-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: color-mix(in srgb, var(--base) 78%, transparent);
+}
+
+.topbar.lit {
+  z-index: 41;
+}
+
+.topbar.lit > :not(.viewer) {
+  opacity: 0.22;
+}
+
+.welcome {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: min(380px, calc(100vw - 2 * var(--pad)));
+  padding: 18px 20px;
+  border: 1px solid color-mix(in srgb, var(--gold) 35%, transparent);
+  border-radius: 14px;
+  background: var(--menu);
+  box-shadow: 0 22px 60px color-mix(in srgb, var(--black) 75%, transparent);
+}
+
+.welcome-line {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.45;
+  color: var(--text);
+}
+
+.welcome-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+/* A tailoring step in the theatre: one column, its answers then its actions; on a wide desktop the title,
+   explanation and actions on the left and the answers on the right, as the door's steps lay out. */
+.tailor-talk {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.tailor-talk > .line {
+  min-height: auto;
+}
+
+@media (min-width: 960px) {
+  .tailor-talk:not(.plain) {
+    display: grid;
+    grid-template-columns: 360px minmax(0, 1fr);
+    grid-template-rows: auto auto auto 1fr;
+    gap: 14px 44px;
+    align-items: start;
+    width: min(1000px, 100%);
+    align-self: center;
+  }
+
+  .tailor-talk > .line {
+    font-size: clamp(28px, 4.5vh, 40px);
+  }
+
+  .tailor-talk > .tailor-answers {
+    grid-row: 1 / span 4;
+    grid-column: 2;
+  }
+
+  .tailor-talk > .tailor-actions {
+    grid-row: 3;
+    grid-column: 1;
+  }
+}
+
+.tailor-answers {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tailor-answers[hidden],
+.tailor-detail[hidden] {
+  display: none;
+}
+
+.tailor-talk .set-choices.column {
+  width: 100%;
+  max-width: 620px;
+}
+
+.tailor-talk .set-choices.column > .letterbox {
+  align-self: stretch;
+}
+
+.tailor-talk [aria-pressed="true"].letterbox {
+  box-shadow:
+    0 0 0 2px var(--gold),
+    0 0 18px color-mix(in srgb, var(--glow) 50%, transparent),
+    inset 0 3px 3px -1px color-mix(in srgb, var(--black) 22%, transparent);
+}
+
 /* A tailoring step: its answers, then its actions in a row (a refusal's line above them). A ladder's answers stand
    as wide as My profile's, and the chosen one is ringed as there. */
 .door-actions {

@@ -6,7 +6,7 @@
 import { get, put } from "./api.js";
 import { h, isPhone } from "./dom.js";
 import { topicButton } from "./topics.js";
-import { FLOORS, RATED, ROWS, SHARING, languageName, languageOrder } from "./settings.js";
+import { FLOORS, RATED, ROWS, SHARING, languageName, languageOrder, topicList } from "./settings.js";
 
 // The offer while a profile is made.
 export const OFFER = {
@@ -15,6 +15,14 @@ export const OFFER = {
   yes: "Yes, let's do it",
   no: "No, just show me movies",
 };
+
+// The welcome a profile made before My profile sees once, the first time it enters the theatre, and the first screen
+// of the tailoring steps it leads to.
+export const WELCOME = "New: you can now rate films, hide films, and see what I've picked for you.";
+export const WHATS_NEW = [
+  "Welcome back.",
+  "You could already tell me what to steer around. Now you can rate films, hide the ones you don't want, look back at what I've picked, and tell me how well rated a film needs to be and which languages you watch in.",
+];
 
 // The steps after the topics, in My profile's order.
 export const STEPS = ["floor", "languages", "rated", "sharing"];
@@ -78,22 +86,52 @@ function languagesStep({ id, now, held, locale, status, next }) {
   return { answers: [h("div", { class: "set-choices", role: "group", "aria-label": ROWS.languages.title }, any, list)], actions: [done] };
 }
 
-// Walks the steps after the topics for the profile `id`, from its settings as they stand. `show({ ack, ask, detail,
-// answers, actions })` puts a screen up, its answers apart from its actions (a refusal's line, "Done" where there is
-// one, and "Skip"); `done()` follows the last step.
-export async function tailorSteps({ id, show, done, locale = navigator.language }) {
-  const [settings, languages] = await Promise.all([get(`/api/profiles/${id}/settings`), get("/api/languages")]);
+function stepFor(key, args) {
+  if (key === "topics") return topicsStep(args);
+  if (key === "languages") return languagesStep(args);
+  return singleStep(key, args);
+}
+
+// The topics step, where the host has no picker of its own: the topics ticked, saved with "Save and continue".
+function topicsStep({ id, now, topics, credit, status, next }) {
+  if (!topics.ok) return { answers: [h("p", { class: "note" }, topics.data.message)], actions: [] };
+  const ticks = topicList({ list: topics.data.topics, chosen: new Set(now.topics), saves: false, onToggle: () => {} });
+  const save = h("button", { class: "action gold", type: "button" }, "Save and continue");
+  save.addEventListener("click", async () => {
+    const chosen = topics.data.topics.filter((t, i) => ticks.buttons[i].getAttribute("aria-pressed") === "true");
+    const res = await put(`/api/profiles/${id}/topics`, { topics: chosen.map((t) => t.id) });
+    if (!res.ok) {
+      status.textContent = res.data.message;
+      return;
+    }
+    next();
+  });
+  ticks.nodes.at(-1).classList.add("note"); // the tally stands on the wall, so it wears the wall's scrim
+  return { answers: ticks.nodes, actions: [save], credit: credit() };
+}
+
+// Walks the steps for the profile `id`, from its settings as they stand: the topics too when `dtdd` (a host with no
+// picker of its own; `credit()` builds DoesTheDogDie's credit for them). `show({ ack, ask, detail, answers, actions })`
+// puts a screen up, its answers apart from its actions (a refusal's line, "Done" or "Save and continue" where there
+// is one, and "Skip"); `done()` follows the last step.
+export async function tailorSteps({ id, show, done, dtdd = false, credit = null, locale = navigator.language }) {
+  const [settings, languages, topics] = await Promise.all([
+    get(`/api/profiles/${id}/settings`),
+    get("/api/languages"),
+    dtdd ? get("/api/topics") : null,
+  ]);
   if (!settings.ok) return done();
   const now = settings.data;
   const held = languages.ok ? languages.data : [];
-  const keys = stepKeys({ dtdd: false, held });
+  const keys = stepKeys({ dtdd, held });
   const at = (i) => {
     if (i >= keys.length) return done();
     const key = keys[i];
     const status = h("p", { class: "note set-status", role: "status" });
     const next = () => at(i + 1);
-    const step = key === "languages" ? languagesStep({ id, now, held, locale, status, next }) : singleStep(key, { id, now, status, next });
-    return show({ ack: ROWS[key].title, ask: ROWS[key].ask ?? "", detail: help(key), answers: step.answers, actions: [status, ...step.actions, skipAction(next)] });
+    const step = stepFor(key, { id, now, held, topics, credit, locale, status, next });
+    const actions = [status, ...step.actions, skipAction(next)];
+    return show({ ack: ROWS[key].title, ask: ROWS[key].ask ?? "", detail: help(key), answers: step.answers, actions, credit: step.credit ?? null });
   };
   return at(0);
 }

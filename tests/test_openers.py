@@ -35,6 +35,8 @@ KEPT = {
     "comedies, camp and the gloriously awful. let's find you one.": "a list, not an interjection",
     "paws, claws and whiskers, coming up.": "a list, not an interjection",
     "Saved. Add a short review if you like.": "the rating's confirmation, word for word from the approved board",
+    "New: you can now rate films, hide films, and see what I've picked for you.": "the welcome, word for word (§14)",
+    "Welcome back.": "what's new for a returning viewer, word for word (§14)",
 }
 
 # A lone word set off by a comma, full stop, colon or exclamation mark, or one of the stock phrases.

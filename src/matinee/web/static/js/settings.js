@@ -204,40 +204,55 @@ function languagesRow({ now, held, save, locale, onToggle }) {
 }
 
 // "Scenes you don't want to see": DoesTheDogDie's topics, searched and ticked; each tick saves at once.
+// DoesTheDogDie's topics to tick, with a search and their tally: `chosen` is the set of chosen ids, changed in place;
+// `onToggle(id, on)` hears each tick; `saves` says each tick saves at once. Returns the nodes, the buttons, and
+// `count()`, which says the tally again.
+export function topicList({ list, chosen, onToggle, saves }) {
+  const search = h("input", { class: "field", type: "text", placeholder: "Search, like spiders or needles", "aria-label": "Search topics", autocomplete: "off" });
+  const nothing = h("p", { class: "set-help", hidden: true }, "Nothing by that name. Try another word.");
+  const tally = h("p", { class: "set-help set-tally" });
+  const count = () => {
+    const said = chosen.size ? `${chosen.size} chosen.` : "Nothing chosen yet.";
+    tally.textContent = `${said}${saves ? " Each tick saves straight away." : ""} The checks are best effort, from votes on DoesTheDogDie.com.`;
+  };
+  const buttons = list.map((t) =>
+    topicButton({
+      label: sentenceCase(t.short),
+      find: `${t.name} ${t.keywords}`,
+      chosen,
+      id: t.id,
+      onToggle: (id, on) => {
+        count();
+        onToggle(id, on);
+      },
+    }),
+  );
+  search.addEventListener("input", () => {
+    const needle = search.value.trim().toLowerCase();
+    for (const b of buttons) b.hidden = !b.dataset.find.includes(needle);
+    nothing.hidden = buttons.some((b) => !b.hidden);
+  });
+  count();
+  return { nodes: [search, h("div", { class: "topic-list set-topics" }, buttons), nothing, tally], buttons, count };
+}
+
 function topicsRow({ topics, now, saveTopics, credit, onToggle }) {
   const list = topics.ok ? topics.data.topics : [];
   const panel = () => {
     if (!topics.ok) return [h("p", { class: "set-help" }, topics.data.message)];
-    const search = h("input", { class: "field", type: "text", placeholder: "Search, like spiders or needles", "aria-label": "Search topics", autocomplete: "off" });
-    const nothing = h("p", { class: "set-help", hidden: true }, "Nothing by that name. Try another word.");
-    const tally = h("p", { class: "set-help set-tally" });
-    const count = () => {
-      const chosen = now.topics.size ? `${now.topics.size} chosen.` : "Nothing chosen yet.";
-      tally.textContent = `${chosen} Each tick saves straight away. The checks are best effort, from votes on DoesTheDogDie.com.`;
-    };
-    const buttons = list.map((t) =>
-      topicButton({
-        label: sentenceCase(t.short),
-        find: `${t.name} ${t.keywords}`,
-        chosen: now.topics,
-        id: t.id,
-        onToggle: async (id, on) => {
-          count();
-          if (await saveTopics(self.status)) return;
-          if (on) now.topics.delete(id);
-          else now.topics.add(id);
-          buttons.forEach((b, i) => b.setAttribute("aria-pressed", String(now.topics.has(list[i].id))));
-          count();
-        },
-      }),
-    );
-    search.addEventListener("input", () => {
-      const needle = search.value.trim().toLowerCase();
-      for (const b of buttons) b.hidden = !b.dataset.find.includes(needle);
-      nothing.hidden = buttons.some((b) => !b.hidden);
+    const ticks = topicList({
+      list,
+      chosen: now.topics,
+      saves: true,
+      onToggle: async (id, on) => {
+        if (await saveTopics(self.status)) return;
+        if (on) now.topics.delete(id);
+        else now.topics.add(id);
+        ticks.buttons.forEach((b, i) => b.setAttribute("aria-pressed", String(now.topics.has(list[i].id))));
+        ticks.count();
+      },
     });
-    count();
-    return [search, h("div", { class: "topic-list set-topics" }, buttons), nothing, tally];
+    return ticks.nodes;
   };
   // The picture: the search box and the first ten topics (four on a phone), the chosen ones first.
   const picture = () => {

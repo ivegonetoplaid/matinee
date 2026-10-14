@@ -18,10 +18,11 @@ import { lightFuse } from "./fuse.js";
 import { typeLine } from "./type.js";
 import { Wall } from "./wall.js";
 import { viewerTag } from "./viewer.js";
-import { openProfile, profileLayer, refreshFilms } from "./profile.js";
+import { isOpen as profileOpen, openProfile, profileLayer, refreshFilms } from "./profile.js";
 import { keptWalk, openOverlay } from "./overlay.js";
 import { answerOf } from "./ratings.js";
 import { settingsPart } from "./settings.js";
+import { WELCOME, WHATS_NEW, tailorSteps } from "./tailor.js";
 import { hiddenPart, hiddenUntil, ratedPart } from "./cases.js";
 import { shownPart } from "./shelves.js";
 import { learnOffers, offers } from "./offers.js";
@@ -438,6 +439,7 @@ async function enter({ viewer, name, avatar, profileTopics, door }) {
   landing = door;
   await door.leave([nameTag()].filter(Boolean));
   await start({ request, keep: true });
+  await welcomeIfNew();
 }
 
 // Where a walk stands before any answer, from the start the server gave.
@@ -505,6 +507,85 @@ async function doors(res = null, ack = visit.sourceReply) {
   visit.doorAsk = got.data.lines[1];
   const options = got.data.options.map((o) => ({ say: o.say, go: () => chooseTree(o) }));
   await ask({ ack, question: got.data.lines[1], options, count: countText(visit.pool.length), many: true });
+}
+
+// A tailoring step in the theatre: the line, its explanation, the answers, then the actions; a step's credit stands in
+// the foot band beside "About Matinee". A `plain` screen, with no answers, keeps the theatre's own centred column.
+async function tailorScreen({ ack, ask, detail, answers, actions, credit = null, plain = false }) {
+  const line = h("h1", { class: "line", "aria-live": "polite" });
+  const later = [
+    detail ? h("p", { class: "note tailor-detail", hidden: true }, detail) : null,
+    h("div", { class: "tailor-answers", hidden: true }, answers),
+    h("div", { class: "door-actions tailor-actions", hidden: true }, actions),
+  ].filter(Boolean);
+  const talk = h("section", { class: plain ? "talk tailor-talk plain" : "talk tailor-talk" }, line, later);
+  clear(stage).append(topbar(nameTag()), talk, h("footer", { class: "bottombar" }, aboutLink(), credit ? h("p", { class: "credits" }, credit) : null));
+  await typeLine(line, ack, ask);
+  for (const node of later) node.hidden = false;
+  stage.querySelector(".tailor-talk :is(input, button)")?.focus({ preventScroll: true });
+}
+
+// "Show me": what is new, then the tailoring steps from the profile's settings as they stand, ending on My profile
+// with the theatre at its first screen beneath.
+function whatsNew() {
+  const id = visit.viewer.profile_id;
+  const steps = () =>
+    tailorSteps({
+      id,
+      dtdd: offers.dtdd,
+      credit: dtddSetting,
+      show: tailorScreen,
+      done: async () => {
+        await start();
+        myProfile(null, "tailor");
+      },
+    });
+  const go = h("button", { class: "action gold", type: "button", onclick: steps }, "Let's go");
+  return tailorScreen({ ack: WHATS_NEW[0], ask: "", detail: WHATS_NEW[1], answers: [], actions: [go], plain: true });
+}
+
+// The first time a profile made before My profile enters the theatre: the page dims but for the profile button, and
+// a line beside it names what is new, with "Show me" and "Not now". Either marks the profile, so it shows once.
+// Found once the profile's settings have arrived, on the page as it then stands; not over My profile or an open
+// menu, and not after the viewer has gone on, so the welcome waits for the next visit.
+async function welcomeIfNew() {
+  const id = visit.viewer.profile_id;
+  if (!id) return;
+  const res = await get(`/api/profiles/${id}/settings`);
+  if (!res.ok || res.data.welcomed || visit.viewer.profile_id !== id) return;
+  const button = stage.querySelector(".topbar .viewer-button");
+  const busy = profileOpen() || stage.querySelector(".viewer-menu:not([hidden])") || !stage.querySelector(".answers");
+  if (!button || busy) return;
+  const scrim = h("div", { class: "welcome-scrim" });
+  const show = h("button", { class: "action gold", type: "button" }, "Show me");
+  const later = h("button", { class: "action cream", type: "button" }, "Not now");
+  const box = h("div", { class: "welcome", role: "dialog", "aria-modal": "true", "aria-labelledby": "welcome-line" }, h("p", { class: "welcome-line", id: "welcome-line" }, WELCOME), h("div", { class: "welcome-actions" }, show, later));
+  // Everything but the line's box is out of reach while it stands; the top bar stands above the dimming, all but the
+  // viewer's button faded, and the box hangs from the button.
+  const lit = button.closest(".viewer");
+  const bar = button.closest(".topbar");
+  const away = [...[...stage.children].filter((n) => n !== bar), ...[...bar.children].filter((n) => n !== lit), button];
+  for (const node of away) node.inert = true;
+  bar.classList.add("lit");
+  stage.append(scrim);
+  lit.append(box);
+  show.focus({ preventScroll: true });
+  const finish = (then) => {
+    for (const b of [show, later]) b.disabled = true;
+    post(`/api/profiles/${id}/welcomed`).then((marked) => {
+      if (!marked.ok) console.warn("the welcome could not be marked as seen; it may show again", marked.data);
+    });
+    scrim.remove();
+    box.remove();
+    bar.classList.remove("lit");
+    for (const node of away) node.inert = false;
+    then();
+  };
+  show.addEventListener("click", () => finish(whatsNew));
+  later.addEventListener("click", () => finish(() => button.focus({ preventScroll: true })));
+  box.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") later.click(); // Escape is "Not now"
+  });
 }
 
 // The viewer's settings and hidden films leave no door: say how many films there would have been without them,
