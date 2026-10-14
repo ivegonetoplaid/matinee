@@ -52,6 +52,13 @@ class HiddenOut(BaseModel):
     until: str | None
 
 
+class HiddenListedOut(HiddenOut):
+    """A hidden film as My profile lists it: with the film's title and year from the film table."""
+
+    title: str
+    year: int | None
+
+
 class RatingOut(BaseModel):
     """One of the viewer's own ratings: the answer (1 to 5), when it was made, and its short review, if any."""
 
@@ -137,11 +144,18 @@ def hidden_out(h: Hidden) -> HiddenOut:
     return HiddenOut(tmdb=h.tmdb, length=h.length, at=h.at, until=h.until)
 
 
+def hidden_listed(h: Hidden, film: FilmRef) -> HiddenListedOut:
+    return HiddenListedOut(tmdb=h.tmdb, length=h.length, at=h.at, until=h.until, title=film.title, year=film.year)
+
+
 def add_hide_routes(app: FastAPI, theatre: Theatre, records: Records) -> None:
     @app.get("/api/profiles/{profile_id}/hidden")
-    def hidden(profile_id: int, request: Request) -> list[HiddenOut]:
-        """The held profile's hidden films whose hide has not ended, newest first."""
-        return [hidden_out(h) for h in records.hidden(profile_id, device_tokens(request))]
+    def hidden(profile_id: int, request: Request) -> list[HiddenListedOut]:
+        """The held profile's hidden films in the current film list whose hide has not ended, newest first. A hide of
+        a film that has left the list stays stored, and is neither shown nor counted."""
+        films = theatre.showing().catalog.table.films
+        listed = [h for h in records.hidden(profile_id, device_tokens(request)) if h.tmdb in films.index]
+        return [hidden_listed(h, film_ref(films, h.tmdb)) for h in listed]
 
     @app.put("/api/profiles/{profile_id}/hidden/{tmdb}")
     def hide(profile_id: int, tmdb: int, body: HideIn, request: Request) -> HiddenOut:

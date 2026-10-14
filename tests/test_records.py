@@ -355,3 +355,13 @@ def test_the_hide_routes_hide_read_and_bring_back(door: Any) -> None:  # noqa: F
     assert elsewhere.put(f"/api/profiles/{pid}/hidden/5", json={"length": "3m"}).status_code == 403
     assert elsewhere.get(f"/api/profiles/{pid}/hidden").status_code == 403
     assert client.get(f"/api/profiles/{pid}/hidden").json() == []
+
+
+def test_the_hidden_list_names_each_film_and_leaves_out_a_film_no_longer_listed(door: Any) -> None:  # noqa: F811
+    client, store = door
+    pid = me(client)
+    client.put(f"/api/profiles/{pid}/hidden/5", json={"length": "3m"})
+    Records(store).hide(pid, 999999, "good", list(client.cookies.values()))  # a film since gone from the film table
+    listed = client.get(f"/api/profiles/{pid}/hidden").json()
+    assert [(h["tmdb"], h["title"], h["until"] is not None) for h in listed] == [(5, "Film 5", True)]
+    assert len(Records(store).hidden(pid, list(client.cookies.values()))) == 2  # kept, should it come back

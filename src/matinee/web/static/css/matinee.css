@@ -4244,6 +4244,67 @@ button.case {
   }
 }
 
+/* A bare case: a plain dark frame, for a film not shown by its rating. */
+.case.bare .plate {
+  top: 2%;
+  left: 4%;
+  width: 92%;
+  height: 8%;
+  line-height: 12.4cqw;
+  color: color-mix(in srgb, var(--text) 80%, transparent);
+}
+
+.case.bare .win {
+  top: 12%;
+  left: 4%;
+  width: 92%;
+  height: 86%;
+  border-radius: 3px;
+  box-shadow:
+    0 0 0 1px var(--strip-edge),
+    0 0 0 4px var(--base);
+}
+
+/* "Films you've hidden": each greyed in its bare case, with when it comes back and "Bring back". */
+.hidden-films {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 26px;
+  padding-top: 14px;
+}
+
+.hidden-film {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  width: 140px;
+}
+
+.hidden-film .case {
+  width: 100%;
+}
+
+.hidden-film .win img {
+  filter: grayscale(0.85) brightness(0.6);
+}
+
+/* "Bring back" stands at the foot of its film, so a return date that wraps never staggers the row's actions. */
+.hidden-film .action {
+  margin-top: auto;
+}
+
+.hidden-until {
+  margin: 0;
+  font-size: 14px;
+  color: color-mix(in srgb, var(--text) 80%, transparent);
+}
+
+.part h2:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 4px;
+}
+
 /* "Films you've rated": a row per rating, its words and count beside its films. */
 .tier {
   display: grid;
@@ -4348,7 +4409,35 @@ button.case {
     scrollbar-width: none;
   }
 
-  /* A third of the next case shows at the row's edge, so a row with more films than fit reads as one to swipe. */
+  .hidden-films {
+    flex-wrap: nowrap;
+    gap: 12px;
+    margin: 0 -16px;
+    padding: 4px 16px 12px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: 16px;
+    scrollbar-width: none;
+  }
+
+  .hidden-until {
+    font-size: 12px;
+  }
+
+  /* Part of the next case shows at the row's edge, so a row with more films than fit reads as one to swipe. A hidden
+     film's column is a little wider, to hold "Bring back" on one line. */
+  .hidden-film {
+    flex: none;
+    width: min(124px, calc((100% - 20px) / 2.6));
+    scroll-snap-align: start;
+  }
+
+  .hidden-film .action {
+    align-self: stretch;
+    padding-inline: 8px;
+    white-space: nowrap;
+  }
+
   .rated-film {
     flex: none;
     width: min(108px, calc((100% - 20px) / 3.33));

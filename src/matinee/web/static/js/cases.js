@@ -4,6 +4,7 @@
 // on screen (never under reduced motion), and where a pointer can hover it glows softly under the pointer. The light
 // brightens what is behind it and lays nothing over it, so a poster's dark areas stay dark.
 
+import { del } from "./api.js";
 import { h, prefersLessMotion } from "./dom.js";
 import { ANSWERS } from "./ratings.js";
 
@@ -100,4 +101,48 @@ export function ratedPart(body, ratings, { poster, phone, onOpen = null }) {
     );
   });
   body.append(...rows);
+}
+
+// When a hidden film comes back: "Back on 10 January" in the viewer's own time, or "Hidden for good". The year is
+// said when the day and month alone would read as this year's: a year's hide made today comes back on today's date.
+export function hiddenUntil(until, today = new Date()) {
+  if (!until) return "Hidden for good";
+  const back = new Date(until);
+  const later = back.getFullYear() > today.getFullYear() && back.getMonth() >= today.getMonth();
+  return `Back on ${back.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: later ? "numeric" : undefined })}`;
+}
+
+// "Films you've hidden": each film in a bare case, greyed, with when it comes back and "Bring back", which brings it
+// back at once and takes it off the part. `recount(n)` hears how many are left.
+export function hiddenPart(body, hidden, { id, poster, recount }) {
+  const row = h("div", { class: "hidden-films" });
+  const status = h("p", { class: "set-status", role: "status" });
+  const items = hidden.map((f) => {
+    const back = h("button", { class: "action gold", type: "button" }, "Bring back");
+    const item = h(
+      "div",
+      { class: "hidden-film" },
+      filmCase({ title: f.title, poster: poster(f.tmdb), label: `${f.title}, hidden` }),
+      h("p", { class: "hidden-until" }, hiddenUntil(f.until)),
+      back,
+    );
+    back.addEventListener("click", async () => {
+      back.disabled = true;
+      const res = await del(`/api/profiles/${id}/hidden/${f.tmdb}`);
+      if (!res.ok) {
+        status.textContent = res.data.message;
+        back.disabled = false;
+        return;
+      }
+      status.textContent = "";
+      const next = item.nextElementSibling ?? item.previousElementSibling;
+      item.remove();
+      recount(row.children.length);
+      // The focus goes to the next film's "Bring back", or the part's heading when none is left.
+      (next?.querySelector("button.action") ?? document.getElementById("mine-hidden-title"))?.focus({ preventScroll: true });
+    });
+    return item;
+  });
+  row.append(...items);
+  body.append(status, row);
 }

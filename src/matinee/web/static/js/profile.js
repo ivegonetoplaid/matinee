@@ -113,7 +113,7 @@ function part(p, phone) {
   const section = h(
     "section",
     { class: "part", id: `mine-${p.id}`, "aria-labelledby": `mine-${p.id}-title` },
-    h("div", { class: "placard" }, h("h2", { id: `mine-${p.id}-title` }, p.title), h("span", { class: "placard-meta" }, (phone && p.phoneMeta) || p.meta)),
+    h("div", { class: "placard" }, h("h2", { id: `mine-${p.id}-title`, tabindex: "-1" }, p.title), h("span", { class: "placard-meta" }, (phone && p.phoneMeta) || p.meta)),
     p.note ? h("p", { class: "part-note" }, p.note) : null,
     h("div", { class: "part-rule" }),
     body,
@@ -284,7 +284,8 @@ function frame({ viewer, avatars, actions, phone }) {
 }
 
 // Each part's count in its jump, and each part's body, from the viewer's records. A phone's jump bar names past picks
-// without a count, as its board draws it.
+// without a count, as its board draws it. A part that loses records as the viewer acts calls `recount(n)`, which
+// sets its jump's count and, at none, puts back its empty line.
 function fill({ built, jumps, notice }, mine, { parts, viewer, phone }) {
   if (mine.problem) {
     notice.textContent = sentenceCase(mine.problem);
@@ -294,7 +295,11 @@ function fill({ built, jumps, notice }, mine, { parts, viewer, phone }) {
     const n = p.count?.(mine) ?? 0;
     if (p.count && !(phone && p.id === "shown")) jumps[i].count.textContent = String(n);
     if (n) built[i].body.querySelector(".part-empty")?.remove(); // the part has records, though no body shows them yet
-    parts[p.id]?.(built[i].body, mine, viewer);
+    const recount = (left) => {
+      if (p.count && !(phone && p.id === "shown")) jumps[i].count.textContent = String(left);
+      if (!left && p.empty) built[i].body.replaceChildren(h("p", { class: "part-empty" }, p.empty));
+    };
+    parts[p.id]?.(built[i].body, mine, { viewer, recount });
   });
 }
 
