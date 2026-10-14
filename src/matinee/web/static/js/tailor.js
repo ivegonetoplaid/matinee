@@ -6,7 +6,7 @@
 import { get, put } from "./api.js";
 import { h, isPhone } from "./dom.js";
 import { topicButton } from "./topics.js";
-import { FLOORS, RATED, ROWS, SHARING, languageName, languageOrder, topicList } from "./settings.js";
+import { FLOORS, RATED, ROWS, SHARING, languageName, languageOrder, languagesFirst, moreLanguages, topicList } from "./settings.js";
 
 // The offer while a profile is made.
 export const OFFER = {
@@ -83,7 +83,8 @@ function languagesStep({ id, now, held, locale, status, next }) {
     }
     next();
   });
-  return { answers: [h("div", { class: "set-choices", role: "group", "aria-label": ROWS.languages.title }, any, list)], actions: [done] };
+  const more = moreLanguages(list, languagesFirst(ordered, held, locale, chosen));
+  return { answers: [h("div", { class: "set-choices", role: "group", "aria-label": ROWS.languages.title }, any, list, more)], actions: [done] };
 }
 
 function stepFor(key, args) {

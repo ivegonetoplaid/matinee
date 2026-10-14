@@ -91,6 +91,31 @@ export function languageOrder(held, locale) {
   return [...held.filter((l) => l.code === own), ...held.filter((l) => l.code !== own)];
 }
 
+export const LANGUAGES_FIRST = 15; // languages shown before "+ More languages": almost every film is in one of them
+
+// Which of `ordered` (languageOrder's list) show before "+ More languages": the LANGUAGES_FIRST the film table holds
+// most, the browser's own, and every one already ticked in `chosen`, so a choice is never out of sight.
+export function languagesFirst(ordered, held, locale, chosen) {
+  const own = String(locale || "").split("-")[0].toLowerCase();
+  const most = new Set(held.slice(0, LANGUAGES_FIRST).map((l) => l.code));
+  return ordered.map((l) => most.has(l.code) || l.code === own || chosen.has(l.code));
+}
+
+// Hides the languages `first` leaves out behind a "+ More languages" letterbox that shows them all and then goes;
+// the focus moves to the first one it showed. Returns the letterbox, or null when nothing is hidden.
+export function moreLanguages(buttons, first) {
+  const rest = buttons.filter((_, i) => !first[i]);
+  if (!rest.length) return null;
+  for (const b of rest) b.hidden = true;
+  const more = h("button", { class: "letterbox setting-answer more-languages", type: "button" }, "+ More languages");
+  more.addEventListener("click", () => {
+    for (const b of rest) b.hidden = false;
+    more.remove();
+    rest[0].focus();
+  });
+  return more;
+}
+
 // An answer in a row's picture: a letterbox that does nothing, ringed in gold and checked when chosen.
 function shown({ say, band = "", chosen, ticked = false }) {
   const classes = `letterbox setting-answer ${ticked ? "topic" : "ticked"}`;
@@ -163,7 +188,7 @@ function singleRow(key, { now, save, onToggle }) {
 }
 
 // "Language preferences": "Any language", or one or more languages ticked; each tick saves at once.
-function languagesRow({ now, held, save, locale, onToggle }) {
+function languagesRow({ now, held, most, save, locale, onToggle }) {
   const named = held.map((l) => ({ code: l.code, say: languageName(l.code, locale) }));
   let saved = new Set(now.languages);
   const panel = () => {
@@ -192,7 +217,8 @@ function languagesRow({ now, held, save, locale, onToggle }) {
       }
     }
     named.forEach((l, i) => (list[i].dataset.code = l.code));
-    return [h("p", { class: "set-ask" }, ROWS.languages.ask), h("div", { class: "set-choices", role: "group", "aria-label": ROWS.languages.title }, any, list)];
+    const more = moreLanguages(list, languagesFirst(held, most, locale, now.languages));
+    return [h("p", { class: "set-ask" }, ROWS.languages.ask), h("div", { class: "set-choices", role: "group", "aria-label": ROWS.languages.title }, any, list, more)];
   };
   const picture = () => [
     h("p", { class: "set-ask" }, ROWS.languages.ask),
@@ -309,7 +335,7 @@ export async function settingsPart(body, { id, dtdd, credit, locale = navigator.
   if (dtdd) rows.push(topicsRow({ topics, now, credit, saveTopics: (status) => send(`/api/profiles/${id}/topics`, { topics: [...now.topics] }, status), onToggle }));
   rows.push(
     singleRow("floor", { now, save, onToggle }),
-    languagesRow({ now, held, save, locale, onToggle }),
+    languagesRow({ now, held, most: languages.ok ? languages.data : [], save, locale, onToggle }),
     singleRow("rated", { now, save, onToggle }),
     singleRow("sharing", { now, save, onToggle }),
   );

@@ -2455,7 +2455,9 @@ the film information area on both desktop and phone.
     letterboxes that toggle, named in the viewer's own language where the
     browser can say it (TMDB's `cn` as "Cantonese", which browsers do not
     name), the browser's own language first and the rest by how many films each
-    holds. Ticking one turns "Any language" off; "Any language" clears every
+    holds. Only the 15 languages the most films hold show at first, with the
+    browser's own and any already ticked; "+ More languages" shows the rest and
+    goes. Ticking one turns "Any language" off; "Any language" clears every
     tick.
   - The rated films ask "Stop picking films I gave this rating or lower:" over
     "Loved it!" (marked "Everything I've rated"), "Really liked it", "It was
@@ -3870,6 +3872,7 @@ describing it wrongly, never by naming something gone.
 - `src/matinee/web/static/js/settings.js::settingsPart` / `ROWS` / `FLOORS` / `RATED` / `SHARING` (the rows' words and answers; saves queued in order)
 - `src/matinee/web/static/js/settings.js::row` / `singleRow` / `languagesRow` / `topicsRow` / `topicList` / `chooser` (a row, its picture and open panel)
 - `src/matinee/web/static/js/settings.js::languageName` / `languageOrder` (named through the browser, `cn` as Cantonese; the browser's language first)
+- `src/matinee/web/static/js/settings.js::languagesFirst` / `moreLanguages` (the 15 most-held languages, the browser's and the ticked first; "+ More languages" shows the rest)
 - `src/matinee/web/static/js/topics.js::topicButton`
 - `src/matinee/web/static/js/credits.js::dtddSetting` (DoesTheDogDie's credit under the topics row)
 - `src/matinee/web/static/js/cases.js::filmCase` / `CASES` / `tiers` / `ratedPart` (a film in its case; the rated tiers)
