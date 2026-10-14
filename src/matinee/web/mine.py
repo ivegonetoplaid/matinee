@@ -241,8 +241,10 @@ class SettingsIn(BaseModel):
 
 class SettingsOut(BaseModel):
     """The viewer's tailoring settings and whether they have seen this feature's welcome. `languages` empty means
-    any language; `rated_out` 0 keeps every rated film in the picks."""
+    any language; `rated_out` 0 keeps every rated film in the picks; `topics` are the DoesTheDogDie topics steered
+    around."""
 
+    topics: list[int]
     floor: str
     languages: list[str]
     rated_out: int
@@ -257,7 +259,12 @@ class LanguageOut(BaseModel):
 
 def settings_out(p: Profile) -> SettingsOut:
     return SettingsOut(
-        floor=p.floor, languages=sorted(p.languages), rated_out=p.rated_out, sharing=p.sharing, welcomed=p.welcomed
+        topics=sorted(p.topics),
+        floor=p.floor,
+        languages=sorted(p.languages),
+        rated_out=p.rated_out,
+        sharing=p.sharing,
+        welcomed=p.welcomed,
     )
 
 

@@ -2,7 +2,8 @@
 // DoesTheDogDie's credit. "About Matinee" opens it: at the foot's middle on a screen with no profile menu, and as the
 // profile menu's last item inside the theatre. DoesTheDogDie's terms also want its credit wherever its data shows,
 // so it stands in the door's credit line while the topic picker shows its topics (`credits`), in the pick's foot
-// band when Matinee's line names one of its topics (`dtddFoot`), and beside an unchecked film's note (`dtddBeside`).
+// band when Matinee's line names one of its topics (`dtddFoot`), beside an unchecked film's note (`dtddBeside`), and
+// under My profile's "Scenes you don't want to see" (`dtddSetting`).
 
 import { openAbout } from "./about.js";
 import { h } from "./dom.js";
@@ -41,6 +42,11 @@ export function dtddFoot() {
     { class: "credits", hidden: true },
     h("a", { href: "https://www.doesthedogdie.com", target: "_blank", rel: "noopener noreferrer" }, "Powered by DoesTheDogDie.com"),
   );
+}
+
+// DoesTheDogDie's credit under My profile's "Scenes you don't want to see", which offers its topics.
+export function dtddSetting() {
+  return h("a", { class: "set-credit", href: "https://www.doesthedogdie.com", target: "_blank", rel: "noopener noreferrer" }, "Powered by DoesTheDogDie.com ↗");
 }
 
 // The door's credit line: DoesTheDogDie's credit, built hidden, for the topic picker to show.

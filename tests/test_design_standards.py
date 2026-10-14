@@ -20,6 +20,7 @@ ACCENTS = {"gold", "rose", "petrol", "cream"}
 # (its drawing, the phone's lit strip and the name in flight), the locked door's scene, the wall's tiles and
 # the scorch.
 ARTWORK = {
+    "thumb-inner",  # a setting's picture of its open panel: letterboxes as spans, no control inside
     "tile",
     "marquee",
     "mq-strip",
@@ -66,6 +67,7 @@ PERMITTED = {
     ("button", "profile.js", "jump", frozenset({"jump"})),
     ("button", "profile.js", "avatarEditor", frozenset({"avatar-button"})),
     ("button", "profile.js", "showName", frozenset({"name-button"})),
+    ("a", "credits.js", "dtddSetting", frozenset({"set-credit"})),
 }
 
 # Every CSS named colour.
@@ -433,6 +435,21 @@ def test_letterboxes_and_actions_have_the_standards_sizes_and_no_override() -> N
     ]
     assert bare == []
     assert all(is_artwork(d) for d in DECLS if d.prop == "zoom")  # zoom shrinks every control it holds
+
+
+def test_a_settings_rows_picture_holds_no_control() -> None:
+    # The picture is zoomed to three tenths and hidden from screen readers, so a control inside it would be a
+    # focus stop no one can see or hear; the row's "Change" is the way in.
+    source = SCRIPTS["settings.js"]
+    pictures = []
+    for m in re.finditer(r"picture(?::|\s*=)\s*\(\)\s*=>", source):
+        ends = [at for at in (source.find("panel:", m.end()), source.find("const self = row", m.end())) if at > 0]
+        pictures.append(source[m.end() : min(ends)])
+    assert len(pictures) == 3
+    assert all("chooser(" not in p and "topicButton(" not in p and '"button"' not in p for p in pictures), pictures
+    shown = source[source.index("function shown(") :]
+    shown = shown[: shown.index("\n}\n")]
+    assert 'h("span"' in shown and "button" not in shown
 
 
 def test_the_wordmark_link_carries_the_corner_mark_named_matinee() -> None:

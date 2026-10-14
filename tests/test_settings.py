@@ -122,6 +122,7 @@ def test_the_routes_read_and_change_settings_and_mark_the_welcome(door: Any) -> 
     pid = me(client)
     path = f"/api/profiles/{pid}/settings"
     assert client.get(path).json() == {
+        "topics": [],
         "floor": "anything",
         "languages": [],
         "rated_out": 1,

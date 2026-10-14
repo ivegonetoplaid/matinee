@@ -4093,6 +4093,190 @@ a.wordmark:focus-visible {
   color: var(--text);
 }
 
+/* "How I pick films for you": a row per setting, its gold title and quieter help beside "Change", and beneath them
+   a small picture of the open panel (the same letterboxes at three tenths their size) that opens it too. */
+.set {
+  padding: 20px 0;
+  border-top: 1px solid color-mix(in srgb, var(--gold) 20%, transparent);
+}
+
+.set:first-child {
+  border-top: 0;
+}
+
+.set-status {
+  margin: 10px 0 0;
+  color: var(--rose-vivid);
+}
+
+.set-status:empty {
+  display: none;
+}
+
+.sethead {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 28px;
+  align-items: start;
+}
+
+.stitle {
+  margin: 0 0 6px;
+  font: 800 24px/1.1 var(--display);
+  color: var(--gold-words);
+}
+
+.set-help {
+  max-width: 720px;
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--dim);
+}
+
+.set-credit {
+  display: inline-block;
+  margin-top: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--petrol-vivid);
+  text-decoration: none;
+}
+
+.set-credit:hover {
+  text-decoration: underline;
+}
+
+.thumb {
+  width: fit-content;
+  max-width: 100%;
+  margin-top: 12px;
+  padding: 10px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--gold) 25%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--base) 72%, transparent);
+  cursor: pointer;
+}
+
+.thumb:hover {
+  border-color: color-mix(in srgb, var(--gold) 60%, transparent);
+}
+
+.thumb[hidden] {
+  display: none;
+}
+
+.thumb-inner {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  width: 640px;
+  zoom: 0.3;
+  pointer-events: none;
+}
+
+.thumb-inner.column {
+  flex-direction: column;
+}
+
+.thumb-inner > .set-ask,
+.thumb-inner > .field {
+  width: 100%;
+}
+
+.thumb-topics {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  width: 100%;
+}
+
+.thumb-inner .letterbox {
+  box-shadow: none;
+}
+
+.setbody {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-top: 18px;
+}
+
+.setbody[hidden] {
+  display: none;
+}
+
+.set-ask {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--gold-words);
+}
+
+.set-choices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.set-choices.column {
+  flex-direction: column;
+  max-width: 620px;
+}
+
+.set-band {
+  align-self: center;
+  margin-left: auto;
+  padding-left: 16px;
+  font: 600 14px var(--body);
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--edge-hi);
+}
+
+/* The chosen answer, or each ticked one, is ringed in gold. */
+.set [aria-pressed="true"].letterbox {
+  box-shadow:
+    0 0 0 2px var(--gold),
+    0 0 18px color-mix(in srgb, var(--glow) 50%, transparent),
+    inset 0 3px 3px -1px color-mix(in srgb, var(--black) 22%, transparent);
+}
+
+.set-topics {
+  flex: none;
+  min-height: 0;
+  max-height: 336px;
+}
+
+/* A language keeps the check mark's gutter on both sides, so its word stays centred. */
+.set-choices > .topic {
+  padding-right: 42px;
+}
+
+@media (max-width: 600px) {
+  .sethead {
+    gap: 12px;
+  }
+
+  .stitle {
+    font-size: 21px;
+  }
+
+  .thumb-inner {
+    width: 340px;
+    zoom: 0.32;
+  }
+
+  .thumb-topics {
+    grid-template-columns: 1fr;
+  }
+
+  .set-topics {
+    max-height: 300px;
+  }
+}
+
 /* A narrow desktop gives the menu its own row above the parts. */
 @media (min-width: 601px) and (max-width: 900px) {
   .my-profile .shell {

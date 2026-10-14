@@ -10,6 +10,7 @@ import { FLIGHT_MS, HANDOVER_MS, copyAt, fly, markAt, nameAt } from "./flight.js
 import { boardText, doorLines, filmCount, findTaken, opensAtOnce, stripLap, twoParts } from "./door-rules.js";
 import { avatarChoices, mark } from "./mark.js";
 import { offers } from "./offers.js";
+import { topicButton } from "./topics.js";
 import { typeLine } from "./type.js";
 
 // The marquee is the drawing in /static/marquee/, wide on a desktop and narrow on a phone, laid into the page
@@ -526,7 +527,9 @@ export class Door {
       const n = this.picked.size;
       tally.textContent = n ? `${n} chosen` : "Nothing chosen yet";
     };
-    const theirs = dtdd.ok ? dtdd.data.topics.map((t) => this.topic(sentenceCase(t.short), `${t.name} ${t.keywords}`, this.picked, t.id, count)) : [];
+    const theirs = dtdd.ok
+      ? dtdd.data.topics.map((t) => topicButton({ label: sentenceCase(t.short), find: `${t.name} ${t.keywords}`, chosen: this.picked, id: t.id, onToggle: count }))
+      : [];
     list.append(...theirs);
     search.addEventListener("input", () => {
       const needle = search.value.trim().toLowerCase();
@@ -561,19 +564,5 @@ export class Door {
         creamAction("Try again", () => this.fillTopics(box, editing)),
       ),
     );
-  }
-
-  // A topic is a letterbox that toggles: chosen, it shows a check mark before its words.
-  topic(label, find, chosen, id, count) {
-    const on = chosen.has(id);
-    const b = h("button", { class: "letterbox topic", type: "button", "aria-pressed": String(on) }, label);
-    b.dataset.find = `${label} ${find}`.toLowerCase();
-    b.addEventListener("click", () => {
-      if (chosen.has(id)) chosen.delete(id);
-      else chosen.add(id);
-      b.setAttribute("aria-pressed", String(chosen.has(id)));
-      count();
-    });
-    return b;
   }
 }

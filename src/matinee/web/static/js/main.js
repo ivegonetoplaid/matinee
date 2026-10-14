@@ -2,7 +2,7 @@
 
 import { del, get, post, put } from "./api.js";
 import { noteLink, walkOf } from "./note.js";
-import { aboutLink, dtddFoot } from "./credits.js";
+import { aboutLink, dtddFoot, dtddSetting } from "./credits.js";
 import { Door, buildMarquee, marqueeReady, showCount } from "./door.js";
 import { LockedDoor, WALL_FADE_MS } from "./locked.js";
 import { clear, h, isPhone, prefersLessMotion, sentenceCase, wait } from "./dom.js";
@@ -19,6 +19,7 @@ import { typeLine } from "./type.js";
 import { Wall } from "./wall.js";
 import { viewerTag } from "./viewer.js";
 import { openProfile } from "./profile.js";
+import { settingsPart } from "./settings.js";
 import { learnOffers, offers } from "./offers.js";
 
 const stage = document.getElementById("stage");
@@ -157,6 +158,7 @@ function myProfile(opener = null, at = null) {
     avatars: avatarsOffered,
     opener,
     at,
+    parts: { tailor: (body) => settingsPart(body, { id, dtdd: offers.dtdd, credit: dtddSetting }) },
     actions: {
       saveAvatar: async (avatar) => {
         const res = await saveAvatar(id, avatar);
