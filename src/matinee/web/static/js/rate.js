@@ -1,0 +1,157 @@
+// "Rate it": the pick's panel with the five answers, best first, and beneath them one line for a short review. An
+// answer saves at once. The short review waits for a rating, takes at most MAX_REVIEW characters (counted as the
+// store counts them, by code point, so an emoji is one), shows how many remain over the last REVIEW_WARN, and saves
+// on Enter or its own Save. A keystroke past the limit is refused: the field's edge turns rose and fades, it shakes
+// (not under reduced motion), and a line asks for about 20 words. A review is shown and kept as plain text.
+
+import { put } from "./api.js";
+import { h } from "./dom.js";
+import { panelAction } from "./panel.js";
+import { ANSWERS } from "./ratings.js";
+
+export const MAX_REVIEW = 140; // the store's limit (matinee.records.MAX_REVIEW)
+const REVIEW_WARN = 20;
+const TRIP_MS = 2200; // how long the rose edge and the line stay before they fade
+const FADE_MS = 400;
+const TOO_LONG = "Short and sweet, please. About 20 words.";
+
+// The length of a short review as the store counts it.
+export const length = (text) => [...text].length;
+
+// What a typed value becomes: itself when it fits, else the last value that did; `tripped` when a keystroke was
+// refused.
+export function fitted(value, before) {
+  return length(value) <= MAX_REVIEW ? { value, tripped: false } : { value: before, tripped: true };
+}
+
+// What the field says about room left: "12 left" over the last REVIEW_WARN characters, nothing before.
+export function roomLeft(value) {
+  const left = MAX_REVIEW - length(value);
+  return left <= REVIEW_WARN ? `${left} left` : "";
+}
+
+function answerButtons(current, onPick) {
+  const buttons = ANSWERS.map((a) =>
+    h("button", { class: "letterbox ticked", type: "button", "aria-pressed": String(a.score === current), onclick: () => onPick(a.score) }, a.say),
+  );
+  return buttons;
+}
+
+// The panel's body for `film`. `rating` is the viewer's current one or null; `save` holds score(score) and
+// review(text), each resolving to the page's { ok, data } answer; `onSaved(rating)` hears every saved change.
+export function ratePanel({ film, rating, save, onSaved }) {
+  let current = rating;
+  const status = h("p", { class: "rate-status", role: "status" });
+  const input = h("input", {
+    class: "review-input",
+    id: "short-review",
+    type: "text",
+    autocomplete: "off",
+    placeholder: "This movie will melt your brain",
+    "aria-describedby": "review-room review-trip",
+  });
+  input.value = rating?.review ?? "";
+  const room = h("span", { class: "review-room", id: "review-room" });
+  const trip = h("p", { class: "review-trip", id: "review-trip", role: "alert" });
+  const send = h("button", { class: "action gold", type: "button" }, "Save");
+  const box = h("div", { class: "review-field" }, input, room, send);
+  let typed = input.value;
+  let tripTimer = 0;
+  const say = (text) => {
+    status.textContent = text;
+  };
+  const ready = () => {
+    const off = !current;
+    input.disabled = off;
+    send.disabled = off;
+    box.classList.toggle("off", off);
+  };
+  const tripped = () => {
+    clearTimeout(tripTimer);
+    box.classList.remove("tripped");
+    void box.offsetWidth; // restart the edge and the shake for every refused keystroke
+    box.classList.add("tripped");
+    trip.textContent = TOO_LONG;
+    trip.classList.remove("leaving");
+    tripTimer = setTimeout(() => {
+      box.classList.remove("tripped");
+      trip.classList.add("leaving"); // the line fades out, then goes
+      tripTimer = setTimeout(() => {
+        trip.textContent = "";
+        trip.classList.remove("leaving");
+      }, FADE_MS);
+    }, TRIP_MS);
+  };
+  input.addEventListener("input", () => {
+    const fit = fitted(input.value, typed);
+    if (fit.tripped) {
+      input.value = fit.value;
+      tripped();
+    }
+    typed = input.value;
+    room.textContent = roomLeft(typed);
+  });
+  input.addEventListener("beforeinput", (e) => {
+    if (e.inputType.startsWith("insert") && e.data && length(typed) + length(e.data) > MAX_REVIEW && input.selectionStart === input.selectionEnd) {
+      e.preventDefault();
+      tripped();
+    }
+  });
+  let saving = false; // Save stays enabled while a save runs, so the keyboard's focus stays on it
+  const saveReview = async () => {
+    if (saving || !current) return undefined;
+    saving = true;
+    const res = await save.review(input.value);
+    saving = false;
+    if (!res.ok) return say(res.data.message);
+    current = res.data;
+    onSaved(current);
+    clearTimeout(tripTimer);
+    box.classList.remove("tripped");
+    trip.textContent = "";
+    return say(current.review ? "Short review saved." : "Short review cleared.");
+  };
+  // A phone's keyboard can cover the field: it scrolls into the panel's view as it takes the focus.
+  input.addEventListener("focus", () => box.scrollIntoView({ block: "nearest" }));
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      saveReview();
+    }
+  });
+  send.addEventListener("click", saveReview);
+  const answers = answerButtons(current?.score ?? null, async (score) => {
+    const res = await save.score(score);
+    if (!res.ok) return say(res.data.message);
+    current = res.data;
+    for (const [i, b] of answers.entries()) b.setAttribute("aria-pressed", String(ANSWERS[i].score === score));
+    ready();
+    onSaved(current);
+    return say("Saved. Add a short review if you like.");
+  });
+  room.textContent = roomLeft(typed);
+  ready();
+  return [
+    h("p", { class: "panel-lede" }, `Seen ${film.title}? Your answer is kept on My profile, where you can change it.`),
+    h("div", { class: "rate-answers", role: "group", "aria-label": "Your answer" }, answers),
+    status,
+    h("label", { class: "review-label", for: "short-review" }, "Short review ", h("span", { class: "review-optional" }, "(optional)")),
+    box,
+    trip,
+  ];
+}
+
+// "Rate it" on the pick: opens the panel for `film`. `household` is the pick's shared ratings and the viewer's own
+// (`mine`), kept current as the viewer rates, so the reading panel shows the new rating. A rating made here names the
+// run, where the film is marked rated.
+export function rateLink({ film, panel, profileId, run, household }) {
+  const path = `/api/profiles/${profileId}/ratings/${film.tmdb}`;
+  const save = {
+    score: (score) => put(path, { score, run }),
+    review: (text) => put(`${path}/review`, { review: text }),
+  };
+  const open = panelAction("Rate it", () =>
+    panel.open(open, "Rate it", ...ratePanel({ film, rating: household.mine, save, onSaved: (r) => Object.assign(household, { mine: r }) })),
+  );
+  return open;
+}

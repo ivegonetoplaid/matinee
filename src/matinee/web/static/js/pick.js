@@ -16,6 +16,7 @@ import { kept } from "./run.js";
 import { backdropUrl, corsImage } from "./pictures.js";
 import { panelAction } from "./panel.js";
 import { focusShown, householdLine, readingPanel } from "./household.js";
+import { rateLink } from "./rate.js";
 import { typeLine } from "./type.js";
 
 const BEAT_MS = 500; // the grown poster holds for one beat before it moves to rest
@@ -226,11 +227,13 @@ function fillBar(frame, left, centre = null) {
   if (isPhone()) frame.aside.append(frame.bar);
 }
 
-// The resting pick's actions: "‹ Back" and "Wrong pick?" at the bar's left, "Not that one" at its centre. A note
-// records `walk`, the walk the film was drawn under.
-function pickBar(frame, film, actions, walk) {
+// The resting pick's actions: "‹ Back", "Wrong pick?" and "Rate it" at the bar's left, "Not that one" at its centre.
+// A note records `walk`, the walk the film was drawn under; a rating names its run. `household` holds the viewer's
+// own rating, which "Rate it" keeps current.
+function pickBar(frame, film, actions, walk, household) {
   const nope = h("button", { class: "action rose lead", type: "button", onclick: actions.notThatOne }, "Not that one");
-  fillBar(frame, [backAction(frame, actions), actions.noteLink(film, frame.panel, walk)], nope);
+  const rate = rateLink({ film, panel: frame.panel, profileId: walk.profileId, run: walk.run, household });
+  fillBar(frame, [backAction(frame, actions), actions.noteLink(film, frame.panel, walk), rate], nope);
 }
 
 // What Matinee's line says at rest, as the films shown this run keep it: its gold and cream parts, or nothing when a
@@ -264,7 +267,7 @@ async function rest({ stage, wall, frame, film, result, actions, info, backdrop,
   frame.showing.append(shown);
   if (!isPhone()) factsUnderLine(frame, info, fuse, line);
   frame.aside.append(...underLine(result, frame.aside.querySelector(".swap-note")));
-  pickBar(frame, film, actions, walk);
+  pickBar(frame, film, actions, walk, household);
   // Measured once the aside is whole, so the poster takes only the height left beneath it.
   const from = wall.landedTile()?.img.getBoundingClientRect();
   const slot = h("div", { class: "poster-slot" });

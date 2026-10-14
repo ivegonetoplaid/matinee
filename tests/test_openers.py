@@ -34,6 +34,7 @@ KEPT = {
     "okay, who's on the couch?": "the kids' door talks the way a parent does",
     "comedies, camp and the gloriously awful. let's find you one.": "a list, not an interjection",
     "paws, claws and whiskers, coming up.": "a list, not an interjection",
+    "Saved. Add a short review if you like.": "the rating's confirmation, word for word from the approved board",
 }
 
 # A lone word set off by a comma, full stop, colon or exclamation mark, or one of the stock phrases.

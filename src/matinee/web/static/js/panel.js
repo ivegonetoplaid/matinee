@@ -54,10 +54,14 @@ export function pickPanel(stage, frame, entries = { opened() {}, closed() {} }) 
   const escape = (e) => {
     if (e.key === "Escape" && shown) close();
   };
-  // A window that becomes a phone's closes the panel; any other change of size places it again.
+  // A window that becomes a phone's closes the panel; any other change of size places it again. A phone's own
+  // resizing, as its keyboard opens, leaves the panel as it is.
+  let phone = isPhone();
   const resized = () => {
-    if (isPhone()) close();
-    else if (shown) place(stage, frame, shown.node);
+    const was = phone;
+    phone = isPhone();
+    if (phone && !was) close();
+    else if (shown && !phone) place(stage, frame, shown.node);
   };
   function listen(on) {
     const how = on ? "addEventListener" : "removeEventListener";

@@ -1368,6 +1368,118 @@ a.wordmark:focus-visible {
   color: var(--dim);
 }
 
+/* "Rate it": the five answers stacked best first, the saved line, then one line for a short review. */
+.rate-answers {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rate-status {
+  min-height: 1.4em;
+  margin: 2px 4px;
+  font-size: 14px;
+  color: var(--gold-words);
+}
+
+.review-label {
+  margin: 4px 4px 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.review-optional {
+  font-weight: 400;
+  color: var(--dim);
+}
+
+/* The short review's line: the field, how many characters remain over the last twenty, and its own Save. A
+   keystroke past the limit gives it a rose edge that fades, and a shake, which reduced motion leaves out. */
+.review-field {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  min-height: 52px;
+  padding: 0 6px 0 14px;
+  border: 1px solid var(--enamel-rim);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--base) 80%, var(--black));
+  transition:
+    border-color 1.2s ease,
+    outline-color 1.2s ease;
+}
+
+.review-field:focus-within {
+  outline: 2px solid var(--gold);
+  outline-offset: 1px;
+}
+
+.review-field.off {
+  opacity: 0.45;
+}
+
+.review-field.tripped {
+  border-color: var(--rose-vivid);
+  outline-color: var(--rose-vivid);
+  transition: none;
+}
+
+.review-field.tripped {
+  animation: shake 0.32s;
+}
+
+@keyframes shake {
+  0%,
+  100% {
+    transform: none;
+  }
+  25% {
+    transform: translateX(-5px);
+  }
+  75% {
+    transform: translateX(5px);
+  }
+}
+
+.review-input {
+  flex: 1 1 12em;
+  min-width: 0;
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  font: 16px var(--body);
+  outline: none;
+}
+
+.review-input::placeholder {
+  color: color-mix(in srgb, var(--text) 45%, transparent);
+}
+
+.review-room {
+  flex: none;
+  font-size: 13px;
+  color: var(--dim);
+}
+
+.review-trip {
+  min-height: 1.4em;
+  margin: 4px;
+  font-size: 15px;
+  color: var(--rose-vivid);
+  animation: fade 0.4s ease backwards;
+}
+
+.review-trip:empty {
+  animation: none;
+}
+
+.review-trip.leaving {
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
 /* The reading panel: the chosen profile's mark, name, rating as a sentence and short review, then a row for each
    profile that shared one, "My review" first. */
 .reading-card {
@@ -1688,7 +1800,8 @@ a.wordmark:focus-visible {
   }
 
   .foot-bar .action {
-    flex: 1 1 0;
+    flex: 1 1 auto;
+    white-space: nowrap;
   }
 
   /* "‹ Back" alone (before any door, or with no film) keeps the width it has beside "Wrong pick?". */
@@ -2806,14 +2919,16 @@ a.wordmark:focus-visible {
   scrollbar-color: color-mix(in srgb, var(--gold) 45%, transparent) transparent;
 }
 
-/* A chosen topic shows a check mark in a gutter before its words, which every topic keeps, so choosing
-   one never moves its words or changes its size. */
-.topic {
+/* A chosen topic, or a rating's chosen answer, shows a check mark in a gutter before its words, which every such
+   letterbox keeps, so choosing one never moves its words or changes its size. */
+.topic,
+.ticked {
   position: relative;
   padding-left: 42px;
 }
 
-.topic[aria-pressed="true"]::before {
+.topic[aria-pressed="true"]::before,
+.ticked[aria-pressed="true"]::before {
   content: "✓";
   position: absolute;
   left: 16px;
