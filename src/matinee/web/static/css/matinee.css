@@ -941,8 +941,9 @@ a.wordmark:focus-visible {
   }
 }
 
-/* On a phone each sentence takes its own row, so no row starts or ends on a separator. */
-@media (max-width: 600px) {
+/* On a phone, and on a desktop too narrow for the foot bar's one row, the left column is narrow: each sentence takes
+   its own row, so no row starts or ends on a separator. */
+@media (max-width: 1080px) {
   .household {
     flex-direction: column;
     align-items: flex-start;
@@ -1368,6 +1369,50 @@ a.wordmark:focus-visible {
   color: var(--dim);
 }
 
+/* The pick's centre holds "Not that one" and, beside it on its right, "Hide film". On a desktop "Not that one" keeps
+   the bar's exact centre and "Hide film" hangs beside it; on a phone the two share the foot's first row. */
+.bar-centre {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+@media (min-width: 601px) {
+  .bar-centre {
+    position: relative;
+  }
+
+  .bar-centre > .action + .action {
+    position: absolute;
+    left: calc(100% + 12px);
+    white-space: nowrap;
+  }
+}
+
+/* A hide's brief "Undo": a plain cream word in the foot while the next pick hunts, fading as the hunt lands. */
+.undo-link {
+  min-height: 44px;
+  padding: 0 8px;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: 600 16px var(--body);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  cursor: pointer;
+  animation: fade 0.3s ease backwards;
+}
+
+.undo-link:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+
+.undo-link.leaving {
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
 /* "Rate it": the five answers stacked best first, the saved line, then one line for a short review. */
 .rate-answers {
   display: flex;
@@ -1742,9 +1787,10 @@ a.wordmark:focus-visible {
   justify-content: flex-end;
 }
 
-/* A desktop too narrow for one row keeps two from the start: "Not that one" centred on the first, "‹ Back" and
-   "Wrong pick?" side by side at the left of the second, as on a phone. */
-@media (min-width: 601px) and (max-width: 800px) {
+/* A desktop too narrow for one row keeps two from the start: "Not that one" centred on the first with "Hide film"
+   beside it, "‹ Back", "Wrong pick?" and "Rate it" side by side at the left of the second, and DoesTheDogDie's
+   credit at the second's right end, clear of "Hide film". */
+@media (min-width: 601px) and (max-width: 1080px) {
   .foot-bar {
     grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
     grid-template-rows: 44px 44px;
@@ -1757,14 +1803,14 @@ a.wordmark:focus-visible {
   }
 
   .foot-bar > .bar-left {
-    grid-column: 1 / -1;
+    grid-column: 1 / 3;
     grid-row: 2;
     flex-wrap: nowrap;
   }
 
   .foot-bar > .bar-right {
     grid-column: 3;
-    grid-row: 1;
+    grid-row: 2;
   }
 }
 

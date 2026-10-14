@@ -9,6 +9,7 @@ import { clear, h, isPhone, prefersLessMotion, sentenceCase, wait } from "./dom.
 import { cornerMark } from "./flight.js";
 import { pickPanel } from "./panel.js";
 import { asPick, newestFirst, remember, runKey, shownBody } from "./run.js";
+import { undoLink } from "./hide.js";
 import { answerRows, forget, stepBack, wayTo } from "./way-back.js";
 import { showPick } from "./pick.js";
 import { posterPaths } from "./pictures.js";
@@ -677,7 +678,7 @@ function checksAloud(posterBack, fuse) {
 // the resting poster goes back to the wall while the next film is fetched, and the check's line does not type.
 // `destruct` (seconds) lights a fuse on the reply: it counts down and burns away on its own clock, and the
 // check's line does not type over it.
-async function pickNow(opening = "", again = false, destruct = null, posterBack = again) {
+async function pickNow(opening = "", again = false, destruct = null, posterBack = again, undo = null) {
   const round = wall.round;
   // The pick is asked for first, so the check and the fetch run while the words fade and the line types.
   const request = requestPick();
@@ -685,6 +686,7 @@ async function pickNow(opening = "", again = false, destruct = null, posterBack 
   const lines = pickLines(again, destruct ? "" : opening);
   await clearForPick(posterBack);
   const { frame, readUntil } = await openPick(opening, lines.nope);
+  standUndo(frame, undo);
   const fuse = fuseOn(frame, opening, destruct, round);
   // The check's line types only on a checked pick that is not "Not that one", and never over a fuse.
   const res = await checkedPick(request, frame, lines, checksAloud(posterBack, fuse));
@@ -769,6 +771,44 @@ async function household(tmdb) {
   };
 }
 
+// A hide's "Undo", in the foot while the next pick hunts: in the foot bar's left on a desktop, in the foot on a phone.
+// None when no hide asked for it.
+function standUndo(frame, undo) {
+  if (!undo) return;
+  frame.undo = undoLink(undo);
+  const home = isPhone() ? stage.querySelector(".bottombar") : frame.bar.firstElementChild;
+  home.append(frame.undo.node);
+  frame.undo.node.focus({ preventScroll: true }); // the length chosen has gone with its panel; the way back takes the focus
+}
+
+// "Hide film": hides the film from this profile's picks for `length`, marks it in its run, and rolls again as "Not
+// that one" does, with "Undo" in the foot while the next pick hunts. Resolves to the server's answer, which the
+// panel shows when it is a refusal.
+async function hideAndRoll(film, length) {
+  const id = visit.viewer.profile_id;
+  const shown = visit.run.find((s) => s.film.tmdb === film.tmdb);
+  const run = shown?.walk.run ?? visit.runKey;
+  const res = await put(`/api/profiles/${id}/hidden/${film.tmdb}`, { length, run });
+  if (!res.ok) return res;
+  pickShowing?.panel.closedByBack(); // the pick's own entry takes the panel's place, so no step of history is taken
+  lockStage();
+  pickNow("", true, null, true, () => undoHide(film, shown, run));
+  return res;
+}
+
+// "Undo" of a hide: the film comes back to this profile's picks, gets back the mark its run held before, and shows
+// again as the pick, as it was first shown.
+async function undoHide(film, shown, run) {
+  const res = await del(`/api/profiles/${visit.viewer.profile_id}/hidden/${film.tmdb}?run=${encodeURIComponent(run)}`);
+  if (!res.ok) {
+    console.warn("the hide could not be undone; the film stays hidden until brought back from My profile", res.data);
+    return;
+  }
+  if (!shown) return;
+  wall.endPick(); // the roll stops where it is; the film comes back on the pick's own history entry
+  bringBack(shown);
+}
+
 // What the pick screen's controls do.
 function pickActions() {
   return {
@@ -792,6 +832,7 @@ function pickActions() {
     },
     failed: (data) => problem(data, start),
     household,
+    hide: hideAndRoll,
     noteLink: (film, panel, walk) => noteLink({ walk, film, trees: visit.trees, panel }),
   };
 }

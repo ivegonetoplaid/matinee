@@ -31,6 +31,7 @@ from matinee.engine import (
     gentlest,
     opening_pool,
     walk,
+    walk_kept,
 )
 from matinee.pick import Pick, Picker, candidates
 from matinee.records import Records, clean_run
@@ -499,7 +500,7 @@ def pick_pool(cat: Catalog, viewer: Viewer, body: PickIn) -> tuple[list[int], st
         if body.answers:
             raise HTTPException(status_code=400, detail="refused")
         return everything(cat, viewer), None
-    step = walk(cat, body.tree, viewer, [Answer(a.question, a.option) for a in body.answers])
+    step = walk_kept(cat, body.tree, viewer, [Answer(a.question, a.option) for a in body.answers])
     return list(step.pool), step.prefer
 
 
@@ -525,7 +526,7 @@ def add_pick_routes(
         ratings = dict(zip(films.index.tolist(), films.rating.fillna(0.0).tolist(), strict=True))
         pool = candidates(left, body.seen, ratings, prefer)
         note = walk_notice(body.source, showing, server, seerr)
-        if left and not pool:
+        if not pool:
             return pick_out(films, Pick(None, used_up=True), note)
         device = device_id(request, response) if viewer.topics else ""
         return pick_out(films, picker.pick(pool, viewer.topics, device, gentlest(cat, viewer, pool)), note)

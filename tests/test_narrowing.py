@@ -16,7 +16,9 @@ from fastapi.testclient import TestClient
 from matinee.engine import (
     FLOOR_EDGES,
     VOTE_FLOOR,
+    Answer,
     Catalog,
+    EngineError,
     Viewer,
     allowed_films,
     base_pool,
@@ -24,12 +26,14 @@ from matinee.engine import (
     load_catalog,
     places,
     walk,
+    walk_ends,
+    walk_kept,
 )
 from matinee.ranks import BANDS, band, rank_among
 from matinee.reference import Reference
 from matinee.store import FLOORS
 from matinee.table import FilmTable
-from matinee.web.viewing import everything
+from matinee.web.viewing import USED_UP, AnswerIn, PickIn, everything, pick_pool
 from test_engine import TREE, make_table, reference, write_data
 from test_web_library import make_world
 
@@ -265,6 +269,8 @@ def test_settings_that_leave_nothing_offer_no_door(world: Any) -> None:
         client.put(f"/api/profiles/{pid}/hidden/{t}", json={"length": "good"})
     first = client.post("/api/first", json={"viewer": {"profile_id": pid}, "source": "all"}).json()
     assert first["options"] == [] and first["pool"] == []
+    picked = client.post("/api/pick", json={"viewer": {"profile_id": pid}, "source": "all"}).json()
+    assert picked["film"] is None and picked["exhausted"] == USED_UP  # never "trips something on your list"
 
 
 def test_the_narrowing_only_ever_narrows_the_doors_own_pool(cat: Catalog) -> None:
@@ -272,3 +278,38 @@ def test_the_narrowing_only_ever_narrows_the_doors_own_pool(cat: Catalog) -> Non
     none_held = Viewer(source="held", allowed=everyone, floor="well_liked")  # the fixture's library holds no film
     assert not base_pool(cat, "west", none_held).any()
     assert (base_pool(cat, "west", Viewer(allowed=everyone)) == base_pool(cat, "west", Viewer())).all()
+
+
+def test_a_pick_after_a_hide_never_refuses_answers_the_narrowing_no_longer_asks(cat: Catalog) -> None:
+    """A hide can bring a pool under a question's stop, so the answers given no longer fit the narrowed walk; the
+    pick still draws from them, and only from films the viewer's narrowing allows."""
+    found = 0
+    for answers, step in walk_ends(cat, "west"):
+        if len(answers) < 2:
+            continue
+        for tmdb in step.pool:
+            allowed = cat.ids != tmdb
+            viewer = Viewer(allowed=allowed)
+            try:
+                walk(cat, "west", viewer, answers)
+            except EngineError:
+                kept = walk_kept(cat, "west", viewer, answers)
+                assert tmdb not in kept.pool and set(kept.pool) <= set(step.pool)
+                found += 1
+    assert found  # the fixture holds such a walk
+    with pytest.raises(EngineError):  # with no narrowing, answers that do not fit are still refused
+        walk_kept(cat, "west", Viewer(), [Answer("era", 99)])
+
+
+def test_after_a_hide_the_pick_draws_from_the_answers_given_and_the_rest_of_the_narrowed_pool(cat: Catalog) -> None:
+    answers = [Answer("era", 3), Answer("gore", 1), Answer("kind", 2)]
+    viewer = Viewer(allowed=cat.ids != 21, floor="above_bottom")  # film 21 just hidden
+    with pytest.raises(EngineError):  # one film fewer changes which questions the narrowed walk asks
+        walk(cat, "west", viewer, answers)
+    plain = walk(cat, "west", Viewer(), answers)
+    allowed = {int(t) for t in cat.ids[base_pool(cat, "west", viewer)]}
+    kept = walk_kept(cat, "west", viewer, answers)
+    assert kept.pool == tuple(t for t in plain.pool if t in allowed)
+    assert len(kept.pool) == 15 and 21 not in kept.pool  # a pool to pick from, not an empty one
+    body = PickIn(tree="west", answers=[AnswerIn(question=a.question, option=a.option) for a in answers])
+    assert pick_pool(cat, viewer, body)[0] == list(kept.pool)  # the pick route draws from it

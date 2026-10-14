@@ -47,7 +47,7 @@ from __future__ import annotations
 import json
 import math
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Literal
 
@@ -579,6 +579,19 @@ def walk(cat: Catalog, tree_id: str, viewer: Viewer, answers: Sequence[Answer]) 
     if pending:
         raise EngineError(f"{len(pending)} answers left over after the last question of '{tree_id}'")
     return Step(tree_id, line, None, _served(cat, tree_id, pool, opened), prefer, destruct)
+
+
+def walk_kept(cat: Catalog, tree_id: str, viewer: Viewer, answers: Sequence[Answer]) -> Step:
+    """The walk a pick draws from. A hide or a rating since the answers were given can change which questions this
+    viewer's narrowed pool asks, so the answers no longer fit; then they are walked without the viewer's own
+    narrowing, and the pool keeps only the films that narrowing allows. Answers that fit no walk are refused as by
+    `walk`, the second time."""
+    try:
+        return walk(cat, tree_id, viewer, answers)
+    except EngineError:
+        plain = walk(cat, tree_id, Viewer(topics=viewer.topics, source=viewer.source), answers)
+        allowed = {int(t) for t in cat.ids[base_pool(cat, tree_id, viewer)]}
+        return replace(plain, pool=tuple(t for t in plain.pool if t in allowed))
 
 
 def walk_ends(cat: Catalog, tree_id: str, viewer: Viewer | None = None) -> list[tuple[tuple[Answer, ...], Step]]:
