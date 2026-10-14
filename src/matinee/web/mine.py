@@ -16,7 +16,7 @@ from matinee.records import Hidden, Mark, Rating, Records, Run, Shared, Walk
 from matinee.store import Profile, Settings, Store
 from matinee.web.common import device_tokens
 from matinee.web.theatre import Theatre
-from matinee.web.viewing import AnswerIn, answer_says
+from matinee.web.viewing import AnswerIn, FilmRef, answer_says, film_ref
 
 # The request's own cap; a short review between this and the store's limit is refused by the store, in words.
 REVIEW_CAP = 1000
@@ -61,6 +61,13 @@ class RatingOut(BaseModel):
     review: str | None
 
 
+class RatedOut(RatingOut):
+    """A rating as My profile lists it: with the film's title and year from the film table."""
+
+    title: str
+    year: int | None
+
+
 class SharedOut(BaseModel):
     """Another profile's shared rating of a film: its name, avatar (null for initials), answer and short review."""
 
@@ -83,6 +90,10 @@ def rating_out(r: Rating) -> RatingOut:
     return RatingOut(tmdb=r.tmdb, score=r.score, at=r.at, review=r.review)
 
 
+def rated_out(r: Rating, film: FilmRef) -> RatedOut:
+    return RatedOut(tmdb=r.tmdb, score=r.score, at=r.at, review=r.review, title=film.title, year=film.year)
+
+
 def offered(theatre: Theatre, tmdb: int) -> int:
     """The film when it is in the current film list; 404 otherwise, as for every other route naming a film."""
     if tmdb not in theatre.showing().catalog.table.films.index:
@@ -92,9 +103,12 @@ def offered(theatre: Theatre, tmdb: int) -> int:
 
 def add_rating_routes(app: FastAPI, theatre: Theatre, records: Records) -> None:
     @app.get("/api/profiles/{profile_id}/ratings")
-    def ratings(profile_id: int, request: Request) -> list[RatingOut]:
-        """Every rating the held profile has made, newest first."""
-        return [rating_out(r) for r in records.ratings(profile_id, device_tokens(request))]
+    def ratings(profile_id: int, request: Request) -> list[RatedOut]:
+        """Every rating the held profile has made of a film in the current film list, newest first. A rating of a
+        film that has left the list stays stored, and is neither shown nor counted."""
+        films = theatre.showing().catalog.table.films
+        listed = [r for r in records.ratings(profile_id, device_tokens(request)) if r.tmdb in films.index]
+        return [rated_out(r, film_ref(films, r.tmdb)) for r in listed]
 
     @app.get("/api/profiles/{profile_id}/shared/{tmdb}")
     def shared(profile_id: int, tmdb: int, request: Request) -> list[SharedOut]:

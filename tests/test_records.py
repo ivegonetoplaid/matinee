@@ -202,6 +202,16 @@ def test_the_routes_save_read_change_and_clear_a_rating(door: Any) -> None:  # n
     assert client.get(f"/api/profiles/{pid}/ratings").json() == []
 
 
+def test_the_ratings_list_names_each_film_and_leaves_out_a_film_no_longer_listed(door: Any) -> None:  # noqa: F811
+    client, store = door
+    pid = me(client)
+    client.put(f"/api/profiles/{pid}/ratings/5", json={"score": 4})
+    Records(store).rate(pid, 999999, 5, list(client.cookies.values()))  # a film since gone from the film table
+    listed = client.get(f"/api/profiles/{pid}/ratings").json()
+    assert [(r["tmdb"], r["title"]) for r in listed] == [(5, "Film 5")] and listed[0]["year"] is not None
+    assert len(Records(store).ratings(pid, list(client.cookies.values()))) == 2  # kept, should it come back
+
+
 def test_the_routes_refuse_in_words(door: Any) -> None:  # noqa: F811
     client, _ = door
     pid = me(client)

@@ -11,8 +11,8 @@ import { h, isPhone, sentenceCase } from "./dom.js";
 import { cornerMark } from "./flight.js";
 import { avatarChoices, mark } from "./mark.js";
 
-// The four parts. `jump` names a part in the menu and `short` on a phone's jump bar; `count` reads its count from
-// the viewer's records, where the part shows one.
+// The four parts. `jump` names a part in the menu and `short` on a phone's jump bar; `phoneMeta` is the heading's
+// side line on a phone, where it differs; `note` is a line beneath the heading; `count` reads its count from the viewer's records, where the part shows one.
 export const PARTS = [
   { id: "tailor", jump: "How I pick for you", short: "How I pick", title: "How I pick films for you", meta: "Changes apply from your next pick", empty: null },
   {
@@ -21,6 +21,8 @@ export const PARTS = [
     short: "Ratings",
     title: "Films you've rated",
     meta: "Best first. The case around each poster shows how you rated it.",
+    phoneMeta: "Best first",
+    note: "Your ratings stay in Matinee for now. We’re exploring syncing them with services like Trakt in the near future.",
     empty: "Nothing rated yet. After a film, tap Rate it and it lands here.",
     count: (mine) => mine.ratings.length,
   },
@@ -106,12 +108,13 @@ async function records(id) {
   };
 }
 
-function part(p) {
+function part(p, phone) {
   const body = h("div", { class: "part-body" }, p.empty ? h("p", { class: "part-empty" }, p.empty) : null);
   const section = h(
     "section",
     { class: "part", id: `mine-${p.id}`, "aria-labelledby": `mine-${p.id}-title` },
-    h("div", { class: "placard" }, h("h2", { id: `mine-${p.id}-title` }, p.title), h("span", { class: "placard-meta" }, p.meta)),
+    h("div", { class: "placard" }, h("h2", { id: `mine-${p.id}-title` }, p.title), h("span", { class: "placard-meta" }, (phone && p.phoneMeta) || p.meta)),
+    p.note ? h("p", { class: "part-note" }, p.note) : null,
     h("div", { class: "part-rule" }),
     body,
   );
@@ -260,7 +263,7 @@ function deleter(viewer, actions) {
 function frame({ viewer, avatars, actions, phone }) {
   const back = h("button", { class: "action gold back-to-picking", type: "button", onclick: () => history.back() }, "‹ Back to picking");
   const switcher = h("button", { class: "action cream", type: "button", onclick: () => leave(actions.switchProfiles) }, "Switch profiles");
-  const built = PARTS.map(part);
+  const built = PARTS.map((p) => part(p, phone));
   const jumps = PARTS.map((p) => jump(p, phone));
   const hint = h("p", { class: "who-hint" });
   const who = h("div", { class: "who" }, avatarEditor(viewer, avatars, actions), h("div", { class: "who-words" }, nameEditor(viewer, actions, hint), hint));

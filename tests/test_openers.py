@@ -50,6 +50,7 @@ NOT_SPOKEN = {
     "button, input",  # CSS selectors and media queries
     "input, button",
     "(pointer: coarse)",
+    "(hover: hover)",
     "private, max-age={}",  # a response header
     "set, checked at each pick",  # the server's log
     "Matinee: a private screening",  # a heading only a screen reader hears

@@ -4023,6 +4023,343 @@ a.wordmark:focus-visible {
   color: var(--text);
 }
 
+/* The line beneath a part's heading: for now, that ratings stay in Matinee. */
+.part-note {
+  margin: 8px 16px 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--dim);
+}
+
+/* A film in its case: the case art scaled to the box, the title on its plate, the poster in its window. */
+.case {
+  position: relative;
+  display: block;
+  flex: none;
+  aspect-ratio: 600 / 932;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent center / 100% 100% no-repeat;
+  color: inherit;
+  font: inherit;
+  container-type: inline-size;
+  filter: drop-shadow(0 10px 16px color-mix(in srgb, var(--black) 55%, transparent));
+}
+
+button.case {
+  cursor: pointer;
+}
+
+.case:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 4px;
+}
+
+.case-gold {
+  background-image: url("../profile/case-gold.webp");
+}
+
+.case-silver {
+  background-image: url("../profile/case-silver.webp");
+}
+
+.case-neutral {
+  background-image: url("../profile/case-neutral.webp");
+}
+
+.case-weathered {
+  background-image: url("../profile/case-weathered.webp");
+}
+
+.case-distressed {
+  background-image: url("../profile/case-distressed.webp");
+}
+
+.case .plate {
+  position: absolute;
+  top: 4.9%;
+  left: 9%;
+  display: block;
+  width: 82%;
+  height: 5.8%;
+  overflow: hidden;
+  font: 800 6.4cqw/9cqw var(--display); /* the line fills the plate: 5.8% of a case 932/600 as tall as it is wide */
+  letter-spacing: 0.08em;
+  text-align: center;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.case-gold .plate {
+  color: #3a2808;
+  text-shadow: 0 1px 0 color-mix(in srgb, #ffecb4 45%, transparent);
+}
+
+.case-silver .plate {
+  color: #22262b;
+  text-shadow: 0 1px 0 color-mix(in srgb, var(--white) 50%, transparent);
+}
+
+.case-neutral .plate {
+  color: color-mix(in srgb, #d6d8dc 80%, transparent);
+  text-shadow: 0 -1px 0 var(--black);
+}
+
+.case-weathered .plate {
+  color: color-mix(in srgb, #dec8a2 82%, transparent);
+  text-shadow: 0 1px 0 var(--black);
+}
+
+.case-distressed .plate {
+  color: color-mix(in srgb, #d2b88c 78%, transparent);
+  text-shadow: 0 1px 0 var(--black);
+}
+
+.case .win {
+  position: absolute;
+  top: 16.2%;
+  left: 10.3%;
+  width: 79.4%;
+  height: 76.3%;
+  overflow: hidden;
+  background: var(--black);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--black) 70%, transparent);
+}
+
+.case .win img {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.case .win::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  box-shadow:
+    inset 0 2px 6px color-mix(in srgb, var(--black) 60%, transparent),
+    inset 0 0 0 1px color-mix(in srgb, var(--black) 50%, transparent);
+}
+
+/* A gold case's light comes from inside: each layer turns up the brightness of the case and poster behind it, and a
+   feathered mask says where. Nothing light lies on top, so dark areas stay dark. */
+@property --bx {
+  syntax: "<percentage>";
+  inherits: true;
+  initial-value: 50%;
+}
+
+@property --by {
+  syntax: "<percentage>";
+  inherits: true;
+  initial-value: 50%;
+}
+
+.sheen,
+.bloom,
+.edge {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* The band brightens what it crosses; its two edges turn the hue a touch either way, the least trace of rainbow.
+   Every layer is a filter of what lies behind it, so black stays black. */
+.case-gold :is(.sheen, .edge) {
+  opacity: 1;
+}
+
+.case-gold .sheen {
+  backdrop-filter: brightness(1.85) saturate(1.12);
+  mask: linear-gradient(45deg, transparent 43%, rgb(0 0 0 / 30%) 46.5%, #000 50%, rgb(0 0 0 / 30%) 53.5%, transparent 57%)
+    100% 0% / 300% 300% no-repeat;
+}
+
+.case-gold .edge.warm {
+  backdrop-filter: hue-rotate(-14deg) saturate(1.08) brightness(1.08);
+  mask: linear-gradient(45deg, transparent 45.5%, #000 47%, transparent 48.5%) 100% 0% / 300% 300% no-repeat;
+}
+
+.case-gold .edge.cool {
+  backdrop-filter: hue-rotate(24deg) saturate(0.9) brightness(1.1);
+  mask: linear-gradient(45deg, transparent 51.5%, #000 53%, transparent 54.5%) 100% 0% / 300% 300% no-repeat;
+}
+
+.case-gold.glint :is(.sheen, .edge) {
+  animation: sheen 3.2s cubic-bezier(0.45, 0, 0.35, 1) var(--d, 0s) 1 both;
+}
+
+@keyframes sheen {
+  from {
+    mask-position: 100% 0%;
+  }
+
+  to {
+    mask-position: 0% 100%;
+  }
+}
+
+.case-gold .bloom {
+  backdrop-filter: brightness(1.5) saturate(1.06);
+  mask: radial-gradient(
+    circle at var(--bx) var(--by),
+    #000 0%,
+    rgb(0 0 0 / 60%) 20%,
+    rgb(0 0 0 / 22%) 44%,
+    rgb(0 0 0 / 6%) 64%,
+    transparent 80%
+  );
+  transition:
+    opacity 0.9s ease,
+    --bx 0.45s ease-out,
+    --by 0.45s ease-out;
+}
+
+.case-gold {
+  transition: filter 0.9s ease;
+}
+
+.case-gold.hov {
+  filter: drop-shadow(0 10px 16px color-mix(in srgb, var(--black) 55%, transparent))
+    drop-shadow(0 0 22px color-mix(in srgb, var(--gold-words) 16%, transparent));
+}
+
+.case-gold.hov .bloom {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .case-gold.glint :is(.sheen, .edge) {
+    animation: none;
+  }
+
+  .case-gold .bloom {
+    transition: opacity 0.2s;
+  }
+}
+
+/* "Films you've rated": a row per rating, its words and count beside its films. */
+.tier {
+  display: grid;
+  grid-template-columns: 170px minmax(0, 1fr);
+  gap: 24px;
+  padding: 14px 0;
+  border-top: 1px solid color-mix(in srgb, var(--gold) 22%, transparent);
+}
+
+.tier:first-child {
+  padding-top: 12px;
+  border-top: 0;
+}
+
+.tier-head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 6px;
+}
+
+.tier-say {
+  margin: 0;
+  font: 800 22px/1.05 var(--display);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--gold-words);
+}
+
+.tier-count {
+  font-size: 14px;
+  color: color-mix(in srgb, var(--text) 65%, transparent);
+}
+
+.tier-films {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 26px;
+}
+
+.rated-film {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 156px;
+}
+
+.rated-film .case {
+  width: 156px;
+}
+
+.rated-review {
+  margin: 0;
+  font-size: 13px;
+  font-style: italic;
+  line-height: 1.35;
+  color: color-mix(in srgb, var(--text) 80%, transparent);
+}
+
+/* On a phone a rating's words and count share a line, and its films scroll sideways. */
+@media (max-width: 600px) {
+  .part-note {
+    margin: 6px 12px 0;
+    font-size: 12px;
+  }
+
+  .tier {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 10px 0 0;
+  }
+
+  .tier:first-child {
+    padding-top: 0;
+  }
+
+  .tier-head {
+    flex-direction: row;
+    align-items: baseline;
+    gap: 8px;
+    padding-top: 0;
+  }
+
+  .tier-say {
+    font-size: 18px;
+    letter-spacing: 0.06em;
+  }
+
+  .tier-count {
+    font-size: 13px;
+  }
+
+  .tier-films {
+    flex-wrap: nowrap;
+    gap: 12px;
+    margin: 0 -16px;
+    padding: 4px 16px 12px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: 16px;
+    scrollbar-width: none;
+  }
+
+  /* A third of the next case shows at the row's edge, so a row with more films than fit reads as one to swipe. */
+  .rated-film {
+    flex: none;
+    width: min(108px, calc((100% - 20px) / 3.33));
+    scroll-snap-align: start;
+  }
+
+  .rated-film .case {
+    width: 100%;
+  }
+}
+
 /* "How I pick films for you": a row per setting, its gold title and quieter help beside "Change", and beneath them
    a small picture of the open panel (the same letterboxes at three tenths their size) that opens it too. */
 .set {

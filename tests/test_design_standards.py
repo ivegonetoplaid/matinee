@@ -20,6 +20,7 @@ ACCENTS = {"gold", "rose", "petrol", "cream"}
 # (its drawing, the phone's lit strip and the name in flight), the locked door's scene, the wall's tiles and
 # the scorch.
 ARTWORK = {
+    "plate",  # a film case's title plate, lettered in the case's own metal
     "thumb-inner",  # a setting's picture of its open panel: letterboxes as spans, no control inside
     "tile",
     "marquee",
@@ -68,6 +69,7 @@ PERMITTED = {
     ("button", "profile.js", "avatarEditor", frozenset({"avatar-button"})),
     ("button", "profile.js", "showName", frozenset({"name-button"})),
     ("a", "credits.js", "dtddSetting", frozenset({"set-credit"})),
+    ("button", "cases.js", "filmCase", frozenset()),  # a film's case, a picture that opens the film
 }
 
 # Every CSS named colour.
@@ -302,11 +304,21 @@ FUNCTION = re.compile(
 )
 
 
+def past_parameters(source: str, start: int) -> int:
+    """Where a function declared at `start` has closed its parameters, which may hold braces of their own."""
+    depth = 0
+    for i in range(source.index("(", start), len(source)):
+        depth += {"(": 1, ")": -1}.get(source[i], 0)
+        if depth == 0:
+            return i
+    raise ValueError("unbalanced parentheses")
+
+
 def enclosing(source: str, at: int) -> str:
     """The innermost function, method or arrow function whose body holds `at`; "" at the top level."""
     name = ""
     for m in FUNCTION.finditer(source, 0, at):
-        body = source.find("{", m.end() - 1)
+        body = source.find("{", past_parameters(source, m.start()) if m.group(1) else m.end() - 1)
         if body != -1 and body < at < body + len(balanced(source, body)):
             name = m.group(1) or m.group(2) or m.group(3)
     return name
@@ -356,7 +368,7 @@ def test_links_and_buttons_are_built_only_through_h_and_carry_no_inline_style() 
 
 
 def test_every_colour_on_a_control_text_band_or_scrim_reads_from_a_token() -> None:
-    checked = [d for d in DECLS if ":root" not in d.selectors and not d.prop.endswith("mask-image")]
+    checked = [d for d in DECLS if ":root" not in d.selectors and not d.prop.endswith(("mask", "mask-image"))]
     assert len(checked) > 400
     stray = [
         f"{', '.join(d.selectors)} {{ {d.prop}: {d.value} }}"

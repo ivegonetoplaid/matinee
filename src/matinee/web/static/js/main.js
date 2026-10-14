@@ -20,6 +20,7 @@ import { Wall } from "./wall.js";
 import { viewerTag } from "./viewer.js";
 import { openProfile } from "./profile.js";
 import { settingsPart } from "./settings.js";
+import { ratedPart } from "./cases.js";
 import { learnOffers, offers } from "./offers.js";
 
 const stage = document.getElementById("stage");
@@ -148,7 +149,10 @@ function myProfile(opener = null, at = null, then = null) {
     opener,
     at,
     then,
-    parts: { tailor: (body) => settingsPart(body, { id, dtdd: offers.dtdd, credit: dtddSetting }) },
+    parts: {
+      tailor: (body) => settingsPart(body, { id, dtdd: offers.dtdd, credit: dtddSetting }),
+      rated: (body, mine) => ratedPart(body, mine.ratings, { poster: (tmdb) => wall.posterUrl(tmdb, "m"), phone: isPhone() }),
+    },
     actions: {
       saveAvatar: async (avatar) => {
         const res = await saveAvatar(id, avatar);
