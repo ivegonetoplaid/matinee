@@ -648,16 +648,18 @@ a.wordmark:focus-visible {
 /* The resting poster is the link to the film's page: its warm outline and glow, and a strip on its foot naming the
    site in petrol words, show once the poster has landed. Hovered or focused, the warm outline strengthens; it
    never turns petrol. */
+/* The poster flies from the wall to rest inside its link, so the link clips its corners only once it has landed;
+   clipping sooner hides the flight everywhere outside the resting place. */
 .poster-link {
   display: flex;
   flex-direction: column;
   border-radius: 6px;
-  overflow: hidden;
   text-decoration: none;
   transition: box-shadow 0.2s ease;
 }
 
 .poster-link.landed {
+  overflow: hidden;
   box-shadow:
     0 0 0 1px color-mix(in srgb, var(--warm) 35%, transparent),
     var(--poster-glow, 0 0 0 transparent),
