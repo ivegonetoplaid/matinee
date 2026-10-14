@@ -335,7 +335,7 @@ a.wordmark:focus-visible {
    it holds, so a box holding wall text near its edge keeps 40 px of room there. */
 .line:not(.locked-line, .viewer-line) > :is(.ack, .ask):not(:empty),
 .countdown,
-.note:not(:empty, .viewer-panel .note, .note-form .note),
+.note:not(:empty, .note-form .note),
 .footnote,
 .count,
 .seat-label,
@@ -347,7 +347,7 @@ a.wordmark:focus-visible {
 
 .line:not(.locked-line, .viewer-line) > :is(.ack, .ask):not(:empty)::before,
 .countdown::before,
-.note:not(:empty, .viewer-panel .note, .note-form .note)::before,
+.note:not(:empty, .note-form .note)::before,
 .footnote::before,
 .count::before,
 .seat-label::before,
@@ -3284,74 +3284,23 @@ a.wordmark:focus-visible {
   background: color-mix(in srgb, var(--gold) 14%, transparent);
 }
 
-.viewer-item.danger {
-  color: var(--velvet);
-}
-
-/* A panel beneath the viewer: Change avatar, and Delete profile's question. */
-.viewer-panel {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
-  z-index: 30;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 14px;
-  width: min(560px, calc(100vw - 2 * var(--pad)));
-  padding: 18px 20px 20px;
-  border: 1px solid color-mix(in srgb, var(--gold) 35%, transparent);
-  border-radius: 16px;
-  background: var(--panel);
-  box-shadow: 0 22px 60px color-mix(in srgb, var(--black) 75%, transparent);
-}
-
-.viewer-panel .note:empty {
-  display: none;
-}
-
 .line.viewer-line {
   min-height: 0;
   font-size: 34px;
   line-height: 1;
 }
 
-.viewer-panel .avatar-choices {
-  align-self: stretch;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.viewer-panel .avatar-choice .mark.door {
-  width: 100%;
-  height: auto;
-  aspect-ratio: 1;
-  border-radius: 12px;
-}
-
-.viewer-choices {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.viewer-panel .line.viewer-line .ask {
-  font-size: 24px;
-  line-height: 1.1;
-}
-
 .letterbox.danger {
   color: var(--velvet);
 }
 
-/* Inside the profile menu's panels, and My profile's own avatar and delete panels, a letterbox has no glow at rest;
-   it glows on hover. */
-:is(.viewer-panel, .avatar-picker, .delete-ask) .letterbox {
+/* Inside My profile's avatar and delete panels, a letterbox has no glow at rest; it glows on hover. */
+:is(.avatar-picker, .delete-ask) .letterbox {
   --lb-glow: 0 0 0 transparent;
 }
 
 @media (hover: hover) {
-  :is(.viewer-panel, .avatar-picker, .delete-ask) .letterbox:hover {
+  :is(.avatar-picker, .delete-ask) .letterbox:hover {
     --lb-glow: 0 0 18px color-mix(in srgb, var(--glow) 55%, transparent);
   }
 }
@@ -3376,27 +3325,8 @@ a.wordmark:focus-visible {
     padding-right: 4px;
   }
 
-  .viewer-panel {
-    position: fixed;
-    top: 72px;
-    right: var(--pad);
-    left: var(--pad);
-    width: auto;
-  }
-
   .line.viewer-line {
     font-size: 28px;
-  }
-
-  .viewer-panel .avatar-choices {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-    gap: 8px;
-  }
-
-  .viewer-panel .avatar-choice .mark.door {
-    width: 100%;
-    height: auto;
-    aspect-ratio: 1;
   }
 }
 

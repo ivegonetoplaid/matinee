@@ -63,7 +63,6 @@ NOT_SPOKEN = {
     "Yes, delete it",
     "No, keep it",
     "Never mind, show me everything",
-    "Never mind, keep my list",
     "None, keep them coming",
 }
 

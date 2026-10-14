@@ -161,18 +161,15 @@ export class Door {
     this.handTimer = null;
   }
 
-  // Build the door and open on the front door's tiles, or on `screen` when given: a new profile ("new"),
-  // or the viewer's list ("list"). `said` replaces the front door's line, as after a profile is deleted.
+  // Build the door and open on the front door's tiles, or on a new profile when `screen` is "new". `said`
+  // replaces the front door's line, as after a profile is deleted.
   // `marquee` is one already standing (the locked door's), kept in place rather than built again.
-  async open({ door, screen = null, profileId = null, said = null, marquee = null }) {
+  async open({ door, screen = null, said = null, marquee = null }) {
     this.profiles = door.profiles;
     this.avatars = door.avatars;
     this.held = door.profiles.filter((p) => p.held);
     this.build(door.now_showing, marquee);
     if (screen === "new") return this.first();
-    const tile = this.held.find((p) => p.id === profileId);
-    const profile = screen === "list" && tile && offers.dtdd ? (await this.seatOf(tile)).seat : null;
-    if (profile) return this.picker({ editing: profile });
     return this.greet(said);
   }
 
@@ -340,7 +337,7 @@ export class Door {
       "One more question.",
       "Is there anything you'd rather not see happen on screen?",
       [
-        strip("Yes, let me pick from a list", () => this.picker({ editing: seat, fresh: true })),
+        strip("Yes, let me pick from a list", () => this.picker(seat)),
         strip("No, show me everything", () => this.done(seat)),
       ],
       { detail },
@@ -463,17 +460,15 @@ export class Door {
     this.settle();
   }
 
-  // The trigger picker, which is also the preferences page, for `editing`, a held profile. `fresh` is a
-  // profile just made, whose list saved leads to "Find me something to watch".
-  async picker({ editing, fresh = false }) {
-    this.fresh = fresh;
+  // The trigger picker for `editing`, a profile just made, whose list saved leads to "Find me something to watch".
+  async picker(editing) {
     this.picked = new Set(editing.topics);
     this.marquee.classList.add("compact");
     this.dtddCredit.hidden = false; // the picker shows DoesTheDogDie's topics
     const heading = h(
       "p",
       { class: "line door-line" },
-      h("span", { class: "ack" }, fresh ? "Let's make your list." : "Your list."),
+      h("span", { class: "ack" }, "Let's make your list."),
       h("span", { class: "ask" }, "What should I steer around?"),
     );
     this.status = h("p", { class: "note picker-status", role: "status" });
@@ -490,14 +485,13 @@ export class Door {
     await this.fillTopics(topics, editing);
   }
 
-  // The way out of the picker without saving: back to a just-made profile's last step, or into the theatre.
+  // The way out of the picker without saving: on to the just-made profile's last step.
   neverMind(editing, as) {
-    if (this.fresh) return as("Never mind, show me everything", () => this.done(editing));
-    return as("Never mind, keep my list", () => this.enterAs(editing));
+    return as("Never mind, show me everything", () => this.done(editing));
   }
 
   saveButton(editing, status) {
-    const button = h("button", { class: "action gold", type: "button" }, this.fresh ? "Save and continue" : "Save my list");
+    const button = h("button", { class: "action gold", type: "button" }, "Save and continue");
     button.addEventListener("click", async () => {
       button.disabled = true;
       const said = await this.save(editing);
@@ -513,7 +507,7 @@ export class Door {
   async save(editing) {
     const res = await put(`/api/profiles/${editing.id}/topics`, { topics: [...this.picked] });
     if (!res.ok) return res.data.message;
-    return this.fresh ? this.done(res.data) : this.enterAs(res.data);
+    return this.done(res.data);
   }
 
   // DoesTheDogDie's topics, fetched now and never kept.

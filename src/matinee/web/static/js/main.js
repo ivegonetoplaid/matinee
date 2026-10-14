@@ -120,21 +120,10 @@ function topbar(...rest) {
 // The viewer at the right of the top bar: their mark and name, which open the profile menu.
 function nameTag() {
   if (!visit.name) return null;
-  const leave = (opts) => leaveTo(() => boot(opts));
-  const id = visit.viewer.profile_id;
-  const deleted = (name) => ({ said: [`${name}'s seat is empty.`, "Who's watching?"] });
-  const tag = viewerTag({ name: visit.name, avatar: visit.avatar }, avatarsOffered, {
-    editList: offers.dtdd ? () => leave({ screen: "list", profileId: id }) : null,
-    myProfile: (opener) => myProfile(opener),
-    switchProfiles: () => leave({}),
-    deleteProfile: async () => {
-      const res = await del(`/api/profiles/${id}`);
-      if (res.ok) leave(deleted(res.data.name));
-      return res;
-    },
-    saveAvatar: (avatar) => saveAvatar(id, avatar),
-  });
-  return tag;
+  return viewerTag(
+    { name: visit.name, avatar: visit.avatar },
+    { myProfile: (opener) => myProfile(opener), switchProfiles: () => leaveTo(() => boot({})) },
+  );
 }
 
 async function saveAvatar(id, avatar) {
@@ -364,7 +353,7 @@ async function askPictures() {
   picturesKnown = true;
 }
 
-// The box office. `opts.screen` opens it on a new profile ("new") or the viewer's list ("list").
+// The box office. `opts.screen` "new" opens it on a new profile.
 // When a door word is set and this device has not given it, the locked door stands in its place, and
 // nothing about the films is asked for until the word is right.
 async function boot(opts = {}) {

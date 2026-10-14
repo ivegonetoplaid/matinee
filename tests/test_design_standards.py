@@ -54,7 +54,7 @@ PERMITTED = {
     ("button", "main.js", "answerButton", frozenset({"pail"})),
     ("button", "mark.js", "avatarChoices", frozenset({"avatar-choice"})),
     ("button", "viewer.js", "viewerTag", frozenset({"viewer-button"})),
-    ("button", "viewer.js", "item", frozenset({"viewer-item", "danger"})),
+    ("button", "viewer.js", "item", frozenset({"viewer-item"})),
     ("button", "locked.js", "show", frozenset({"peek"})),
     ("button", "panel.js", "open", frozenset({"panel-close"})),
     ("button", "main.js", "answerRow", frozenset({"panel-row", "answer-row"})),
@@ -435,6 +435,10 @@ def test_letterboxes_and_actions_have_the_standards_sizes_and_no_override() -> N
     ]
     assert bare == []
     assert all(is_artwork(d) for d in DECLS if d.prop == "zoom")  # zoom shrinks every control it holds
+
+
+def test_the_profile_menu_holds_my_profile_switch_profiles_and_about_in_that_order() -> None:
+    assert re.findall(r'\bitem\("([^"]+)"', SCRIPTS["viewer.js"]) == ["My profile", "Switch profiles", "About Matinee"]
 
 
 def test_a_settings_rows_picture_holds_no_control() -> None:
