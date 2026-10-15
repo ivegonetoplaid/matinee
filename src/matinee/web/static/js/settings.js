@@ -1,8 +1,8 @@
 // My profile's "How I pick films for you": each tailoring setting rests as a row with a gold title, one quieter line
 // of explanation, a small picture of its open panel with the chosen answers ringed in gold, and "Change". "Change" or
-// the picture opens the panel full size; one row is open at a time. A single-answer setting saves and closes when an
-// answer is chosen; the topics and the languages save each tick at once and close with "Done". There is no Save.
-// A choice takes effect on the viewer's next pick.
+// the picture opens the panel full size; one row is open at a time. Every answer and tick saves at once and the row
+// says "✓ Saved", staying open until "Done" closes it. There is no Save. A choice takes effect on the viewer's next
+// pick.
 
 import { get, put } from "./api.js";
 import { h, isPhone, sentenceCase } from "./dom.js";
@@ -154,6 +154,7 @@ function row({ key, words, panel, picture, credit, onToggle }) {
       if (!self.open && body.contains(document.activeElement)) change.focus({ preventScroll: true });
       thumb.replaceChildren(h("div", { class: `thumb-inner${words.column ? " column" : ""}` }, picture()));
       thumb.hidden = self.open;
+      if (!self.open && status.classList.contains("saved")) status.textContent = ""; // "✓ Saved" goes with the panel
       body.hidden = !self.open;
       body.replaceChildren(...(self.open ? panel().filter(Boolean) : []));
       change.textContent = self.open ? "Done" : "Change";
@@ -165,7 +166,7 @@ function row({ key, words, panel, picture, credit, onToggle }) {
   return self;
 }
 
-// A single-answer row: choosing an answer saves it and closes the row.
+// A single-answer row: choosing an answer saves it and checks it; the row stays open until "Done".
 function singleRow(key, { now, save, onToggle }) {
   // A phone's board stacks the sharing answers too.
   const words = { ...ROWS[key], column: ROWS[key].column || (key === "sharing" && isPhone()) };
@@ -174,22 +175,22 @@ function singleRow(key, { now, save, onToggle }) {
     words,
     onToggle,
     picture: () => [words.ask ? h("p", { class: "set-ask" }, words.ask) : null, words.options.map((o) => shown({ ...o, chosen: o.value === now[words.field] }))],
-    panel: () => [
-      words.ask ? h("p", { class: "set-ask" }, words.ask) : null,
-      h(
-        "div",
-        { class: `set-choices${words.column ? " column" : ""}`, role: "group", "aria-label": words.title },
-        words.options.map((o) =>
-          chooser({
-            ...o,
-            chosen: o.value === now[words.field],
-            onPick: async () => {
-              if (await save({ [words.field]: o.value }, self.status)) onToggle(self);
-            },
-          }),
-        ),
-      ),
-    ],
+    panel: () => {
+      const mark = () => buttons.forEach((b, i) => b.setAttribute("aria-pressed", String(words.options[i].value === now[words.field])));
+      const buttons = words.options.map((o) =>
+        chooser({
+          ...o,
+          chosen: o.value === now[words.field],
+          onPick: async () => {
+            if (await save({ [words.field]: o.value }, self.status)) mark();
+          },
+        }),
+      );
+      return [
+        words.ask ? h("p", { class: "set-ask" }, words.ask) : null,
+        h("div", { class: `set-choices${words.column ? " column" : ""}`, role: "group", "aria-label": words.title }, buttons),
+      ];
+    },
   });
   return self;
 }
@@ -316,7 +317,8 @@ export async function settingsPart(body, { id, dtdd, credit, locale = navigator.
   const send = (path, change, status) => {
     queue = queue.then(async () => {
       const res = await put(path, change);
-      status.textContent = res.ok ? "" : res.data.message;
+      status.textContent = res.ok ? "✓ Saved" : res.data.message;
+      status.classList.toggle("saved", res.ok);
       return res.ok;
     });
     return queue;

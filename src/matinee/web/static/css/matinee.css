@@ -5312,6 +5312,11 @@ button.case {
   display: none;
 }
 
+/* Each answer or tick saved says so in gold while its row stays open. */
+.set-status.saved {
+  color: var(--gold);
+}
+
 .sethead {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

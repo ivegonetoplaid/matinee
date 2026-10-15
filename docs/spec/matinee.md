@@ -2010,7 +2010,8 @@ page's actions. New actions follow those meanings.
 | "Roll again" | gold |
 | "Just show me what you picked" | gold |
 | "Save" (a note) | gold |
-| "Show me" (the welcome), "Let's go" (what's new) | gold |
+| "Show me" (the welcome), "Let's go" (what's new), "Let's find something to watch" (all set up) | gold |
+| "My profile" (all set up) | cream |
 | "Change my settings" (the empty pool) | gold |
 | "‹ Back to picking" (My profile) | gold |
 | "Change", "Done" (a setting's row on My profile) | gold |
@@ -2460,9 +2461,10 @@ the film information area on both desktop and phone.
   of its open panel at about a third of its size with the chosen answers
   checked and ringed in gold (a picture holds no control), and "Change" at its
   right. "Change" or the picture opens the panel full size in the row's place,
-  and "Change" reads "Done"; one row is open at a time. A single-answer row
-  saves and closes when an answer is chosen; the topics and the languages save
-  each tick at once and close with "Done". There is no Save action. Saves
+  and "Change" reads "Done"; one row is open at a time. Every answer and tick
+  saves at once, checks the answer, and says "✓ Saved" in gold beneath the
+  row's head; the row stays open until "Done" closes it, which takes "✓ Saved"
+  with it. There is no Save action. Saves
   reach the server one after another, in the order the viewer made them; a
   refused save says why beneath the row's head, and a refused tick is put back.
   - The rating floor's answers stack best first, each with its share beside
@@ -2562,12 +2564,15 @@ the film information area on both desktop and phone.
   "Show me" types "Welcome back." in gold over "You could already tell me what
   to steer around. Now you can rate films, hide the ones you don't want, look
   back at what I've picked, and tell me how well rated a film needs to be and
-  which languages you watch in." and "Let's go", which walks the tailoring
+  which languages you watch in." in cream, both as Matinee's line; on a phone
+  the second stands beneath the line as a quieter paragraph. Then "Let's go", which walks the tailoring
   steps in the theatre, from the profile's settings as they stand: the topics
   first with a DoesTheDogDie key, with their search, "Save and continue" and
   "Skip", and DoesTheDogDie's credit in the foot band beside "About Matinee".
-  The last step ends on the walk's first screen with My profile open at "How
-  I pick films for you". The welcome does not stand over My profile or an
+  After the last step Matinee says "You're all set up." in gold and "You can
+  see and change these settings on My profile." in cream, over "Let's find
+  something to watch", which goes to the walk's first screen, and "My
+  profile", which opens My profile at "How I pick films for you" over it. The welcome does not stand over My profile or an
   open menu, nor once the viewer has gone on from the first screen: it waits
   for the next visit. A settings read that fails shows no welcome. Nothing
   replays it.
@@ -3909,13 +3914,13 @@ describing it wrongly, never by naming something gone.
 
 - `src/matinee/web/static/js/main.js::myProfile` / `saveAvatar` (opening My profile over the theatre; its parts and actions)
 - `src/matinee/web/static/js/main.js::keepShown` / `household` / `hideAndRoll` / `undoHide` / `standUndo` (the history kept; the household's ratings; a hide, its roll and "Undo")
-- `src/matinee/web/static/js/main.js::welcomeIfNew` / `whatsNew` / `tailorScreen` / `enter` (the one-time welcome and its steps in the theatre)
+- `src/matinee/web/static/js/main.js::welcomeIfNew` / `whatsNew` / `allSet` / `tailorScreen` / `enter` (the one-time welcome, its steps in the theatre and "You're all set up.")
 - `src/matinee/web/static/js/main.js::nothingLeft` (the empty first question and "Change my settings")
 - `src/matinee/web/static/js/profile.js::openProfile` / `showPage` / `close` / `cover` / `frame` / `part` / `PARTS` / `DELETE_LINE` (the page, its history entry, its parts' words)
 - `src/matinee/web/static/js/profile.js::nameEditor` / `avatarEditor` / `deleter` / `jump` (rename, picture, delete, the jumps)
 - `src/matinee/web/static/js/profile.js::records` / `fill` / `fillPart` / `refreshFilms` / `profileLayer` (the parts filled from the viewer's records, and again after a change)
 - `src/matinee/web/static/js/settings.js::settingsPart` / `ROWS` / `FLOORS` / `RATED` / `SHARING` (the rows' words and answers; saves queued in order)
-- `src/matinee/web/static/js/settings.js::row` / `singleRow` / `languagesRow` / `topicsRow` / `topicList` / `chooser` (a row, its picture and open panel)
+- `src/matinee/web/static/js/settings.js::row` / `singleRow` / `languagesRow` / `topicsRow` / `topicList` / `chooser` (a row, its picture and open panel; it stays open, saying "✓ Saved", until "Done")
 - `src/matinee/web/static/js/settings.js::languageName` / `languageOrder` (named through the browser, `cn` as Cantonese; the browser's language first)
 - `src/matinee/web/static/js/settings.js::heardWords` / `src/matinee/web/static/js/pick.js::heardLine` (the language line's words; the line beneath the rank)
 - `src/matinee/web/static/js/settings.js::languagesFirst` / `moreLanguages` (the 15 most-held languages, the browser's and the ticked first; "+ More languages" shows the rest)
@@ -3928,7 +3933,7 @@ describing it wrongly, never by naming something gone.
 - `src/matinee/web/static/js/shelves.js::shownPart` / `dayShelf` / `runShelf` / `runGroups` / `runCaption` / `didWith` / `byDay` / `dayCount` (the day shelves)
 - `src/matinee/web/static/js/overlay.js::openOverlay` / `load` / `overlayPanel` / `posterSide` / `aboutFilm` / `overlayActions` (the poster overlay)
 - `src/matinee/web/static/js/overlay.js::keptWalk` / `noteWalk` / `FROM_PICKS` (how a film was found; a note from the overlay names no run)
-- `src/matinee/web/static/js/tailor.js::tailorSteps` / `OFFER` / `STEPS` / `stepKeys` / `stepFor` / `singleStep` / `languagesStep` / `topicsStep` / `WELCOME` / `WHATS_NEW` (the tailoring steps and the welcome's words)
+- `src/matinee/web/static/js/tailor.js::tailorSteps` / `OFFER` / `STEPS` / `stepKeys` / `stepFor` / `singleStep` / `languagesStep` / `topicsStep` / `WELCOME` / `WHATS_NEW` / `ALL_SET` (the tailoring steps and the welcome's words)
 - `src/matinee/web/static/js/rate.js::rateLink` / `ratePanel` / `fitted` / `roomLeft` / `oneLine` / `length` / `MAX_REVIEW` / `autosaver` / `PAUSE_MS` ("Rate it" and its field's rules; the review saves itself)
 - `src/matinee/web/static/js/hide.js::hideLink` / `undoLink` / `LENGTHS` ("Hide film" and "Undo")
 - `src/matinee/web/static/js/household.js::householdLine` / `nameButton` / `readingPanel` / `personRow` / `focusShown` (the household's line and reading panel)

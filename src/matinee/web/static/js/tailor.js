@@ -24,6 +24,14 @@ export const WHATS_NEW = [
   "You could already tell me what to steer around. Now you can rate films, hide the ones you don't want, look back at what I've picked, and tell me how well rated a film needs to be and which languages you watch in.",
 ];
 
+// The screen after the welcome's last step: its line, then its two ways on.
+export const ALL_SET = {
+  ack: "You're all set up.",
+  ask: "You can see and change these settings on My profile.",
+  profile: "My profile",
+  watch: "Let's find something to watch",
+};
+
 // The steps after the topics, in My profile's order.
 export const STEPS = ["floor", "languages", "rated", "sharing"];
 

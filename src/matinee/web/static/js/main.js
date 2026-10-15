@@ -22,7 +22,7 @@ import { isOpen as profileOpen, openProfile, profileLayer, refreshFilms } from "
 import { keptWalk, openOverlay } from "./overlay.js";
 import { answerOf } from "./ratings.js";
 import { settingsPart } from "./settings.js";
-import { WELCOME, WHATS_NEW, tailorSteps } from "./tailor.js";
+import { ALL_SET, WELCOME, WHATS_NEW, tailorSteps } from "./tailor.js";
 import { hiddenPart, hiddenUntil, ratedPart } from "./cases.js";
 import { shownPart } from "./shelves.js";
 import { learnOffers, offers } from "./offers.js";
@@ -525,23 +525,27 @@ async function tailorScreen({ ack, ask, detail, answers, actions, credit = null,
   stage.querySelector(".tailor-talk :is(input, button)")?.focus({ preventScroll: true });
 }
 
-// "Show me": what is new, then the tailoring steps from the profile's settings as they stand, ending on My profile
-// with the theatre at its first screen beneath.
+// After the welcome's last step: "You're all set up.", then My profile, with the theatre at its first screen beneath,
+// or the theatre's first screen.
+function allSet() {
+  const profile = h("button", { class: "action cream", type: "button" }, ALL_SET.profile);
+  const watch = h("button", { class: "action gold", type: "button", onclick: () => start() }, ALL_SET.watch);
+  profile.addEventListener("click", async () => {
+    await start();
+    myProfile(null, "tailor");
+  });
+  return tailorScreen({ ack: ALL_SET.ack, ask: ALL_SET.ask, answers: [], actions: [watch, profile], plain: true });
+}
+
+// "Show me": what is new, in Matinee's own voice on a wider screen (a phone takes it as a quieter paragraph), then the
+// tailoring steps from the profile's settings as they stand, then "You're all set up."
 function whatsNew() {
   const id = visit.viewer.profile_id;
-  const steps = () =>
-    tailorSteps({
-      id,
-      dtdd: offers.dtdd,
-      credit: dtddSetting,
-      show: tailorScreen,
-      done: async () => {
-        await start();
-        myProfile(null, "tailor");
-      },
-    });
+  const steps = () => tailorSteps({ id, dtdd: offers.dtdd, credit: dtddSetting, show: tailorScreen, done: allSet });
   const go = h("button", { class: "action gold", type: "button", onclick: steps }, "Let's go");
-  return tailorScreen({ ack: WHATS_NEW[0], ask: "", detail: WHATS_NEW[1], answers: [], actions: [go], plain: true });
+  const [ack, said] = WHATS_NEW;
+  const spoken = isPhone() ? { ask: "", detail: said } : { ask: said };
+  return tailorScreen({ ack, ...spoken, answers: [], actions: [go], plain: true });
 }
 
 // The first time a profile made before My profile enters the theatre: the page dims but for the profile button, and
