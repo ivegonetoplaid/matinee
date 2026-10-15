@@ -2266,10 +2266,13 @@ the film information area on both desktop and phone.
   empties it.
 
   A tap on another film brings it back as the pick, without asking for a new
-  pick and without asking DoesTheDogDie anything: the resting poster goes back
-  to the wall as on `Not that one`, no hunt runs (the wall cuts straight to the
-  film's poster, which brightens and grows as on any pick; its line is not
-  held for reading first), and the film shows with the line it rested
+  pick and without asking DoesTheDogDie anything, and nothing moves on the
+  wall: no hunt runs and no poster flies. The page beneath the top bar fades
+  out (0.18 s), and the film's page fades in (0.18 s) already at rest, its
+  poster in place with its own glow, its line whole and, on a phone, scrolled
+  to its details; the wall stays dimmed and the film takes the cell the last
+  poster left, so `Not that one` returns its poster there. Under reduced motion
+  the page swaps at once. The film shows with the line it rested
   with (none when a fuse burnt it away), DoesTheDogDie's credit in the foot band
   when it stood there, its content note and lookup action when it had them,
   and the door and walk it was first drawn under, so its rank counts among that
@@ -3112,7 +3115,7 @@ symbol when one does not match.
 | `src/matinee/web/static/js/wall.js::Wall` | `src/matinee/web/static/js/wall.js:85` | 2026-10-05 |
 | `src/matinee/web/static/js/wall.js::Wall.show` / `fadeIn` / `clear` / `whenStill` | `src/matinee/web/static/js/wall.js:142` | 2026-10-05 |
 | `src/matinee/web/static/js/wall.js::Wall.endPick` | `src/matinee/web/static/js/wall.js:196` | 2026-10-05 |
-| `src/matinee/web/static/js/wall.js::Wall.hunt` / `travel` / `jump` / `readyToHunt` / `settle` / `hop` (`quick`: a film brought back cuts to its poster) | `src/matinee/web/static/js/wall.js:242` | 2026-10-05 |
+| `src/matinee/web/static/js/wall.js::Wall.hunt` / `jump` / `readyToHunt` / `settle` / `hop` / `swapLanded` | `src/matinee/web/static/js/wall.js:242` | 2026-10-05 |
 | `src/matinee/web/static/js/wall.js::Wall.stepBack` / `grownScale` | `src/matinee/web/static/js/wall.js:341` | 2026-10-05 |
 | `src/matinee/web/static/js/wall.js::Wall.useSharp` (the front element) | `src/matinee/web/static/js/wall.js:366` | 2026-10-05 |
 | `src/matinee/web/static/js/wall.js::Wall.bringForward` | `src/matinee/web/static/js/wall.js:385` | 2026-10-05 |
@@ -3127,7 +3130,7 @@ symbol when one does not match.
 | `src/matinee/web/static/js/wall.js::Wall.place` / `lay` / `picture` / `request` (`BLANK`) | `src/matinee/web/static/js/wall.js:618` | 2026-10-05 |
 | `src/matinee/web/static/js/wall.js::Wall.resort` / `slide` / `depart` | `src/matinee/web/static/js/wall.js:702` | 2026-10-05 |
 | `src/matinee/web/static/js/api.js::del` | `src/matinee/web/static/js/api.js:27` | 2026-10-05 |
-| `src/matinee/web/static/js/pick.js::showPick` / `huntLift` | `src/matinee/web/static/js/pick.js:363` | 2026-10-10 |
+| `src/matinee/web/static/js/pick.js::showPick` / `huntLift` / `swapPick` / `fadePage` (a film brought back swaps in at rest) | `src/matinee/web/static/js/pick.js:363` | 2026-10-10 |
 | `src/matinee/web/static/js/pick.js::goldLine` | `src/matinee/web/static/js/pick.js:300` | 2026-10-10 |
 | `src/matinee/web/static/js/pick.js::bringOut` | `src/matinee/web/static/js/pick.js:339` | 2026-10-10 |
 | `src/matinee/web/static/js/pick.js::toRest` (`BEAT_MS`, `STILL_HOLD_MS`) | `src/matinee/web/static/js/pick.js:386` | 2026-10-10 |

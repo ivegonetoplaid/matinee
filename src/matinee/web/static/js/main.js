@@ -10,7 +10,7 @@ import { cornerMark } from "./flight.js";
 import { pickPanel } from "./panel.js";
 import { asPick, newestFirst, remember } from "./run.js";
 import { answerRows, forget, stepBack, wayTo } from "./way-back.js";
-import { showPick } from "./pick.js";
+import { showPick, swapPick } from "./pick.js";
 import { posterPaths } from "./pictures.js";
 import { Deck, dealBeneath, dealPair, setFor } from "./quips.js";
 import { lightFuse } from "./fuse.js";
@@ -783,17 +783,15 @@ async function showPicked(held) {
   return showPick({ stage, wall, result, frame, readUntil, lines, fuse: null, actions: pickActions(), door: visit.tree, walk: walkOf(visit) });
 }
 
-// A film this run has shown, brought back from the Back panel as the pick: no new pick is asked for and no hunt runs,
-// the wall cutting straight to its poster. It shows as it was first shown, with its line, its content note and the door and walk it was drawn under; its details, rank,
-// tags and pictures load as on any pick, and nothing of DoesTheDogDie is asked for.
+// A film this run has shown, brought back from the Back panel as the pick: no new pick is asked for and nothing
+// moves on the wall; the page swaps to the film at rest (pick.js `swapPick`). It shows as it was first shown, with its
+// line, its content note and the door and walk it was drawn under; its details, rank, tags and pictures load as on
+// any pick, and nothing of DoesTheDogDie is asked for.
 async function bringBack(shown) {
   lockStage();
-  await clearForPick(Boolean(stage.querySelector(".slot-poster")));
-  const round = wall.round;
   const { result, lines, door, walk } = asPick(shown);
-  const { frame } = await openPick(lines.gold, null);
-  if (!frame.showing.isConnected || wall.round !== round) return undefined;
-  return showPick({ stage, wall, result, frame, lines, fuse: null, actions: pickActions(), door, walk, quick: true });
+  const openFrame = async () => (await openPick("", null)).frame;
+  return swapPick({ stage, wall, result, lines, actions: pickActions(), door, walk, openFrame });
 }
 
 boot();
