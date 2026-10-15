@@ -912,6 +912,16 @@ actually has.
   has no English copy.
 - A film held as several copies keeps every copy's languages together.
 - A rebuild with no media server records no audio languages.
+- A film's original language is TMDB's, except for the films the shipped
+  `data/original_languages.json` names: TMDB gives the production country's
+  language for some films shot in English (The Fifth Element as French). Each
+  entry is a TMDB id, the two-letter code of the language the film was made in,
+  and its title for the reader. The table is written with TMDB's language and
+  read with the shipped one in its place (`load_table`), so an update corrects
+  a film at once, and every reader of the language (the trees' English filter,
+  the viewer's languages, the pick's language line) sees the correction. An
+  entry that is not a TMDB id with a two-letter code stops the table's read
+  with a `TableError` naming the file. It holds 13 films.
 
 The rebuild reports itself in `rebuild.json` in the data directory, replaced
 whole each time, and the server reads it
@@ -3533,7 +3543,9 @@ describing it wrongly, never by naming something gone.
 - `src/matinee/table.py::_library_rows` / `_listed_rows` / `_from_library` / `_from_tmdb`
 - `src/matinee/table.py::FORMAT` / `COLUMNS` / `SHOWN` / `TMDB_COLUMNS` / `INSERT_FILM` / `LATER_COLUMNS` (a table without `audio` is read with none)
 - `src/matinee/table.py::write_table` / `_cell`
-- `src/matinee/table.py::load_table` / `_read` / `_text` (format 2 with every column, else refused; a stale table is read)
+- `src/matinee/table.py::load_table` / `_read` / `_text` (format 2 with every column, else refused; a stale table is read; the shipped original languages in TMDB's place)
+- `src/matinee/table.py::language_fixes` / `LANGUAGE_FIXES` (the shipped original-language corrections, each a TMDB id with a two-letter code)
+- `data/original_languages.json` (13 films TMDB gives a production country's language)
 - `src/matinee/table.py::empty_table`
 - `src/matinee/table.py::is_stale` (the oldest TMDB fact 183 days old or more)
 - `src/matinee/table.py::with_live` / `_offered` / `_aligned` (held from the live list; the films the labels name)

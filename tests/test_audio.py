@@ -19,7 +19,7 @@ from matinee.library import LibraryFilm
 from matinee.library.jellyfin import JellyfinReader, parse_film
 from matinee.library.plex import audio_of
 from matinee.reference import DATA
-from matinee.table import build_table, load_table, with_live, write_table
+from matinee.table import TableError, build_table, language_fixes, load_table, with_live, write_table
 from test_plex import ITEM, SECTIONS, reader
 from test_web_library import SECRET_KEY, SECRET_URL
 
@@ -250,3 +250,18 @@ def test_a_film_is_in_its_original_language_and_each_language_its_copy_is_tagged
         }
     )
     assert held(films) == [("de", 2), ("fr", 2), ("en", 1), ("ja", 1)]
+
+
+def test_a_table_is_read_with_the_shipped_original_language_in_tmdbs_place(tmp_path: Path) -> None:
+    table, _ = build_table([film(18, frozenset({"en"})), film(7, None)], NO_GENOME, {}, datetime.now(UTC))
+    table.films["language"] = table.films.index.map({18: "fr", 7: "ja"})  # TMDB gives The Fifth Element as French
+    write_table(table, tmp_path / "films.sqlite")
+    assert load_table(tmp_path / "films.sqlite").films.language.to_dict() == {18: "en", 7: "ja"}
+
+
+def test_a_shipped_correction_that_is_not_a_tmdb_id_with_a_two_letter_code_is_refused(tmp_path: Path) -> None:
+    assert language_fixes()[429] == "en"  # The Good, the Bad and the Ugly
+    bad = tmp_path / "original_languages.json"
+    bad.write_text(json.dumps({"films": [{"tmdb": 18, "language": "eng"}]}), encoding="utf-8")
+    with pytest.raises(TableError, match="two-letter"):
+        language_fixes(bad)

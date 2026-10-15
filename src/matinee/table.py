@@ -24,6 +24,10 @@ does not hold needs those facts to be offered at all. A table whose oldest TMDB
 fact is six months old or more is still read and served, flagged (`is_stale`):
 TMDB's terms cap caching there, and the server warns on every screen until a
 rebuild refreshes it.
+
+A film's original language is TMDB's, except where `data/original_languages.json` gives the language the film was
+made in: TMDB gives the production country's language for some films shot in English. The table is read with the
+shipped language in TMDB's place, so an update corrects a film at once rather than at the next rebuild.
 """
 
 from __future__ import annotations
@@ -41,9 +45,11 @@ import pandas as pd
 
 from matinee.genome import Matrix, Scores
 from matinee.library import LibraryFilm
+from matinee.reference import DATA
 from matinee.tmdb import MAX_AGE, TmdbFilm
 
 FORMAT = 2
+LANGUAGE_FIXES = DATA / "original_languages.json"
 SHOWN = ("name", "year", "genres", "certificate", "runtime_min", "rating")  # the facts the trees and the page read
 TMDB_COLUMNS = (
     "tmdb_known",
@@ -456,9 +462,26 @@ def _read(path: Path) -> tuple[dict[str, str], list[str], list[tuple[object, ...
     return meta, names, rows, blobs
 
 
+def language_fixes(path: Path = LANGUAGE_FIXES) -> dict[int, str]:
+    """The shipped original-language corrections: each film's TMDB id with the two-letter code of the language it was
+    made in. Raises TableError when an entry is not one."""
+    fixes: dict[int, str] = {}
+    for entry in json.loads(path.read_text(encoding="utf-8"))["films"]:
+        code = entry.get("language")
+        if not isinstance(entry.get("tmdb"), int) or not (isinstance(code, str) and len(code) == 2 and code.islower()):
+            raise TableError(f"{path.name}: {entry!r} is not a TMDB id with a two-letter language code")
+        fixes[entry["tmdb"]] = code
+    return fixes
+
+
+def _fix_languages(frame: pd.DataFrame) -> None:
+    fixed = {t: code for t, code in language_fixes().items() if t in frame.index}
+    frame.loc[list(fixed), "language"] = list(fixed.values())
+
+
 def load_table(path: Path) -> FilmTable:
-    """Read the table; raises TableError when it is absent or in another format. A table too old for TMDB's terms
-    is still read (`is_stale`)."""
+    """Read the table, with the shipped original-language corrections in TMDB's place; raises TableError when it is
+    absent or in another format. A table too old for TMDB's terms is still read (`is_stale`)."""
     if not path.exists():
         raise TableError(f"no film table at {path}; run tools/rebuild_table.py")
     meta, names, rows, blobs = _read(path)
@@ -474,6 +497,7 @@ def load_table(path: Path) -> FilmTable:
     for column in SET_COLUMNS:
         frame[column] = frame[column].map(lambda v: frozenset(json.loads(v)) if isinstance(v, str) else None)
     frame["genres"] = frame.genres.map(lambda g: g if g is not None else frozenset())
+    _fix_languages(frame)
     matrix = np.full((len(frame), len(tags)), np.nan, dtype=np.float32)
     for i, t in enumerate(frame.index):
         blob = blobs.get(int(t))
