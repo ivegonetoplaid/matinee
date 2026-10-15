@@ -12,7 +12,7 @@ import pandas as pd
 import pytest
 
 from matinee.engine import Catalog, FirstOption
-from matinee.ranks import DOOR_WORDS, VOTE_FLOOR, Rank, rank, rank_among
+from matinee.ranks import DOOR_WORDS, VOTE_FLOOR, Rank, rank, rank_among, thin_rank
 from matinee.reference import DATA
 
 
@@ -80,6 +80,23 @@ def test_a_film_under_the_vote_floor_or_without_a_score_has_no_rank_and_is_not_c
     table = films(scores, votes)
     assert [rank_among(table, EVERY, t, "horror") for t in (1, 5)] == [None, None]
     assert said(rank_among(table, EVERY, 6, "horror")) == "A crowd favourite in horror"  # first of 95 counted
+
+
+def test_a_film_under_the_vote_floor_says_why_and_where_its_few_votes_place_it() -> None:
+    scores: list[float | None] = [float(100 - i) for i in range(100)]
+    votes = [VOTE_FLOOR] * 100
+    scores[:4] = [65.5, 3.0, 50.0, None]
+    votes[:4] = [19, 1, 0, 7]
+    table = films(scores, votes).assign(year=[2026, 1990, 2025, 2024] + [2000] * 96)
+    # Film 1's 65.5 trails 31 of the 96 counted films, so its place is 32 / 97, in the top 40%.
+    assert thin_rank(table, EVERY, 1, 2026) == Rank(
+        "Too new for clear ratings", "Only 19 votes, which place it in the top 40% by TMDB audience rating"
+    )
+    assert thin_rank(table, EVERY, 2, 2026) == Rank(
+        "Too little-known for clear ratings", "Only 1 vote, which places it in the bottom 10% by TMDB audience rating"
+    )
+    assert thin_rank(table, EVERY, 3, 2026) == Rank("Too new for clear ratings", "No votes on TMDB yet")  # last year's
+    assert thin_rank(table, EVERY, 4, 2026) == Rank("Too little-known for clear ratings", "No votes on TMDB yet")
 
 
 def test_the_rank_counts_only_the_doors_films_plus_the_film_itself() -> None:

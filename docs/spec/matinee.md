@@ -560,7 +560,14 @@ why a film was picked: the labels alone place films (section 2.6).
   media server's rating is never read, and no number is ever shown.
 - **The vote floor.** Only a film with at least 200 TMDB votes and a TMDB score
   is ranked or counted (`VOTE_FLOOR`, one named value with no setting). A film
-  under the floor, or with no score, has no rank.
+  under the floor, or with no score, has no clear rank, and its line says so,
+  so the pick's room for the rank never empties (`thin_rank`): "Too new for
+  clear ratings" for a film released this year or last (`NEW_YEARS`), else
+  "Too little-known for clear ratings", over a standing that says where its
+  few votes would place it among the door's counted films, by the same place
+  and bands as a ranked film: "Only 19 votes, which place it in the top 40% by
+  TMDB audience rating" ("Only 1 vote, which places it…"). A film with no
+  score or no votes stands over "No votes on TMDB yet".
 - **The door's films.** A rank counts among every film the labels and the
   waiting room put behind the door the pick came through: the door's whole
   pool over the film table (section 3.1), whatever source the viewer chose. A
@@ -1460,7 +1467,7 @@ would hand one device's profiles to another.
 | GET | `/static/…` | scripts, styles, self-hosted fonts, icons, pails, avatars, the locked door's art, manifest (`Cache-Control: no-cache`, so a deploy is never seen half-applied) |
 | GET | `/img/{kind}/{tmdb}/{size}` | a poster or backdrop: from the media server for a film the library holds, else from TMDB's image server through Matinee |
 | GET | `/api/pictures` | the image source, and under `tmdb` the TMDB poster path of every live film that has one (section 11.5) |
-| GET | `/api/film/{tmdb}?door=` | one film's card (`src/matinee/web/app.py::FilmCard`): `tmdb`, `title`, `year`, `runtime_min`, `synopsis`, the pick's link (`link`, and `link_to`: `seerr` or `tmdb`), under the `tmdb` image source its TMDB backdrop path (`backdrop_path`, else null), `rank` (the film's rank line among the films behind `door`, the tree its pick came through, or overall without `door`; null under the vote floor, without a TMDB score, or for a tree with no rank word; section 2.8), `standing` (the rank's band share and basis, such as "Middle 20% by TMDB audience rating"; null whenever `rank` is) and `tags` (up to four, strongest first; empty for a film the genome does not cover). A `door` that names no tree is refused (400 `refused`) |
+| GET | `/api/film/{tmdb}?door=` | one film's card (`src/matinee/web/app.py::FilmCard`): `tmdb`, `title`, `year`, `runtime_min`, `synopsis`, the pick's link (`link`, and `link_to`: `seerr` or `tmdb`), under the `tmdb` image source its TMDB backdrop path (`backdrop_path`, else null), `rank` (the film's rank line among the films behind `door`, the tree its pick came through, or overall without `door`; under the vote floor or without a TMDB score, why its rank is not clear; null for a tree with no rank word; section 2.8), `standing` (the rank's band share and basis, such as "Middle 20% by TMDB audience rating", or under the floor where its few votes place it; null whenever `rank` is) and `tags` (up to four, strongest first; empty for a film the genome does not cover). A `door` that names no tree is refused (400 `refused`) |
 | GET | `/api/door` | the film count, every profile (marking those this device holds), the avatars offered, whether a DoesTheDogDie key is set, and `posters_from` (`server` or `tmdb`) |
 | POST | `/api/profiles` | create a profile and issue this device a token |
 | POST | `/api/profiles/{id}/open` | open a profile by PIN, or at once when held or PIN-less |
@@ -2087,7 +2094,7 @@ the film information area on both desktop and phone.
   quiet text (13 px, 11 px on a phone). The tags stand beneath it as outlined chips that
   wrap, 16 px, in sentence case, with small corners, each on a dark backing of
   its own (the page base at 92 per cent) in place of a scrim; never filled with
-  an accent and never a pill. A film with no rank or no tags shows none, and the layout closes up.
+  an accent and never a pill. A film with no tags shows none, and the layout closes up; every film shows a rank line (a film under the vote floor, its own), except under a tree with no rank word.
   Nothing on the pick says the tags are why the film was picked.
 
   On a phone Matinee's words keep the foot of the pick screen, 316 px tall,
@@ -2225,8 +2232,9 @@ the film information area on both desktop and phone.
 - **The Back panel.** "‹ Back" opens the panel headed "Go back to…". It holds,
   from the top:
   - under "Change an answer", every answer of the walk in the order given, each
-    an outlined row with a gold "‹" at its left, its question in quiet text and
-    the answer beneath: the source answer
+    an outlined row with a gold "‹" at its left, its question, and the answer
+    beneath in quiet text (14 px), so the row reads as the question it returns
+    to: the source answer
     when the source question was asked, the door, then each later answer. A
     pick that "Just pick one!" made before any door lists only the answers
     given before it. With no answer to list, neither the rows nor the heading
@@ -2297,15 +2305,15 @@ the film information area on both desktop and phone.
   that data, and a question or problem screen leave it off. Nowhere on the wall carries it.
 - **About.** A screen inside the page, with no address of its own and no
   server route. It opens over whatever screen is showing, as a centred dark
-  panel 65 per cent opaque over the poster wall, 1040 px wide on a desktop and
+  panel 80 per cent opaque over the poster wall, 1040 px wide on a desktop and
   the screen's width less a 16 px gutter each side on a phone, with no sideways
   scroll. The screen underneath, its foot included, is hidden, never
   rebuilt or paused, so only the posters and the screen's two bands show
   through (Bands, above); it shows again exactly
-  as it stood when About closes. The corner mark stands, as a picture and not
-  a link, at the theatre wordmark's place: fixed from 1400 px wide up, and scrolling away with the page
+  as it stood when About closes. The corner mark stands at the theatre
+  wordmark's place, a button named "Close About": fixed from 1400 px wide up, and scrolling away with the page
   below that so it never sits over the text. About scrolls as a page when the panel
-  is taller than the screen. "Back" at its top, the browser's Back, a phone's back gesture
+  is taller than the screen. "Back" at its top, the corner mark, the browser's Back, a phone's back gesture
   and Escape each close it and return the focus to what opened it ("About
   Matinee" at the foot, or the viewer's button for the profile menu's item): opening it
   adds one history entry at the same address, and a second Back leaves the page
@@ -2700,7 +2708,9 @@ symbol when one does not match.
 | `src/matinee/ranks.py::DOOR_WORDS` (each door's word, by tree) | `src/matinee/ranks.py:23` | 2026-10-10 |
 | `src/matinee/ranks.py::BANDS` / `BASIS` / `Rank` / `band` (a place to its words and standing; an edge reads as the higher band) | `src/matinee/ranks.py:42` | 2026-10-10 |
 | `src/matinee/ranks.py::door_films` (the door's pool, or every door's before one) | `src/matinee/ranks.py:68` | 2026-10-10 |
-| `src/matinee/ranks.py::rank_among` / `rank` (None under the floor, without a score, or for a tree with no word) | `src/matinee/ranks.py:79` | 2026-10-10 |
+| `src/matinee/ranks.py::rank_among` / `rank` (None under the floor or without a score, where `rank` gives `thin_rank`'s line; None for a tree with no word) | `src/matinee/ranks.py:90` | 2026-10-14 |
+| `src/matinee/ranks.py::thin_rank` / `NEW_YEARS` (a film under the floor: too new or too little-known, and where its few votes place it) | `src/matinee/ranks.py:109` | 2026-10-14 |
+| `tests/test_ranks.py::test_a_film_under_the_vote_floor_says_why_and_where_its_few_votes_place_it` | `tests/test_ranks.py:85` | 2026-10-14 |
 | `tests/test_ranks.py::test_a_film_reads_the_band_its_place_falls_in_and_an_edge_reads_as_the_higher` | `tests/test_ranks.py:53` | 2026-10-10 |
 | `tests/test_ranks.py::test_every_door_the_first_question_offers_has_its_rank_word` | `tests/test_ranks.py:97` | 2026-10-10 |
 | `src/matinee/tags.py::TAGS_FILE` / `SKIP_FILE` / `WORDS_PER_FILM` / `SHOWN` (40 shipped, 4 shown) | `src/matinee/tags.py:34` | 2026-10-10 |

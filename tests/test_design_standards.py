@@ -47,6 +47,7 @@ PERMITTED = {
     ("a", "credits.js", "dtddBeside", frozenset()),
     ("a", "credits.js", "dtddFoot", frozenset()),
     ("a", "main.js", "wordmark", frozenset({"wordmark"})),
+    ("button", "about.js", "openAbout", frozenset({"wordmark", "about-wordmark"})),
     ("button", "credits.js", "aboutLink", frozenset({"inline-link", "about-link"})),
     ("button", "door.js", "tile", frozenset({"seat"})),
     ("button", "door.js", "newTile", frozenset({"seat", "new"})),

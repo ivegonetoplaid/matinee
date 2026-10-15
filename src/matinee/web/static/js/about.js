@@ -1,7 +1,7 @@
 // The About page: a screen inside the page, with no address of its own. It opens over whatever screen
 // is showing, as a centred see-through panel over the poster wall with the wordmark at the top left.
 // The screen underneath is hidden, never rebuilt or paused, and shows again exactly as it stands when
-// About closes. "Back", the browser's Back, a phone's back gesture and Escape all close it: opening it
+// About closes. "Back", the corner mark, the browser's Back, a phone's back gesture and Escape all close it: opening it
 // adds one history entry at the same address, and closing it by "Back" or Escape steps back over that entry.
 // Opened from the door, the marquee's name flies to the wordmark's place first and flies back on closing.
 
@@ -180,7 +180,7 @@ export async function openAbout(opener = null, around = null) {
   const layer = h(
     "div",
     { class: around ? "about from-door flying" : "about", role: "dialog", "aria-modal": "true", "aria-labelledby": "about-title" },
-    h("div", { class: "wordmark about-wordmark", "aria-hidden": "true" }, cornerMark()),
+    h("button", { class: "wordmark about-wordmark", type: "button", "aria-label": "Close About", onclick: () => history.back() }, cornerMark()),
     h("main", { class: "about-panel" }, copy(back)),
   );
   shown = { layer, opener, around };

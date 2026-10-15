@@ -706,7 +706,7 @@ async function pickNow(opening = "", again = false, destruct = null, posterBack 
   });
 }
 
-// One answer in the Back panel: its question in quiet text, the answer beneath. A tap asks that question again.
+// One answer in the Back panel: its question, the answer beneath in quiet text. A tap asks that question again.
 function answerRow(row) {
   const go = () => wayTo(row, { source: start, doors: () => doors(), reask });
   return h(
