@@ -57,13 +57,14 @@ function glowUnder(box) {
   box.addEventListener("pointerleave", () => box.classList.remove("hov"));
 }
 
-// A film's case. `score` picks a rating's case, or none for a bare frame; `poster` is the poster's address; `label`
-// is what a screen reader hears. With `onOpen(opener)` the case is a button that opens the film; without, a picture.
-export function filmCase({ tmdb = null, title, poster, score = null, label, onOpen = null }) {
+// A film's case. `score` picks a rating's case, or none for a bare frame; `poster` is the poster's address, or
+// `picture` a poster already on the page to stand in the window; `label` is what a screen reader hears. With
+// `onOpen(opener)` the case is a button that opens the film; without, a picture.
+export function filmCase({ tmdb = null, title, poster, picture = null, score = null, label, onOpen = null }) {
   const kind = CASES[score] ? `case case-${CASES[score]}` : "case bare";
   const parts = [
     h("span", { class: "plate", "aria-hidden": "true" }, title),
-    h("span", { class: "win" }, h("img", { src: poster, alt: "", loading: "lazy", decoding: "async" })),
+    h("span", { class: "win" }, picture ?? h("img", { src: poster, alt: "", loading: "lazy", decoding: "async" })),
     score === 5 ? ["sheen", "edge warm", "edge cool", "bloom"].map((light) => h("span", { class: light })) : null,
   ];
   const box = onOpen

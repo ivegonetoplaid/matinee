@@ -68,14 +68,22 @@ def printable(text: str) -> str:
     return "".join("\ufffd" if unicodedata.category(c).startswith("C") else c for c in flat)
 
 
-def what_was_wrong(note: FiledNote, door: str, names: Names) -> str:
-    """The viewer's choice in the panel's own words, with where a "Not <genre> at all" film belongs, by door."""
+def sorted_wrong(note: FiledNote, door: str, names: Names) -> str | None:
+    """The viewer's sort choice in the panel's own words, with where a "Not <genre> at all" film belongs, by door."""
     if note.kind == "genre":
         where = f"; belongs in {', '.join(names.door(t) for t in note.belongs)}" if note.belongs else ""
         return f"Not {door.lower()} at all{where}"
     if note.kind == "kind":
         return f"{door}, but not the kind I asked for"
-    return "The right kind, just not a good pick"
+    if note.kind == "quality":
+        return "The right kind, just not a good pick"
+    return None
+
+
+def what_was_wrong(note: FiledNote, door: str, names: Names) -> str:
+    """What the viewer ticked, in the panel's own words; a note of words alone says so."""
+    said = [sorted_wrong(note, door, names), "The tags don't fit it" if note.tags else None]
+    return ". ".join(s for s in said if s) or "(nothing ticked; see the comment)"
 
 
 def describe(note: FiledNote, names: Names) -> list[str]:

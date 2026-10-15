@@ -341,6 +341,7 @@ a.wordmark:focus-visible {
 .seat-label,
 .feature-text,
 .rank,
+.heard,
 .facts .household {
   position: relative;
 }
@@ -353,6 +354,7 @@ a.wordmark:focus-visible {
 .seat-label::before,
 .feature-text::before,
 .rank::before,
+.heard::before,
 .facts .household::before {
   content: "";
   position: absolute;
@@ -674,6 +676,31 @@ a.wordmark:focus-visible {
     0 24px 60px color-mix(in srgb, var(--black) 60%, transparent);
 }
 
+/* A rated film rests in its rating's case, which draws its own edge and shadow: the link wears no outline or glow,
+   and its strip rounds its own foot. The case's window clips the poster only once it has landed, so the flight shows
+   whole. Focused, the link takes a gold ring. */
+.poster-link.cased.landed {
+  overflow: visible;
+  box-shadow: none;
+}
+
+.poster-link.cased.landed:is(:hover, :focus-visible) {
+  box-shadow: none;
+}
+
+.poster-link.cased:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 4px;
+}
+
+.poster-link.cased:not(.landed) .case .win {
+  overflow: visible;
+}
+
+.poster-link.cased .poster-strip {
+  border-radius: 0 0 6px 6px;
+}
+
 /* The strip takes the poster's width and never widens the link: a small poster's strip wraps its words. */
 .poster-strip {
   width: 0;
@@ -715,7 +742,7 @@ a.wordmark:focus-visible {
 }
 
 /* The pick's line: at most 40 px on a desktop, so every approved line fits in three lines there; four
-   lines are reserved, so `Not that one` and the links below it stay in place from pick to pick. */
+   lines are reserved, so `Show me another` and the links below it stay in place from pick to pick. */
 .pick-line {
   font-size: clamp(28px, min(4vw, 6vh), 40px);
   min-height: calc(4 * 0.98em);
@@ -909,6 +936,26 @@ a.wordmark:focus-visible {
   color: var(--dim);
 }
 
+/* A pick heard in a ticked language its own is not: "Original language: Thai", then in quiet text beneath, "Your copy
+   has English audio". */
+.heard {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+}
+
+.heard-original {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.heard-copy {
+  font-size: 13px;
+  color: var(--dim);
+}
+
 /* The household's shared ratings under the rank, in the household's colour: each name a sentence ("Alex loved it")
    that opens the reading panel, then "+ N more". */
 .household {
@@ -1052,7 +1099,7 @@ a.wordmark:focus-visible {
   color: var(--text);
 }
 
-/* "Wrong pick?"'s form in the pick's panel: its fields one under another, Save at the panel's foot. */
+/* "Something wrong?"'s form in the pick's panel: its fields one under another, Save at the panel's foot. */
 .note-form {
   flex: 1 0 auto;
   display: flex;
@@ -1375,7 +1422,7 @@ a.wordmark:focus-visible {
   color: var(--dim);
 }
 
-/* The pick's centre holds "Not that one" and, beside it on its right, "Hide film". On a desktop "Not that one" keeps
+/* The pick's centre holds "Show me another" and, beside it on its right, "Hide film". On a desktop "Show me another" keeps
    the bar's exact centre and "Hide film" hangs beside it; on a phone the two share the foot's first row. */
 .bar-centre {
   display: flex;
@@ -1419,7 +1466,7 @@ a.wordmark:focus-visible {
   transition: opacity 0.4s ease;
 }
 
-/* "Rate it": the five answers stacked best first, the saved line, then one line for a short review. */
+/* "Rate it": the five answers stacked best first, the saved line, then a three-line box for a short review. */
 .rate-answers {
   display: flex;
   flex-direction: column;
@@ -1444,16 +1491,15 @@ a.wordmark:focus-visible {
   color: var(--dim);
 }
 
-/* The short review's line: the field, how many characters remain over the last twenty, and "✓ Saved" once it has
-   saved itself. A
-   keystroke past the limit gives it a rose edge that fades, and a shake, which reduced motion leaves out. */
+/* The short review's box: three lines to type in, then "✓ Saved" at the bottom left once it has saved itself and how
+   many characters remain at the bottom right, always. A keystroke past the limit gives it a rose edge that fades, and
+   a shake, which reduced motion leaves out. */
 .review-field {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: 1fr auto;
   align-items: center;
-  gap: 4px 10px;
-  min-height: 52px;
-  padding: 0 6px 0 14px;
+  gap: 0 10px;
+  padding: 10px 12px 6px 14px;
   border: 1px solid var(--enamel-rim);
   border-radius: 8px;
   background: color-mix(in srgb, var(--base) 80%, var(--black));
@@ -1495,13 +1541,14 @@ a.wordmark:focus-visible {
 }
 
 .review-input {
-  flex: 1 1 12em;
+  grid-column: 1 / -1;
   min-width: 0;
-  min-height: 44px;
+  padding: 0;
   border: 0;
   background: transparent;
   color: var(--text);
-  font: 16px var(--body);
+  font: 16px/1.4 var(--body);
+  resize: none;
   outline: none;
 }
 
@@ -1510,14 +1557,15 @@ a.wordmark:focus-visible {
 }
 
 .review-room {
-  flex: none;
+  grid-column: 2;
+  justify-self: end;
   font-size: 13px;
   color: var(--dim);
 }
 
 .review-saved {
-  flex: none;
-  padding-right: 8px;
+  grid-column: 1;
+  min-height: 1.4em;
   font-size: 14px;
   color: var(--gold);
 }
@@ -1776,7 +1824,7 @@ a.wordmark:focus-visible {
   flex-wrap: wrap;
 }
 
-/* The pick's foot bar, a row of its own across the foot on a desktop: "‹ Back" and "Wrong pick?" at its left, "Not
+/* The pick's foot bar, a row of its own across the foot on a desktop: "‹ Back" and "Something wrong?" at its left, "Not
    that one" at its exact centre at every width, DoesTheDogDie's credit at its right end when shown. Its row is kept
    from the start of the pick. */
 .foot-bar {
@@ -1801,8 +1849,8 @@ a.wordmark:focus-visible {
   justify-content: flex-end;
 }
 
-/* A desktop too narrow for one row keeps two from the start: "Not that one" centred on the first with "Hide film"
-   beside it, "‹ Back", "Wrong pick?" and "Rate it" side by side at the left of the second, and DoesTheDogDie's
+/* A desktop too narrow for one row keeps two from the start: "Show me another" centred on the first with "Hide film"
+   beside it, "‹ Back", "Something wrong?" and "Rate it" side by side at the left of the second, and DoesTheDogDie's
    credit at the second's right end, clear of "Hide film". */
 @media (min-width: 601px) and (max-width: 1080px) {
   .foot-bar {
@@ -1833,8 +1881,8 @@ a.wordmark:focus-visible {
   scroll-margin-bottom: calc(-1 * (var(--band-fade) + 72px));
 }
 
-/* On a phone the bar stands at the foot of Matinee's words in two rows: "Not that one" alone on the first, "‹ Back"
-   and "Wrong pick?" sharing the second. */
+/* On a phone the bar stands at the foot of Matinee's words in two rows: "Show me another" alone on the first, "‹ Back"
+   and "Something wrong?" sharing the second. */
 @media (max-width: 600px) {
   .foot-bar {
     flex-basis: auto;
@@ -1864,7 +1912,7 @@ a.wordmark:focus-visible {
     white-space: nowrap;
   }
 
-  /* "‹ Back" alone (before any door, or with no film) keeps the width it has beside "Wrong pick?". */
+  /* "‹ Back" alone (before any door, or with no film) keeps the width it has beside "Something wrong?". */
   .foot-bar .bar-left > .action:only-child {
     flex: 0 1 calc(50% - 5px);
   }
@@ -1961,7 +2009,7 @@ a.wordmark:focus-visible {
   --thread: var(--cream-thread);
 }
 
-/* "Not that one" stands out by its rose words, its thread drawn at all times and a faint rose glow, never by its size. */
+/* "Show me another" stands out by its rose words, its thread drawn at all times and a faint rose glow, never by its size. */
 .action.lead {
   box-shadow:
     0 0 0 1px var(--enamel-rim),

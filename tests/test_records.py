@@ -219,7 +219,7 @@ def test_the_routes_refuse_in_words(door: Any) -> None:  # noqa: F811
     assert unrated.status_code == 400 and unrated.json()["code"] == "not_rated"
     client.put(f"/api/profiles/{pid}/ratings/5", json={"score": 3})
     long = client.put(f"/api/profiles/{pid}/ratings/5/review", json={"review": "z" * (MAX_REVIEW + 1)})
-    assert long.status_code == 400 and long.json()["message"] == "Short and sweet, please. About 20 words."
+    assert long.status_code == 400 and long.json()["message"] == "Short and sweet, please. About 15 words."
     assert client.put(f"/api/profiles/{pid}/ratings/5", json={"score": 9}).json()["code"] == "bad_score"
     assert client.put(f"/api/profiles/{pid}/ratings/999999", json={"score": 3}).status_code == 404
     assert client.put(f"/api/profiles/{pid}/ratings/5", json={"score": 3, "extra": 1}).status_code == 422

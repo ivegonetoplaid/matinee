@@ -228,7 +228,7 @@ def test_a_shape_1_store_keeps_every_profile_token_and_note_and_arrives_unwelcom
     store = Store(path)
     assert rows(path, "PRAGMA user_version") == [(SHAPE,)]
     assert rows(path, "SELECT * FROM profiles ORDER BY id") == [(*p, *DEFAULTS) for p in SHAPE_1_PROFILES]
-    assert rows(path, "SELECT * FROM notes ORDER BY id") == SHAPE_1_NOTES
+    assert rows(path, "SELECT * FROM notes ORDER BY id") == [(*n, 0) for n in SHAPE_1_NOTES]  # tags: none
     assert rows(path, "SELECT profile_id FROM tokens") == [(1,)]
     assert [p.name for p in store.holding([TOKEN]).values()] == ["Ada"]
     tables = {r[0] for r in rows(path, "SELECT name FROM sqlite_master WHERE type = 'table'")}

@@ -1,14 +1,14 @@
-// The pick's panel: the one panel every pick action but "Not that one" opens. On a desktop it stands over the left
+// The pick's panel: the one panel every pick action but "Show me another" opens. On a desktop it stands over the left
 // column, from under the top bar down to the foot, always at that full height; on a phone it stands over everything
 // under the top bar. It is headed by the action's name in gold, with a × at its top right. The ×, Escape and a tap
-// or click outside it each close it; a tap outside closes it and does nothing else, so a viewer reaching for
-// "Not that one" with a panel open closes the panel first. Opening one action's panel while another is open
+// or click outside it each close it; a tap outside on a button or link also does its work, so "Show me another" with
+// a panel open draws the next film, while a tap on anything else outside only closes it. Opening one action's panel while another is open
 // replaces it. Focus moves into the panel as it opens and returns to the action that opened it as it closes; that
 // action shows its thread while its panel is open.
 
 import { h, isPhone } from "./dom.js";
 
-// The click that follows a tap outside the panel is that tap's, and does nothing. A tap that never becomes a click
+// The click that follows a tap outside the panel, on no button or link, is that tap's, and does nothing. A tap that never becomes a click
 // (a drag) leaves the next tap alone: the next pointerdown lifts the swallow.
 function swallowNextClick() {
   const eat = (e) => {
@@ -58,7 +58,7 @@ export function pickPanel(stage, frame, entries = { opened() {}, closed() {} }, 
   const outside = (e) => {
     if (!shown?.node.isConnected) return forget();
     if (shown.node.contains(e.target) || e.target.closest?.(`[${OPENER}]`)) return undefined;
-    swallowNextClick();
+    if (!e.target.closest?.(":is(button, a)")) swallowNextClick();
     return close();
   };
   const escape = (e) => {

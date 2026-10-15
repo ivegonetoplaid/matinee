@@ -1,19 +1,20 @@
-// "Rate it": the pick's panel with the five answers, best first, and beneath them one line for a short review. An
-// answer saves at once. The short review waits for a rating, takes at most MAX_REVIEW characters (counted as the
-// store counts them, by code point, so an emoji is one), shows how many remain over the last REVIEW_WARN, and saves
-// itself: PAUSE_MS after typing stops, on leaving the field, or on Enter, then says "✓ Saved" in the field. A keystroke past the limit is refused: the field's edge turns rose and fades, it shakes
-// (not under reduced motion), and a line asks for about 20 words. A review is shown and kept as plain text.
+// "Rate it": the pick's panel with the five answers, best first, and beneath them a three-line box for a short
+// review. An answer saves at once. The short review waits for a rating, is one line however it is typed or pasted,
+// takes at most MAX_REVIEW characters (counted as the store counts them, by code point, so an emoji is one), always
+// shows how many remain at the box's bottom right, and saves itself: PAUSE_MS after typing stops, on leaving the box,
+// or on Enter, then says "✓ Saved" at its bottom left. A keystroke past the limit is refused: the box's edge turns
+// rose and fades, it shakes (not under reduced motion), and a line asks for about 15 words. A review is shown and
+// kept as plain text.
 
 import { put } from "./api.js";
 import { h } from "./dom.js";
 import { panelAction } from "./panel.js";
 import { ANSWERS } from "./ratings.js";
 
-export const MAX_REVIEW = 140; // the store's limit (matinee.records.MAX_REVIEW)
-const REVIEW_WARN = 20;
+export const MAX_REVIEW = 100; // the store's limit (matinee.records.MAX_REVIEW)
 const TRIP_MS = 2200; // how long the rose edge and the line stay before they fade
 const FADE_MS = 400;
-const TOO_LONG = "Short and sweet, please. About 20 words.";
+const TOO_LONG = "Short and sweet, please. About 15 words.";
 const PAUSE_MS = 1000; // how long typing must stop before the short review saves itself
 
 // The length of a short review as the store counts it.
@@ -25,11 +26,11 @@ export function fitted(value, before) {
   return length(value) <= MAX_REVIEW ? { value, tripped: false } : { value: before, tripped: true };
 }
 
-// What the field says about room left: "12 left" over the last REVIEW_WARN characters, nothing before.
-export function roomLeft(value) {
-  const left = MAX_REVIEW - length(value);
-  return left <= REVIEW_WARN ? `${left} left` : "";
-}
+// What the box says about room left, always: "12 left".
+export const roomLeft = (value) => `${MAX_REVIEW - length(value)} left`;
+
+// A short review is one line: a line break typed or pasted into the box becomes a space.
+export const oneLine = (value) => value.replace(/\s*[\r\n\u2028\u2029]+\s*/g, " ");
 
 // The short review's saving. `soon(text)` after each keystroke saves once typing has paused for `wait`; `now(text)`
 // (leaving the field, Enter) saves at once. Saves run one at a time in the order asked, and a text the store already
@@ -66,10 +67,10 @@ function answerButtons(current, onPick) {
 export function ratePanel({ film, rating, save, onSaved }) {
   let current = rating;
   const status = h("p", { class: "rate-status", role: "status" });
-  const input = h("input", {
+  const input = h("textarea", {
     class: "review-input",
     id: "short-review",
-    type: "text",
+    rows: 3,
     autocomplete: "off",
     placeholder: "This movie will melt your brain",
     "aria-describedby": "review-room review-trip",
@@ -78,7 +79,7 @@ export function ratePanel({ film, rating, save, onSaved }) {
   const room = h("span", { class: "review-room", id: "review-room" });
   const trip = h("p", { class: "review-trip", id: "review-trip", role: "alert" });
   const saved = h("span", { class: "review-saved", role: "status" });
-  const box = h("div", { class: "review-field" }, input, room, saved);
+  const box = h("div", { class: "review-field" }, input, saved, room);
   let typed = input.value;
   let tripTimer = 0;
   const say = (text) => {
@@ -106,6 +107,7 @@ export function ratePanel({ film, rating, save, onSaved }) {
     }, TRIP_MS);
   };
   input.addEventListener("input", () => {
+    if (oneLine(input.value) !== input.value) input.value = oneLine(input.value);
     const fit = fitted(input.value, typed);
     if (fit.tripped) {
       input.value = fit.value;

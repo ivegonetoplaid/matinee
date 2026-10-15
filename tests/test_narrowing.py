@@ -29,6 +29,7 @@ from matinee.engine import (
     walk_ends,
     walk_kept,
 )
+from matinee.languages import heard_only
 from matinee.ranks import BANDS, band, rank_among
 from matinee.reference import Reference
 from matinee.store import FLOORS
@@ -173,6 +174,16 @@ def test_a_ticked_language_keeps_a_film_by_its_copys_tagged_tracks_else_by_its_o
     assert kept({"en"}, out={3}) == [5]
     assert kept(set(), out={1, 4}) == [2, 3, 5]
     assert allowed_films(table, frozenset(), frozenset()) is None  # nothing narrows: the pools Matinee shows today
+
+
+def test_a_film_reached_only_through_its_copys_audio_names_those_ticked_languages() -> None:
+    ticked = frozenset({"en", "es", "fr"})
+    assert heard_only("th", frozenset({"en", "th"}), ticked) == ["en"]
+    assert heard_only("ja", frozenset({"de", "es", "en"}), ticked) == ["en", "es"]
+    assert heard_only("fr", frozenset({"en", "fr"}), ticked) == []  # its own language is ticked
+    assert heard_only("th", None, ticked) == []  # no tagged copy: it came by its own language, or not at all
+    assert heard_only("xx", frozenset({"en"}), ticked) == []  # no known language of its own to name
+    assert heard_only("th", frozenset({"en"}), frozenset()) == []  # any language: nothing was narrowed
 
 
 def test_narrowing_one_viewer_never_changes_the_shared_masks(cat: Catalog) -> None:

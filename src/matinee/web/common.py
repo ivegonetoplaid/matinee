@@ -34,7 +34,7 @@ PROFILE_LINES = {
     "wrong_pin": "That PIN isn't right.",
     "locked": "Too many wrong PINs. That profile is locked for {minutes} minutes.",
     "bad_score": "I only know five answers, from Loved it! down to Hated it.",
-    "bad_review": "Short and sweet, please. About 20 words.",
+    "bad_review": "Short and sweet, please. About 15 words.",
     "not_rated": "Rate it first, then tell me why.",
     "bad_length": "Pick how long: 3 months, 6 months, 1 year or for good.",
     "bad_run": "I lost track of this run. Start over and I'll keep up.",

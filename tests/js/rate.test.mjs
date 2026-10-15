@@ -1,7 +1,7 @@
 import { mock, test } from "node:test";
 import assert from "node:assert/strict";
 
-import { MAX_REVIEW, autosaver, fitted, length, roomLeft } from "../../src/matinee/web/static/js/rate.js";
+import { MAX_REVIEW, autosaver, fitted, length, oneLine, roomLeft } from "../../src/matinee/web/static/js/rate.js";
 
 const at = (n, ch = "x") => ch.repeat(n);
 
@@ -11,7 +11,7 @@ test("the field counts as the store does: an emoji, joined or not, by its code p
   assert.equal(length("❤️‍\u{1F525}"), 4);
 });
 
-test("the field never takes a 141st character and says so", () => {
+test("the field never takes a character past the limit and says so", () => {
   assert.deepEqual(fitted(at(MAX_REVIEW), at(MAX_REVIEW - 1)), { value: at(MAX_REVIEW), tripped: false });
   assert.deepEqual(fitted(at(MAX_REVIEW + 1), at(MAX_REVIEW)), { value: at(MAX_REVIEW), tripped: true });
   assert.deepEqual(fitted(at(MAX_REVIEW - 1, "\u{1F525}") + "ab", at(MAX_REVIEW - 1, "\u{1F525}")), {
@@ -20,10 +20,14 @@ test("the field never takes a 141st character and says so", () => {
   });
 });
 
-test("room left shows over the last twenty characters only", () => {
-  assert.equal(roomLeft(at(MAX_REVIEW - 21)), "");
-  assert.equal(roomLeft(at(MAX_REVIEW - 20)), "20 left");
+test("room left always shows, from the whole limit down to none", () => {
+  assert.equal(roomLeft(""), `${MAX_REVIEW} left`);
   assert.equal(roomLeft(at(MAX_REVIEW)), "0 left");
+});
+
+test("a line break typed or pasted into the box becomes one space", () => {
+  assert.equal(oneLine("Gets worse.\n\n  Still good\r\nhere"), "Gets worse. Still good here");
+  assert.equal(oneLine("one line"), "one line");
 });
 
 test("the short review saves once typing pauses, at once on leaving, and never twice for one text", async () => {

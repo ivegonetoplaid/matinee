@@ -681,10 +681,12 @@ const PANEL_ENTRY = { matinee: "panel" };
 let pickShowing = null; // the frame of the last pick screen drawn
 let ownBacks = 0; // backs the page takes itself, to drop its own entries
 
-// A new pick screen holds the pick's entry: pushed after an answer, kept through "Not that one", and stepped down to
-// from a panel's entry when a film is brought back from the panel.
+// A new pick screen holds the pick's entry: pushed after an answer, kept through "Show me another", and stepped down to
+// from a panel's entry when a film is brought back from the panel. A panel closed by the tap that drew this pick has
+// already asked for that step, which the browser has yet to take, so it is not asked for twice.
 function holdPickEntry() {
   if (history.state?.matinee === PANEL_ENTRY.matinee) {
+    if (ownBacks > 0) return;
     ownBacks++;
     history.back();
   } else if (history.state?.matinee !== PICK_ENTRY.matinee) {
@@ -760,11 +762,11 @@ async function fadeTalk() {
   await wait(TALK_FADE_MS);
 }
 
-// The lines for a pick, from the set of the category the first answer led to. After "Not that one" a
+// The lines for a pick, from the set of the category the first answer led to. After "Show me another" a
 // nope line and a reveal line are dealt together under the combined cap; otherwise a reveal line alone.
 // `beneath(fixed)` redeals only the reveal line to fit beneath `fixed`, the check's explanation.
 // The pick's lines. `gold` is the line that stays through the hunt, with the reveal line dealt to fit
-// beneath it: the nope line after "Not that one", else `held`, the reply to the last answer.
+// beneath it: the nope line after "Show me another", else `held`, the reply to the last answer.
 function pickLines(again, held = "") {
   if (!quips) return { nope: null, gold: held || null, reveal: "", beneath: () => "" };
   const revealSet = setFor(quips, visit.tree, "reveal");
@@ -784,7 +786,7 @@ function rushLine() {
   return quips ? deck.deal(setFor(quips, visit.tree, "rush")) : "";
 }
 
-// What the screen gives up as a pick begins: a question's words fade out, or, on "Not that one", the
+// What the screen gives up as a pick begins: a question's words fade out, or, on "Show me another", the
 // resting poster goes back to its cell on the wall.
 async function clearForPick(posterBack) {
   if (posterBack) wall.putBack(stage.querySelector(".slot-poster"));
@@ -797,7 +799,7 @@ function requestPick() {
   return post("/api/pick", { tree: visit.tree, answers: visit.answers, viewer: visit.viewer, seen, source: visit.source });
 }
 
-// Opens the pick screen and types a line in gold: after "Not that one" the nope line, which stays
+// Opens the pick screen and types a line in gold: after "Show me another" the nope line, which stays
 // through the wait and the hunt, or else `opening`, the reply to the last answer. Resolves to the frame
 // and the time until which a reply should stay whole before the hunt fades it (0 when none fades).
 async function openPick(opening, nope) {
@@ -809,7 +811,7 @@ async function openPick(opening, nope) {
   return { frame, readUntil: nope ? 0 : performance.now() + READ_MS };
 }
 
-// Every film the pick showed or the check turned away is seen, so "Not that one" never draws it again.
+// Every film the pick showed or the check turned away is seen, so "Show me another" never draws it again.
 function markSeen(data) {
   if (data.film) visit.seen.push(data.film.tmdb);
   visit.seen.push(...data.turned_away);
@@ -822,12 +824,12 @@ function fuseOn(frame, reply, destruct, round) {
   return lightFuse(frame.line, destruct, () => frame.showing.isConnected && wall.round === round);
 }
 
-// Whether the check's line types: on a pick that is not "Not that one", with no fuse lit.
+// Whether the check's line types: on a pick that is not "Show me another", with no fuse lit.
 function checksAloud(posterBack, fuse) {
   return hasTopics() && !posterBack && !fuse;
 }
 
-// `again` is "Not that one" or "Roll again": a nope line types in gold. `posterBack` is "Not that one":
+// `again` is "Show me another" or "Roll again": a nope line types in gold. `posterBack` is "Show me another":
 // the resting poster goes back to the wall while the next film is fetched, and the check's line does not type.
 // `destruct` (seconds) lights a fuse on the reply: it counts down and burns away on its own clock, and the
 // check's line does not type over it.
@@ -841,7 +843,7 @@ async function pickNow(opening = "", again = false, destruct = null, posterBack 
   const { frame, readUntil } = await openPick(opening, lines.nope);
   standUndo(frame, undo);
   const fuse = fuseOn(frame, opening, destruct, round);
-  // The check's line types only on a checked pick that is not "Not that one", and never over a fuse.
+  // The check's line types only on a checked pick that is not "Show me another", and never over a fuse.
   const res = await checkedPick(request, frame, lines, checksAloud(posterBack, fuse));
   // The viewer took a way back out while the pick was fetched.
   if (!frame.showing.isConnected || wall.round !== round) return undefined;

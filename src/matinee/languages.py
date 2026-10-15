@@ -63,6 +63,16 @@ def audio_languages(tags: Iterable[object]) -> frozenset[str] | None:
     return found or None
 
 
+def heard_only(original: object, audio: object, ticked: frozenset[str]) -> list[str]:
+    """The ticked languages a library copy's audio is in, when the film's own language is known and not ticked: the
+    languages it reached the viewer in only through its copy. Empty otherwise."""
+    if not ticked or not isinstance(audio, frozenset) or not isinstance(original, str):
+        return []
+    if not original or original in PLACEHOLDERS or original in ticked:
+        return []
+    return sorted(audio & ticked)
+
+
 def held(films: pd.DataFrame) -> list[tuple[str, int]]:
     """Each language the films are in, with how many films are in it, most films first, then by code. A film is in
     its original language and in each language its library copy's audio tracks are tagged with, once for each."""

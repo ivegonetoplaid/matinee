@@ -18,6 +18,9 @@ import { panelAction } from "./panel.js";
 import { focusShown, householdLine, readingPanel } from "./household.js";
 import { rateLink } from "./rate.js";
 import { hideLink } from "./hide.js";
+import { heardWords } from "./settings.js";
+import { CASES, filmCase } from "./cases.js";
+import { ANSWERS } from "./ratings.js";
 import { typeLine } from "./type.js";
 
 const BEAT_MS = 500; // the grown poster holds for one beat before it moves to rest
@@ -27,6 +30,7 @@ const PHONE_HOLD_MS = 2200;
 const POSTER_RATIO = 1.5; // height over width
 const POSTER_MIN_H = 160; // below this the page scrolls rather than shrink the poster further
 const STRIP_H = 44; // the poster link's strip, beneath the poster
+const CASE_RATIO = 932 / 600; // the case art's height over its width
 const PICTURE_WAIT_MS = 10000; // a picture not drawable by then is given up, as the server gives up on the media server
 
 // A picture fetched ahead of its moment. Resolves to the image once it can be drawn, or to null when it
@@ -77,17 +81,47 @@ function landed(link) {
   link.classList.add("landed");
 }
 
+// A rated film's poster rests in its rating's case, as on My profile, `height` tall: the poster in the case's window,
+// the title on its plate. A film the viewer has not rated, or no longer has, rests as its bare poster. Either way the
+// poster is the one already on the page, so dressing it again (a rating made on the pick) keeps it where it is.
+function dress(poster, link, film, score, height) {
+  const was = link.querySelector(".case") ?? poster;
+  if (CASES[score]) {
+    const say = ANSWERS.find((a) => a.score === score).say;
+    const spot = document.createComment("");
+    was.before(spot); // the case takes the poster in, so it is placed by a marker, not by what it replaces
+    poster.className = "";
+    poster.removeAttribute("style");
+    const box = filmCase({ title: film.title, picture: poster, score, label: `${film.title}, ${say}` });
+    box.style.height = `${height}px`;
+    box.style.width = `${height / CASE_RATIO}px`;
+    spot.replaceWith(box);
+    if (was !== poster) was.remove();
+  } else {
+    poster.className = "slot-poster";
+    poster.style.width = `${height / POSTER_RATIO}px`;
+    poster.style.height = `${height}px`;
+    if (was !== poster) was.replaceWith(poster);
+  }
+  link.classList.toggle("cased", Boolean(CASES[score]));
+}
+
+// Dresses the landed poster in `link` again for a rating saved on the pick, at the height it rests at.
+function redress(link, film, score) {
+  const poster = link.querySelector("img");
+  if (!poster || !link.classList.contains("landed")) return;
+  dress(poster, link, film, score, (link.querySelector(".case") ?? poster).getBoundingClientRect().height);
+}
+
 // Moves `poster` into `link`, above its strip, in the page's flow, carried from `from`, the screen box where it
-// hung on the wall. The link stands in `slot`, placed by the caller before this runs. The move starts from that
-// box, measured from the same corner it scales from, so it never jumps. The link keeps the glow the poster wore on
-// the wall, `glow(width)`.
-function settle(poster, from, slot, link, glow) {
+// hung on the wall; a rated film's into its case's window. The link stands in `slot`, placed by the caller before
+// this runs. The move starts from that box, measured from the same corner it scales from, so it never jumps. The link
+// keeps the glow the poster wore on the wall, `glow(width)`.
+function settle(poster, from, slot, link, glow, film, score) {
   const size = fit(slot);
-  poster.className = "slot-poster";
-  poster.style.width = `${size.width}px`;
-  poster.style.height = `${size.height}px`;
   link.style.setProperty("--poster-glow", glow(size.width));
   link.prepend(poster);
+  dress(poster, link, film, score, size.height);
   slot.append(link);
   const to = poster.getBoundingClientRect();
   if (prefersLessMotion() || !to.width) return landed(link);
@@ -117,11 +151,19 @@ function tagList(card) {
   return h("ul", { class: "tags", "aria-label": "Tags" }, card.tags.map((tag) => h("li", { class: "tag" }, sentenceCase(tag))));
 }
 
-// What the pick says about the film beyond its title: its rank, the household's shared ratings, then its tags. Null
-// when there is nothing to say, so the layout closes up. On a desktop it stands under Matinee's line; on a phone,
-// under the film's title.
-function facts(card, household) {
-  const said = [rankLine(card), household, tagList(card)].filter(Boolean);
+// A pick in a language the viewer did not tick, offered for its copy's audio in one they did: its own language, then
+// in quiet words beneath, the ticked languages its copy is heard in. Null for any other pick.
+function heardLine(heard) {
+  if (!heard) return null;
+  const [original, copy] = heardWords(heard, navigator.language);
+  return h("p", { class: "heard" }, h("span", { class: "heard-original" }, original), " ", h("span", { class: "heard-copy" }, copy));
+}
+
+// What the pick says about the film beyond its title: its rank, the language it was heard in where that is not its
+// own, the household's shared ratings, then its tags. Null when there is nothing to say, so the layout closes up. On
+// a desktop it stands under Matinee's line; on a phone, under the film's title.
+function facts(card, household, heard) {
+  const said = [rankLine(card), heardLine(heard), household, tagList(card)].filter(Boolean);
   return said.length ? h("div", { class: "facts" }, said) : null;
 }
 
@@ -134,7 +176,7 @@ function heading(film) {
 function feature(card, film, result, backdrop, household) {
   if (backdrop) backdrop.className = "backdrop";
   const unchecked = result.unchecked ? [h("p", { class: "note" }, result.unchecked), dtddBeside(), lookUp(result)] : [];
-  const phoneFacts = isPhone() ? facts(card, household) : null;
+  const phoneFacts = isPhone() ? facts(card, household, result.heard) : null;
   return h(
     "div",
     { class: "feature" },
@@ -228,12 +270,12 @@ function fillBar(frame, left, centre = null) {
   if (isPhone()) frame.aside.append(frame.bar);
 }
 
-// The resting pick's actions: "‹ Back", "Wrong pick?" and "Rate it" at the bar's left, "Not that one" and "Hide
+// The resting pick's actions: "‹ Back", "Something wrong?" and "Rate it" at the bar's left, "Show me another" and "Hide
 // film" at its centre. A note records `walk`, the walk the film was drawn under; a rating names its run. `household`
 // holds the viewer's own rating, which "Rate it" keeps current.
-function pickBar(frame, film, actions, walk, household) {
-  const nope = h("button", { class: "action rose lead", type: "button", onclick: actions.notThatOne }, "Not that one");
-  const rate = rateLink({ film, panel: frame.panel, profileId: walk.profileId, run: walk.run, household });
+function pickBar(frame, film, actions, walk, household, rated) {
+  const nope = h("button", { class: "action rose lead", type: "button", onclick: actions.notThatOne }, "Show me another");
+  const rate = rateLink({ film, panel: frame.panel, profileId: walk.profileId, run: walk.run, household, saved: rated });
   const hide = hideLink({ film, panel: frame.panel, hide: (length) => actions.hide(film, length) });
   fillBar(frame, [backAction(frame, actions), actions.noteLink(film, frame.panel, walk), rate], [nope, hide]);
 }
@@ -250,9 +292,9 @@ function lineSaid(frame, fuse) {
 
 // On a desktop the facts stand under Matinee's line, and the resting line gives up the room it kept for four lines
 // so they stand one gap under its words; a lit fuse keeps that room, since its countdown still changes the line.
-function factsUnderLine(frame, info, fuse, household) {
+function factsUnderLine(frame, info, fuse, household, heard) {
   if (!fuse?.lit()) frame.line.classList.add("rested");
-  const said = facts(info, household);
+  const said = facts(info, household, heard);
   if (said) frame.line.after(said);
 }
 
@@ -267,16 +309,16 @@ async function rest({ stage, wall, frame, film, result, actions, info, backdrop,
   });
   const shown = feature(info, film, result, backdrop, line);
   frame.showing.append(shown);
-  if (!isPhone()) factsUnderLine(frame, info, fuse, line);
+  if (!isPhone()) factsUnderLine(frame, info, fuse, line, result.heard);
   frame.aside.append(...underLine(result, frame.aside.querySelector(".swap-note")));
-  pickBar(frame, film, actions, walk, household);
+  const link = posterLink(info, film);
+  pickBar(frame, film, actions, walk, household, (r) => redress(link, film, r?.score ?? null));
   // Measured once the aside is whole, so the poster takes only the height left beneath it.
   const from = wall.landedTile()?.img.getBoundingClientRect();
   const slot = h("div", { class: "poster-slot" });
   frame.left.append(slot);
-  const link = posterLink(info, film);
   if (poster && from) {
-    settle(poster, from, slot, link, (w) => wall.glowAt(w));
+    settle(poster, from, slot, link, (w) => wall.glowAt(w), film, household.mine?.score ?? null);
     wall.lift(true);
   } else {
     slot.append(link);

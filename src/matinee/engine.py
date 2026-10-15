@@ -30,7 +30,7 @@ the flavour is given.
 
 Unknown values are inclusive: a film with no runtime, rating, year, language,
 collection or score passes a filter on it, because a wrongly included film costs
-one `Not that one` and a wrongly excluded one is invisible.
+one `Show me another` and a wrongly excluded one is invisible.
 
 A viewer's own settings narrow every tree's starting pool beside the topics'
 `treat_as` answers: the films they may be offered (`Viewer.allowed`: not hidden,
@@ -83,6 +83,7 @@ class Viewer:
     source: Source = "all"  # every pool, count and pick of the walk is bounded by it
     allowed: Mask | None = None  # the films this viewer may be offered, aligned with the catalogue; None: every film
     floor: str = "anything"  # the rating floor, a key of FLOOR_EDGES
+    languages: frozenset[str] = frozenset()  # the languages ticked, which `allowed` already holds to; empty: any
 
 
 @dataclass(frozen=True)

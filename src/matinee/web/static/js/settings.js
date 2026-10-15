@@ -85,6 +85,13 @@ export function languageName(code, locale) {
   }
 }
 
+// A pick offered for its library copy's audio in a ticked language when its own is not ticked, in two lines:
+// "Original language: Thai" and "Your copy has English and Spanish audio". `heard` is the pick reply's.
+export function heardWords(heard, locale) {
+  const audio = new Intl.ListFormat("en", { type: "conjunction" }).format(heard.audio.map((c) => languageName(c, locale)));
+  return [`Original language: ${languageName(heard.original, locale)}`, `Your copy has ${audio} audio`];
+}
+
 // The languages to offer, as the server lists them (most films first), with the browser's own language first.
 export function languageOrder(held, locale) {
   const own = String(locale || "").split("-")[0].toLowerCase();

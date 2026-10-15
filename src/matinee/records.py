@@ -51,7 +51,7 @@ SOURCE = "matinee"
 MAX_RUNS = 50
 RUN_KEY = re.compile(r"^[A-Za-z0-9_-]{8,64}$")
 Mark = Literal["rated", "hid", "reported"]
-MAX_REVIEW = 140
+MAX_REVIEW = 100
 SCORES = range(1, 6)
 # A short review is one line: control characters (tab, newline, carriage return, next line) and the line and
 # paragraph separators are refused. Format characters stay, since every joined emoji carries one.

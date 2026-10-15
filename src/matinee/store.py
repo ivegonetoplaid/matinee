@@ -76,16 +76,18 @@ NOTE_SELECT = "SELECT n.*, p.name AS profile FROM notes AS n LEFT JOIN profiles 
 
 @dataclass(frozen=True)
 class Note:
-    """A viewer's note on one pick: what was wrong with it, the answers that led there, and why."""
+    """A viewer's note on one pick: what was wrong with its place (`kind`, None when the note does not say), whether its
+    tags are wrong, the answers that led there, and why. A note says at least one of the three."""
 
     profile_id: int
     tmdb: int
     tree: str
-    kind: Literal["genre", "kind", "quality"]
+    kind: Literal["genre", "kind", "quality"] | None
     path: tuple[str, ...]
     rushed: bool
     comment: str
     belongs: tuple[str, ...] = ()  # where a "Not <genre> at all" note says the film belongs
+    tags: bool = False
 
 
 @dataclass(frozen=True)
@@ -96,12 +98,13 @@ class FiledNote:
     profile: str | None
     tmdb: int
     tree: str
-    kind: str
+    kind: str | None
     path: tuple[str, ...]
     rushed: bool
     comment: str
     at: str
     belongs: tuple[str, ...]
+    tags: bool
     status: Status
     reason: str | None
     ruling: str | None
@@ -194,12 +197,13 @@ def _filed(row: sqlite3.Row) -> FiledNote:
         profile=None if row["profile"] is None else str(row["profile"]),
         tmdb=int(row["tmdb"]),
         tree=str(row["tree"]),
-        kind=str(row["kind"]),
+        kind=None if row["kind"] is None else str(row["kind"]),
         path=tuple(str(p) for p in json.loads(row["path"])),
         rushed=bool(row["rushed"]),
         comment=str(row["comment"]),
         at=str(row["at"]),
         belongs=tuple(str(t) for t in json.loads(row["belongs"])),
+        tags=bool(row["tags"]),
         status=_status(str(row["status"])),
         reason=row["reason"],
         ruling=row["ruling"],
@@ -445,8 +449,8 @@ class Store:
         with closing(self._connect()) as db, db:
             self._held(db, n.profile_id, by)
             db.execute(
-                "INSERT INTO notes (profile_id, tmdb, tree, kind, path, rushed, comment, at, belongs)"
-                " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO notes (profile_id, tmdb, tree, kind, path, rushed, comment, at, belongs, tags)"
+                " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     n.profile_id,
                     n.tmdb,
@@ -457,6 +461,7 @@ class Store:
                     n.comment,
                     now(),
                     json.dumps(sorted(set(n.belongs))),
+                    int(n.tags),
                 ),
             )
             if also is not None:

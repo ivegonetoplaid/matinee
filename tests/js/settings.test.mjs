@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 
-import { FLOORS, LANGUAGES_FIRST, RATED, ROWS, languageName, languageOrder, languagesFirst } from "../../src/matinee/web/static/js/settings.js";
+import { FLOORS, LANGUAGES_FIRST, RATED, ROWS, heardWords, languageName, languageOrder, languagesFirst } from "../../src/matinee/web/static/js/settings.js";
 
 test("a language is named in the viewer's language, and TMDB's Cantonese code, which browsers do not name, as Cantonese", () => {
   assert.equal(languageName("fr", "en-GB"), "French");
@@ -38,4 +38,12 @@ test("the topics' explanation names only gentle examples, spiders and needles, a
     assert.match(words, /^Choose topics like spiders or needles\. /);
     assert.doesNotMatch(words.slice("Choose topics like spiders or needles.".length), /\b(like|such as|e\.g\.)/i);
   }
+});
+
+test("a film heard in ticked languages names its own and each of them, joined as a sentence", () => {
+  assert.deepEqual(heardWords({ original: "th", audio: ["en"] }, "en-US"), ["Original language: Thai", "Your copy has English audio"]);
+  assert.deepEqual(heardWords({ original: "ja", audio: ["en", "es", "fr"] }, "en-US"), [
+    "Original language: Japanese",
+    "Your copy has English, Spanish, and French audio",
+  ]);
 });

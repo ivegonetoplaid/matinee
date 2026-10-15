@@ -13,7 +13,7 @@ governs:
 
 Matinee is a film picker for a home media library. A viewer answers two or three
 questions and is handed one film from the library, presented as tonight's
-showing, with `Not that one` to draw again.
+showing, with `Show me another` to draw again.
 
 This spec was written from the code on 2026-09-26 and last reconciled with it on
 2026-10-05; its pick screen, the pick's rank and tags, the film card and the
@@ -183,7 +183,7 @@ The answers, their order and the tree each leads to are data in
   viewer in the chosen source.
 - Every answer must carry a `label`. The engine refuses to load a first question
   whose answer lacks one. The label names the door where a short name is needed,
-  such as the "Wrong pick?" panel. Each door's label is its name.
+  such as the "Something wrong?" panel. Each door's label is its name.
 - Matinee's reply to a door is the opening line of the tree it leads to.
 - Stand-up specials are not a door. They are an answer under Comedy (section
   2.3).
@@ -256,7 +256,7 @@ these signals, and no others:
 **Unknown values are inclusive.** A film whose runtime, rating, year, language,
 collection or score is unknown passes a filter on it. A `sequel: false` filter
 keeps films with no known collection, so a film whose TMDB facts are unknown
-passes it too. A wrongly included film costs one `Not that one`; a wrongly
+passes it too. A wrongly included film costs one `Show me another`; a wrongly
 excluded one is invisible. One signal is the exception:
 
 - A certificate filter keeps only the certificates it lists. Comedy's room
@@ -531,7 +531,7 @@ page reads it through `GET /api/quips`, which returns the file as loaded
 
 - A category is `universal`, or a tree by its file name. It may hold
   `reveal` lines, said as a film arrives, `nope` lines, said after
-  `Not that one` and "Roll again", and `rush` lines, said after "Just pick
+  `Show me another` and "Roll again", and `rush` lines, said after "Just pick
   one!". The shipped file holds universal (16 reveal, 22 nope, 8 rush),
   horror (18, 19), comedy (22, 29) and action (16, 19). A tree with no category of its
   own, such as thriller or crime, draws universal's lines. No category draws
@@ -1286,7 +1286,9 @@ Each of their rows goes with its profile when the profile is deleted.
   every profile with no avatar.
 - From shape 1 every profile arrives with each setting at its default and
   without the welcome mark, so it sees the welcome once (section 12), and with
-  no ratings, hidden films or history.
+  no ratings, hidden films or history. The notes move to a new `notes` table,
+  each under its own id, where a note may name no sort choice and may say the
+  film's tags are wrong (section 10); none arrives saying so.
 - Before its first change to an older file, the upgrade copies the file as it
   stood to a new file beside it, named
   `matinee.sqlite.before-shape-2-<UTC time>`. The copy is written under the
@@ -1412,10 +1414,10 @@ whole number. The viewer only ever sees the words.
   changed answer takes the new time and keeps its short review.
   Clearing a rating clears its short review with it.
 - **A short review** is optional: one line of plain text, trimmed, of at most
-  140 characters counted as Unicode code points, so an emoji, joined or not,
+  100 characters counted as Unicode code points, so an emoji, joined or not,
   counts as its code points. A longer one, or one holding a control character
   or a line or paragraph separator, is refused, never cut (`bad_review`, "Short
-  and sweet, please. About 20 words."). Format characters stay, since every
+  and sweet, please. About 15 words."). Format characters stay, since every
   joined emoji carries one. An empty one clears it. A short review needs a
   rating (`not_rated`, "Rate it first, then tell me why."). Changing only the
   short review leaves the rating's time as it was. Every surface shows it as
@@ -1601,8 +1603,8 @@ never kept. No tree, scale or score is built from DoesTheDogDie data.
   at the tap, and "You should know it's one where <topic>." in cream as its poster
   grows, `<topic>` the first of the viewer's topics it trips, in the order
   DoesTheDogDie lists its votes. It then
-  behaves as any pick: `Not that one`, "‹ Back" and, where offered, "Wrong
-  pick?" work.
+  behaves as any pick: `Show me another`, "‹ Back" and, where offered, "Something
+  wrong?" work.
 - **Every pick is checked.** No request can ask to skip the check: a pick for a
   viewer with topics looks its film up whatever the request carries.
 - **Turned-away films.** Every film a pick turns away is reported to the page
@@ -1663,9 +1665,9 @@ A note is a viewer's complaint about a pick, kept for whoever runs Matinee. It
 changes nothing any viewer is shown.
 
 - The note action is offered only on a pick that came through a tree. It is
-  "Wrong pick?", in the pick's foot (section 12), and in My profile's poster
+  "Something wrong?", in the pick's foot (section 12), and in My profile's poster
   overlay for a film whose kept walk came through a door. It opens the pick's
-  panel, headed "Wrong pick?". The film always belongs to a profile this device
+  panel, headed "Something wrong?". The film always belongs to a profile this device
   holds, so the panel never asks for a name.
 - The panel opens with "This goes to whoever runs Matinee as a note. It changes
   nothing you are shown.", then "How you got here" over the door and the
@@ -1674,20 +1676,24 @@ changes nothing any viewer is shown.
   was shown: a film brought back from the Back panel is noted under the walk it
   first came from. In the overlay they are the walk kept with the film in the
   newest run that showed it (section 7.6).
-- The panel asks "What's wrong with it?" with three choices, offers an optional
-  "Why?" box of at most 500 characters, and a "Save" button at the panel's
-  foot. The form is built once per pick, so closing the panel and opening it
-  again keeps what the viewer chose and wrote:
+- The panel asks "What's wrong? Tick any, or just tell me below." over four
+  ticks, offers an optional "Tell me more" box of at most 500 characters, and a
+  "Save" button at the panel's foot. The first three say what was wrong with
+  where the film was sorted, and only one of them stands: ticking one unticks
+  the other two, and any may be unticked. The form is built once per pick, so
+  closing the panel and opening it again keeps what the viewer chose and wrote:
   - "Not <genre> at all", which asks "Where does it belong?". It offers every
     tree except the one that offered the film, the kids tree included, and the
     note keeps every tree ticked;
   - "<Genre>, but not the kind I asked for";
-  - "The right kind, just not a good pick".
+  - "The right kind, just not a good pick";
+  - "The tags don't fit it", which stands with any of the three.
 
-  "Save" with no choice made says "Tell me what's wrong with it first." and
-  saves nothing.
-- Every choice, once saved, saves a note and nothing else: the profile, the film, the tree,
-  the choice, the answers that led to the pick in words, whether "Just pick
+  A note says at least one thing: a sort choice, the tags, or words in the
+  box. "Save" with none of them says "Tick what's wrong, or tell me below." and
+  saves nothing; the server refuses such a note (400 `refused`).
+- Every note, once saved, saves a note and nothing else: the profile, the film, the tree,
+  the sort choice (or none), whether the tags are wrong, the answers that led to the pick in words, whether "Just pick
   one!" ended the questions, the comment and a UTC timestamp. A note needs a
   held profile. A film Matinee does not offer now is refused (400 `refused`).
   Its answers are resolved against the tree when it is saved; a tree that no
@@ -1705,9 +1711,10 @@ changes nothing any viewer is shown.
   never disagrees with the notes and a retry files no second note. A note made
   from My profile's overlay names no run and marks nothing.
 - Once the note is saved the form and "Save" leave the panel, and it says "Thanks for that. It's gone to
-  whoever runs Matinee." in gold and "If they agree, it moves for everyone." in cream. The
+  whoever runs Matinee." in gold and, for a note with a sort choice, "If they agree, it moves for everyone." in
+  cream; a note without one moves no film, so it says the gold line alone. The
   About page's paragraph on films in the wrong place says the same: a viewer
-  can say where a film fits best through "Wrong pick?",
+  can say where a film fits best through "Something wrong?",
   every note reaches whoever runs Matinee, and when they agree the film moves
   for everyone.
 - A note outlives the profile that filed it. Deleting a profile leaves every
@@ -1727,8 +1734,9 @@ changes nothing any viewer is shown.
   - `list` prints every open note, oldest first: its id, the film's title and
     year (from the film table, made printable as a comment is), the door's label, the time, the profile's name
     or "a deleted profile", the answers in order (ending "Just pick one!" when
-    that ended the questions), what was wrong in the panel's own words with
-    where the film belongs (by door label), and the comment, then the count of
+    that ended the questions), what was ticked in the panel's own words with
+    where the film belongs (by door label) and whether the tags don't fit, or
+    "(nothing ticked; see the comment)", and the comment, then the count of
     open notes. A film no longer in the film table is named by its TMDB id. A
     viewer's comment is printed on one line, with every control or format
     character shown as U+FFFD, so it can neither forge a note nor reach the
@@ -1861,7 +1869,7 @@ entries inside `answers` are not checked for extras.
   and a PIN 8; an avatar 40; topics 400; answers 12; tree names
   40; option indexes 0 to 50; films already seen 200; a note's comment 500;
   trees a note says a film belongs in 32; a run's key 64; a short review
-  1,000 (the store refuses one past 140 in words, section 7.4); a hide's length
+  1,000 (the store refuses one past 100 in words, section 7.4); a hide's length
   8; a rating floor 20; ticked languages 200. A pick with no tree may carry no
   answers, and neither may a film a run showed. A word given at the door over
   200 characters is wrong
@@ -2007,7 +2015,7 @@ page's actions. New actions follow those meanings.
 | "‹ Back to picking" (My profile) | gold |
 | "Change", "Done" (a setting's row on My profile) | gold |
 | "Bring back" (a hidden film) | gold |
-| "Not that one" (its thread always drawn, with a faint rose glow) | rose |
+| "Show me another" (its thread always drawn, with a faint rose glow) | rose |
 | "Delete this profile" (My profile) | rose |
 | "More on Seerr ↗", "More on TMDB ↗" (the strip on the pick's poster) | petrol |
 | "Read about these on DoesTheDogDie ↗" | petrol |
@@ -2020,7 +2028,7 @@ page's actions. New actions follow those meanings.
 | "Not now" (the welcome) | cream |
 | "Switch profiles" (My profile) | cream |
 | "Try again" (a problem screen and the topic list) | cream |
-| "Wrong pick?", "Rate it", "Hide film" | cream |
+| "Something wrong?", "Rate it", "Hide film" | cream |
 | The turned-away pick's reveal button | cream |
 | "Back" (About) | cream |
 
@@ -2029,7 +2037,7 @@ page's actions. New actions follow those meanings.
 Matinee's line and choices stay anchored while the line types and the choices
 appear. This table gives their composition; the detailed screen contracts below
 supply dimensions, responsive exceptions and interaction behaviour. The pick's
-reporting action is "Wrong pick?", not the unchecked-content warning. That
+reporting action is "Something wrong?", not the unchecked-content warning. That
 warning, DoesTheDogDie's credit and the lookup action follow the synopsis in
 the film information area on both desktop and phone.
 
@@ -2040,7 +2048,7 @@ the film information area on both desktop and phone.
 | The trigger picker | The left column's top, its explanation and the save actions beneath; the topics in the right column, with the DoesTheDogDie action under them | Stacked under the marquee's lit strip: the line, the explanation, the topics, the actions |
 | A tailoring step (at the door, or in the theatre after the welcome) | From 960 px wide, the line, the explanation and the actions in a left column, the answers in the right, as the picker; narrower, one column: the line, the explanation, the answers, then the actions | One column under the marquee's lit strip (at the door) or the top bar (in the theatre): the line, the explanation, the answers, the actions |
 | The questions | The line hangs from the top, three lines reserved, letterboxes beneath it | The line hangs from the top; letterboxes at the foot of the screen |
-| The pick | The left column hangs from the top: the line, then the rank, the household's line and the tags, then the note revealing a turned-away film where there is one, then the poster as the link to the film's page, its strip on its foot. The actions sit in the foot bar: "‹ Back", "Wrong pick?" and "Rate it" at its left, `Not that one` at its exact centre with "Hide film" beside it on its right, DoesTheDogDie's credit at its right end when the line names one of its topics | The showing scrolls above a fixed foot: the poster with its strip, then the title and year, the rank, the household's line, the tags and the synopsis. The foot holds the line, then, at its foot, `Not that one` and "Hide film" in one row and "‹ Back", "Wrong pick?" and "Rate it" in the next, with overflow scrolling inside it |
+| The pick | The left column hangs from the top: the line, then the rank, the language line, the household's line and the tags, then the note revealing a turned-away film where there is one, then the poster as the link to the film's page, its strip on its foot. The actions sit in the foot bar: "‹ Back", "Something wrong?" and "Rate it" at its left, `Show me another` at its exact centre with "Hide film" beside it on its right, DoesTheDogDie's credit at its right end when the line names one of its topics | The showing scrolls above a fixed foot: the poster with its strip, then the title and year, the rank, the language line, the household's line, the tags and the synopsis. The foot holds the line, then, at its foot, `Show me another` and "Hide film" in one row and "‹ Back", "Something wrong?" and "Rate it" in the next, with overflow scrolling inside it |
 | My profile | The pinned menu in a column at the left, the four parts beside it; from 601 to 900 px wide the menu takes its own row above the parts | The page's head (the picture, the name and the ways out), a jump bar pinned to the top of the screen, then the parts |
 
 ### Screen behaviour
@@ -2532,9 +2540,9 @@ the film information area on both desktop and phone.
   household's line (below), the synopsis, "How you found it:" with the kept
   walk's words or "From what I showed you" for a film no kept run showed, and
   "What you did:" with what its part says of it. At its foot stand "Rate it",
-  "Hide film" and, where the kept walk came through a door, "Wrong pick?", each
+  "Hide film" and, where the kept walk came through a door, "Something wrong?", each
   opening the pick's panel over the right side on a desktop and over the whole
-  sheet on a phone. It offers neither "‹ Back" nor "Not that one", never makes
+  sheet on a phone. It offers neither "‹ Back" nor "Show me another", never makes
   the film the pick, and what is done there names no run (section 7.6). "Hide
   film" here reads "Matinee won't pick <film> for you until then. You can
   bring it back any time from My profile."; a hide closes the panel and the
@@ -2636,10 +2644,18 @@ the film information area on both desktop and phone.
   no poster to rest shows the strip alone in the poster's place, still the
   link. There is no other link to the film's page on the pick.
 
+  A film the viewer has rated rests in its rating's case, as on My profile
+  (section 12): the poster flies into the case's window, which clips it only
+  once it has landed, with the title on the case's plate and the strip beneath
+  the case, which takes the poster's height. A cased poster wears no warm
+  outline or glow, and takes a gold ring when focused. A rating saved from
+  "Rate it" on the pick dresses the resting poster in its case at once, or
+  changes the case; one cleared undresses it.
+
   On a desktop the pick takes the room between the top bar and the foot bar,
   ending one gap above the bar; only a window too short for a 160 px poster
   scrolls. The left column hangs from the top of
-  the screen: the line, then the rank, the household's line and the tags, then the note revealing a turned-away
+  the screen: the line, then the rank, the language line, the household's line and the tags, then the note revealing a turned-away
   film where there is one, then the poster above its strip at the column's
   foot, as large as the height left there allows at 2:3 (never under 160 px).
   At rest the line gives up the four lines it reserved, so the rank stands one
@@ -2661,6 +2677,17 @@ the film information area on both desktop and phone.
   an accent and never a pill. A film with no rank or no tags shows none, and the layout closes up.
   Nothing on the pick says the tags are why the film was picked.
 
+  **The language line.** Beneath the rank, a pick whose own language (its
+  TMDB original language) the viewer did not tick, and which reached them
+  through its library copy's audio in languages they did tick (section 7.3),
+  says so: "Original language: Thai" (17 px, cream), then beneath it in small
+  quiet text "Your copy has English audio", naming each ticked language the
+  copy's audio holds, joined as a sentence ("English, Spanish, and French").
+  Languages are named as the language setting names them. The pick reply
+  carries it as `heard` (`original`, `audio`); a film in a ticked language of
+  its own, a viewer who ticks none, and a film whose own language is unknown
+  carry none.
+
   **The household's line.** Between the rank and the tags stand the
   household's shared ratings of the film (section 7.4), in the household's own
   colour, `--house`, which does nothing else: the first two sharing profiles,
@@ -2676,16 +2703,16 @@ the film information area on both desktop and phone.
   On a phone Matinee's words keep the foot of the pick screen, 316 px tall,
   which holds without scrolling, from its top, the line (four lines reserved)
   and, at its foot, the actions at the standard size in two rows:
-  `Not that one` and "Hide film" in the first, and "‹ Back", "Wrong pick?" and
+  `Show me another` and "Hide film" in the first, and "‹ Back", "Something wrong?" and
   "Rate it" sharing the second, each sized to its words on one line, so on the
   narrowest phones "Rate it" may take a row of its own. "‹ Back" alone keeps the
-  half width it has beside "Wrong pick?". The note revealing a turned-away film stands between
+  half width it has beside "Something wrong?". The note revealing a turned-away film stands between
   the line and the actions. Beneath the foot the foot band carries only
   DoesTheDogDie's credit, centred, when the line names one of its topics, and
   rises 48 px behind Matinee's words. Only something taller than the foot, such as a turned-away
   pick's reveal or a line longer than its four lines, scrolls inside it. The
   foot's top never moves from the first word of a pick to the
-  last, through `Not that one` and the next pick. The space above it scrolls on
+  last, through `Show me another` and the next pick. The space above it scrolls on
   its own, runs to the screen's sides and fades at its top and foot, so nothing
   passes behind the words and the poster's glow is never cut square. The hunt
   lands, and the poster grows, at the middle of that space, not at the screen's
@@ -2713,7 +2740,7 @@ the film information area on both desktop and phone.
   beneath it in the text colour as the poster grows. While the check runs, its
   line types beneath the reply, and goes once the check is done. A reply that
   self-destructs is the exception: its fuse owns the line. "Just pick one!"
-  deals a rush line, which stands in the reply's place by every rule above. On `Not that one` and "Roll again" a nope line
+  deals a rush line, which stands in the reply's place by every rule above. On `Show me another` and "Roll again" a nope line
   and a reveal line are dealt together within the combined cap: when a pair
   is over it, the longer line goes back unshown and its set deals the next
   that fits beside the other, then, if the pair is still over, the other is
@@ -2729,7 +2756,7 @@ the film information area on both desktop and phone.
   action. A pick with no film speaks no quip; its line types its first sentence in
   gold and the rest in cream.
 
-  `Not that one` asks for the next film at the tap and carries the resting
+  `Show me another` asks for the next film at the tap and carries the resting
   poster back from where it rests to its cell on the wall, at the wall's size
   and strength, over 0.45 s while the wall's dimming lifts (at once under
   reduced motion; with no poster at rest the dimming alone lifts over 0.45 s).
@@ -2738,7 +2765,7 @@ the film information area on both desktop and phone.
   the screen. The next hunt starts
   from where the wall stands, by every rule above. "Roll again", after three
   films in a row were turned away, is a new pick: its nope line types in gold
-  at the tap, as on `Not that one`, and its check line types beneath it.
+  at the tap, as on `Show me another`, and its check line types beneath it.
   "Just show me what you picked" asks for no new pick, so no check line types.
 
   An answer in the Back panel, the browser's back, the wordmark, "Switch
@@ -2770,20 +2797,20 @@ the film information area on both desktop and phone.
   follows, so the film rests beneath the scorch. When the check turns a film
   away, the fuse is put out and the explanation types as usual. Under reduced
   motion the numbers change without fading and the reply goes at once, leaving
-  the scorch. "Not that one" and every later pick speak as usual.
+  the scorch. "Show me another" and every later pick speak as usual.
 - **The pick's foot.** The pick shows no trail and no TMDB credit, at any
   width. Its actions stand in the foot. On a desktop they sit in the foot bar,
   a row kept across the bottom of the screen from the moment the pick screen
-  opens, so nothing moves when they arrive: "‹ Back", "Wrong pick?" and "Rate
-  it" at its left, `Not that one` at its exact centre at every width with "Hide
+  opens, so nothing moves when they arrive: "‹ Back", "Something wrong?" and "Rate
+  it" at its left, `Show me another` at its exact centre at every width with "Hide
   film" beside it on its right, its right end empty. From 601 to 1080 px wide
-  the bar keeps two rows from the start: `Not that one` centred on the first
-  with "Hide film" beside it, "‹ Back", "Wrong pick?" and "Rate it" side by side
+  the bar keeps two rows from the start: `Show me another` centred on the first
+  with "Hide film" beside it, "‹ Back", "Something wrong?" and "Rate it" side by side
   at the left of the second, and DoesTheDogDie's credit, where it stands, at
   the second's right end. A phone's
-  foot holds the actions under Matinee's line (above). `Not that one` is the
+  foot holds the actions under Matinee's line (above). `Show me another` is the
   same size as every other action; it stands out by its rose words, its thread
-  drawn at all times and a faint rose glow. "Wrong pick?" shows only on a pick
+  drawn at all times and a faint rose glow. "Something wrong?" shows only on a pick
   that came through a door (section 10); "Rate it" and "Hide film" show on every
   pick of a film. After a hide, a plain "Undo" stands in the foot while the
   next pick hunts: at the foot bar's left on a desktop, in the foot on a phone
@@ -2791,8 +2818,8 @@ the film information area on both desktop and phone.
   trips the list, three in a row did, or the pool is used up; section 9) shows
   "‹ Back" alone in the foot, and its other actions, `Start over` among them,
   beneath the line.
-- **The pick's panel.** "‹ Back", "Wrong pick?", "Rate it", "Hide film" and
-  the names on the household's line open one shared panel; `Not that one`
+- **The pick's panel.** "‹ Back", "Something wrong?", "Rate it", "Hide film" and
+  the names on the household's line open one shared panel; `Show me another`
   never opens one. On a desktop it stands over the left column, from one gap under the
   top bar down to the foot bar, always at that full height whatever the column
   holds, and is placed again when the window changes size; the left column is
@@ -2802,9 +2829,10 @@ the film information area on both desktop and phone.
   open. It is a solid panel headed by the action's name in Matinee's
   display face, in gold, with a × at its top right; its contents scroll inside
   it when taller. The ×, Escape, a tap or click outside it, and the same action
-  again each close it. A tap outside it closes it and does nothing else, unless
-  the tap is on another action that opens the panel: so a viewer reaching for
-  `Not that one` with a panel open closes the panel first. My profile's poster
+  again each close it. A tap outside it on a button or a link closes it and
+  does that button's or link's work at once, so `Show me another` with a panel
+  open draws the next film; a tap on anything else outside it closes it and
+  does nothing else. My profile's poster
   overlay opens the same panel over its own words (above).
   Opening another action's panel replaces it. While it is open the parts it
   covers are out of reach of the keyboard. Focus moves into it as it opens, to
@@ -2850,28 +2878,29 @@ the film information area on both desktop and phone.
 
   A tap on another film brings it back as the pick, without asking for a new
   pick and without asking DoesTheDogDie anything: the resting poster goes back
-  to the wall as on `Not that one`, and the film shows with the line it rested
+  to the wall as on `Show me another`, and the film shows with the line it rested
   with (none when a fuse burnt it away), DoesTheDogDie's credit in the foot band
   when it stood there, its content note and lookup action when it had them,
   and the door and walk it was first drawn under, so its rank counts among that
   door and a note on it records that walk. Never the film a check turned away.
   Its details, rank, tags and pictures load as on any pick, and it is a pick
-  like any other: `Not that one` draws the next film as usual.
+  like any other: `Show me another` draws the next film as usual.
 - **"Rate it"** opens the panel headed "Rate it": "Seen <film>? Your answer is
   kept on My profile, where you can change it.", then the five answers stacked
   best first, "Loved it!" at the top, the viewer's current one checked; then
-  "Short review (optional)" over a single-line field ("This movie will melt
-  your brain" until written in), with no Save of its own. An answer saves at once
+  "Short review (optional)" over a three-line box ("This movie will melt
+  your brain" until written in), with no Save of its own. A short review is
+  one line: a line break typed or pasted into the box becomes a space. An answer saves at once
   and says "Saved. Add a short review if you like.". The field waits for a
   rating, inactive until the film has one. It saves itself one second after
   typing stops, on leaving the field, and on Enter, one save at a time and never
-  a text already saved; "✓ Saved" (or "✓ Cleared" when emptied) then shows in
-  the field until typing resumes. It holds the
+  a text already saved; "✓ Saved" (or "✓ Cleared" when emptied) then shows at
+  the box's bottom left until typing resumes. It holds the
   viewer's short review when the panel opens, so it can be changed or cleared.
-  It counts as the store does (section 7.4) and never takes a 141st character:
-  over the last 20 it says how many are left ("12 left"), and a keystroke past
+  It counts as the store does (section 7.4) and never takes a 101st character:
+  its bottom right always says how many are left ("12 left"), and a keystroke past
   the limit gives its edge a thin rose line that fades, shakes it (not under
-  reduced motion) and shows "Short and sweet, please. About 20 words.", which
+  reduced motion) and shows "Short and sweet, please. About 15 words.", which
   fades in and out. A refusal says why in the panel. A rating made here names
   the run, where the film is marked rated, and the household's reading panel
   shows it at once as "My review". The words "note" and "remark" never name a
@@ -2880,7 +2909,7 @@ the film information area on both desktop and phone.
   <film> for you until then, and rolls again now. You can bring it back any
   time from My profile.", over "3 months", "6 months", "1 year" and "For good",
   none chosen. A choice hides the film for that long (section 7.5), marks it in
-  the run, closes the panel and rolls again as `Not that one` does, taking no
+  the run, closes the panel and rolls again as `Show me another` does, taking no
   step of the browser's history; a refusal says why in the panel. While the
   next pick hunts, a plain "Undo" stands in the foot and takes the focus; it
   fades as the hunt comes to rest, just before the next pick fills the foot.
@@ -2955,7 +2984,7 @@ the film information area on both desktop and phone.
   paragraphs 19 px (on a phone the title is at most 13 per cent of the screen's
   width, the lead 20 px and the paragraphs 17 px); section headings are gold,
   in the display face. The copy, in order: a lead; "Why it exists", whose last paragraph says a
-  viewer can tell Matinee where a film fits best through "Wrong pick?" and
+  viewer can tell Matinee where a film fits best through "Something wrong?" and
   that a note the operator agrees with moves the film for
   everyone (section 10); "How it
   knows what a film feels like", with links to MovieLens and the tag genome
@@ -3542,7 +3571,7 @@ describing it wrongly, never by naming something gone.
 
 - `src/matinee/records.py::Records` (a profile's own records, through the store's ownership checks)
 - `src/matinee/records.py::Records.rate` / `unrate` / `review` / `ratings` (the same answer keeps its first time; a review alone never moves it; newest first)
-- `src/matinee/records.py::clean_score` / `clean_review` / `MAX_REVIEW` / `LINE_BREAKING` / `SOURCE` (1 to 5; one line of 140 code points, refused never cut)
+- `src/matinee/records.py::clean_score` / `clean_review` / `MAX_REVIEW` / `LINE_BREAKING` / `SOURCE` (1 to 5; one line of 100 code points, refused never cut)
 - `src/matinee/records.py::Records.shared` / `Shared` (other sharing profiles' ratings of a film, newest first)
 - `src/matinee/records.py::LENGTHS` / `months_on` / `hide_until` / `Hidden` (calendar months, the day clamped; none for good)
 - `src/matinee/records.py::Records.hide` / `unhide` / `hidden` (a hide replaced; ended hides left out)
@@ -3568,6 +3597,7 @@ describing it wrongly, never by naming something gone.
 - `src/matinee/languages.py::held` / `PLACEHOLDERS` (the languages the films are in, most first; never `xx`)
 - `src/matinee/languages.py::codes` / `two_letter` / `audio_languages` (a tag to TMDB's two-letter code, or untagged)
 - `src/matinee/languages.py::extra_track` / `EXTRA_TRACK` (a commentary, description or score track names no language)
+- `src/matinee/languages.py::heard_only` / `src/matinee/web/viewing.py::heard_out` / `HeardOut` / `src/matinee/engine.py::Viewer.languages` (a pick reached only through its copy's audio names those languages)
 - `data/languages.json` / `codes` (ISO 639-2 to TMDB's codes)
 - `src/matinee/library/__init__.py::LibraryFilm.audio` / `Library.films` (read only when asked)
 - `src/matinee/engine.py::Viewer.allowed` / `Viewer.floor` / `Catalog.places` (a viewer's narrowing; door places worked out once per catalogue)
@@ -3598,18 +3628,18 @@ describing it wrongly, never by naming something gone.
 
 ### Notes and the notes tool
 
-- `src/matinee/store.py::Note` (`belongs`)
+- `src/matinee/store.py::Note` (`belongs`; `kind` None or `tags`)
 - `src/matinee/store.py::NOTE_SELECT` / `FiledNote` / `one_line` / `MAX_REASON`
 - `src/matinee/store.py::Store.note`
 - `src/matinee/store.py::Store.notes` / `filed` / `rule`
 - `src/matinee/web/viewing.py::NoteOut` / `NoteIn` (request caps)
-- `src/matinee/web/viewing.py::NOTED` / `answer_says` / `check_belongs`
+- `src/matinee/web/viewing.py::NOTED` / `answer_says` / `check_belongs` / `check_says` (a note says something)
 - `src/matinee/web/viewing.py::add_note_routes` / `WALK_GONE` (`POST /api/notes`; a film Matinee does not offer now is refused; a walk gone refused in words)
 - `src/matinee/web/viewing.py::NoteIn.run` (the run a note marks reported)
 - `src/matinee/records.py::Records.report` / `src/matinee/store.py::Store.note` (the note and its mark in one write)
 - `tools/notes.py::Names` / `load_names` (titles and door labels)
 - `tools/notes.py::printable`
-- `tools/notes.py::what_was_wrong` / `describe`
+- `tools/notes.py::what_was_wrong` / `sorted_wrong` / `describe`
 - `tools/notes.py::list_open` / `rule` / `clear_pin` / `clear_topics`
 - `tools/notes.py::note_id` / `parser` / `main` (exit statuses)
 - `src/matinee/store.py::Store.clear_topics` (`clear-topics`)
@@ -3721,7 +3751,7 @@ describing it wrongly, never by naming something gone.
 - `src/matinee/web/static/js/run.js::remember` / `newestFirst` / `kept` / `asPick` (the films a run has shown; `asked` keeps a turned-away film out of the history)
 - `src/matinee/web/static/js/run.js::runKey` / `shownBody` (a run's key; what the history keeps of a film shown)
 - `tests/js/way-back.test.mjs`, `tests/js/run.test.mjs`
-- `src/matinee/web/static/js/panel.js::pickPanel` / `place` / `swallowNextClick` / `onThePick` (the shared panel and its closing rules; where it stands)
+- `src/matinee/web/static/js/panel.js::pickPanel` / `place` / `swallowNextClick` / `onThePick` (the shared panel and its closing rules, a tap outside on a button or link doing its work; where it stands)
 - `src/matinee/web/static/js/panel.js::OPENER` / `panelAction` (a cream action that opens the panel)
 - `src/matinee/web/static/js/main.js::enter` (the start asked at the tap, the first screen after the landing)
 - `src/matinee/web/static/js/main.js::topbar` (settles a landed name)
@@ -3770,7 +3800,7 @@ describing it wrongly, never by naming something gone.
 - `src/matinee/web/static/js/about.js::openAbout` (the focus returns to what opened it)
 - `src/matinee/web/static/js/about.js::close` (popstate; Escape steps back)
 - `src/matinee/web/static/js/about.js::keeps` (the privacy statement, "What Matinee keeps")
-- `src/matinee/web/static/js/about.js::copy` (the About page's words and links; no steering section without a key; "Good company" always; names "Wrong pick?")
+- `src/matinee/web/static/js/about.js::copy` (the About page's words and links; no steering section without a key; "Good company" always; names "Something wrong?")
 - `src/matinee/web/static/js/wall-grid.js::posterAcross` / `ACROSS` / `GAP`
 - `src/matinee/web/static/js/wall-grid.js::wallLayout`
 - `src/matinee/web/static/js/wall-grid.js::bestStride` / `repeatDistance`
@@ -3820,12 +3850,12 @@ describing it wrongly, never by naming something gone.
 - `src/matinee/web/static/js/fuse.js::lightFuse` / `fuseTimeline`
 - `src/matinee/trees.py::_self_destruct` / `_one_self_destruct`
 - `src/matinee/web/static/js/pick.js::feature`
-- `src/matinee/web/static/js/pick.js::underLine` / `backAction` / `fillBar` / `pickBar` (the foot bar: "Rate it" after "Wrong pick?", "Hide film" beside "Not that one")
+- `src/matinee/web/static/js/pick.js::underLine` / `backAction` / `fillBar` / `pickBar` (the foot bar: "Rate it" after "Something wrong?", "Hide film" beside "Show me another")
 - `src/matinee/web/static/js/pick.js::showNoFilm`
 - `src/matinee/web/static/js/pick.js::firstPickReveal`
 - `src/matinee/web/static/js/pick.js::showCredit` (DoesTheDogDie's credit in the foot band, for a line naming one of its topics)
 - `src/matinee/web/static/js/pick.js::lookUp` ("Look it up on DoesTheDogDie ↗")
-- `src/matinee/web/static/js/note.js::noteLink` / `walkOf` ("Wrong pick?" in the panel; the walk and run a note records; `walk_gone` leaves Save disabled)
+- `src/matinee/web/static/js/note.js::noteLink` / `kindChoices` / `walkOf` ("Something wrong?" in the panel; one sort tick stands; the walk and run a note records; `walk_gone` leaves Save disabled)
 - `src/matinee/web/static/js/credits.js::credits` (the door's credit line: DoesTheDogDie's credit, built hidden)
 - `src/matinee/web/static/js/credits.js::dtddCredit` (built hidden) / `dtddFoot` (the pick's foot band, built hidden) / `dtddBeside` (after an unchecked film's note)
 - `src/matinee/web/static/js/credits.js::aboutLink` ("About Matinee"; `around`, the door)
@@ -3859,11 +3889,11 @@ describing it wrongly, never by naming something gone.
 - `src/matinee/web/static/css/matinee.css` `.pick-line` (size, four lines reserved), `.pick-line.rested`, `.hushed`
 - `src/matinee/web/static/css/matinee.css` `.poster-link`, `.poster-strip`
 - `src/matinee/web/static/css/matinee.css` `.facts`, `.rank`, `.rank-words`, `.rank-by`, `.tags`, `.tag`
-- `src/matinee/web/static/css/matinee.css` `.note-form` ("Wrong pick?"'s form)
+- `src/matinee/web/static/css/matinee.css` `.note-form` ("Something wrong?"'s form)
 - `src/matinee/web/static/css/matinee.css` `.pick-panel`, `.panel-head`, `.panel-title`, `.panel-close`, `.panel-body`, `.panel-lede`, `.panel-section`, `.panel-row`, `.answer-row`, `.films`, `.film-row`, `.panel-foot`, `.action.open`
 - `src/matinee/web/static/css/matinee.css` `.foot-bar`, `.bar-left` (one row; two rows from 601 to 800 px; a phone's rows), desktop `.showing` and `.feature` (the details scroll with a fade)
 - `src/matinee/web/static/css/matinee.css` `.bar-right` (DoesTheDogDie's credit at the foot bar's right end)
-- `src/matinee/web/static/css/matinee.css` `.action.lead` ("Not that one": thread always, rose glow)
+- `src/matinee/web/static/css/matinee.css` `.action.lead` ("Show me another": thread always, rose glow)
 - `src/matinee/web/static/css/matinee.css` `.beside-credit` (DoesTheDogDie's credit after an unchecked film's note)
 - `tests/test_design_standards.py::PERMITTED` (the panel's ×, `answerRow`, `filmRow`, `posterLink`, `dtddBeside`, `dtddFoot`)
 - `src/matinee/web/static/css/matinee.css` `.talk > .footnote`
@@ -3887,17 +3917,19 @@ describing it wrongly, never by naming something gone.
 - `src/matinee/web/static/js/settings.js::settingsPart` / `ROWS` / `FLOORS` / `RATED` / `SHARING` (the rows' words and answers; saves queued in order)
 - `src/matinee/web/static/js/settings.js::row` / `singleRow` / `languagesRow` / `topicsRow` / `topicList` / `chooser` (a row, its picture and open panel)
 - `src/matinee/web/static/js/settings.js::languageName` / `languageOrder` (named through the browser, `cn` as Cantonese; the browser's language first)
+- `src/matinee/web/static/js/settings.js::heardWords` / `src/matinee/web/static/js/pick.js::heardLine` (the language line's words; the line beneath the rank)
 - `src/matinee/web/static/js/settings.js::languagesFirst` / `moreLanguages` (the 15 most-held languages, the browser's and the ticked first; "+ More languages" shows the rest)
 - `src/matinee/web/static/js/topics.js::topicButton`
 - `src/matinee/web/static/js/credits.js::dtddSetting` (DoesTheDogDie's credit under the topics row)
-- `src/matinee/web/static/js/cases.js::filmCase` / `CASES` / `tiers` / `ratedPart` (a film in its case; the rated tiers)
+- `src/matinee/web/static/js/cases.js::filmCase` / `CASES` / `tiers` / `ratedPart` (a film in its case, around a poster already on the page where given; the rated tiers)
+- `src/matinee/web/static/js/pick.js::dress` / `redress` / `settle` / `CASE_RATIO` (a rated pick rests in its case; a rating on the pick dresses it at once)
 - `src/matinee/web/static/js/cases.js::shimmerOnce` / `mostlyOnScreen` / `glowUnder` / `SETTLE_MS` (the gold case's light)
 - `src/matinee/web/static/js/cases.js::hiddenPart` / `hiddenUntil` (the hidden films, their return, "Bring back")
 - `src/matinee/web/static/js/shelves.js::shownPart` / `dayShelf` / `runShelf` / `runGroups` / `runCaption` / `didWith` / `byDay` / `dayCount` (the day shelves)
 - `src/matinee/web/static/js/overlay.js::openOverlay` / `load` / `overlayPanel` / `posterSide` / `aboutFilm` / `overlayActions` (the poster overlay)
 - `src/matinee/web/static/js/overlay.js::keptWalk` / `noteWalk` / `FROM_PICKS` (how a film was found; a note from the overlay names no run)
 - `src/matinee/web/static/js/tailor.js::tailorSteps` / `OFFER` / `STEPS` / `stepKeys` / `stepFor` / `singleStep` / `languagesStep` / `topicsStep` / `WELCOME` / `WHATS_NEW` (the tailoring steps and the welcome's words)
-- `src/matinee/web/static/js/rate.js::rateLink` / `ratePanel` / `fitted` / `roomLeft` / `length` / `MAX_REVIEW` / `autosaver` / `PAUSE_MS` ("Rate it" and its field's rules; the review saves itself)
+- `src/matinee/web/static/js/rate.js::rateLink` / `ratePanel` / `fitted` / `roomLeft` / `oneLine` / `length` / `MAX_REVIEW` / `autosaver` / `PAUSE_MS` ("Rate it" and its field's rules; the review saves itself)
 - `src/matinee/web/static/js/hide.js::hideLink` / `undoLink` / `LENGTHS` ("Hide film" and "Undo")
 - `src/matinee/web/static/js/household.js::householdLine` / `nameButton` / `readingPanel` / `personRow` / `focusShown` (the household's line and reading panel)
 - `src/matinee/web/static/js/ratings.js::ANSWERS` / `said` / `answerOf` (the five answers; the shared sentence)

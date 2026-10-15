@@ -3,8 +3,9 @@
 A store file records its shape in SQLite's `user_version`. A file from before
 shapes were recorded reads 0 and holds the tables `profiles`, `corrections`,
 `feedback` and `tokens`. Shape 1 holds profiles, notes and tokens. Shape 2 adds
-each profile's tailoring settings and welcome mark, and the tables `ratings`,
-`hidden`, `runs` and `run_films`, whose rows go with their profile.
+each profile's tailoring settings and welcome mark, the tables `ratings`,
+`hidden`, `runs` and `run_films`, whose rows go with their profile, and a
+note's mark that the film's tags are wrong; a shape-2 note may name no kind.
 
 `prepare` creates a missing or empty file at the current shape and leaves a
 current file alone. It carries an older file to the current shape in one
@@ -43,7 +44,7 @@ RECORDS = (
     at TEXT NOT NULL,
     source TEXT NOT NULL,
     outside TEXT,
-    review TEXT CHECK (review IS NULL OR length(review) BETWEEN 1 AND 140),
+    review TEXT CHECK (review IS NULL OR length(review) BETWEEN 1 AND 100),
     PRIMARY KEY (profile_id, tmdb)
 )""",
     "CREATE INDEX ratings_by_film ON ratings (tmdb)",
@@ -102,7 +103,7 @@ TABLES = (
     profile_id INTEGER REFERENCES profiles(id) ON DELETE SET NULL,
     tmdb INTEGER NOT NULL,
     tree TEXT NOT NULL,
-    kind TEXT NOT NULL CHECK (kind IN ('genre', 'kind', 'quality')),
+    kind TEXT CHECK (kind IS NULL OR kind IN ('genre', 'kind', 'quality')),
     path TEXT NOT NULL,
     rushed INTEGER NOT NULL,
     comment TEXT NOT NULL,
@@ -112,6 +113,8 @@ TABLES = (
     reason TEXT,
     ruling TEXT,
     ruled_at TEXT,
+    tags INTEGER NOT NULL DEFAULT 0 CHECK (tags IN (0, 1)),
+    CHECK (kind IS NOT NULL OR tags = 1 OR comment <> ''),
     CHECK (
         (status = 'open' AND reason IS NULL AND ruling IS NULL AND ruled_at IS NULL)
         OR (status = 'rejected' AND reason IS NOT NULL AND ruling IS NULL AND ruled_at IS NOT NULL)
@@ -161,6 +164,14 @@ FROM_SHAPE_1 = (
     "ALTER TABLE profiles ADD COLUMN sharing INTEGER NOT NULL DEFAULT 0 CHECK (sharing IN (0, 1))",
     "ALTER TABLE profiles ADD COLUMN welcomed INTEGER NOT NULL DEFAULT 0 CHECK (welcomed IN (0, 1))",
     *RECORDS,
+    # A note may name no kind (the tags alone, or only words) and may say the tags are wrong, which a table's checks
+    # cannot learn in place: the notes move to a new table, each keeping its id, and none says the tags are wrong.
+    "ALTER TABLE notes RENAME TO notes_shape_1",
+    TABLES[1],
+    "INSERT INTO notes (id, profile_id, tmdb, tree, kind, path, rushed, comment, at, belongs, status, reason, ruling,"
+    " ruled_at) SELECT id, profile_id, tmdb, tree, kind, path, rushed, comment, at, belongs, status, reason, ruling,"
+    " ruled_at FROM notes_shape_1",
+    "DROP TABLE notes_shape_1",
 )
 
 

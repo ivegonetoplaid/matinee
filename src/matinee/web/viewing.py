@@ -33,6 +33,7 @@ from matinee.engine import (
     walk,
     walk_kept,
 )
+from matinee.languages import heard_only
 from matinee.pick import Pick, Picker, candidates
 from matinee.records import Records, clean_run
 from matinee.store import Note, Profile, Store
@@ -161,7 +162,8 @@ class NoteIn(BaseModel):
     profile_id: int
     tmdb: int
     tree: str = Field(max_length=40)
-    kind: Literal["genre", "kind", "quality"]
+    kind: Literal["genre", "kind", "quality"] | None = None  # where it was sorted wrong; None: not said
+    tags: bool = False  # its tags don't fit it
     answers: list[AnswerIn] = Field(default=[], max_length=12)
     rushed: bool = False
     comment: str = Field(default="", max_length=500)
@@ -190,8 +192,16 @@ class LastOut(BaseModel):
     lines: list[str]
 
 
+class HeardOut(BaseModel):
+    """A pick in a language the viewer did not tick, offered for its library copy's audio in ones they did."""
+
+    original: str  # the film's own language, TMDB's two-letter code
+    audio: list[str]  # the ticked languages its copy's audio is in
+
+
 class PickOut(BaseModel):
     film: FilmRef | None
+    heard: HeardOut | None = None
     swapped: SwapOut | None
     last: LastOut | None
     unchecked: str | None
@@ -273,7 +283,8 @@ def resolve(
     profile = held_profile(request, seat.store, v.profile_id)
     topics = profile.topics if topics_on else frozenset()
     allowed = seat.allowed(profile, device_tokens(request))
-    return Viewer(topics=topics, source=source, allowed=allowed, floor=profile.floor), profile
+    viewer = Viewer(topics=topics, source=source, allowed=allowed, floor=profile.floor, languages=profile.languages)
+    return viewer, profile
 
 
 def resolve_held(request: Request, seat: Seating, v: ViewerIn, topics_on: bool, source: Source = "all") -> Viewer:
@@ -358,9 +369,16 @@ def _last_out(films: Any, result: Pick) -> LastOut | None:
     return LastOut(film=film_ref(films, result.last), topics=names, lines=[gold, cream.format(topic=names[0])])
 
 
-def pick_out(films: Any, result: Pick, fallback: str | None = None) -> PickOut:
+def heard_out(films: Any, tmdb: int, ticked: frozenset[str]) -> HeardOut | None:
+    row = films.loc[tmdb]
+    audio = heard_only(row.language, row.audio, ticked)
+    return HeardOut(original=str(row.language), audio=audio) if audio else None
+
+
+def pick_out(films: Any, result: Pick, fallback: str | None = None, ticked: frozenset[str] = frozenset()) -> PickOut:
     return PickOut(
         film=None if result.film is None else film_ref(films, result.film),
+        heard=None if result.film is None else heard_out(films, result.film, ticked),
         swapped=_swap_out(films, result),
         last=_last_out(films, result),
         unchecked=None if result.unchecked is None else UNCHECKED_LINES[result.unchecked],
@@ -486,6 +504,12 @@ def check_belongs(cat: Catalog, body: NoteIn) -> None:
         raise HTTPException(status_code=400, detail="refused")
 
 
+def check_says(body: NoteIn) -> None:
+    """A note says at least one thing: where the film was sorted wrong, that its tags don't fit, or words."""
+    if body.kind is None and not body.tags and not body.comment.strip():
+        raise HTTPException(status_code=400, detail="refused")
+
+
 def add_note_routes(app: FastAPI, theatre: Theatre, store: Store, records: Records) -> None:
     @app.post("/api/notes", response_model=None)
     def note(body: NoteIn, request: Request) -> NoteOut | JSONResponse:
@@ -505,11 +529,12 @@ def add_note_routes(app: FastAPI, theatre: Theatre, store: Store, records: Recor
             path = None
         if tree is None or path is None:
             return problem(400, "walk_gone", WALK_GONE)
+        check_says(body)
         check_belongs(cat, body)
         comment, belongs = body.comment.strip(), tuple(body.belongs)
-        note = Note(body.profile_id, body.tmdb, body.tree, body.kind, path, body.rushed, comment, belongs)
+        note = Note(body.profile_id, body.tmdb, body.tree, body.kind, path, body.rushed, comment, belongs, body.tags)
         records.report(note, body.run, device_tokens(request))
-        return NoteOut(lines=NOTED)
+        return NoteOut(lines=NOTED if body.kind else NOTED[:1])  # only a sort choice can move a film
 
 
 def pick_pool(cat: Catalog, viewer: Viewer, body: PickIn) -> tuple[list[int], str | None]:
@@ -547,4 +572,5 @@ def add_pick_routes(
         if not pool:
             return pick_out(films, Pick(None, used_up=True), note)
         device = device_id(request, response) if viewer.topics else ""
-        return pick_out(films, picker.pick(pool, viewer.topics, device, gentlest(cat, viewer, pool)), note)
+        drawn = picker.pick(pool, viewer.topics, device, gentlest(cat, viewer, pool))
+        return pick_out(films, drawn, note, viewer.languages)

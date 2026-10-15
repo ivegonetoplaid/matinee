@@ -1,9 +1,9 @@
 // My profile's poster overlay: activating a film's poster in recent picks, rated films or hidden films opens one wide
 // surface over the page. Its poster stands on the left in the film's case, at the overlay's full height, with the
 // pick's "More on" link beneath; its right side holds the film's title, rank, the household's shared ratings,
-// synopsis, how the viewer found it and what they did with it, then "Rate it", "Hide film" and "Wrong pick?", each
+// synopsis, how the viewer found it and what they did with it, then "Rate it", "Hide film" and "Something wrong?", each
 // opening the pick's own panel over that side (over the whole sheet on a phone). It offers neither "‹ Back" nor
-// "Not that one", and never makes the film the pick: a rating, hide or note made here names no run, so the history
+// "Show me another", and never makes the film the pick: a rating, hide or note made here names no run, so the history
 // stays as it was. Escape closes an open panel first, then the overlay; closing gives the focus back to the poster.
 
 import { get, put } from "./api.js";
@@ -30,7 +30,7 @@ export function keptWalk(tmdb, runs) {
   return null;
 }
 
-// A kept walk as "Wrong pick?" takes it: the door's words apart from the answers', and no run, so a note made here
+// A kept walk as "Something wrong?" takes it: the door's words apart from the answers', and no run, so a note made here
 // marks nothing in the history.
 export function noteWalk(walk, profileId) {
   const said = walk.tree ? walk.says.slice(1) : walk.says;
@@ -79,7 +79,7 @@ function posterSide(film, info, household, poster) {
   return h("div", { class: "overlay-poster" }, shown, link);
 }
 
-// "Rate it", "Hide film" and, where the film's walk came through a door, "Wrong pick?". A hide made here is said on
+// "Rate it", "Hide film" and, where the film's walk came through a door, "Something wrong?". A hide made here is said on
 // `status`, in the words the hidden films part uses.
 function overlayActions({ film, walk, viewer, household, panel, trees, changed, status }) {
   const hide = async (length) => {
@@ -115,7 +115,7 @@ function aboutFilm({ film, info, household, panel, box, walk, did }) {
 
 // Opens the overlay over My profile's `layer` for `film` ({ tmdb, title, year }). `did` is what the viewer did with
 // it; `walk` the walk kept with it, or null. `viewer` is { id, name, avatar }; `poster(tmdb, size)` gives its poster;
-// `trees()` the doors as the page knows them, for "Wrong pick?"; `changed()` runs after a rating or hide is saved.
+// `trees()` the doors as the page knows them, for "Something wrong?"; `changed()` runs after a rating or hide is saved.
 export async function openOverlay({ layer, film, did, walk, opener, viewer, poster, trees, changed }) {
   const { info, household } = await load(film, walk, viewer);
   if (!layer.isConnected) return;
