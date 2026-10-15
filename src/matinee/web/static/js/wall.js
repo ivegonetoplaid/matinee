@@ -237,21 +237,27 @@ export class Wall {
   // whole row; it plans every hop, places the film in the cell the last hop lands on (a cell off the
   // screen until the hunt brings it in), and plays the hops. Resolves to the pause the plan gives
   // after the last hop, in seconds, or null when the pick was ended (`endPick`, a new pool or a
-  // cleared wall) at any point. Under reduced motion the camera jumps straight to the landing cell.
+  // cleared wall) at any point. Under reduced motion, or when `quick`, the camera jumps straight to the
+  // landing cell.
   // The camera is steered in cells, so a window resized mid-hunt only rescales it.
-  async hunt(id, { rand = Math.random, notBefore = 0, onStop = () => {}, lift = 0 } = {}) {
+  async hunt(id, { rand = Math.random, notBefore = 0, onStop = () => {}, lift = 0, quick = false } = {}) {
     const round = this.round;
     if (!(await this.readyToHunt(round, notBefore))) return null;
     this.lift(false);
     this.drifting = false;
     onStop();
-    const from = await this.settle(lift);
+    const from = await this.settle(lift, quick);
     if (!from || round !== this.round) return null;
     const plan = this.planClearOf(id, from, rand);
     this.placed = new Map([...this.placed, ...placeLanding(plan, id)]);
     this.dirty = true;
     this.request(this.posterUrl(id, this.size));
-    if (lessMotion.matches) return this.jump(plan, round);
+    return this.travel(plan, from, round, quick);
+  }
+
+  // The hunt's hops, or under reduced motion, or when `quick`, the jump to the landing cell.
+  travel(plan, from, round, quick) {
+    if (lessMotion.matches || quick) return this.jump(plan, round);
     return this.hop(plan, from);
   }
 
@@ -289,15 +295,15 @@ export class Wall {
 
   // Eases the camera forward to the next whole row in the drift's direction and resolves to that
   // cell, or to null when the pick was ended meanwhile. Over the same ease the aim rises `lift` px above
-  // the screen's centre, where the hunt then lands. Under reduced motion it moves at once.
-  async settle(lift = 0) {
+  // the screen's centre, where the hunt then lands. Under reduced motion, or when `quick`, it moves at once.
+  async settle(lift = 0, quick = false) {
     const L = this.layout;
     const was = this.liftRows;
     const to = lift / L.sy;
     const base = { x: this.cam.x, y: this.cam.y - was * L.sy }; // the camera's aim, without its lift
     const row = (base.y - L.h / 2) / L.sy;
     const from = camCell(L, settledCamera(base, L));
-    if (!lessMotion.matches) {
+    if (!lessMotion.matches && !quick) {
       const eased = await this.tween(
         SETTLE_S * 1000,
         (t) => {

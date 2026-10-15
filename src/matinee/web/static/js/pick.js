@@ -356,11 +356,12 @@ async function bringOut({ wall, frame, pause, posterReady, left, lines, gold, fu
 // The page's pick screen. `door` is the tree the film was drawn through, which its rank counts among (null before
 // a door), and `walk` the walk it was drawn under, which a note records. `actions` holds notThatOne, rollAgain,
 // showPicked, startOver, backPanel (what the Back panel holds), failed, the note link's builder, and remember,
-// which keeps each film shown on screen for the Back panel. `readUntil` (a performance.now() time) holds the hunt until the line on screen has
+// which keeps each film shown on screen for the Back panel. `quick` skips the hunt: the wall cuts straight to the
+// film's poster, which grows as on any pick (a film brought back from the Back panel). `readUntil` (a performance.now() time) holds the hunt until the line on screen has
 // been read. After every wait the pick checks that its screen is still showing and that the pick was
 // not ended on the wall: a way back or the name tag can end it at any moment, and a pick the viewer
 // has left changes nothing further.
-export async function showPick({ stage, wall, result, frame, readUntil = 0, lines, fuse = null, actions, door, walk }) {
+export async function showPick({ stage, wall, result, frame, readUntil = 0, lines, fuse = null, actions, door, walk, quick = false }) {
   const film = result.film;
   if (!film) {
     fuse?.cancel();
@@ -375,7 +376,7 @@ export async function showPick({ stage, wall, result, frame, readUntil = 0, line
   const onStop = () => {
     if (!gold && !fuse?.lit()) frame.line.classList.add("hushed");
   };
-  const pause = await wall.hunt(film.tmdb, { notBefore: readUntil, onStop, lift: huntLift(stage, frame) });
+  const pause = await wall.hunt(film.tmdb, { notBefore: readUntil, onStop, lift: huntLift(stage, frame), quick });
   if (pause === null || left()) return undefined;
   const out = await bringOut({ wall, frame, pause, posterReady, left, lines, gold, fuse });
   if (!out) return undefined;

@@ -2267,7 +2267,9 @@ the film information area on both desktop and phone.
 
   A tap on another film brings it back as the pick, without asking for a new
   pick and without asking DoesTheDogDie anything: the resting poster goes back
-  to the wall as on `Not that one`, and the film shows with the line it rested
+  to the wall as on `Not that one`, no hunt runs (the wall cuts straight to the
+  film's poster, which brightens and grows as on any pick; its line is not
+  held for reading first), and the film shows with the line it rested
   with (none when a fuse burnt it away), DoesTheDogDie's credit in the foot band
   when it stood there, its content note and lookup action when it had them,
   and the door and walk it was first drawn under, so its rank counts among that
@@ -3110,7 +3112,7 @@ symbol when one does not match.
 | `src/matinee/web/static/js/wall.js::Wall` | `src/matinee/web/static/js/wall.js:85` | 2026-10-05 |
 | `src/matinee/web/static/js/wall.js::Wall.show` / `fadeIn` / `clear` / `whenStill` | `src/matinee/web/static/js/wall.js:142` | 2026-10-05 |
 | `src/matinee/web/static/js/wall.js::Wall.endPick` | `src/matinee/web/static/js/wall.js:196` | 2026-10-05 |
-| `src/matinee/web/static/js/wall.js::Wall.hunt` / `jump` / `readyToHunt` / `settle` / `hop` | `src/matinee/web/static/js/wall.js:242` | 2026-10-05 |
+| `src/matinee/web/static/js/wall.js::Wall.hunt` / `jump` / `readyToHunt` / `settle` / `hop` (`quick`: a film brought back cuts to its poster) | `src/matinee/web/static/js/wall.js:242` | 2026-10-05 |
 | `src/matinee/web/static/js/wall.js::Wall.stepBack` / `grownScale` | `src/matinee/web/static/js/wall.js:341` | 2026-10-05 |
 | `src/matinee/web/static/js/wall.js::Wall.useSharp` (the front element) | `src/matinee/web/static/js/wall.js:366` | 2026-10-05 |
 | `src/matinee/web/static/js/wall.js::Wall.bringForward` | `src/matinee/web/static/js/wall.js:385` | 2026-10-05 |
