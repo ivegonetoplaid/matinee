@@ -621,7 +621,8 @@ why a film was picked: the labels alone place films (section 2.6).
   (`--tags-out` names another path). It holds 16,353 films.
 - `data/tag_skip.txt` lists the words the pick never shows: one word per line,
   exactly as the genome spells it, a line starting with `#` a note, blank lines
-  ignored. It holds 294 words in four groups: genre names; generic praise and
+  ignored. It holds 298 words in four groups: genre names and a genre's plain
+  adjective ("funny", "humorous"); generic praise and
   judgement; words about the release rather than the film (lists, awards,
   sources, sequels, ratings, formats and names); and words unfit for a family
   screen. A test in `./check.sh` fails when an entry is not a genome word, and
