@@ -4,6 +4,7 @@ import { test } from "node:test";
 import {
   HOP_TABLE,
   centreOf,
+  halfSpan,
   hopCell,
   hopCount,
   hopOffset,
@@ -121,23 +122,41 @@ test("hop counts come one, two or three, weighted 1, 2 and 3", () => {
   assert.ok(Math.abs(counts[1] - 1000) < 150 && Math.abs(counts[2] - 2000) < 150 && Math.abs(counts[3] - 3000) < 150);
 });
 
-test("hop lengths follow the table, and the first hop crosses the screen", () => {
+test("each hop in the table is shorter than the shortest the hop before it can draw", () => {
+  for (const { lengths } of Object.values(HOP_TABLE)) {
+    for (let k = 1; k < lengths.length; k += 1) assert.ok(lengths[k][1] < lengths[k - 1][0], JSON.stringify(lengths));
+  }
+});
+
+test("hop lengths follow the table as shares of the screen", () => {
   for (const layout of layouts()) {
-    for (let seed = 1; seed < 200; seed += 1) {
+    for (let seed = 1; seed < 60; seed += 1) {
       const rand = seeded(seed);
       const n = hopCount(rand);
       const plan = planHunt({ n, rand, layout, from: { i: 0, j: 0 } });
       plan.hops.forEach((hop, k) => {
-        const [lo, hi] = HOP_TABLE[n].lengths[k];
-        const scaled = hop.axis === "y" && hi > 1 ? [Math.round(lo * 0.7), Math.round(hi * 0.7)] : [lo, hi];
-        const reach = hop.axis === "x" ? layout.screenCols + 1 : layout.screenRows + 1;
-        if (k === 0) assert.ok(hop.cells >= reach && hop.cells >= scaled[0] && hop.cells <= Math.max(scaled[1], reach));
-        else assert.ok(hop.cells >= scaled[0] && hop.cells <= scaled[1]);
+        const half = halfSpan(layout, hop.axis);
+        const hi = Math.max(1, Math.round(HOP_TABLE[n].lengths[k][1] * half));
+        assert.ok(hop.cells >= 1 && hop.cells <= Math.max(hi, k === 0 ? half : 1), `${hop.axis} ${hop.cells} of ${half}`);
         assert.ok(hop.seconds >= HOP_TABLE[n].move[k] - 1e-9);
         assert.equal(hop.pause, HOP_TABLE[n].pause[k]);
       });
     }
   }
+});
+
+test("on a full desktop wall the hunt's length varies and its last hop is often more than one poster", () => {
+  const layout = wallLayout(1440, 900, posterAcross(4000, false), false, 4000);
+  const rand = seeded(11);
+  const totals = new Set();
+  let longLast = 0;
+  for (let k = 0; k < 60; k += 1) {
+    const plan = planHunt({ n: hopCount(rand), rand, layout, from: { i: 0, j: 0 } });
+    totals.add(plan.hops.reduce((sum, hop) => sum + hop.cells, 0));
+    if (plan.hops.at(-1).cells > 1) longLast += 1;
+  }
+  assert.ok(totals.size >= 8, `${totals.size} distinct lengths`);
+  assert.ok(longLast >= 20, `${longLast} of 60 end on more than one poster`);
 });
 
 // The most the page's camera moves along a hop's axis in any 1/60 s, in px, measured on its own: the

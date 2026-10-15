@@ -2015,14 +2015,18 @@ the film information area on both desktop and phone.
   the drift stops, Matinee's words fade out (a gold nope line, or a line
   saying why a film was turned away, stays), and the wall eases forward to
   the next whole row (0.4 s). The wall then hunts in one, two or three hops,
-  drawn at random with weights 1, 2 and 3 in 6: 6 to 9 posters in 1.5 s; 5
-  to 7 then 1 in 1.05 and 0.55 s; 5 to 8, 2 to 3, then 1 in 0.95, 0.7 and
-  0.5 s, pausing 0.3; 0.18 and 0.34; 0.14, 0.22 and 0.34 s after each. The
-  first hop runs across the wall three times in five and down it otherwise;
-  a second hop turns onto the other axis, and a third takes either. The
-  first hop always runs at least one poster further than the screen shows
-  along its axis, so the landing poster starts off screen. A vertical hop
-  longer than one poster runs 0.7 of its count, rounded, and goes down the
+  drawn at random with weights 1, 2 and 3 in 6. A hop's length is drawn as a
+  share of its axis's half-span, the posters from the screen's centre to the
+  first one wholly off screen, so it suits a wall of large posters and one of
+  small alike: 1.1 to 2 in 1.5 s; 0.9 to 1.8 then 0.15 to 0.6 in 1.05 and
+  0.55 s; 0.8 to 1.5, 0.3 to 0.7, then 0.1 to 0.29 in 0.95, 0.7 and 0.5 s,
+  pausing 0.3; 0.18 and 0.34; 0.14, 0.22 and 0.34 s after each. Each share is
+  rounded to whole posters, at least one, and each hop's longest share is
+  shorter than the hop before it can draw. The first hop runs across the
+  wall three times in five and down it otherwise; a second hop turns onto
+  the other axis, and a third takes either. The landing poster always starts
+  off screen: up to 20 plans are drawn for one that lands there, and failing
+  that the first hop is stretched to its half-span. A vertical hop goes down the
   wall, the drift's way; no hop moves back along an axis already travelled.
   Each hop moves on one axis, passes its stop by at most 12 px (6 per cent
   of a short hop) and settles back, and never moves the wall more than half
@@ -3097,7 +3101,7 @@ symbol when one does not match.
 | `src/matinee/web/static/js/hunt-plan.js::hopOffset` / `TICK_PX` (the tick) | `src/matinee/web/static/js/hunt-plan.js:58` | 2026-10-05 |
 | `src/matinee/web/static/js/hunt-plan.js::peakStep` / `limitedTime` (the speed limit) | `src/matinee/web/static/js/hunt-plan.js:65` | 2026-10-05 |
 | `src/matinee/web/static/js/hunt-plan.js::settledCamera` | `src/matinee/web/static/js/hunt-plan.js:96` | 2026-10-05 |
-| `src/matinee/web/static/js/hunt-plan.js::planHunt` (first hop, no reversal) | `src/matinee/web/static/js/hunt-plan.js:118` | 2026-10-05 |
+| `src/matinee/web/static/js/hunt-plan.js::planHunt` / `halfSpan` (hop lengths as shares of the screen, landing off screen, no reversal) | `src/matinee/web/static/js/hunt-plan.js:118` | 2026-10-05 |
 | `src/matinee/web/static/js/hunt-plan.js::hopCell` / `placeLanding` | `src/matinee/web/static/js/hunt-plan.js:138` | 2026-10-05 |
 | `src/matinee/web/static/js/glow.js::posterGlow` / `GOLD` | `src/matinee/web/static/js/glow.js:19` | 2026-10-05 |
 | `src/matinee/web/static/js/quips.js::setFor` | `src/matinee/web/static/js/quips.js:9` | 2026-10-05 |
