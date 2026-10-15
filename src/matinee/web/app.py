@@ -96,8 +96,8 @@ class FilmCard(BaseModel):
     link: str  # the film's page on the configured Seerr, or on TMDB without one
     link_to: Literal["seerr", "tmdb"]
     backdrop_path: str | None  # TMDB's path for the backdrop, given only when TMDB is the image source
-    rank: str | None  # how well audiences regard the film among the door's films, in words; None under the vote floor
-    standing: str | None  # the rank's band as a share of the door's films and what it is measured by; None with no rank
+    rank: str | None  # how well audiences regard the film among the door's films, in words; why not, under the floor
+    standing: str | None  # the band's share of the door's films and its measure; under the floor, its few votes
     tags: list[str]  # its strongest genome words less the skip list and words alike to one shown; none when not covered
 
 

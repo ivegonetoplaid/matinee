@@ -198,8 +198,8 @@ def test_film_card_reads_the_synopsis_live(world: Any) -> None:
         "link": "https://seerr.invalid/movie/5",
         "link_to": "seerr",
         "backdrop_path": None,  # the media server is the image source
-        "rank": None,  # the film has no TMDB score
-        "standing": None,
+        "rank": "Too little-known for clear ratings",  # a 1975 film with no TMDB score
+        "standing": "No votes on TMDB yet",
         "tags": ["lone hero", "small town"],
     }
     assert ("synopsis", "f" * 32) in library.calls
@@ -227,8 +227,8 @@ def test_the_film_card_ranks_among_the_door_it_names_and_overall_without_one(
     card = client.get("/api/film/5?door=west").json()
     assert (card["rank"], card["standing"]) == ("Well liked in westerns", "Top 25% by TMDB audience rating")
     assert client.get("/api/film/5").json()["rank"] == "Well liked overall"
-    unranked = client.get("/api/film/6?door=west").json()  # no TMDB score: no rank
-    assert (unranked["rank"], unranked["standing"]) == (None, None)
+    unranked = client.get("/api/film/6?door=west").json()  # no TMDB score: no clear rank
+    assert unranked["rank"].endswith("for clear ratings") and unranked["standing"] == "No votes on TMDB yet"
 
 
 def test_a_film_new_to_the_library_is_offered_by_its_tags(world: Any) -> None:

@@ -1339,8 +1339,8 @@ a.wordmark:focus-visible {
   }
 }
 
-/* An answer, outlined as the way back to its question: "‹" at its left, the question in quiet text, the answer
-   beneath. */
+/* An answer, outlined as the way back to its question: "‹" at its left, the question, then the answer beneath in
+   quiet text, so the row reads as the question it returns to. */
 .answer-row {
   display: grid;
   grid-template-columns: auto 1fr;
@@ -1360,8 +1360,8 @@ a.wordmark:focus-visible {
   grid-column: 2;
 }
 
-.row-ask {
-  font-size: 13px;
+.row-say {
+  font-size: 14px;
   color: var(--dim);
 }
 
@@ -2509,7 +2509,17 @@ a.wordmark:focus-visible {
   top: var(--pad);
   left: var(--pad);
   z-index: 1;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
   line-height: 1.2;
+  cursor: pointer;
+}
+
+.about-wordmark:focus-visible {
+  outline: 2px solid var(--gold-words);
+  outline-offset: 4px;
 }
 
 @media (min-width: 1400px) {
@@ -2525,7 +2535,7 @@ a.wordmark:focus-visible {
   display: flex;
   flex-direction: column;
   gap: 56px;
-  background: color-mix(in srgb, var(--about-panel) 65%, transparent);
+  background: color-mix(in srgb, var(--about-panel) 80%, transparent);
   border: 1px solid color-mix(in srgb, var(--gold) 28%, transparent);
   border-radius: 14px;
   box-shadow: 0 30px 80px color-mix(in srgb, var(--black) 60%, transparent);
