@@ -2643,7 +2643,9 @@ the film information area on both desktop and phone.
   motion), once the line has typed and the film's details (and on a desktop
   its backdrop) have arrived, the poster moves from exactly where it hangs to
   its resting place (1.3 s) as the details rise, leaving its cell empty while
-  it rests. It keeps its glow at rest, at full strength, sized from its resting width. The wall stays at 12 per cent behind the resting page.
+  it rests. It wears its glow through the move and keeps it at rest, at full strength, sized from its resting
+  width, with no gap or fade between the two; a rated film's poster, bound for its rating's case, which wears no
+  glow, lets it fade over the move instead. The wall stays at 12 per cent behind the resting page.
 
   At rest the poster is the link to the film's page, opening a new tab: on the
   configured Seerr, or, without a Seerr or while it does not answer,

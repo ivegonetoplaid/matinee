@@ -77,8 +77,12 @@ function posterLink(info, film) {
   );
 }
 
+// The link takes the glow the poster carried on its flight at full strength, not easing in as a hover's does.
 function landed(link) {
+  link.style.transition = "none";
   link.classList.add("landed");
+  getComputedStyle(link).boxShadow; // the glow is drawn before the hover's ease is back
+  link.style.transition = "";
 }
 
 // A rated film's poster rests in its rating's case, as on My profile, `height` tall: the poster in the case's window,
@@ -116,7 +120,7 @@ function redress(link, film, score) {
 // Moves `poster` into `link`, above its strip, in the page's flow, carried from `from`, the screen box where it
 // hung on the wall; a rated film's into its case's window. The link stands in `slot`, placed by the caller before
 // this runs. The move starts from that box, measured from the same corner it scales from, so it never jumps. The link
-// keeps the glow the poster wore on the wall, `glow(width)`.
+// keeps the glow the poster wore on the wall, `glow(width, strength)`.
 function settle(poster, from, slot, link, glow, film, score) {
   const size = fit(slot);
   link.style.setProperty("--poster-glow", glow(size.width));
@@ -127,7 +131,11 @@ function settle(poster, from, slot, link, glow, film, score) {
   if (prefersLessMotion() || !to.width) return landed(link);
   const shift = `translate(${from.left - to.left}px, ${from.top - to.top}px) scale(${from.width / to.width}, ${from.height / to.height})`;
   poster.style.transformOrigin = "top left";
-  const move = poster.animate([{ transform: shift }, { transform: "none" }], {
+  // The poster wears its glow on the way, so the glow never leaves it between the wall and the link. A poster
+  // bound for its rating's case, which wears no glow, lets it fade on the way instead.
+  const shine = glow(to.width);
+  const after = CASES[score] ? glow(to.width, 0) : shine;
+  const move = poster.animate([{ transform: shift, boxShadow: shine }, { transform: "none", boxShadow: after }], {
     duration: SETTLE_MS,
     easing: "cubic-bezier(0.2, 0.7, 0.2, 1)",
   });
@@ -318,7 +326,7 @@ async function rest({ stage, wall, frame, film, result, actions, info, backdrop,
   const slot = h("div", { class: "poster-slot" });
   frame.left.append(slot);
   if (poster && from) {
-    settle(poster, from, slot, link, (w) => wall.glowAt(w), film, household.mine?.score ?? null);
+    settle(poster, from, slot, link, (w, g) => wall.glowAt(w, g), film, household.mine?.score ?? null);
     wall.lift(true);
   } else {
     slot.append(link);
