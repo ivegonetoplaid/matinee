@@ -2612,11 +2612,15 @@ the film information area on both desktop and phone.
   drawn at random with weights 1, 2 and 3 in 6. A hop's length is drawn as a
   share of its axis's half-span, the posters from the screen's centre to the
   first one wholly off screen, so it suits a wall of large posters and one of
-  small alike: 1.1 to 2 in 1.5 s; 0.9 to 1.8 then 0.15 to 0.6 in 1.05 and
-  0.55 s; 0.8 to 1.5, 0.3 to 0.7, then 0.1 to 0.29 in 0.95, 0.7 and 0.5 s,
-  pausing 0.3; 0.18 and 0.34; 0.14, 0.22 and 0.34 s after each. Each share is
-  rounded to whole posters, at least one, and each hop's longest share is
-  shorter than the hop before it can draw. The first hop runs across the
+  small alike: 1.4 to 2.3 in at least 2 s; 1.3 to 2.2 then 0.4 to 1.1 in
+  at least 1.2 and 1.4 s; 1.2 to 2, 0.5 to 1.1, then 0.1 to 0.4 in at least
+  1, 0.9 and 1.25 s, pausing 0.3; 0.12 and 0.34; 0.1, 0.12 and 0.34 s after
+  each. Each share is rounded to whole posters, at least one, and each hop's
+  longest share is shorter than the hop before it can draw. The hunt runs
+  like a prize wheel: each hop is cut to fewer px than the hop before it,
+  at least one poster, and takes long enough that its fastest frame moves
+  the wall at most 0.7 of the hop before it's, so the first hop is the
+  furthest and fastest and the last coasts in. The first hop runs across the
   wall three times in five and down it otherwise; a second hop turns onto
   the other axis, and a third takes either. The landing poster always starts
   off screen: up to 20 plans are drawn for one that lands there, and failing
@@ -2624,8 +2628,8 @@ the film information area on both desktop and phone.
   wall, the drift's way; no hop moves back along an axis already travelled.
   Each hop moves on one axis, passes its stop by at most 12 px (6 per cent
   of a short hop) and settles back, and never moves the wall more than half
-  the poster spacing along its axis in 1/60 s; a hop that would takes longer,
-  its length unchanged. Before the hunt the whole plan is made and the picked
+  the poster spacing along its axis in 1/60 s; a hop over either limit takes
+  longer, its length unchanged. Before the hunt the whole plan is made and the picked
   film is placed in the landing cell, which is never beside a copy of the
   picked film: a plan whose landing has that film in any of the eight cells
   around it, in the wall's order or placed by an earlier hunt, is drawn again,
@@ -3852,7 +3856,7 @@ describing it wrongly, never by naming something gone.
 - `src/matinee/web/static/js/wall-grid.js::resortPlan`
 - `src/matinee/web/static/js/hunt-plan.js::HOP_TABLE` / `hopCount`
 - `src/matinee/web/static/js/hunt-plan.js::hopOffset` / `TICK_PX` (the tick)
-- `src/matinee/web/static/js/hunt-plan.js::peakStep` / `limitedTime` (the speed limit)
+- `src/matinee/web/static/js/hunt-plan.js::peakStep` / `limitedTime` / `SLOWDOWN` (the speed limit; each hop slower than the last)
 - `src/matinee/web/static/js/hunt-plan.js::settledCamera`
 - `src/matinee/web/static/js/hunt-plan.js::planHunt` / `halfSpan` (hop lengths as shares of the screen, landing off screen, no reversal)
 - `src/matinee/web/static/js/hunt-plan.js::hopCell` / `placeLanding`
