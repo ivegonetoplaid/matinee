@@ -1010,17 +1010,17 @@ async function showPicked(held) {
   return showPick({ stage, wall, result, frame, readUntil, lines, fuse: null, actions: pickActions(), door: visit.tree, walk: walkOf(visit) });
 }
 
-// A film this run has shown, brought back from the Back panel as the pick: no new pick is asked for. It shows as it
-// was first shown, with its line, its content note and the door and walk it was drawn under; its details, rank,
+// A film this run has shown, brought back from the Back panel as the pick: no new pick is asked for and no hunt runs,
+// the wall cutting straight to its poster. It shows as it was first shown, with its line, its content note and the door and walk it was drawn under; its details, rank,
 // tags and pictures load as on any pick, and nothing of DoesTheDogDie is asked for.
 async function bringBack(shown) {
   lockStage();
   await clearForPick(Boolean(stage.querySelector(".slot-poster")));
   const round = wall.round;
   const { result, lines, door, walk } = asPick(shown);
-  const { frame, readUntil } = await openPick(lines.gold, null);
+  const { frame } = await openPick(lines.gold, null);
   if (!frame.showing.isConnected || wall.round !== round) return undefined;
-  return showPick({ stage, wall, result, frame, readUntil, lines, fuse: null, actions: pickActions(), door, walk });
+  return showPick({ stage, wall, result, frame, lines, fuse: null, actions: pickActions(), door, walk, quick: true });
 }
 
 boot();

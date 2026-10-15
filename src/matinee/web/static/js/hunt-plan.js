@@ -3,15 +3,17 @@
 // a cell is a poster's place on the endless wall, counted in columns (i) and rows (j), and the camera
 // stops on a cell when that cell's centre is at the screen's centre.
 
-// Hop lengths in posters, move times and pauses in seconds, by the number of hops.
+// Hop lengths as shares of the screen's half-span along the hop's axis (`halfSpan`), move times and pauses
+// in seconds, by the number of hops. Each hop's longest share is shorter than the hop before it can draw. Shares rather than posters, because a wall of 4,000 films shows about
+// three times as many posters across as a wall of 40: a length in posters fitted to one is lost on the other.
 export const HOP_TABLE = {
-  1: { lengths: [[6, 9]], move: [1.5], pause: [0.3] },
-  2: { lengths: [[5, 7], [1, 1]], move: [1.05, 0.55], pause: [0.18, 0.34] },
-  3: { lengths: [[5, 8], [2, 3], [1, 1]], move: [0.95, 0.7, 0.5], pause: [0.14, 0.22, 0.34] },
+  1: { lengths: [[1.1, 2]], move: [1.5], pause: [0.3] },
+  2: { lengths: [[0.9, 1.8], [0.15, 0.6]], move: [1.05, 0.55], pause: [0.18, 0.34] },
+  3: { lengths: [[0.8, 1.5], [0.3, 0.7], [0.1, 0.29]], move: [0.95, 0.7, 0.5], pause: [0.14, 0.22, 0.34] },
 };
+const PLAN_TRIES = 20; // plans drawn for one whose landing cell starts off screen, before the first hop is stretched
 const HOP_COUNTS = [1, 2, 2, 3, 3, 3]; // one, two or three hops, weighted 1, 2 and 3 in 6
 const FIRST_AXIS_ACROSS = 0.6; // the first hop runs across more often than down
-const VERTICAL_SCALE = 0.7; // rows are taller than columns are wide
 export const TICK_PX = 12; // the most a hop passes its stop by before settling back
 const TICK_SHARE = 0.06; // ... and never more than this share of the hop
 const TICK_SPLIT = 0.8; // the share of a hop's time spent reaching the far point of the tick
@@ -85,8 +87,6 @@ export function limitedTime(dist, seconds, spacing) {
   return time;
 }
 
-const pickInt = (rand, [lo, hi]) => lo + Math.floor(rand() * (hi - lo + 1));
-
 export function hopCount(rand) {
   return HOP_COUNTS[Math.floor(rand() * HOP_COUNTS.length)];
 }
@@ -111,20 +111,29 @@ function hopAxes(n, rand) {
   return [first, other, rand() < 0.5 ? "x" : "y"];
 }
 
-// The hunt from `from`, a cell the camera has settled on. The first hop always runs at least one
-// poster further than the screen shows along its axis, so the landing cell starts off screen and
-// the wall is seen to search. No hop moves back along an axis the settle or an earlier hop
-// travelled: the settle travelled down the wall, so every vertical hop goes down it too.
-export function planHunt({ n, rand, layout, from }) {
+// How many posters from the screen's centre along `axis` the first one wholly off screen stands.
+export function halfSpan(layout, axis) {
+  if (axis === "x") return Math.floor((layout.vw + layout.w) / (2 * layout.sx)) + 1;
+  return Math.floor((layout.vh + layout.h) / (2 * layout.sy)) + 1;
+}
+
+function offScreen(landing, from, layout) {
+  return Math.abs(landing.i - from.i) >= halfSpan(layout, "x") || Math.abs(landing.j - from.j) >= halfSpan(layout, "y");
+}
+
+// One draw of the hops from `from`, each hop's share of its half-span drawn from the table. `reach` stretches the first hop to its
+// half-span, which puts the landing cell off screen whatever the later hops draw, since none reverses.
+function drawPlan(n, rand, layout, from, reach) {
   const table = HOP_TABLE[n];
   const signs = { x: 0, y: 1 };
-  const reach = { x: layout.screenCols + 1, y: layout.screenRows + 1 };
   const spacing = { x: layout.sx, y: layout.sy };
   let cell = { ...from };
   const hops = hopAxes(n, rand).map((axis, k) => {
-    const drawn = pickInt(rand, table.lengths[k]);
-    let cells = axis === "y" && drawn > 1 ? Math.max(1, Math.round(drawn * VERTICAL_SCALE)) : drawn;
-    if (k === 0) cells = Math.max(cells, reach[axis]);
+    const [lo, hi] = table.lengths[k];
+    const share = lo + rand() * (hi - lo);
+    const half = halfSpan(layout, axis);
+    let cells = Math.max(1, Math.round(share * half));
+    if (k === 0 && reach) cells = Math.max(cells, half);
     if (!signs[axis]) signs[axis] = rand() < 0.5 ? -1 : 1;
     const sign = signs[axis];
     const dist = cells * spacing[axis];
@@ -132,6 +141,18 @@ export function planHunt({ n, rand, layout, from }) {
     return { axis, sign, cells, dist, seconds: limitedTime(dist, table.move[k], spacing[axis]), pause: table.pause[k], to: cell };
   });
   return { hops, landing: cell };
+}
+
+// The hunt from `from`, a cell the camera has settled on. The landing cell always starts off screen, so
+// the wall is seen to search: up to PLAN_TRIES draws are made for one that lands there, and failing that
+// the first hop is stretched until it does. No hop moves back along an axis the settle or an earlier hop
+// travelled: the settle travelled down the wall, so every vertical hop goes down it too.
+export function planHunt({ n, rand, layout, from }) {
+  for (let k = 0; k < PLAN_TRIES; k += 1) {
+    const plan = drawPlan(n, rand, layout, from, false);
+    if (offScreen(plan.landing, from, layout)) return plan;
+  }
+  return drawPlan(n, rand, layout, from, true);
 }
 
 // Where the camera aims, as a fractional cell, at share `t` of `hop` from cell `start`.
