@@ -70,8 +70,12 @@ function posterLink(info, film) {
   );
 }
 
+// The link takes the glow the poster carried on its flight at full strength, not easing in as a hover's does.
 function landed(link) {
+  link.style.transition = "none";
   link.classList.add("landed");
+  getComputedStyle(link).boxShadow; // the glow is drawn before the hover's ease is back
+  link.style.transition = "";
 }
 
 // Moves `poster` into `link`, above its strip, in the page's flow, carried from `from`, the screen box where it
@@ -83,14 +87,16 @@ function settle(poster, from, slot, link, glow) {
   poster.className = "slot-poster";
   poster.style.width = `${size.width}px`;
   poster.style.height = `${size.height}px`;
-  link.style.setProperty("--poster-glow", glow(size.width));
+  const shine = glow(size.width);
+  link.style.setProperty("--poster-glow", shine);
   link.prepend(poster);
   slot.append(link);
   const to = poster.getBoundingClientRect();
   if (prefersLessMotion() || !to.width) return landed(link);
   const shift = `translate(${from.left - to.left}px, ${from.top - to.top}px) scale(${from.width / to.width}, ${from.height / to.height})`;
   poster.style.transformOrigin = "top left";
-  const move = poster.animate([{ transform: shift }, { transform: "none" }], {
+  // The poster wears its glow on the way, so the glow never leaves it between the wall and the link.
+  const move = poster.animate([{ transform: shift, boxShadow: shine }, { transform: "none", boxShadow: shine }], {
     duration: SETTLE_MS,
     easing: "cubic-bezier(0.2, 0.7, 0.2, 1)",
   });
