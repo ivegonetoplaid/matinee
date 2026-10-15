@@ -2907,11 +2907,15 @@ the film information area on both desktop and phone.
   failure to keep one is logged and the pick goes on.
 
   A tap on another film brings it back as the pick, without asking for a new
-  pick and without asking DoesTheDogDie anything: the resting poster goes back
-  to the wall as on `Show me another`, no hunt runs (the wall cuts straight to the
-  film's poster, which brightens and grows as on any pick; its line is not
-  held for reading first), and the film shows with the line it rested
-  with (none when a fuse burnt it away), DoesTheDogDie's credit in the foot band
+  pick and without asking DoesTheDogDie anything, and nothing moves on the
+  wall: no hunt runs and no poster flies. The page beneath the top bar fades
+  out (0.18 s), and the film's page fades in (0.18 s) already at rest, its
+  poster in place with its own glow, its line whole and, on a phone, scrolled
+  to its details; the wall stays dimmed and the film takes the cell the last
+  poster left, so `Show me another` returns its poster there. Under reduced motion
+  the page swaps at once. A rated film rests in its case, and the household's
+  shared ratings show as on any pick. The film shows with the line it rested
+  with (none when a fuse burnt it away), its language line when it had one, DoesTheDogDie's credit in the foot band
   when it stood there, its content note and lookup action when it had them,
   and the door and walk it was first drawn under, so its rank counts among that
   door and a note on it records that walk. Never the film a check turned away.
@@ -3783,8 +3787,9 @@ describing it wrongly, never by naming something gone.
 - `src/matinee/web/static/js/main.js::PICK_ENTRY` / `PANEL_ENTRY` / `holdPickEntry` / `dropPickEntry` / `panelHistory` / `onBack` (the browser's back on a pick)
 - `src/matinee/web/static/js/main.js::answerRow` / `filmRow` / `backPanel` (the Back panel)
 - `src/matinee/web/static/js/main.js::bringBack` (a film of the run shown again, no new pick)
+- `src/matinee/web/static/js/pick.js::swapPick` / `fadePage` / `placePoster` / `toDetails` (a film brought back swaps in at rest; nothing moves on the wall)
 - `src/matinee/web/static/js/way-back.js::answerRows` / `forget` / `wayTo` / `stepBack`
-- `src/matinee/web/static/js/run.js::remember` / `newestFirst` / `kept` / `asPick` (the films a run has shown; `asked` keeps a turned-away film out of the history)
+- `src/matinee/web/static/js/run.js::remember` / `newestFirst` / `kept` / `asPick` (the films a run has shown; `asked` keeps a turned-away film out of the history; `heard`, its language line)
 - `src/matinee/web/static/js/run.js::runKey` / `shownBody` (a run's key; what the history keeps of a film shown)
 - `tests/js/way-back.test.mjs`, `tests/js/run.test.mjs`
 - `src/matinee/web/static/js/panel.js::pickPanel` / `place` / `swallowNextClick` / `onThePick` (the shared panel and its closing rules, a tap outside on a button or link doing its work; where it stands)
@@ -3858,7 +3863,8 @@ describing it wrongly, never by naming something gone.
 - `src/matinee/web/static/js/wall.js::Wall`
 - `src/matinee/web/static/js/wall.js::Wall.show` / `fadeIn` / `clear` / `whenStill`
 - `src/matinee/web/static/js/wall.js::Wall.endPick`
-- `src/matinee/web/static/js/wall.js::Wall.hunt` / `travel` / `jump` / `readyToHunt` / `settle` / `hop` (`quick`: a film brought back cuts to its poster)
+- `src/matinee/web/static/js/wall.js::Wall.hunt` / `jump` / `readyToHunt` / `settle` / `hop`
+- `src/matinee/web/static/js/wall.js::Wall.swapLanded` (a film brought back takes the landed cell and its glow)
 - `src/matinee/web/static/js/wall.js::Wall.stepBack` / `grownScale`
 - `src/matinee/web/static/js/wall.js::Wall.useSharp` (the front element)
 - `src/matinee/web/static/js/wall.js::Wall.bringForward`

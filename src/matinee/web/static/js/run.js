@@ -18,10 +18,11 @@ export function newestFirst(run, showing) {
 // out of the history however often it is shown.
 export function kept({ film, result, door, walk, said }) {
   const asked = Boolean(result.last || result.asked);
-  return { film, door, walk, said, unchecked: result.unchecked ?? null, dtdd_item: result.dtdd_item ?? null, link: result.link, asked };
+  return { film, door, walk, said, unchecked: result.unchecked ?? null, dtdd_item: result.dtdd_item ?? null, link: result.link, asked, heard: result.heard ?? null };
 }
 
-// A kept film as a pick to show again: the reply, the line and its credit, the door and the walk, as first shown.
+// A kept film as a pick to show again: the reply, the line and its credit, its language line, the door and the walk,
+// as first shown.
 export function asPick(shown) {
   const { gold, reveal, credit } = shown.said;
   const result = {
@@ -35,6 +36,7 @@ export function asPick(shown) {
     exhausted: null,
     turned_away: [],
     asked: shown.asked,
+    heard: shown.heard,
   };
   return { result, lines: { nope: null, gold, reveal, credit, beneath: () => reveal }, door: shown.door, walk: shown.walk };
 }

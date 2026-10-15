@@ -27,6 +27,7 @@ const BEAT_MS = 500; // the grown poster holds for one beat before it moves to r
 const STILL_HOLD_MS = 2000; // under reduced motion there is no hunt or growth; the grown poster holds about as long
 const SETTLE_MS = 1300;
 const PHONE_HOLD_MS = 2200;
+const SWAP_MS = 180; // a film brought back from the Back panel: the page fades out, then in, over this each way
 const POSTER_RATIO = 1.5; // height over width
 const POSTER_MIN_H = 160; // below this the page scrolls rather than shrink the poster further
 const STRIP_H = 44; // the poster link's strip, beneath the poster
@@ -119,8 +120,9 @@ function redress(link, film, score) {
 
 // Moves `poster` into `link`, above its strip, in the page's flow, carried from `from`, the screen box where it
 // hung on the wall; a rated film's into its case's window. The link stands in `slot`, placed by the caller before
-// this runs. The move starts from that box, measured from the same corner it scales from, so it never jumps. The link
-// keeps the glow the poster wore on the wall, `glow(width, strength)`.
+// this runs. The move starts from that box, measured from the same corner it scales from, so it never jumps; with no
+// `from` (a film swapped in from the Back panel) it is placed at once. The link keeps the glow the poster wore on the
+// wall, `glow(width, strength)`.
 function settle(poster, from, slot, link, glow, film, score) {
   const size = fit(slot);
   link.style.setProperty("--poster-glow", glow(size.width));
@@ -128,7 +130,7 @@ function settle(poster, from, slot, link, glow, film, score) {
   dress(poster, link, film, score, size.height);
   slot.append(link);
   const to = poster.getBoundingClientRect();
-  if (prefersLessMotion() || !to.width) return landed(link);
+  if (!from || prefersLessMotion() || !to.width) return landed(link);
   const shift = `translate(${from.left - to.left}px, ${from.top - to.top}px) scale(${from.width / to.width}, ${from.height / to.height})`;
   poster.style.transformOrigin = "top left";
   // The poster wears its glow on the way, so the glow never leaves it between the wall and the link. A poster
@@ -308,7 +310,7 @@ function factsUnderLine(frame, info, fuse, household, heard) {
 
 // The resting page: the film's details rise, and the landed poster, where there is one, moves from the
 // wall to its place and leaves its cell empty until the pick ends.
-async function rest({ stage, wall, frame, film, result, actions, info, backdrop, poster, fuse, door, walk, household }) {
+async function rest({ stage, wall, frame, film, result, actions, info, backdrop, poster, fuse, door, walk, household, still = false }) {
   stage.classList.add("revealed");
   actions.remember(kept({ film, result, door, walk, said: lineSaid(frame, fuse) }));
   const line = householdLine(household.shared, (opener, first) => {
@@ -321,22 +323,37 @@ async function rest({ stage, wall, frame, film, result, actions, info, backdrop,
   frame.aside.append(...underLine(result, frame.aside.querySelector(".swap-note")));
   const link = posterLink(info, film);
   pickBar(frame, film, actions, walk, household, (r) => redress(link, film, r?.score ?? null));
-  // Measured once the aside is whole, so the poster takes only the height left beneath it.
-  const from = wall.landedTile()?.img.getBoundingClientRect();
   const slot = h("div", { class: "poster-slot" });
   frame.left.append(slot);
-  if (poster && from) {
-    settle(poster, from, slot, link, (w, g) => wall.glowAt(w, g), film, household.mine?.score ?? null);
+  placePoster({ wall, slot, link, poster, still, film, score: household.mine?.score ?? null });
+  await toDetails(frame, shown, still);
+}
+
+// Rests `poster` in `slot` inside `link`, a rated film's in its case: carried from where it hangs on the wall, or placed
+// at once when `still`. With no poster the link rests alone. Measured once the aside is whole, so the poster takes only
+// the height left beneath it.
+function placePoster({ wall, slot, link, poster, still, film, score }) {
+  const from = wall.landedTile()?.img.getBoundingClientRect();
+  if (poster && (from || still)) {
+    settle(poster, still ? null : from, slot, link, (w, g) => wall.glowAt(w, g), film, score);
     wall.lift(true);
   } else {
     slot.append(link);
     landed(link);
   }
-  if (isPhone()) {
-    frame.showing.scrollTop = 0;
-    await wait(PHONE_HOLD_MS);
-    if (frame.showing.isConnected) shown.scrollIntoView({ behavior: prefersLessMotion() ? "auto" : "smooth", block: "start" });
+}
+
+// On a phone the resting page shows the poster, then after a hold scrolls to the film's details; when `still` (a film
+// swapped in) it is at the details at once.
+async function toDetails(frame, shown, still) {
+  if (!isPhone()) return;
+  if (still) {
+    shown.scrollIntoView({ block: "start" });
+    return;
   }
+  frame.showing.scrollTop = 0;
+  await wait(PHONE_HOLD_MS);
+  if (frame.showing.isConnected) shown.scrollIntoView({ behavior: prefersLessMotion() ? "auto" : "smooth", block: "start" });
 }
 
 // The poster to carry to rest: the sharp picture when it has loaded, else a copy of the wall's own
@@ -418,12 +435,11 @@ async function bringOut({ wall, frame, pause, posterReady, left, lines, gold, fu
 // a door), and `walk` the walk it was drawn under, which a note records. `actions` holds notThatOne, rollAgain,
 // showPicked, startOver, backPanel (what the Back panel holds), failed, the note link's builder, remember, which
 // keeps each film shown on screen for the Back panel and the history, and household, which resolves to the film's
-// shared ratings, the viewer's own rating and the viewer ({ shared, mine, viewer }). `quick` skips the hunt: the wall
-// cuts straight to the film's poster, which grows as on any pick (a film brought back from the Back panel). `readUntil` (a performance.now() time) holds the hunt until the line on screen has
+// shared ratings, the viewer's own rating and the viewer ({ shared, mine, viewer }). `readUntil` (a performance.now() time) holds the hunt until the line on screen has
 // been read. After every wait the pick checks that its screen is still showing and that the pick was
 // not ended on the wall: a way back or the name tag can end it at any moment, and a pick the viewer
 // has left changes nothing further.
-export async function showPick({ stage, wall, result, frame, readUntil = 0, lines, fuse = null, actions, door, walk, quick = false }) {
+export async function showPick({ stage, wall, result, frame, readUntil = 0, lines, fuse = null, actions, door, walk }) {
   const film = result.film;
   if (!film) {
     fuse?.cancel();
@@ -439,11 +455,44 @@ export async function showPick({ stage, wall, result, frame, readUntil = 0, line
   const onStop = () => {
     if (!gold && !fuse?.lit()) frame.line.classList.add("hushed");
   };
-  const pause = await wall.hunt(film.tmdb, { notBefore: readUntil, onStop, lift: huntLift(stage, frame), quick });
+  const pause = await wall.hunt(film.tmdb, { notBefore: readUntil, onStop, lift: huntLift(stage, frame) });
   if (pause === null || left()) return undefined;
   const out = await bringOut({ wall, frame, pause, posterReady, left, lines, gold, fuse });
   if (!out) return undefined;
   return toRest({ stage, wall, frame, film, result, actions, left, out, cardRequest, backdropReady, fuse, door, walk, household });
+}
+
+// Fades the page's parts beneath its top bar from `from` to `to` opacity over SWAP_MS, holding the end (at once
+// under reduced motion). Resolves to the fades, which a caller cancels to hand the page its own opacity back.
+function fadePage(stage, from, to) {
+  const parts = [...stage.children].filter((el) => !el.classList.contains("topbar"));
+  const duration = prefersLessMotion() ? 0 : SWAP_MS;
+  const fades = parts.map((el) => el.animate([{ opacity: from }, { opacity: to }], { duration, easing: "ease", fill: "forwards" }));
+  return Promise.all(fades.map((f) => f.finished.catch(() => undefined))).then(() => fades);
+}
+
+// A film brought back from the Back panel, swapped in for the film at rest: the wall stays still and dimmed, the page
+// fades out, and the film's page fades in already at rest, its poster in place and its line whole. No hunt runs and
+// nothing flies. `openFrame` opens a fresh pick screen. Its details and pictures load as on any pick.
+export async function swapPick({ stage, wall, result, lines, actions, door, walk, openFrame }) {
+  const { film } = result;
+  const round = wall.round;
+  const { cardRequest, posterReady, backdropReady } = fetchFilm(film, wall, door);
+  const household = actions.household(film.tmdb);
+  const [, card, poster, backdrop, shared] = await Promise.all([fadePage(stage, 1, 0), cardRequest, posterReady, backdropReady, household]);
+  if (wall.round !== round) return undefined;
+  if (!card.ok) return actions.failed(card.data);
+  const frame = await openFrame();
+  const parts = [...stage.children].filter((el) => !el.classList.contains("topbar"));
+  parts.forEach((el) => (el.style.opacity = "0"));
+  if (lines.credit) showCredit(frame);
+  typeLine(frame.line, lines.gold, lines.reveal, { shown: Infinity });
+  if (poster) wall.swapLanded(film.tmdb, poster);
+  await rest({ stage, wall, frame, film, result, actions, info: card.data, backdrop, poster, fuse: null, door, walk, household: shared, still: true });
+  const fades = await fadePage(stage, 0, 1);
+  parts.forEach((el) => el.style.removeProperty("opacity"));
+  fades.forEach((f) => f.cancel());
+  return undefined;
 }
 
 // After the beat, once the film's details and backdrop have arrived, the poster moves to rest.

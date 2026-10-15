@@ -34,10 +34,10 @@ test("a run of twenty films keeps all twenty", () => {
   assert.equal(newestFirst(run, true).length, 20);
 });
 
-test("a kept film comes back exactly as first shown: its line and credit, note, door and walk", () => {
+test("a kept film comes back exactly as first shown: its line and credit, language line, note, door and walk", () => {
   const first = {
     film: { tmdb: 7, title: "Film 7", year: 1999 },
-    result: { unchecked: "Nobody has voted on this one.", dtdd_item: 42, link: "https://dtdd.invalid", swapped: { film: { tmdb: 8 } } },
+    result: { unchecked: "Nobody has voted on this one.", dtdd_item: 42, link: "https://dtdd.invalid", swapped: { film: { tmdb: 8 } }, heard: { original: "th", audio: ["en"] } },
     door: "horror",
     walk: { tree: "horror", answers: [{ question: "kind", option: 1 }], says: ["ghosts"], rushed: false },
     said: { gold: "I passed on one where a dog dies.", reveal: "Try this.", credit: true },
@@ -47,6 +47,7 @@ test("a kept film comes back exactly as first shown: its line and credit, note, 
   assert.equal(again.result.unchecked, first.result.unchecked);
   assert.equal(again.result.dtdd_item, 42);
   assert.equal(again.result.link, first.result.link);
+  assert.deepEqual(again.result.heard, first.result.heard);
   assert.equal(again.door, "horror");
   assert.deepEqual(again.walk, first.walk);
   assert.deepEqual([again.lines.gold, again.lines.reveal, again.lines.credit], [first.said.gold, "Try this.", true]);
