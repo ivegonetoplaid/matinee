@@ -216,7 +216,7 @@ in the words' colour, 2 px outside the edge. A disabled action stands at 45 per
 cent opacity. A petrol action's words always end with ↗.
 
 Two threads stand without a hover. An action whose panel is open shows its
-thread for as long as the panel is open. "Not that one" is the same size as
+thread for as long as the panel is open. "Show me another" is the same size as
 every other action and stands out by its rose words, its thread drawn at all
 times, a faint rose glow and its place at the centre of the pick's foot bar.
 
@@ -279,7 +279,7 @@ chips with small corners, never filled and never a pill.
 
 ### 5.5 The pick's panel
 
-Every pick action but "Not that one" opens one shared panel: over the left
+Every pick action but "Show me another" opens one shared panel: over the left
 column on a desktop, from under the top bar down to the foot bar, always at that
 full height; over everything under the top bar on a phone. The panel is a solid
 `--menu` surface, so its text needs no scrim. It is headed by the action's name
@@ -334,12 +334,12 @@ beneath it. Nothing re-centres while a line types or the choices appear.
 [The page specification](docs/spec/matinee.md#screen-composition) owns the desktop and
 phone composition for each screen. On the pick, its actions stand in the foot,
 following the pick-screen decisions at both widths. On a desktop they sit in a
-foot bar kept across the bottom of the screen: "‹ Back" and "Wrong pick?" at
-its left, "Not that one" at its exact centre. On a phone the foot holds
-Matinee's line, then "Not that one", then "‹ Back" and "Wrong pick?". "‹ Back",
-"Wrong pick?", "Rate it" and "Hide film" are cream. After "Hide film" a plain
+foot bar kept across the bottom of the screen: "‹ Back" and "Something wrong?" at
+its left, "Show me another" at its exact centre. On a phone the foot holds
+Matinee's line, then "Show me another", then "‹ Back" and "Something wrong?". "‹ Back",
+"Something wrong?", "Rate it" and "Hide film" are cream. After "Hide film" a plain
 "Undo" link stands in the foot bar while the next pick hunts and fades as it
-lands; it brings the hidden film back as the pick. Distinguish "Wrong pick?"
+lands; it brings the hidden film back as the pick. Distinguish "Something wrong?"
 from an unchecked-content warning beneath the film's synopsis.
 
 ---
