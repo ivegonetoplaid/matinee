@@ -203,8 +203,22 @@ test("each hop passes its stop by at most 12 px, eases back, and ends exactly on
 });
 
 test("a hop within the limit keeps its time; one over it takes longer, never shorter", () => {
-  assert.equal(limitedTime(100, 1, 100), 1);
-  const long = limitedTime(3000, 0.5, 60);
+  assert.equal(limitedTime(100, 1, 50), 1);
+  const long = limitedTime(3000, 0.5, 30);
   assert.ok(long > 0.5);
   assert.ok(peakStep(3000, long) <= 30);
+});
+
+test("like a prize wheel, each hop is shorter in px than the one before and its fastest frame at most 0.7 of it", () => {
+  for (const layout of layouts()) {
+    for (let seed = 1; seed < 200; seed += 1) {
+      const rand = seeded(seed);
+      const plan = planHunt({ n: hopCount(rand), rand, layout, from: { i: 0, j: 0 } });
+      for (let k = 1; k < plan.hops.length; k += 1) {
+        const [prev, hop] = [plan.hops[k - 1], plan.hops[k]];
+        assert.ok(hop.dist < prev.dist, `hop ${k} ${hop.dist} px after ${prev.dist} px`);
+        assert.ok(peakStep(hop.dist, hop.seconds) <= 0.7 * peakStep(prev.dist, prev.seconds) + 1e-6, `hop ${k} not slower`);
+      }
+    }
+  }
 });
