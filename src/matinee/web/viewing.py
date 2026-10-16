@@ -184,19 +184,20 @@ class SwapOut(BaseModel):
     reveal: str
 
 
-class LastOut(BaseModel):
-    """A tired pick's last film turned away, the topics it trips, and the two lines that show it."""
-
-    film: FilmRef
-    topics: list[str]
-    lines: list[str]
-
-
 class HeardOut(BaseModel):
     """A pick in a language the viewer did not tick, offered for its library copy's audio in ones they did."""
 
     original: str  # the film's own language, TMDB's two-letter code
     audio: list[str]  # the ticked languages its copy's audio is in
+
+
+class LastOut(BaseModel):
+    """A tired pick's last film turned away, the topics it trips, the two lines that show it, and its language line."""
+
+    film: FilmRef
+    topics: list[str]
+    lines: list[str]
+    heard: HeardOut | None = None
 
 
 class PickOut(BaseModel):
@@ -361,12 +362,17 @@ def _swap_out(films: Any, result: Pick) -> SwapOut | None:
     )
 
 
-def _last_out(films: Any, result: Pick) -> LastOut | None:
+def _last_out(films: Any, result: Pick, ticked: frozenset[str]) -> LastOut | None:
     if result.last is None:
         return None
     names = [h.name for h in result.last_hits]
     gold, cream = PICKED
-    return LastOut(film=film_ref(films, result.last), topics=names, lines=[gold, cream.format(topic=names[0])])
+    return LastOut(
+        film=film_ref(films, result.last),
+        topics=names,
+        lines=[gold, cream.format(topic=names[0])],
+        heard=heard_out(films, result.last, ticked),
+    )
 
 
 def heard_out(films: Any, tmdb: int, ticked: frozenset[str]) -> HeardOut | None:
@@ -380,7 +386,7 @@ def pick_out(films: Any, result: Pick, fallback: str | None = None, ticked: froz
         film=None if result.film is None else film_ref(films, result.film),
         heard=None if result.film is None else heard_out(films, result.film, ticked),
         swapped=_swap_out(films, result),
-        last=_last_out(films, result),
+        last=_last_out(films, result, ticked),
         unchecked=None if result.unchecked is None else UNCHECKED_LINES[result.unchecked],
         dtdd_item=result.item,
         exhausted=_no_film_line(result),

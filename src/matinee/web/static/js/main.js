@@ -1006,7 +1006,7 @@ async function showPicked(held) {
   const lines = { nope: null, gold, reveal: trip, beneath: () => trip };
   const { frame, readUntil } = await openPick(gold, null);
   if (!frame.showing.isConnected || wall.round !== round) return undefined;
-  const result = { ...held, film: held.last.film, swapped: null, tired: null, turned_away: [] };
+  const result = { ...held, film: held.last.film, heard: held.last.heard, swapped: null, tired: null, turned_away: [] };
   return showPick({ stage, wall, result, frame, readUntil, lines, fuse: null, actions: pickActions(), door: visit.tree, walk: walkOf(visit) });
 }
 

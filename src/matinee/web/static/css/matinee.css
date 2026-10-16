@@ -1824,8 +1824,8 @@ a.wordmark:focus-visible {
   flex-wrap: wrap;
 }
 
-/* The pick's foot bar, a row of its own across the foot on a desktop: "‹ Back" and "Something wrong?" at its left, "Not
-   that one" at its exact centre at every width, DoesTheDogDie's credit at its right end when shown. Its row is kept
+/* The pick's foot bar, a row of its own across the foot on a desktop: "‹ Back" and "Something wrong?" at its left, "Show
+   me another" at its exact centre at every width, DoesTheDogDie's credit at its right end when shown. Its row is kept
    from the start of the pick. */
 .foot-bar {
   flex-basis: 100%;

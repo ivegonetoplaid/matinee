@@ -30,11 +30,12 @@ from matinee.engine import (
     walk_kept,
 )
 from matinee.languages import heard_only
+from matinee.pick import Hit, Pick
 from matinee.ranks import BANDS, band, rank_among
 from matinee.reference import Reference
 from matinee.store import FLOORS
 from matinee.table import FilmTable
-from matinee.web.viewing import USED_UP, AnswerIn, PickIn, everything, pick_pool
+from matinee.web.viewing import USED_UP, AnswerIn, PickIn, everything, pick_out, pick_pool
 from test_engine import TREE, make_table, reference, write_data
 from test_web_library import make_world
 
@@ -184,6 +185,24 @@ def test_a_film_reached_only_through_its_copys_audio_names_those_ticked_language
     assert heard_only("th", None, ticked) == []  # no tagged copy: it came by its own language, or not at all
     assert heard_only("xx", frozenset({"en"}), ticked) == []  # no known language of its own to name
     assert heard_only("th", frozenset({"en"}), frozenset()) == []  # any language: nothing was narrowed
+
+
+def test_the_film_shown_by_just_show_me_what_you_picked_carries_its_language_line() -> None:
+    films = pd.DataFrame(
+        {
+            "name": ["Shutter", "Alien"],
+            "year": [2004, 1979],
+            "language": ["th", "en"],
+            "audio": [frozenset({"en", "th"})] * 2,
+        },
+        index=[9696, 348],
+    )
+    hits = (Hit(1, "a topic"),)
+    tired = Pick(None, swapped=348, swapped_hits=hits, last=9696, last_hits=hits)
+    body = pick_out(films, tired, ticked=frozenset({"en"}))
+    assert body.film is None and body.heard is None
+    assert body.last is not None and body.last.heard is not None
+    assert (body.last.heard.original, body.last.heard.audio) == ("th", ["en"])
 
 
 def test_narrowing_one_viewer_never_changes_the_shared_masks(cat: Catalog) -> None:

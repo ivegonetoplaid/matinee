@@ -2721,7 +2721,8 @@ the film information area on both desktop and phone.
   quiet text "Your copy has English audio", naming each ticked language the
   copy's audio holds, joined as a sentence ("English, Spanish, and French").
   Languages are named as the language setting names them. The pick reply
-  carries it as `heard` (`original`, `audio`); a film in a ticked language of
+  carries it as `heard` (`original`, `audio`), and `last` carries its own for
+  "Just show me what you picked"; a film in a ticked language of
   its own, a viewer who ticks none, and a film whose own language is unknown
   carry none.
 
@@ -3720,7 +3721,7 @@ describing it wrongly, never by naming something gone.
 - `src/matinee/pick.py::Picker._item` (the item as held after any lookup)
 - `src/matinee/web/viewing.py::device_id` / `DEVICE_COOKIE`
 - `src/matinee/web/viewing.py::SWAP_LINE` / `UNCHECKED_LINES` / `EXHAUSTED` / `TIRED` / `PICKED`
-- `src/matinee/web/viewing.py::LastOut` / `PickOut` (`last`, `dtdd_item`, `heard`)
+- `src/matinee/web/viewing.py::LastOut` / `PickOut` (`last` and its `heard`, `dtdd_item`, `heard`)
 - `src/matinee/web/viewing.py::_swap_out` / `_last_out` / `pick_out`
 - `src/matinee/web/viewing.py::pick_pool` (the walk kept after a hide; an empty pool is used up)
 - `src/matinee/web/viewing.py::add_pick_routes`
