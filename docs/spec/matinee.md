@@ -18,7 +18,8 @@ showing, with `Show me another` to draw again.
 This spec was written from the code on 2026-09-26 and last reconciled with it on
 2026-10-05; its pick screen, the pick's rank and tags, the film card and the
 wordmark's size were reconciled on 2026-10-10, and each profile's own records,
-the narrowing of a viewer's pool and My profile on 2026-10-14. It has two halves. The
+the narrowing of a viewer's pool and My profile on 2026-10-14, and the changes
+since on 2026-10-15. It has two halves. The
 **contract** says what Matinee must do and must refuse. It is authoritative. The
 **map** says where each part lives. It is a pointer, never proof. The
 [index](README.md) explains how to read the two when they disagree with the
@@ -1285,7 +1286,9 @@ table named `feedback`) and personal corrections. Shape 1 holds profiles, tokens
 and notes. Shape 2 adds each profile's tailoring settings and welcome mark
 (columns of its row, section 7.3) and four tables of what a profile keeps:
 `ratings` (7.4), `hidden` (7.5), and `runs` with their films, `run_films` (7.6).
-Each of their rows goes with its profile when the profile is deleted.
+Each of their rows goes with its profile when the profile is deleted. Shape
+2's `notes` table lets a note name no sort choice and mark the film's tags as wrong
+(section 10).
 
 - A missing or empty file is made at the current shape.
 - Each profile row keeps an `exclusions` column from when Matinee had
@@ -1332,7 +1335,7 @@ check, `/api/admission`. Every other route answers `401 not_admitted`, with the
 usual headers. The protection is sized for a household film picker. A page whose
 device stops being admitted while it is open (the word changed, or the cookie
 is gone) is sent back to the door: the first `401 not_admitted` any of its
-requests meets reloads the page, which opens on the locked door, and that
+calls to the API meets reloads the page, which opens on the locked door, and that
 request never answers, so no half-done screen is drawn first.
 
 - **Admission.** The right word sets the cookie `matinee_admit` (`HttpOnly`,
@@ -2231,8 +2234,9 @@ the film information area on both desktop and phone.
     setting asks one, its question in cream, with its explanation in body type
     beneath and its answers as letterboxes, the current one checked and ringed
     in gold: My profile's words throughout (below). A single answer saves and
-    goes on; the languages are ticked and saved with "Done". Every step offers
-    "Skip", which keeps that setting as it stands, and a refused save says why
+    goes on; the languages are ticked (the 15 most-held first and the rest
+    behind "+ More languages", as on My profile) and saved with "Done". Every
+    step offers "Skip", which keeps that setting as it stands, and a refused save says why
     on the step and stays. Last, "You're all set, <name>." over a centred
     "Find me something to watch" action, which goes in to the first question.
     A profile made now has seen the welcome (section 7.3) whichever answer the
@@ -2683,7 +2687,7 @@ the film information area on both desktop and phone.
   the case, which takes the poster's height. A cased poster wears no warm
   outline or glow, and takes a gold ring when focused. A rating saved from
   "Rate it" on the pick dresses the resting poster in its case at once, or
-  changes the case; one cleared undresses it.
+  changes the case.
 
   On a desktop the pick takes the room between the top bar and the foot bar,
   ending one gap above the bar; only a window too short for a 160 px poster
@@ -3599,9 +3603,9 @@ describing it wrongly, never by naming something gone.
 
 ### The store file
 
-- `src/matinee/upgrade.py::SHAPE` / `TABLES` (the current shape; the settings' columns; the unread `exclusions` column)
+- `src/matinee/upgrade.py::SHAPE` / `TABLES` (the current shape; the settings' columns; the unread `exclusions` column; a note's optional `kind` and its `tags` mark)
 - `src/matinee/upgrade.py::RECORDS` (`ratings`, `hidden`, `runs`, `run_films`, each going with its profile)
-- `src/matinee/upgrade.py::FROM_SHAPE_1` (the settings at their defaults, every profile unmarked)
+- `src/matinee/upgrade.py::FROM_SHAPE_1` (the settings at their defaults, every profile unmarked; the notes moved to the new table under their own ids)
 - `src/matinee/upgrade.py::BELONGS_FROM_CORRECTIONS` (where an old genre note's film belongs)
 - `src/matinee/upgrade.py::FROM_SHAPE_0`
 - `src/matinee/upgrade.py::ShapeError`
@@ -3716,7 +3720,7 @@ describing it wrongly, never by naming something gone.
 - `src/matinee/pick.py::Picker._item` (the item as held after any lookup)
 - `src/matinee/web/viewing.py::device_id` / `DEVICE_COOKIE`
 - `src/matinee/web/viewing.py::SWAP_LINE` / `UNCHECKED_LINES` / `EXHAUSTED` / `TIRED` / `PICKED`
-- `src/matinee/web/viewing.py::LastOut` / `PickOut` (`last`, `dtdd_item`)
+- `src/matinee/web/viewing.py::LastOut` / `PickOut` (`last`, `dtdd_item`, `heard`)
 - `src/matinee/web/viewing.py::_swap_out` / `_last_out` / `pick_out`
 - `src/matinee/web/viewing.py::pick_pool` (the walk kept after a hide; an empty pool is used up)
 - `src/matinee/web/viewing.py::add_pick_routes`
@@ -3858,7 +3862,7 @@ describing it wrongly, never by naming something gone.
 - `src/matinee/web/static/js/hunt-plan.js::hopOffset` / `TICK_PX` (the tick)
 - `src/matinee/web/static/js/hunt-plan.js::peakStep` / `limitedTime` / `SLOWDOWN` (the speed limit; each hop slower than the last)
 - `src/matinee/web/static/js/hunt-plan.js::settledCamera`
-- `src/matinee/web/static/js/hunt-plan.js::planHunt` / `halfSpan` (hop lengths as shares of the screen, landing off screen, no reversal)
+- `src/matinee/web/static/js/hunt-plan.js::planHunt` / `halfSpan` / `drawPlan` / `offScreen` / `PLAN_TRIES` (hop lengths as shares of the screen, each hop cut short of the last, landing off screen, no reversal)
 - `src/matinee/web/static/js/hunt-plan.js::hopCell` / `placeLanding`
 - `src/matinee/web/static/js/glow.js::posterGlow` / `GOLD`
 - `src/matinee/web/static/js/quips.js::setFor`
@@ -3933,11 +3937,13 @@ describing it wrongly, never by naming something gone.
 - `src/matinee/web/static/css/matinee.css` `.credits`, `.bottombar .credits`, `.inline-link`
 - `src/matinee/web/static/css/matinee.css` `.stage.behind-about`, `.about`, `.about-wordmark`, `.about-panel`
 - `src/matinee/web/static/css/matinee.css` `.pick-line` (size, four lines reserved), `.pick-line.rested`, `.hushed`
-- `src/matinee/web/static/css/matinee.css` `.poster-link`, `.poster-strip`
+- `src/matinee/web/static/css/matinee.css` `.poster-link`, `.poster-link.landed`, `.poster-strip` (the link clips the poster only once it has landed)
+- `src/matinee/web/static/css/matinee.css` `.poster-link.cased` (a rated pick in its case: no outline or glow, a gold ring when focused)
 - `src/matinee/web/static/css/matinee.css` `.facts`, `.rank`, `.rank-words`, `.rank-by`, `.tags`, `.tag`
+- `src/matinee/web/static/css/matinee.css` `.heard`, `.heard-original`, `.heard-copy` (the language line)
 - `src/matinee/web/static/css/matinee.css` `.note-form` ("Something wrong?"'s form)
 - `src/matinee/web/static/css/matinee.css` `.pick-panel`, `.panel-head`, `.panel-title`, `.panel-close`, `.panel-body`, `.panel-lede`, `.panel-section`, `.panel-row`, `.answer-row`, `.films`, `.film-row`, `.panel-foot`, `.action.open`
-- `src/matinee/web/static/css/matinee.css` `.foot-bar`, `.bar-left` (one row; two rows from 601 to 800 px; a phone's rows), desktop `.showing` and `.feature` (the details scroll with a fade)
+- `src/matinee/web/static/css/matinee.css` `.foot-bar`, `.bar-left` (one row; two rows from 601 to 1080 px; a phone's rows), desktop `.showing` and `.feature` (the details scroll with a fade)
 - `src/matinee/web/static/css/matinee.css` `.bar-right` (DoesTheDogDie's credit at the foot bar's right end)
 - `src/matinee/web/static/css/matinee.css` `.action.lead` ("Show me another": thread always, rose glow)
 - `src/matinee/web/static/css/matinee.css` `.beside-credit` (DoesTheDogDie's credit after an unchecked film's note)
@@ -3964,7 +3970,7 @@ describing it wrongly, never by naming something gone.
 - `src/matinee/web/static/js/settings.js::row` / `singleRow` / `languagesRow` / `topicsRow` / `topicList` / `chooser` (a row, its picture and open panel; it stays open, saying "✓ Saved", until "Done")
 - `src/matinee/web/static/js/settings.js::languageName` / `languageOrder` (named through the browser, `cn` as Cantonese; the browser's language first)
 - `src/matinee/web/static/js/settings.js::heardWords` / `src/matinee/web/static/js/pick.js::heardLine` (the language line's words; the line beneath the rank)
-- `src/matinee/web/static/js/settings.js::languagesFirst` / `moreLanguages` (the 15 most-held languages, the browser's and the ticked first; "+ More languages" shows the rest)
+- `src/matinee/web/static/js/settings.js::languagesFirst` / `moreLanguages` / `LANGUAGES_FIRST` (the 15 most-held languages, the browser's and the ticked first; "+ More languages" shows the rest)
 - `src/matinee/web/static/js/topics.js::topicButton`
 - `src/matinee/web/static/js/credits.js::dtddSetting` (DoesTheDogDie's credit under the topics row)
 - `src/matinee/web/static/js/cases.js::filmCase` / `CASES` / `tiers` / `ratedPart` (a film in its case, around a poster already on the page where given; the rated tiers)
@@ -3982,9 +3988,9 @@ describing it wrongly, never by naming something gone.
 - `src/matinee/web/static/js/pick.js::facts` / `rest` / `toRest` (the household's line among the facts; "Undo" fades before rest)
 - `src/matinee/web/static/js/mark.js::mark` (a `panel` size)
 - `src/matinee/web/static/css/matinee.css` `--house`, `.household`, `.reading-card`, `.person-row` (the household's colour, one job)
-- `src/matinee/web/static/css/matinee.css` `.ticked`, `.rate-answers`, `.review-field`, `@keyframes shake`, `.undo-link`, `.bar-centre`
+- `src/matinee/web/static/css/matinee.css` `.ticked`, `.rate-answers`, `.review-field`, `.review-saved`, `@keyframes shake`, `.undo-link`, `.bar-centre`
 - `src/matinee/web/static/css/matinee.css` `--felt`, `--placard`, `.my-profile`, `.pin`, `.part`, `.placard`, `.jump-bar`, `.part-note`
-- `src/matinee/web/static/css/matinee.css` `.set`, `.sethead`, `.stitle`, `.thumb`, `.thumb-inner`, `.setbody`, `.set-choices`, `.set-band`
+- `src/matinee/web/static/css/matinee.css` `.set`, `.sethead`, `.stitle`, `.thumb`, `.thumb-inner`, `.setbody`, `.set-choices`, `.set-band`, `.set-status.saved` ("✓ Saved" in gold)
 - `src/matinee/web/static/css/matinee.css` `.case`, `.plate`, `.win`, `.sheen`, `.bloom`, `.tier`, `.rated-film`, `.hidden-film`
 - `src/matinee/web/static/css/matinee.css` `.day`, `.day-stub`, `.day-head`, `.day-peek`, `.chev`, `.run`, `.shown-film`, `.shown-did`
 - `src/matinee/web/static/css/matinee.css` `.overlay`, `.overlay-poster`, `.overlay-words`, `.overlay-actions`
