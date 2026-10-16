@@ -16,6 +16,7 @@ from matinee.table import FilmTable
 from matinee.web.app import create_app
 from matinee.web.config import Config
 from matinee.web.theatre import Theatre
+from matinee.web.viewing import WALK_GONE
 from test_engine import TREE, reference, write_data
 from test_viewing import FakeDtdd
 from test_web_library import SERVER, FakeLibrary, seat_for, write_film_table
@@ -85,14 +86,18 @@ def test_only_a_held_profile_may_note_and_only_answers_the_tree_has(site: Any, t
     me = client.post("/api/profiles", json={"name": "Me"}).json()["id"]
     for bad in ({"kind": "boring"}, {"comment": "x" * 501}):
         assert client.post("/api/notes", json={**base, "profile_id": me, **bad}).status_code == 422
-    refused: list[dict[str, Any]] = [
+    unknown = client.post("/api/notes", json={**base, "profile_id": me, "tmdb": 123456})
+    assert unknown.status_code == 400 and unknown.json()["error"] == "refused"  # never mistaken for a changed walk
+    gone: list[dict[str, Any]] = [  # a walk the catalogue no longer holds, as after an update: refused in words
         {"tree": "nowhere"},
-        {"tmdb": 123456},
         {"answers": [{"question": "nope", "option": 0}]},
         {"answers": [{"question": "era", "option": 49}]},
+        {"answers": [{"question": "era", "option": 4}]},  # one past the question's last answer
     ]
-    for bad in refused:
-        assert client.post("/api/notes", json={**base, "profile_id": me, **bad}).status_code == 400
+    for bad in gone:
+        refused = client.post("/api/notes", json={**base, "profile_id": me, **bad})
+        assert refused.status_code == 400 and refused.json()["error"] == "walk_gone", bad
+        assert refused.json()["message"] == WALK_GONE
     assert note_rows(tmp_path) == []
 
 
@@ -134,3 +139,17 @@ def test_where_a_film_belongs_is_only_another_known_tree_on_a_genre_note(site: A
         assert client.post("/api/notes", json={**base, **bad}).status_code == 400
     assert client.post("/api/notes", json={**base, "belongs": ["east"] * 33}).status_code == 422
     assert note_rows(tmp_path) == []
+
+
+def test_a_note_may_say_only_that_the_tags_are_wrong_or_only_words_but_never_nothing(site: Any, tmp_path: Path) -> None:
+    client, _ = site
+    me = client.post("/api/profiles", json={"name": "Me"}).json()["id"]
+    body = {"profile_id": me, "tmdb": 5, "tree": "west", "answers": [{"question": "era", "option": 0}]}
+    tags_only = client.post("/api/notes", json={**body, "tags": True})
+    assert tags_only.json()["lines"] == ["Thanks for that. It's gone to whoever runs Matinee."]  # it moves no film
+    assert client.post("/api/notes", json={**body, "comment": "not a western"}).status_code == 200
+    assert client.post("/api/notes", json={**body, "kind": "genre", "tags": True}).status_code == 200
+    assert client.post("/api/notes", json={**body, "comment": "   "}).status_code == 400
+    with sqlite3.connect(tmp_path / "matinee.sqlite") as db:
+        kept = db.execute("SELECT kind, tags, comment FROM notes ORDER BY id").fetchall()
+    assert kept == [(None, 1, ""), (None, 0, "not a western"), ("genre", 1, "")]

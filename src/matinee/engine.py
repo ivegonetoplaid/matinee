@@ -30,7 +30,16 @@ the flavour is given.
 
 Unknown values are inclusive: a film with no runtime, rating, year, language,
 collection or score passes a filter on it, because a wrongly included film costs
-one `Not that one` and a wrongly excluded one is invisible.
+one `Show me another` and a wrongly excluded one is invisible.
+
+A viewer's own settings narrow every tree's starting pool beside the topics'
+`treat_as` answers: the films they may be offered (`Viewer.allowed`: not hidden,
+not rated out, in a ticked language; built by `allowed_films`) and the rating
+floor, which keeps out a film whose place among its own door's films (`places`)
+falls below the floor's edge and never a film with no place. Before any door,
+a door is offered only when its narrowed pool holds a film, so a film behind
+several doors stays when it passes the floor in one of them. The shared answer
+masks never see a viewer.
 """
 
 from __future__ import annotations
@@ -38,7 +47,7 @@ from __future__ import annotations
 import json
 import math
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Literal
 
@@ -54,6 +63,10 @@ from matinee.table import FilmTable
 from matinee.trees import Filter, Option, Question, Tree, TreeError, load_trees
 
 STOP_UNDER = 12
+VOTE_FLOOR = 200  # TMDB votes a film needs before its average is ranked or counted (`matinee.ranks`)
+# The rating floor's choices and the furthest place from the top each keeps, as a share of the door's ranked films:
+# the edges of `matinee.ranks.BANDS` (a test holds them to it).
+FLOOR_EDGES = {"anything": 1.0, "above_bottom": 0.90, "middle": 0.60, "above_middle": 0.40, "well_liked": 0.25}
 KIND_MIN_FILMS = 30  # a labelled kind holding fewer films in the loaded library is not offered
 Mask = npt.NDArray[np.bool_]
 Source = Literal["held", "new", "all"]  # the source question's pools: the library's films, the others, or both
@@ -64,10 +77,13 @@ class EngineError(ValueError):
     """The answers do not fit the tree, or the data the engine was given is inconsistent."""
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, eq=False)
 class Viewer:
     topics: frozenset[int] = frozenset()
     source: Source = "all"  # every pool, count and pick of the walk is bounded by it
+    allowed: Mask | None = None  # the films this viewer may be offered, aligned with the catalogue; None: every film
+    floor: str = "anything"  # the rating floor, a key of FLOOR_EDGES
+    languages: frozenset[str] = frozenset()  # the languages ticked, which `allowed` already holds to; empty: any
 
 
 @dataclass(frozen=True)
@@ -138,6 +154,7 @@ class Catalog:
     small: dict[Source, set[tuple[str, str, int]]] = field(  # per source, answers whose labelled kind is under the bar
         default_factory=lambda: {source: set() for source in SOURCES}
     )
+    places: dict[str, npt.NDArray[np.float64]] = field(default_factory=dict)  # per tree id, filled on first use
 
     @property
     def ids(self) -> npt.NDArray[np.int64]:
@@ -366,6 +383,38 @@ def _too_small(cat: Catalog, tree: Tree, q: Question, option: Option, source: So
     return int(held.sum()) < KIND_MIN_FILMS
 
 
+def places(films: pd.DataFrame, among: Mask) -> npt.NDArray[np.float64]:
+    """Each film's place among the ranked films `among` marks, as `matinee.ranks` counts it: its position from the
+    top as a share of them, tied films sharing the better position. NaN for a film with fewer than VOTE_FLOOR votes,
+    no TMDB score, or not among them."""
+    scores = films.tmdb_rating.to_numpy(dtype=float, na_value=np.nan)
+    ranked = among & (films.vote_count.fillna(0) >= VOTE_FLOOR).to_numpy(dtype=bool) & ~np.isnan(scores)
+    order = np.sort(scores[ranked])
+    better = len(order) - np.searchsorted(order, scores, side="right")
+    place = np.full(len(scores), np.nan)
+    place[ranked] = (better[ranked] + 1) / len(order)
+    return place
+
+
+def allowed_films(table: FilmTable, out: frozenset[int], languages: frozenset[str]) -> Mask | None:
+    """The films a viewer may be offered: not in `out` (hidden, or rated out), and with `languages` ticked, in one of
+    them. A film with a library copy whose audio tracks name a language is in those; any other film is in its TMDB
+    original language, and a film with neither is in none. None when nothing narrows."""
+    if not out and not languages:
+        return None
+    films = table.films
+    keep = ~films.index.isin(list(out))
+    if languages:
+        keep &= np.array(
+            [
+                bool(audio & languages) if audio else original in languages
+                for original, audio in zip(films.language, films.audio, strict=True)
+            ],
+            dtype=bool,
+        )
+    return np.asarray(keep, dtype=bool)
+
+
 def _answer_masks(cat: Catalog, tree: Tree) -> None:
     """Every answer's films, and in each source which answers offer a kind too small to show."""
     for q in tree.questions:
@@ -423,7 +472,7 @@ def base_pool(cat: Catalog, tree_id: str, viewer: Viewer) -> Mask:
     """The tree's pool for this viewer before any answer, within the viewer's source.
 
     A question the viewer's DoesTheDogDie topics skip applies its `treat_as` answer here, to the whole starting pool,
-    so every answer shown and every stop count already sees it.
+    so every answer shown and every stop count already sees it, and so do the viewer's allowed films and floor.
     """
     tree = cat.trees.get(tree_id)
     if tree is None:
@@ -432,7 +481,20 @@ def base_pool(cat: Catalog, tree_id: str, viewer: Viewer) -> Mask:
     for q in tree.questions:
         if q.treat_as is not None and q.skip_if_topics & viewer.topics:
             pool &= cat.masks[(tree.id, q.id, q.treat_as)]
+    if viewer.allowed is not None:
+        pool &= viewer.allowed
+    edge = FLOOR_EDGES[viewer.floor]
+    if edge < 1.0:
+        place = _door_places(cat, tree)
+        pool &= np.isnan(place) | (place <= edge)
     return pool
+
+
+def _door_places(cat: Catalog, tree: Tree) -> npt.NDArray[np.float64]:
+    """Each film's place among the tree's door's films, worked out once per catalogue, when a floor first asks."""
+    if tree.id not in cat.places:
+        cat.places[tree.id] = places(cat.table.films, cat.pools[tree.pool])
+    return cat.places[tree.id]
 
 
 def opening_pool(cat: Catalog, tree_id: str, viewer: Viewer) -> Mask:
@@ -518,6 +580,19 @@ def walk(cat: Catalog, tree_id: str, viewer: Viewer, answers: Sequence[Answer]) 
     if pending:
         raise EngineError(f"{len(pending)} answers left over after the last question of '{tree_id}'")
     return Step(tree_id, line, None, _served(cat, tree_id, pool, opened), prefer, destruct)
+
+
+def walk_kept(cat: Catalog, tree_id: str, viewer: Viewer, answers: Sequence[Answer]) -> Step:
+    """The walk a pick draws from. A hide or a rating since the answers were given can change which questions this
+    viewer's narrowed pool asks, so the answers no longer fit; then they are walked without the viewer's own
+    narrowing, and the pool keeps only the films that narrowing allows. Answers that fit no walk are refused as by
+    `walk`, the second time."""
+    try:
+        return walk(cat, tree_id, viewer, answers)
+    except EngineError:
+        plain = walk(cat, tree_id, Viewer(topics=viewer.topics, source=viewer.source), answers)
+        allowed = {int(t) for t in cat.ids[base_pool(cat, tree_id, viewer)]}
+        return replace(plain, pool=tuple(t for t in plain.pool if t in allowed))
 
 
 def walk_ends(cat: Catalog, tree_id: str, viewer: Viewer | None = None) -> list[tuple[tuple[Answer, ...], Step]]:

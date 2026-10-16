@@ -1,6 +1,6 @@
 ---
 purpose: Index of Matinee's behaviour specifications — what each spec covers, how much to trust it against the code, and the policy that keeps the two reconciled.
-updated: 2026-10-10
+updated: 2026-10-14
 ---
 
 # Matinee Specs
@@ -47,7 +47,11 @@ governs, one command lists what to read:
 git log --oneline --since=<updated> -- <governs>
 ```
 
-Nothing checks any of this. The rule earns its keep by being worth following.
+Nothing checks the contract against the code. The rule earns its keep by
+being worth following. One thing is checked: `./check.sh` fails when a map
+entry names a file that does not exist or a symbol the file does not define
+(`tests/test_spec_map.py`), so a rename or a removal cannot leave the map
+pointing at nothing.
 
 The policy has one hard edge: a spec nobody is prepared to keep reconciled is
 deleted rather than left standing. Git history holds it.
@@ -61,12 +65,16 @@ deleted rather than left standing. Git history holds it.
   the pool rules, the reference statistics, the gore scale and house pins, the
   offline film table and its rebuild (TMDB's records fetched at a set pace,
   most-voted first, saved as it goes), the setup note and the logs, profiles,
-  avatars and device tokens, the store file and its upgrade, the optional door
+  avatars and device tokens, the store file and its upgrade, each profile's
+  tailoring settings, ratings and short reviews, hidden films and history, and
+  how they narrow its pool, the optional door
   word, the optional DoesTheDogDie topics and the check at the moment of a
   pick, viewers' notes and the notes tool, the web surface and its security
   headers, the page (the locked door, the front door's tiles, the setup note,
-  the stale-data warning and the viewer's profile menu among it), the
+  the stale-data warning, the viewer's profile menu, My profile, the tailoring
+  steps and the welcome among it), the
   deployment shape and its settings, and the terms of the three data sources.
   Written from the code on 2026-09-26, and last reconciled with it on
-  2026-10-05; its pick screen, rank and tags on 2026-10-10. It ends with a list of known gaps: behaviour deliberately
+  2026-10-05; its pick screen, rank and tags on 2026-10-10; My profile and
+  everything a profile keeps on 2026-10-14. It ends with a list of known gaps: behaviour deliberately
   absent, still open, or short of the contract.

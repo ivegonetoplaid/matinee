@@ -3,13 +3,16 @@
 // Every question at the door types onto the wall, each piece of text on its own scrim;
 // the marquee stays until the viewer goes in.
 
+import { OFFER, stepKeys, tailorSteps } from "./tailor.js";
+import { ROWS } from "./settings.js";
 import { get, post, put } from "./api.js";
 import { aboutLink, credits } from "./credits.js";
-import { clear, h, prefersLessMotion, sentenceCase, wait } from "./dom.js";
+import { clear, h, isPhone, prefersLessMotion, sentenceCase, wait } from "./dom.js";
 import { FLIGHT_MS, HANDOVER_MS, copyAt, fly, markAt, nameAt } from "./flight.js";
 import { boardText, doorLines, filmCount, findTaken, opensAtOnce, stripLap, twoParts } from "./door-rules.js";
 import { avatarChoices, mark } from "./mark.js";
 import { offers } from "./offers.js";
+import { topicButton } from "./topics.js";
 import { typeLine } from "./type.js";
 
 // The marquee is the drawing in /static/marquee/, wide on a desktop and narrow on a phone, laid into the page
@@ -80,6 +83,16 @@ function creamAction(text, onclick) {
 
 function strip(text, onclick) {
   return h("button", { class: "letterbox", type: "button", onclick }, text);
+}
+
+// What a door screen holds back until its line has typed: the detail, the controls and the actions, where there are
+// any.
+function heldBack(controls, detail, actions) {
+  return [
+    detail ? h("p", { class: "note door-detail", hidden: true }, detail) : null,
+    h("div", { class: "door-controls", hidden: true }, controls),
+    actions ? h("div", { class: "door-actions", hidden: true }, actions) : null,
+  ].filter(Boolean);
 }
 
 // A profile's tile: its mark, and its name in large type beneath.
@@ -160,18 +173,15 @@ export class Door {
     this.handTimer = null;
   }
 
-  // Build the door and open on the front door's tiles, or on `screen` when given: a new profile ("new"),
-  // or the viewer's list ("list"). `said` replaces the front door's line, as after a profile is deleted.
+  // Build the door and open on the front door's tiles, or on a new profile when `screen` is "new". `said`
+  // replaces the front door's line, as after a profile is deleted.
   // `marquee` is one already standing (the locked door's), kept in place rather than built again.
-  async open({ door, screen = null, profileId = null, said = null, marquee = null }) {
+  async open({ door, screen = null, said = null, marquee = null }) {
     this.profiles = door.profiles;
     this.avatars = door.avatars;
     this.held = door.profiles.filter((p) => p.held);
     this.build(door.now_showing, marquee);
     if (screen === "new") return this.first();
-    const tile = this.held.find((p) => p.id === profileId);
-    const profile = screen === "list" && tile && offers.dtdd ? (await this.seatOf(tile)).seat : null;
-    if (profile) return this.picker({ editing: profile });
     return this.greet(said);
   }
 
@@ -231,22 +241,23 @@ export class Door {
 
   // One question on the wall: the line types out, then its controls appear, with `detail`, a body-type line
   // beneath Matinee's, when there is one. `tiles` lets the profile tiles take the width the line keeps.
-  async talk(ack, ask, controls, { tiles = false, detail = null } = {}) {
-    this.marquee.classList.remove("compact");
+  // `actions`, where given, stand apart from the answers: in the left column beside them on a wide desktop, as the
+  // picker's, and beneath them elsewhere.
+  async talk(ack, ask, controls, { tiles = false, detail = null, compact = false, actions = null } = {}) {
+    this.marquee.classList.toggle("compact", compact);
     this.dtddCredit.hidden = true;
     const line = h("p", { class: "line door-line", "aria-live": "polite" });
-    const more = detail ? h("p", { class: "note door-detail", hidden: true }, detail) : null;
-    const below = h("div", { class: "door-controls", hidden: true }, controls);
-    clear(this.wall).append(h("div", { class: tiles ? "door-talk at-seats" : "door-talk" }, line, more, below));
+    const later = heldBack(controls, detail, actions);
+    const kind = ["door-talk", tiles ? "at-seats" : "", compact ? "tailoring" : ""].filter(Boolean).join(" ");
+    clear(this.wall).append(h("div", { class: kind }, line, later));
     await typeLine(line, ack, ask);
-    if (more) more.hidden = false;
-    below.hidden = false;
-    const first = below.querySelector("input, button");
+    for (const node of later) node.hidden = false;
+    const first = this.wall.querySelector(".door-controls :is(input, button)");
     first?.focus({ preventScroll: true, focusVisible: first.tagName === "INPUT" });
   }
 
   // Making a profile: its name, then its avatar or initials, then an optional PIN. The profile is made once
-  // those are known; the list question follows, then "Find me something to watch".
+  // those are known; the tailoring offer follows, then "Find me something to watch".
   first() {
     return this.askName("Pull up a chair.", "What should I call you?");
   }
@@ -321,7 +332,7 @@ export class Door {
   async create(draft) {
     this.lock();
     const res = await post("/api/profiles", draft);
-    if (res.ok) return this.askList(res.data);
+    if (res.ok) return this.offerTailoring(res.data);
     const { code, message } = res.data;
     if (code === "full") return this.refused(message);
     if (code === "bad_name") return this.askName("Pull up a chair.", "What should I call you?", message);
@@ -331,19 +342,22 @@ export class Door {
     return holder ? this.taken(holder) : this.askName("Pull up a chair.", "What should I call you?", message);
   }
 
-  // Without a DoesTheDogDie key there is no list to pick from, so the step is skipped.
-  askList(seat) {
-    if (!offers.dtdd) return this.done(seat);
-    const detail = "Things like spiders or needles. Pick them and I'll skip any film that has them.";
-    return this.talk(
-      "One more question.",
-      "Is there anything you'd rather not see happen on screen?",
-      [
-        strip("Yes, let me pick from a list", () => this.picker({ editing: seat, fresh: true })),
-        strip("No, show me everything", () => this.done(seat)),
-      ],
-      { detail },
-    );
+  // The tailoring offer: a decline finishes the profile with every setting at its default; an accept walks the
+  // tailoring steps, the topics first in the picker where the installation offers them.
+  offerTailoring(seat) {
+    return this.talk(OFFER.ack, OFFER.ask, [
+      strip(OFFER.yes, () => (stepKeys({ dtdd: offers.dtdd, held: [] })[0] === "topics" ? this.picker(seat) : this.tailor(seat))),
+      strip(OFFER.no, () => this.done(seat)),
+    ]);
+  }
+
+  // The tailoring steps after the topics, each on the door's own screen, then "You're all set".
+  tailor(seat) {
+    return tailorSteps({
+      id: seat.id,
+      show: ({ ack, ask, detail, answers, actions }) => this.talk(ack, ask, answers, { detail, compact: true, actions }),
+      done: () => this.done(seat),
+    });
   }
 
   done(seat) {
@@ -462,41 +476,39 @@ export class Door {
     this.settle();
   }
 
-  // The trigger picker, which is also the preferences page, for `editing`, a held profile. `fresh` is a
-  // profile just made, whose list saved leads to "Find me something to watch".
-  async picker({ editing, fresh = false }) {
-    this.fresh = fresh;
+  // The trigger picker, the first tailoring step for `editing`, a profile just made: its list saved or skipped leads
+  // to the next step.
+  async picker(editing) {
     this.picked = new Set(editing.topics);
     this.marquee.classList.add("compact");
     this.dtddCredit.hidden = false; // the picker shows DoesTheDogDie's topics
     const heading = h(
       "p",
       { class: "line door-line" },
-      h("span", { class: "ack" }, fresh ? "Let's make your list." : "Your list."),
-      h("span", { class: "ask" }, "What should I steer around?"),
+      h("span", { class: "ack" }, ROWS.topics.title),
     );
     this.status = h("p", { class: "note picker-status", role: "status" });
     const topics = h("div", { class: "picker-topics" }, h("p", { class: "note" }, "Fetching the list…"));
     // In reading order, which is also the Tab order; the desktop layout places the topics beside the rest.
     const parts = [
       heading,
-      h("p", { class: "note picker-lead" }, "I'll check each pick against these and pass on any that hits one."),
+      h("p", { class: "note picker-lead" }, isPhone() ? ROWS.topics.short : ROWS.topics.help),
       topics,
       this.status,
       h("div", { class: "picker-actions" }, this.saveButton(editing, this.status), this.neverMind(editing, creamAction)),
     ];
     clear(this.wall).append(h("div", { class: "picker" }, parts));
     await this.fillTopics(topics, editing);
+    this.wall.querySelector(".picker input")?.focus({ preventScroll: true, focusVisible: false });
   }
 
-  // The way out of the picker without saving: back to a just-made profile's last step, or into the theatre.
+  // The way on without saving: the next tailoring step.
   neverMind(editing, as) {
-    if (this.fresh) return as("Never mind, show me everything", () => this.done(editing));
-    return as("Never mind, keep my list", () => this.enterAs(editing));
+    return as("Skip", () => this.tailor(editing));
   }
 
   saveButton(editing, status) {
-    const button = h("button", { class: "action gold", type: "button" }, this.fresh ? "Save and continue" : "Save my list");
+    const button = h("button", { class: "action gold", type: "button" }, "Save and continue");
     button.addEventListener("click", async () => {
       button.disabled = true;
       const said = await this.save(editing);
@@ -512,7 +524,7 @@ export class Door {
   async save(editing) {
     const res = await put(`/api/profiles/${editing.id}/topics`, { topics: [...this.picked] });
     if (!res.ok) return res.data.message;
-    return this.fresh ? this.done(res.data) : this.enterAs(res.data);
+    return this.tailor(res.data);
   }
 
   // DoesTheDogDie's topics, fetched now and never kept.
@@ -526,7 +538,9 @@ export class Door {
       const n = this.picked.size;
       tally.textContent = n ? `${n} chosen` : "Nothing chosen yet";
     };
-    const theirs = dtdd.ok ? dtdd.data.topics.map((t) => this.topic(sentenceCase(t.short), `${t.name} ${t.keywords}`, this.picked, t.id, count)) : [];
+    const theirs = dtdd.ok
+      ? dtdd.data.topics.map((t) => topicButton({ label: sentenceCase(t.short), find: `${t.name} ${t.keywords}`, chosen: this.picked, id: t.id, onToggle: count }))
+      : [];
     list.append(...theirs);
     search.addEventListener("input", () => {
       const needle = search.value.trim().toLowerCase();
@@ -561,19 +575,5 @@ export class Door {
         creamAction("Try again", () => this.fillTopics(box, editing)),
       ),
     );
-  }
-
-  // A topic is a letterbox that toggles: chosen, it shows a check mark before its words.
-  topic(label, find, chosen, id, count) {
-    const on = chosen.has(id);
-    const b = h("button", { class: "letterbox topic", type: "button", "aria-pressed": String(on) }, label);
-    b.dataset.find = `${label} ${find}`.toLowerCase();
-    b.addEventListener("click", () => {
-      if (chosen.has(id)) chosen.delete(id);
-      else chosen.add(id);
-      b.setAttribute("aria-pressed", String(chosen.has(id)));
-      count();
-    });
-    return b;
   }
 }

@@ -45,7 +45,7 @@ const GLOW_SPREAD = 0.033; // the glow's spread, likewise
 const GLOW_ALPHA = 0.35; // the glow's strength once grown
 const GLOW_SAMPLE = [32, 48]; // the poster is read at this size for its colour
 const STEP_BACK_MS = 350; // the wall dimming for a resting page that has no poster to bring forward
-const RETURN_MS = 450; // "Not that one" carries the resting poster back to its cell
+const RETURN_MS = 450; // "Show me another" carries the resting poster back to its cell
 const LANDED_DRAW_MS = 1000; // under reduced motion, the jump waits at most this long for the landed picture
 const NONE_PLACED = new Map();
 
@@ -447,7 +447,7 @@ export class Wall {
     img.style.zIndex = z;
   }
 
-  // "Not that one": carries `img`, the poster resting on the page, from where it rests back to its cell
+  // "Show me another": carries `img`, the poster resting on the page, from where it rests back to its cell
   // on the wall over RETURN_MS, at the wall's size and strength, while the wall's dimming lifts; then
   // the cell shows its poster again and the wall drifts. The element itself moves onto the wall, so
   // its picture never has to be drawn again. The next hunt waits for it. Resolves when it has ended.
@@ -509,6 +509,21 @@ export class Wall {
     this.drifting = true;
     this.layer.style.removeProperty("--tile");
     this.place();
+  }
+
+  // A film brought back from the Back panel takes the landed cell from the film that rested, with `img`'s glow, so
+  // its poster returns there when the viewer moves on. Nothing on screen moves: the cell is lifted while it rests.
+  swapLanded(id, img) {
+    if (!this.landed) {
+      // An "Undo" ended the roll first: the drift stops, the cell at the screen's centre takes the film, and the wall
+      // dims as behind any resting page. Nothing moves.
+      this.drifting = false;
+      this.landed = camCell(this.layout, this.cam);
+      this.dim(AWAY_STRENGTH);
+    }
+    this.placed = new Map([...this.placed, [`${this.landed.i},${this.landed.j}`, id]]);
+    this.glow = glowOf(img);
+    this.dirty = true;
   }
 
   // The landed poster's element, or null when no hunt has landed.

@@ -136,15 +136,17 @@ def test_without_a_key_records_past_six_months_are_still_dropped(tmp_path: Path)
     assert not (empty / "tmdb").exists()
 
 
-def test_the_rebuild_fetches_the_labels_and_the_library_once_each(
+def test_the_rebuild_fetches_the_labels_and_the_library_once_each_with_its_audio(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     labelled = next(iter(load_labels().films()))
     outside = 999_999_999
     assert outside not in load_labels().films()
+    audio_asked: list[bool] = []
 
     class Reader:
-        def films(self) -> list[LibraryFilm]:
+        def films(self, audio: bool = False) -> list[LibraryFilm]:
+            audio_asked.append(audio)
             return [
                 LibraryFilm("a" * 32, outside, "Home film", 2001, frozenset(), "", None, None, None),
                 LibraryFilm("b" * 32, labelled, "Labelled", 2002, frozenset(), "", None, None, None),
@@ -160,6 +162,7 @@ def test_the_rebuild_fetches_the_labels_and_the_library_once_each(
     monkeypatch.setattr(rebuild_table, "refresh", refresh)
     rebuild_table.rebuild(MediaServer("jellyfin", "http://jf.invalid", "k"), tmp_path, "t")
     assert sorted(asked[0]) == sorted(load_labels().films() | {outside})
+    assert audio_asked == [True]  # the rebuild alone reads each copy's audio languages
 
 
 def test_a_media_server_that_does_not_answer_is_waited_for_with_the_table_in_place(
@@ -173,7 +176,7 @@ def test_a_media_server_that_does_not_answer_is_waited_for_with_the_table_in_pla
     class Starting:
         tries = 0
 
-        def films(self) -> list[LibraryFilm]:
+        def films(self, audio: bool = False) -> list[LibraryFilm]:
             self.tries += 1
             if self.tries < 3:
                 raise LibraryError("Jellyfin could not be reached: connection refused")
@@ -199,7 +202,7 @@ def test_a_long_wait_still_sweeps_what_tmdbs_terms_age_out_and_names_a_turned_do
     failures: list[LibraryError] = [LibraryError("Jellyfin could not be reached"), LibraryRefused("HTTP 401")]
 
     class Away:
-        def films(self) -> list[LibraryFilm]:
+        def films(self, audio: bool = False) -> list[LibraryFilm]:
             if failures:
                 raise failures.pop(0)
             return []
@@ -239,7 +242,7 @@ def test_the_rebuild_writes_labelled_films_the_library_lacks_beside_the_library(
     }
 
     class Reader:
-        def films(self) -> list[LibraryFilm]:
+        def films(self, audio: bool = False) -> list[LibraryFilm]:
             return [LibraryFilm("c" * 32, owned, "Owned", 2003, frozenset({"Drama"}), "PG", 90.0, 7.0, None)]
 
     monkeypatch.setattr(rebuild_table, "open_reader", lambda server: Reader())
@@ -267,7 +270,7 @@ def test_the_table_is_saved_before_any_fetch_and_as_records_come(
     labelled = sorted(load_labels().films())[:4]
 
     class Reader:
-        def films(self) -> list[LibraryFilm]:
+        def films(self, audio: bool = False) -> list[LibraryFilm]:
             return [LibraryFilm("c" * 32, owned, "Owned", 2003, frozenset({"Drama"}), "PG", 90.0, 7.0, None)]
 
     def rec(t: int) -> TmdbFilm:

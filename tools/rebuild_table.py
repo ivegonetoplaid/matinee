@@ -223,7 +223,7 @@ def library_films(server: MediaServer, state: Path, started: str) -> list[Librar
     kept_at = time.monotonic()
     while True:
         try:
-            films = reader.films()
+            films = reader.films(audio=True)  # the one read that asks for audio tracks: never while a viewer waits
         except LibraryError as exc:
             refused = isinstance(exc, LibraryRefused)
             if refused != was_refused:

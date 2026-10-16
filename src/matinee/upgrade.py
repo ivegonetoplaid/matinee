@@ -1,27 +1,82 @@
-"""The store file's shape, and the one step that carries an older store file to it.
+"""The store file's shape, and the steps that carry an older store file to it.
 
 A store file records its shape in SQLite's `user_version`. A file from before
 shapes were recorded reads 0 and holds the tables `profiles`, `corrections`,
-`feedback` and `tokens`. `prepare` creates a missing or empty file at the current
-shape and leaves a current file alone. It carries a shape-0 file to the current
-shape in one transaction, keeping where each "Not <genre> at all" note said its
-film belongs from the correction saved with it, giving every note the status
-`open` and every profile no avatar, after copying the file as it stood to a new file beside
-it, which nothing ever overwrites; a start that finds such a copy already there
-makes no other. It refuses, and changes nothing in the store file, a current
-file in which older code has since filed notes into its old `feedback` table, a
-file newer than this code, a file that is not a SQLite database, and an
+`feedback` and `tokens`. Shape 1 holds profiles, notes and tokens. Shape 2 adds
+each profile's tailoring settings and welcome mark, the tables `ratings`,
+`hidden`, `runs` and `run_films`, whose rows go with their profile, and a
+note's mark that the film's tags are wrong; a shape-2 note may name no kind.
+
+`prepare` creates a missing or empty file at the current shape and leaves a
+current file alone. It carries an older file to the current shape in one
+transaction, after copying the file as it stood to a new file beside it, which
+nothing ever overwrites; a start that finds such a copy already there makes no
+other. From shape 0 it keeps where each "Not <genre> at all" note said its film
+belongs from the correction saved with it, gives every note the status `open`
+and every profile no avatar. From shape 1 every profile arrives unmarked, with
+every setting at its default. It refuses, and changes nothing in the store file,
+a file in which older code has since filed notes into its old `feedback` table,
+a file newer than this code, a file that is not a SQLite database, and an
 upgrade that fails or would lose a profile, a token or a note.
 """
 
 from __future__ import annotations
 
+import os
 import sqlite3
 from contextlib import closing
 from datetime import UTC, datetime
 from pathlib import Path
 
-SHAPE = 1
+SHAPE = 2
+
+# What a profile keeps of its own, from shape 2. A rating is 1 ("Hated it") to 5 ("Loved it!") with when and where it
+# was made, the outside service's own value for an imported one, and an optional short review. A hidden film's `until`
+# is empty when it is hidden for good. A run keeps when it began and the films it showed, each with the walk that
+# reached it (its door and answers as a note takes them, what each said, whether "Just pick one!" ended them) and what
+# the viewer did with it there; `before` holds the mark a hide replaced, which its "Undo" restores. A film shown again
+# in the same run moves to the end and keeps its mark (its row's `seq` and walk are rewritten).
+RECORDS = (
+    """CREATE TABLE ratings (
+    profile_id INTEGER NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+    tmdb INTEGER NOT NULL,
+    score INTEGER NOT NULL CHECK (score BETWEEN 1 AND 5),
+    at TEXT NOT NULL,
+    source TEXT NOT NULL,
+    outside TEXT,
+    review TEXT CHECK (review IS NULL OR length(review) BETWEEN 1 AND 100),
+    PRIMARY KEY (profile_id, tmdb)
+)""",
+    "CREATE INDEX ratings_by_film ON ratings (tmdb)",
+    """CREATE TABLE hidden (
+    profile_id INTEGER NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+    tmdb INTEGER NOT NULL,
+    length TEXT NOT NULL CHECK (length IN ('3m', '6m', '1y', 'good')),
+    at TEXT NOT NULL,
+    until TEXT,
+    CHECK ((length = 'good') = (until IS NULL)),
+    PRIMARY KEY (profile_id, tmdb)
+)""",
+    """CREATE TABLE runs (
+    id INTEGER PRIMARY KEY,
+    profile_id INTEGER NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
+    run_key TEXT NOT NULL,
+    began TEXT NOT NULL,
+    UNIQUE (profile_id, run_key)
+)""",
+    """CREATE TABLE run_films (
+    run_id INTEGER NOT NULL REFERENCES runs(id) ON DELETE CASCADE,
+    seq INTEGER NOT NULL,
+    tmdb INTEGER NOT NULL,
+    mark TEXT CHECK (mark IS NULL OR mark IN ('rated', 'hid', 'reported')),
+    before TEXT CHECK (before IS NULL OR before IN ('rated', 'reported')),
+    tree TEXT,
+    answers TEXT NOT NULL DEFAULT '[]',
+    says TEXT NOT NULL DEFAULT '[]',
+    rushed INTEGER NOT NULL DEFAULT 0 CHECK (rushed IN (0, 1)),
+    PRIMARY KEY (run_id, tmdb)
+)""",
+)
 
 TABLES = (
     """CREATE TABLE profiles (
@@ -35,14 +90,20 @@ TABLES = (
     topics TEXT NOT NULL DEFAULT '[]',
     exclusions TEXT NOT NULL DEFAULT '[]',
     created_at TEXT NOT NULL,
-    avatar TEXT
+    avatar TEXT,
+    floor TEXT NOT NULL DEFAULT 'anything'
+        CHECK (floor IN ('anything', 'above_bottom', 'middle', 'above_middle', 'well_liked')),
+    languages TEXT NOT NULL DEFAULT '[]',
+    rated_out INTEGER NOT NULL DEFAULT 1 CHECK (rated_out BETWEEN 0 AND 5),
+    sharing INTEGER NOT NULL DEFAULT 0 CHECK (sharing IN (0, 1)),
+    welcomed INTEGER NOT NULL DEFAULT 0 CHECK (welcomed IN (0, 1))
 )""",
     """CREATE TABLE notes (
     id INTEGER PRIMARY KEY,
     profile_id INTEGER REFERENCES profiles(id) ON DELETE SET NULL,
     tmdb INTEGER NOT NULL,
     tree TEXT NOT NULL,
-    kind TEXT NOT NULL CHECK (kind IN ('genre', 'kind', 'quality')),
+    kind TEXT CHECK (kind IS NULL OR kind IN ('genre', 'kind', 'quality')),
     path TEXT NOT NULL,
     rushed INTEGER NOT NULL,
     comment TEXT NOT NULL,
@@ -52,6 +113,8 @@ TABLES = (
     reason TEXT,
     ruling TEXT,
     ruled_at TEXT,
+    tags INTEGER NOT NULL DEFAULT 0 CHECK (tags IN (0, 1)),
+    CHECK (kind IS NOT NULL OR tags = 1 OR comment <> ''),
     CHECK (
         (status = 'open' AND reason IS NULL AND ruling IS NULL AND ruled_at IS NULL)
         OR (status = 'rejected' AND reason IS NOT NULL AND ruling IS NULL AND ruled_at IS NOT NULL)
@@ -63,6 +126,7 @@ TABLES = (
     profile_id INTEGER NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
     created_at TEXT NOT NULL
 )""",
+    *RECORDS,
 )
 
 # Where a "Not <genre> at all" note says its film belongs was kept only in the correction saved with it: the
@@ -78,7 +142,7 @@ BELONGS_FROM_CORRECTIONS = """UPDATE notes SET belongs = (
         ORDER BY added.tree))
 WHERE kind = 'genre'"""
 
-# Shape 0 to the current shape. Each note keeps its id, so a note named before the upgrade is the same note after,
+# Shape 0 to shape 1. Each note keeps its id, so a note named before the upgrade is the same note after,
 # and outlives the profile that filed it: deleting the profile leaves the note with no profile.
 FROM_SHAPE_0 = (
     TABLES[1],
@@ -89,6 +153,25 @@ FROM_SHAPE_0 = (
     "DROP INDEX IF EXISTS corrections_by_profile",
     "DROP TABLE corrections",
     "ALTER TABLE profiles ADD COLUMN avatar TEXT",
+)
+
+# Shape 1 to shape 2: the settings and welcome mark take their defaults, so every profile arrives unmarked.
+FROM_SHAPE_1 = (
+    "ALTER TABLE profiles ADD COLUMN floor TEXT NOT NULL DEFAULT 'anything'"
+    " CHECK (floor IN ('anything', 'above_bottom', 'middle', 'above_middle', 'well_liked'))",
+    "ALTER TABLE profiles ADD COLUMN languages TEXT NOT NULL DEFAULT '[]'",
+    "ALTER TABLE profiles ADD COLUMN rated_out INTEGER NOT NULL DEFAULT 1 CHECK (rated_out BETWEEN 0 AND 5)",
+    "ALTER TABLE profiles ADD COLUMN sharing INTEGER NOT NULL DEFAULT 0 CHECK (sharing IN (0, 1))",
+    "ALTER TABLE profiles ADD COLUMN welcomed INTEGER NOT NULL DEFAULT 0 CHECK (welcomed IN (0, 1))",
+    *RECORDS,
+    # A note may name no kind (the tags alone, or only words) and may say the tags are wrong, which a table's checks
+    # cannot learn in place: the notes move to a new table, each keeping its id, and none says the tags are wrong.
+    "ALTER TABLE notes RENAME TO notes_shape_1",
+    TABLES[1],
+    "INSERT INTO notes (id, profile_id, tmdb, tree, kind, path, rushed, comment, at, belongs, status, reason, ruling,"
+    " ruled_at) SELECT id, profile_id, tmdb, tree, kind, path, rushed, comment, at, belongs, status, reason, ruling,"
+    " ruled_at FROM notes_shape_1",
+    "DROP TABLE notes_shape_1",
 )
 
 
@@ -138,15 +221,20 @@ def _stranded(db: sqlite3.Connection) -> int:
 def _keep_copy(db: sqlite3.Connection, path: Path) -> Path | None:
     """A copy of the store as it stands, in a new file beside it whose name says what it was kept before.
 
-    None when such a copy is already there: a refused upgrade leaves the store unchanged, so the first copy
-    still holds it, and a start that keeps failing must not fill the disk with copies.
+    The copy is written under a working name and takes its kept name only once whole, so a copy cut short by a
+    crash or a full disk never passes for one. None when a kept copy is already there: a refused upgrade leaves
+    the store unchanged, so the first copy still holds it, and a start that keeps failing must not fill the disk
+    with copies.
     """
     if next(path.parent.glob(f"{path.name}.before-shape-{SHAPE}-*"), None) is not None:
         return None
+    working = path.with_name(f"{path.name}.copying")
+    working.unlink(missing_ok=True)
+    with closing(sqlite3.connect(working)) as dest:
+        db.backup(dest)
     stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%S%fZ")
     copy = path.with_name(f"{path.name}.before-shape-{SHAPE}-{stamp}")
-    with closing(sqlite3.connect(copy)) as dest:
-        db.backup(dest)
+    os.replace(working, copy)
     return copy
 
 
@@ -158,16 +246,19 @@ def _create(db: sqlite3.Connection) -> None:
     db.execute("COMMIT")
 
 
-def _upgrade_from_0(db: sqlite3.Connection) -> None:
-    """Every statement of the upgrade in one transaction, kept only when no profile, token or note is lost."""
+def _upgrade(db: sqlite3.Connection, start: int) -> None:
+    """Every step from shape `start` to the current shape in one transaction, kept only when no profile, token or
+    note is lost."""
+    steps = (FROM_SHAPE_0, FROM_SHAPE_1)[start:]  # read at call time, so a test can stand a step in
     db.execute("BEGIN IMMEDIATE")
     try:
-        if _shape(db) != 0:  # another process upgraded it first
+        if _shape(db) != start:  # another process upgraded it first
             db.execute("ROLLBACK")
             return
-        before = _counts(db, "feedback")
-        for statement in FROM_SHAPE_0:
-            db.execute(statement)
+        before = _counts(db, "feedback" if start == 0 else "notes")
+        for step in steps:
+            for statement in step:
+                db.execute(statement)
         db.execute(f"PRAGMA user_version = {SHAPE}")
         after = _counts(db, "notes")
         if after != before:
@@ -195,17 +286,18 @@ def prepare(path: Path) -> None:
     with closing(_connect(path)) as db:
         try:
             shape = _shape(db)
-            if shape == SHAPE:
-                _refuse_stranded(db)
-                return
             if shape > SHAPE:
                 raise ShapeError(f"the store file has shape {shape}, newer than this code's {SHAPE}")
-            if shape != 0:
+            if shape < 0:
                 raise ShapeError(f"the store file has shape {shape}, which no upgrade starts from")
-            if _empty(db):
+            if shape > 0:
+                _refuse_stranded(db)
+            if shape == SHAPE:
+                return
+            if shape == 0 and _empty(db):
                 _create(db)
                 return
             _keep_copy(db, path)
-            _upgrade_from_0(db)
+            _upgrade(db, shape)
         except sqlite3.Error as exc:
             raise ShapeError(f"the store file cannot be upgraded: {exc}") from exc

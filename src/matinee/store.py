@@ -2,7 +2,9 @@
 
 A profile holds a display name, an optional four-digit PIN, an optional avatar
 (one of `AVATARS`; two profiles may share one) and the DoesTheDogDie topics the
-viewer steers around. The store's `exclusions` column is no longer read or
+viewer steers around, its tailoring settings and whether it has seen the welcome,
+and it keeps ratings, hidden films and its last runs, all of which go with it.
+The store's `exclusions` column is no longer read or
 written; a new row takes its empty default. An
 avatar Matinee does not offer is refused when set and reads as none when found
 in the store. A note is a viewer's complaint about a pick, kept for whoever runs
@@ -30,8 +32,8 @@ import json
 import secrets
 import sqlite3
 import unicodedata
-from collections.abc import Iterable, Sequence
-from contextlib import closing
+from collections.abc import Callable, Iterable, Iterator, Sequence
+from contextlib import closing, contextmanager
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -64,21 +66,28 @@ AVATARS = (
     "vhs",
 )
 Status = Literal["open", "accepted", "rejected"]
+# The rating floor's choices, loosest first: every film; above the bottom 10%; the bottom 40% kept out; only the top
+# 40%; only the top 25% (`matinee.ranks` bands).
+FLOORS = ("anything", "above_bottom", "middle", "above_middle", "well_liked")
+# The rated-films setting: films rated this or lower stay out of the profile's picks; 0 keeps every rated film in.
+RATED_OUT = range(0, 6)
 NOTE_SELECT = "SELECT n.*, p.name AS profile FROM notes AS n LEFT JOIN profiles AS p ON p.id = n.profile_id"
 
 
 @dataclass(frozen=True)
 class Note:
-    """A viewer's note on one pick: what was wrong with it, the answers that led there, and why."""
+    """A viewer's note on one pick: what was wrong with its place (`kind`, None when the note does not say), whether its
+    tags are wrong, the answers that led there, and why. A note says at least one of the three."""
 
     profile_id: int
     tmdb: int
     tree: str
-    kind: Literal["genre", "kind", "quality"]
+    kind: Literal["genre", "kind", "quality"] | None
     path: tuple[str, ...]
     rushed: bool
     comment: str
     belongs: tuple[str, ...] = ()  # where a "Not <genre> at all" note says the film belongs
+    tags: bool = False
 
 
 @dataclass(frozen=True)
@@ -89,12 +98,13 @@ class FiledNote:
     profile: str | None
     tmdb: int
     tree: str
-    kind: str
+    kind: str | None
     path: tuple[str, ...]
     rushed: bool
     comment: str
     at: str
     belongs: tuple[str, ...]
+    tags: bool
     status: Status
     reason: str | None
     ruling: str | None
@@ -115,13 +125,32 @@ class Locked(StoreError):
         self.until = until
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, kw_only=True)
 class Profile:
+    """A profile and its tailoring settings: the rating floor (one of FLOORS), the languages it watches in (none
+    ticked: any language), the rated-films setting (RATED_OUT), whether it shares its ratings with the household, and
+    whether it has seen this feature's welcome."""
+
     id: int
     name: str
     has_pin: bool
     topics: frozenset[int]
     avatar: str | None = None
+    floor: str
+    languages: frozenset[str]
+    rated_out: int
+    sharing: bool
+    welcomed: bool
+
+
+@dataclass(frozen=True)
+class Settings:
+    """A change to a profile's settings; None leaves that setting as it is."""
+
+    floor: str | None = None
+    languages: frozenset[str] | None = None
+    rated_out: int | None = None
+    sharing: bool | None = None
 
 
 def name_key(name: str) -> str:
@@ -168,17 +197,23 @@ def _filed(row: sqlite3.Row) -> FiledNote:
         profile=None if row["profile"] is None else str(row["profile"]),
         tmdb=int(row["tmdb"]),
         tree=str(row["tree"]),
-        kind=str(row["kind"]),
+        kind=None if row["kind"] is None else str(row["kind"]),
         path=tuple(str(p) for p in json.loads(row["path"])),
         rushed=bool(row["rushed"]),
         comment=str(row["comment"]),
         at=str(row["at"]),
         belongs=tuple(str(t) for t in json.loads(row["belongs"])),
+        tags=bool(row["tags"]),
         status=_status(str(row["status"])),
         reason=row["reason"],
         ruling=row["ruling"],
         ruled_at=row["ruled_at"],
     )
+
+
+def shown_avatar(stored: object) -> str | None:
+    """An avatar as the page shows it: one Matinee offers, or None (the initials) for anything else found stored."""
+    return stored if isinstance(stored, str) and stored in AVATARS else None
 
 
 def clean_avatar(avatar: str | None) -> str | None:
@@ -195,7 +230,8 @@ def _pin_digest(pin: str, salt: bytes) -> bytes:
     return hashlib.scrypt(pin.encode(), salt=salt, **SCRYPT)
 
 
-def _now() -> str:
+def now() -> str:
+    """The time as the store keeps it: ISO 8601 in UTC."""
     return datetime.now(UTC).isoformat()
 
 
@@ -219,7 +255,12 @@ class Store:
             name=str(row["name"]),
             has_pin=row["pin_hash"] is not None,
             topics=frozenset(int(t) for t in json.loads(row["topics"])),
-            avatar=row["avatar"] if row["avatar"] in AVATARS else None,
+            avatar=shown_avatar(row["avatar"]),
+            floor=str(row["floor"]),
+            languages=frozenset(str(code) for code in json.loads(row["languages"])),
+            rated_out=int(row["rated_out"]),
+            sharing=bool(row["sharing"]),
+            welcomed=bool(row["welcomed"]),
         )
 
     def _issue(self, db: sqlite3.Connection, profile_id: int) -> str:
@@ -227,13 +268,15 @@ class Store:
         cutoff = datetime.fromtimestamp(datetime.now(UTC).timestamp() - TOKEN_LIFE_S, UTC).isoformat()
         db.execute("DELETE FROM tokens WHERE created_at < ?", (cutoff,))
         token = secrets.token_urlsafe(32)
-        db.execute("INSERT INTO tokens VALUES (?, ?, ?)", (_digest(token), profile_id, _now()))
+        db.execute("INSERT INTO tokens VALUES (?, ?, ?)", (_digest(token), profile_id, now()))
         return token
 
     def create(
         self, name: str, pin: str | None, topics: Iterable[int], avatar: str | None = None
     ) -> tuple[Profile, str]:
-        """A new profile and a device token for it; refuses a taken name, a bad PIN or avatar, or a full store."""
+        """A new profile and a device token for it; refuses a taken name, a bad PIN or avatar, or a full store.
+
+        A profile made now is marked as having seen the welcome: making it already offers the tailoring steps."""
         display, pin, avatar = clean_name(name), clean_pin(pin), clean_avatar(avatar)
         salt = secrets.token_bytes(16) if pin else None
         with closing(self._connect()) as db, db:
@@ -242,15 +285,15 @@ class Store:
                 raise StoreError("full", f"Matinee holds at most {MAX_PROFILES} profiles")
             try:
                 cur = db.execute(
-                    "INSERT INTO profiles (name, name_key, pin_salt, pin_hash, topics, created_at, avatar)"
-                    " VALUES (?, ?, ?, ?, ?, ?, ?)",
+                    "INSERT INTO profiles (name, name_key, pin_salt, pin_hash, topics, created_at, avatar, welcomed)"
+                    " VALUES (?, ?, ?, ?, ?, ?, ?, 1)",
                     (
                         display,
                         name_key(display),
                         salt,
                         _pin_digest(pin, salt) if pin and salt else None,
                         json.dumps(sorted(set(topics))),
-                        _now(),
+                        now(),
                         avatar,
                     ),
                 )
@@ -281,7 +324,16 @@ class Store:
         return [self._profile(r) for r in rows]
 
     @staticmethod
-    def _held(db: sqlite3.Connection, profile_id: int, tokens: Sequence[str]) -> sqlite3.Row:
+    def _issued(db: sqlite3.Connection, profile_id: int, tokens: Sequence[str]) -> sqlite3.Row | None:
+        """The profile, when one of these device tokens is issued for it; None otherwise."""
+        issued = {str(r[0]) for r in db.execute("SELECT token_hash FROM tokens WHERE profile_id = ?", (profile_id,))}
+        held: sqlite3.Row | None = db.execute("SELECT * FROM profiles WHERE id = ?", (profile_id,)).fetchone()
+        if held is None or not issued & {_digest(t) for t in tokens}:
+            return None
+        return held
+
+    @classmethod
+    def _held(cls, db: sqlite3.Connection, profile_id: int, tokens: Sequence[str]) -> sqlite3.Row:
         """The profile, inside the caller's write transaction, when one of these device tokens is issued for it.
 
         Checking and writing in one transaction means a profile deleted, and its id reused by a new profile,
@@ -289,11 +341,27 @@ class Store:
         device's tokens.
         """
         db.execute("BEGIN IMMEDIATE")
-        issued = {str(r[0]) for r in db.execute("SELECT token_hash FROM tokens WHERE profile_id = ?", (profile_id,))}
-        held: sqlite3.Row | None = db.execute("SELECT * FROM profiles WHERE id = ?", (profile_id,)).fetchone()
-        if held is None or not issued & {_digest(t) for t in tokens}:
+        held = cls._issued(db, profile_id, tokens)
+        if held is None:
             raise StoreError("not_held", "this device holds no token for that profile")
         return held
+
+    @contextmanager
+    def writing(self, profile_id: int, by: Sequence[str]) -> Iterator[sqlite3.Connection]:
+        """One write transaction on what a profile keeps, opened only for a profile one of the tokens `by` is issued
+        for, and committed when the block ends without an error."""
+        with closing(self._connect()) as db, db:
+            self._held(db, profile_id, by)
+            yield db
+
+    @contextmanager
+    def reading(self, profile_id: int, by: Sequence[str]) -> Iterator[sqlite3.Connection]:
+        """A connection that reads what a profile keeps, opened only for a profile one of the tokens `by` is issued
+        for."""
+        with closing(self._connect()) as db:
+            if self._issued(db, profile_id, by) is None:
+                raise StoreError("not_held", "this device holds no token for that profile")
+            yield db
 
     def set_topics(self, profile_id: int, topics: Iterable[int], by: Sequence[str]) -> Profile:
         """Replace the saved DoesTheDogDie topics of a profile one of the device tokens `by` is issued for."""
@@ -308,6 +376,21 @@ class Store:
         with closing(self._connect()) as db, db:
             return db.execute("UPDATE profiles SET topics = '[]' WHERE topics != '[]'").rowcount
 
+    def rename(self, profile_id: int, name: str, by: Sequence[str]) -> Profile:
+        """Rename a profile `by` holds, under the rules a new profile's name follows; its own name in another case is
+        allowed, and another profile's is refused as name_taken."""
+        display = clean_name(name)
+        with closing(self._connect()) as db, db:
+            self._held(db, profile_id, by)
+            try:
+                db.execute(
+                    "UPDATE profiles SET name = ?, name_key = ? WHERE id = ?", (display, name_key(display), profile_id)
+                )
+            except sqlite3.IntegrityError as exc:
+                raise StoreError("name_taken", "that name is already a profile") from exc
+            row = db.execute("SELECT * FROM profiles WHERE id = ?", (profile_id,)).fetchone()
+        return self._profile(row)
+
     def set_avatar(self, profile_id: int, avatar: str | None, by: Sequence[str]) -> Profile:
         """Set the avatar of a profile `by` holds, or clear it for initials; refuses an avatar not offered."""
         avatar = clean_avatar(avatar)
@@ -317,13 +400,57 @@ class Store:
             row = db.execute("SELECT * FROM profiles WHERE id = ?", (profile_id,)).fetchone()
         return self._profile(row)
 
-    def note(self, n: Note, by: Sequence[str]) -> None:
-        """Keep one viewer's note on a pick for review, filed by a profile `by` holds: what was wrong and why."""
+    def profile(self, profile_id: int, by: Sequence[str]) -> Profile:
+        """The profile with its settings, when one of the tokens `by` is issued for it; not_held otherwise."""
+        with closing(self._connect()) as db:
+            row = self._issued(db, profile_id, by)
+        if row is None:
+            raise StoreError("not_held", "this device holds no token for that profile")
+        return self._profile(row)
+
+    def set_settings(self, profile_id: int, change: Settings, known: frozenset[str], by: Sequence[str]) -> Profile:
+        """Change the settings of a profile `by` holds. Refuses a floor or rated-films choice that is not offered, and a
+        newly ticked language that is not in `known` (the languages the film table holds); a language already ticked
+        stays kept whether or not the table still holds it."""
+        if change.floor is not None and change.floor not in FLOORS:
+            raise StoreError("bad_setting", f"the rating floor is one of {', '.join(FLOORS)}")
+        if change.rated_out is not None and change.rated_out not in RATED_OUT:
+            raise StoreError("bad_setting", "the rated-films setting is a rating from 0 to 5")
+        with closing(self._connect()) as db, db:
+            row = self._held(db, profile_id, by)
+            kept = frozenset(str(code) for code in json.loads(row["languages"]))
+            if change.languages is not None and change.languages - known - kept:
+                raise StoreError("bad_language", "that language is not one the film table holds")
+            languages = kept if change.languages is None else change.languages
+            db.execute(
+                "UPDATE profiles SET floor = ?, languages = ?, rated_out = ?, sharing = ? WHERE id = ?",
+                (
+                    row["floor"] if change.floor is None else change.floor,
+                    json.dumps(sorted(languages)),
+                    row["rated_out"] if change.rated_out is None else change.rated_out,
+                    row["sharing"] if change.sharing is None else int(change.sharing),
+                    profile_id,
+                ),
+            )
+            row = db.execute("SELECT * FROM profiles WHERE id = ?", (profile_id,)).fetchone()
+        return self._profile(row)
+
+    def welcome(self, profile_id: int, by: Sequence[str]) -> Profile:
+        """Mark a profile `by` holds as having seen this feature's welcome; it never shows again."""
+        with closing(self._connect()) as db, db:
+            self._held(db, profile_id, by)
+            db.execute("UPDATE profiles SET welcomed = 1 WHERE id = ?", (profile_id,))
+            row = db.execute("SELECT * FROM profiles WHERE id = ?", (profile_id,)).fetchone()
+        return self._profile(row)
+
+    def note(self, n: Note, by: Sequence[str], also: Callable[[sqlite3.Connection], None] | None = None) -> None:
+        """Keep one viewer's note on a pick for review, filed by a profile `by` holds: what was wrong and why. `also`
+        runs inside the same write, so what it records stands or falls with the note."""
         with closing(self._connect()) as db, db:
             self._held(db, n.profile_id, by)
             db.execute(
-                "INSERT INTO notes (profile_id, tmdb, tree, kind, path, rushed, comment, at, belongs)"
-                " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                "INSERT INTO notes (profile_id, tmdb, tree, kind, path, rushed, comment, at, belongs, tags)"
+                " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 (
                     n.profile_id,
                     n.tmdb,
@@ -332,10 +459,13 @@ class Store:
                     json.dumps(list(n.path)),
                     int(n.rushed),
                     n.comment,
-                    _now(),
+                    now(),
                     json.dumps(sorted(set(n.belongs))),
+                    int(n.tags),
                 ),
             )
+            if also is not None:
+                also(db)
 
     def notes(self, status: Status = "open") -> list[FiledNote]:
         """Every note with this status, oldest first."""
@@ -370,12 +500,13 @@ class Store:
                 raise StoreError("no_note", f"no note {note_id}")
             db.execute(
                 "UPDATE notes SET status = ?, reason = ?, ruling = ?, ruled_at = ? WHERE id = ?",
-                (status, reason, kept, _now(), note_id),
+                (status, reason, kept, now(), note_id),
             )
         return _filed(row)
 
     def delete(self, profile_id: int, by: Sequence[str]) -> Profile:
-        """Delete a profile `by` holds, its topics and every device token issued for it; its notes stay."""
+        """Delete a profile `by` holds with everything it keeps: its settings, every device token issued for it, its
+        ratings, hidden films and runs. Its notes stay."""
         with closing(self._connect()) as db, db:
             row = self._held(db, profile_id, by)
             db.execute("DELETE FROM profiles WHERE id = ?", (profile_id,))

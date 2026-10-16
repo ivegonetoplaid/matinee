@@ -11,6 +11,7 @@ from __future__ import annotations
 import logging
 import secrets
 from collections.abc import Sequence
+from dataclasses import dataclass
 from typing import Any, Literal
 
 import numpy as np
@@ -19,8 +20,22 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from matinee.dtdd import Dtdd, DtddError
-from matinee.engine import Answer, Catalog, Source, Viewer, first_question, gentlest, opening_pool, walk
+from matinee.engine import (
+    Answer,
+    Catalog,
+    Mask,
+    Source,
+    Viewer,
+    allowed_films,
+    first_question,
+    gentlest,
+    opening_pool,
+    walk,
+    walk_kept,
+)
+from matinee.languages import heard_only
 from matinee.pick import Pick, Picker, candidates
+from matinee.records import Records, clean_run
 from matinee.store import Note, Profile, Store
 from matinee.trees import Tree
 from matinee.web.common import COOKIE_AGE_S, Seat, device_tokens, optional_int, over_https, problem, seat
@@ -32,6 +47,8 @@ log = logging.getLogger("matinee.web")
 DTDD_CREDIT = "Powered by DoesTheDogDie.com"
 DTDD_LINK = "https://www.doesthedogdie.com"
 TOPICS_UNAVAILABLE = "I can't load the list of topics right now."
+# A note from My profile on a film whose door or answers have since changed or gone.
+WALK_GONE = "My questions have changed since I showed you this film, so I can't take a note on how you got there."
 
 
 class ViewerIn(BaseModel):
@@ -116,6 +133,10 @@ class FirstOut(BaseModel):
     checked: bool  # this viewer's picks are checked against DoesTheDogDie: a key is set and they hold topics
     source: SourceQuestionOut | None = None  # asked first, before the doors; None when it is not asked
     fallback: str | None = None
+    # When a profile's settings and hidden films leave no door: the films the first question would hold with none of
+    # them (no settings, no topics, nothing hidden), which the page says. None whenever a door is offered.
+    unsettled: int | None = None
+    narrowed: bool = False  # this viewer's settings or hidden films leave fewer films than `pool` would hold without
 
 
 class TopicOut(BaseModel):
@@ -142,11 +163,13 @@ class NoteIn(BaseModel):
     profile_id: int
     tmdb: int
     tree: str = Field(max_length=40)
-    kind: Literal["genre", "kind", "quality"]
+    kind: Literal["genre", "kind", "quality"] | None = None  # where it was sorted wrong; None: not said
+    tags: bool = False  # its tags don't fit it
     answers: list[AnswerIn] = Field(default=[], max_length=12)
     rushed: bool = False
     comment: str = Field(default="", max_length=500)
     belongs: list[str] = Field(default=[], max_length=32)  # "Not <genre> at all": where the film belongs
+    run: str | None = Field(default=None, max_length=64)  # the run the pick showed it in, where it is marked reported
 
 
 class FilmRef(BaseModel):
@@ -162,16 +185,25 @@ class SwapOut(BaseModel):
     reveal: str
 
 
+class HeardOut(BaseModel):
+    """A pick in a language the viewer did not tick, offered for its library copy's audio in ones they did."""
+
+    original: str  # the film's own language, TMDB's two-letter code
+    audio: list[str]  # the ticked languages its copy's audio is in
+
+
 class LastOut(BaseModel):
-    """A tired pick's last film turned away, the topics it trips, and the two lines that show it."""
+    """A tired pick's last film turned away, the topics it trips, the two lines that show it, and its language line."""
 
     film: FilmRef
     topics: list[str]
     lines: list[str]
+    heard: HeardOut | None = None
 
 
 class PickOut(BaseModel):
     film: FilmRef | None
+    heard: HeardOut | None = None
     swapped: SwapOut | None
     last: LastOut | None
     unchecked: str | None
@@ -193,6 +225,12 @@ def everything(cat: Catalog, viewer: Viewer) -> list[int]:
     for option in first_question(cat, viewer):
         every |= opening_pool(cat, option.tree, viewer)
     return [int(t) for t in cat.ids[every]]
+
+
+def unsettled(cat: Catalog, viewer: Viewer) -> int | None:
+    """The films the first question would hold within the viewer's source with none of their settings, topics or
+    hidden films; None when there are none, since then it is not the settings that leave nothing (§21)."""
+    return len(everything(cat, Viewer(source=viewer.source))) or None
 
 
 def held_profile(request: Request, store: Store, profile_id: int) -> Profile:
@@ -235,24 +273,44 @@ def walk_notice(answer: Source | None, showing: Showing, server: str | None, see
 
 
 def resolve(
-    request: Request, store: Store, v: ViewerIn, topics_on: bool, source: Source = "all"
+    request: Request, seat: Seating, v: ViewerIn, topics_on: bool, source: Source = "all"
 ) -> tuple[Viewer, Profile | None]:
-    """The engine's viewer within `source`: a held profile's saved topics, or none when no profile is named.
+    """The engine's viewer within `source`: a held profile's saved topics, its settings and its hidden and rated
+    films, read afresh on every request; or none when no profile is named.
 
     Without a DoesTheDogDie key (`topics_on` false) a profile's stored topics stay in the store and have no effect.
     """
     if v.profile_id is None:
         return Viewer(source=source), None
-    profile = held_profile(request, store, v.profile_id)
-    return Viewer(topics=profile.topics if topics_on else frozenset(), source=source), profile
+    profile = held_profile(request, seat.store, v.profile_id)
+    topics = profile.topics if topics_on else frozenset()
+    allowed = seat.allowed(profile, device_tokens(request))
+    viewer = Viewer(topics=topics, source=source, allowed=allowed, floor=profile.floor, languages=profile.languages)
+    return viewer, profile
 
 
-def resolve_held(request: Request, store: Store, v: ViewerIn, topics_on: bool, source: Source = "all") -> Viewer:
+def resolve_held(request: Request, seat: Seating, v: ViewerIn, topics_on: bool, source: Source = "all") -> Viewer:
     """The engine's viewer for a walk or a pick, which runs only under a profile this device holds; 403 otherwise."""
-    viewer, profile = resolve(request, store, v, topics_on, source)
+    viewer, profile = resolve(request, seat, v, topics_on, source)
     if profile is None:
         raise HTTPException(status_code=403, detail="refused")
     return viewer
+
+
+@dataclass(frozen=True)
+class Seating:
+    """Where a request's viewer is read from: the store, the profiles' own records, and the catalogue in use."""
+
+    store: Store
+    records: Records
+    cat: Catalog
+
+    def allowed(self, profile: Profile, tokens: Sequence[str]) -> Mask | None:
+        """The films the profile may be offered: not hidden, not rated at or below its rated-films setting, and in a
+        ticked language; None when nothing narrows."""
+        hidden = {h.tmdb for h in self.records.hidden(profile.id, tokens)}
+        rated = {r.tmdb for r in self.records.ratings(profile.id, tokens) if r.score <= profile.rated_out}
+        return allowed_films(self.cat.table, frozenset(hidden | rated), profile.languages)
 
 
 DEVICE_COOKIE = "matinee_device"
@@ -305,19 +363,31 @@ def _swap_out(films: Any, result: Pick) -> SwapOut | None:
     )
 
 
-def _last_out(films: Any, result: Pick) -> LastOut | None:
+def _last_out(films: Any, result: Pick, ticked: frozenset[str]) -> LastOut | None:
     if result.last is None:
         return None
     names = [h.name for h in result.last_hits]
     gold, cream = PICKED
-    return LastOut(film=film_ref(films, result.last), topics=names, lines=[gold, cream.format(topic=names[0])])
+    return LastOut(
+        film=film_ref(films, result.last),
+        topics=names,
+        lines=[gold, cream.format(topic=names[0])],
+        heard=heard_out(films, result.last, ticked),
+    )
 
 
-def pick_out(films: Any, result: Pick, fallback: str | None = None) -> PickOut:
+def heard_out(films: Any, tmdb: int, ticked: frozenset[str]) -> HeardOut | None:
+    row = films.loc[tmdb]
+    audio = heard_only(row.language, row.audio, ticked)
+    return HeardOut(original=str(row.language), audio=audio) if audio else None
+
+
+def pick_out(films: Any, result: Pick, fallback: str | None = None, ticked: frozenset[str] = frozenset()) -> PickOut:
     return PickOut(
         film=None if result.film is None else film_ref(films, result.film),
+        heard=None if result.film is None else heard_out(films, result.film, ticked),
         swapped=_swap_out(films, result),
-        last=_last_out(films, result),
+        last=_last_out(films, result, ticked),
         unchecked=None if result.unchecked is None else UNCHECKED_LINES[result.unchecked],
         dtdd_item=result.item,
         exhausted=_no_film_line(result),
@@ -359,7 +429,13 @@ def add_topic_routes(app: FastAPI, store: Store, dtdd: Dtdd) -> None:
 
 
 def add_viewing_routes(
-    app: FastAPI, theatre: Theatre, store: Store, topics_on: bool, server: str | None, seerr: SeerrCheck
+    app: FastAPI,
+    theatre: Theatre,
+    store: Store,
+    records: Records,
+    topics_on: bool,
+    server: str | None,
+    seerr: SeerrCheck,
 ) -> None:
     @app.post("/api/first")
     def first(body: FirstIn, request: Request) -> FirstOut:
@@ -367,7 +443,8 @@ def add_viewing_routes(
         within its answer, and the films the wall shows behind them."""
         showing = theatre.showing()
         cat = showing.catalog
-        viewer, profile = resolve(request, store, body.viewer, topics_on, source_for(body.source, showing))
+        seat = Seating(store, records, cat)
+        viewer, profile = resolve(request, seat, body.viewer, topics_on, source_for(body.source, showing))
         options = [FirstOptionOut(say=o.say, tree=o.tree, label=o.label) for o in first_question(cat, viewer)]
         question = None
         if body.source is None and asks_source(showing):
@@ -375,21 +452,25 @@ def add_viewing_routes(
                 ask=cat.source_ask,
                 options=[SourceOptionOut(say=o.say, source=o.source, reply=o.reply) for o in cat.source_options],
             )
+        pool = everything(cat, viewer)
         return FirstOut(
             lines=list(cat.first_lines),
             name=profile.name if profile else None,
             options=options,
-            pool=everything(cat, viewer),
+            pool=pool,
             checked=bool(viewer.topics),
             source=question,
             fallback=walk_notice(body.source, showing, server, seerr),
+            unsettled=None if options or profile is None else unsettled(cat, viewer),
+            narrowed=profile is not None and len(pool) < len(everything(cat, Viewer(source=viewer.source))),
         )
 
     @app.post("/api/walk")
     def walk_tree(body: WalkIn, request: Request) -> StepOut:
         showing = theatre.showing()
         cat = showing.catalog
-        viewer = resolve_held(request, store, body.viewer, topics_on, source_for(body.source, showing))
+        seat = Seating(store, records, cat)
+        viewer = resolve_held(request, seat, body.viewer, topics_on, source_for(body.source, showing))
         step = walk(cat, body.tree, viewer, [Answer(a.question, a.option) for a in body.answers])
         question = None
         if step.question is not None:
@@ -432,21 +513,37 @@ def check_belongs(cat: Catalog, body: NoteIn) -> None:
         raise HTTPException(status_code=400, detail="refused")
 
 
-def add_note_routes(app: FastAPI, theatre: Theatre, store: Store) -> None:
-    @app.post("/api/notes")
-    def note(body: NoteIn, request: Request) -> NoteOut:
-        """Keep a viewer's note on a pick for whoever runs Matinee; it changes nothing any viewer is shown."""
+def check_says(body: NoteIn) -> None:
+    """A note says at least one thing: where the film was sorted wrong, that its tags don't fit, or words."""
+    if body.kind is None and not body.tags and not body.comment.strip():
+        raise HTTPException(status_code=400, detail="refused")
+
+
+def add_note_routes(app: FastAPI, theatre: Theatre, store: Store, records: Records) -> None:
+    @app.post("/api/notes", response_model=None)
+    def note(body: NoteIn, request: Request) -> NoteOut | JSONResponse:
+        """Keep a viewer's note on a pick for whoever runs Matinee; it changes nothing any viewer is shown. A walk
+        whose door or answers the catalogue no longer holds (a note from My profile after an update) is refused in
+        words."""
         held_profile(request, store, body.profile_id)
+        if body.run is not None:
+            clean_run(body.run)  # refused before the note is kept, never after
         cat = theatre.showing().catalog
-        tree = cat.trees.get(body.tree)
-        if tree is None or body.tmdb not in cat.table.films.index:
+        if body.tmdb not in cat.table.films.index:
             raise HTTPException(status_code=400, detail="refused")
+        tree = cat.trees.get(body.tree)
+        try:
+            path = tuple(answer_says(tree, body.answers)) if tree else None
+        except HTTPException:
+            path = None
+        if tree is None or path is None:
+            return problem(400, "walk_gone", WALK_GONE)
+        check_says(body)
         check_belongs(cat, body)
-        path = tuple(answer_says(tree, body.answers))
         comment, belongs = body.comment.strip(), tuple(body.belongs)
-        note = Note(body.profile_id, body.tmdb, body.tree, body.kind, path, body.rushed, comment, belongs)
-        store.note(note, device_tokens(request))
-        return NoteOut(lines=NOTED)
+        note = Note(body.profile_id, body.tmdb, body.tree, body.kind, path, body.rushed, comment, belongs, body.tags)
+        records.report(note, body.run, device_tokens(request))
+        return NoteOut(lines=NOTED if body.kind else NOTED[:1])  # only a sort choice can move a film
 
 
 def pick_pool(cat: Catalog, viewer: Viewer, body: PickIn) -> tuple[list[int], str | None]:
@@ -455,7 +552,7 @@ def pick_pool(cat: Catalog, viewer: Viewer, body: PickIn) -> tuple[list[int], st
         if body.answers:
             raise HTTPException(status_code=400, detail="refused")
         return everything(cat, viewer), None
-    step = walk(cat, body.tree, viewer, [Answer(a.question, a.option) for a in body.answers])
+    step = walk_kept(cat, body.tree, viewer, [Answer(a.question, a.option) for a in body.answers])
     return list(step.pool), step.prefer
 
 
@@ -463,6 +560,7 @@ def add_pick_routes(
     app: FastAPI,
     theatre: Theatre,
     store: Store,
+    records: Records,
     picker: Picker,
     topics_on: bool,
     server: str | None,
@@ -473,13 +571,15 @@ def add_pick_routes(
         """One film from the pool the answers leave, checked against the viewer's topics before it is shown."""
         showing = theatre.showing()
         cat = showing.catalog
-        viewer = resolve_held(request, store, body.viewer, topics_on, source_for(body.source, showing))
+        seat = Seating(store, records, cat)
+        viewer = resolve_held(request, seat, body.viewer, topics_on, source_for(body.source, showing))
         left, prefer = pick_pool(cat, viewer, body)
         films = cat.table.films
         ratings = dict(zip(films.index.tolist(), films.rating.fillna(0.0).tolist(), strict=True))
         pool = candidates(left, body.seen, ratings, prefer)
         note = walk_notice(body.source, showing, server, seerr)
-        if left and not pool:
+        if not pool:
             return pick_out(films, Pick(None, used_up=True), note)
         device = device_id(request, response) if viewer.topics else ""
-        return pick_out(films, picker.pick(pool, viewer.topics, device, gentlest(cat, viewer, pool)), note)
+        drawn = picker.pick(pool, viewer.topics, device, gentlest(cat, viewer, pool))
+        return pick_out(films, drawn, note, viewer.languages)

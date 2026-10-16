@@ -2,21 +2,29 @@
 
 import { del, get, post, put } from "./api.js";
 import { noteLink, walkOf } from "./note.js";
-import { aboutLink, dtddFoot } from "./credits.js";
+import { aboutLink, dtddFoot, dtddSetting } from "./credits.js";
 import { Door, buildMarquee, marqueeReady, showCount } from "./door.js";
 import { LockedDoor, WALL_FADE_MS } from "./locked.js";
 import { clear, h, isPhone, prefersLessMotion, sentenceCase, wait } from "./dom.js";
 import { cornerMark } from "./flight.js";
 import { pickPanel } from "./panel.js";
-import { asPick, newestFirst, remember } from "./run.js";
+import { asPick, newestFirst, remember, runKey, shownBody } from "./run.js";
+import { undoLink } from "./hide.js";
 import { answerRows, forget, stepBack, wayTo } from "./way-back.js";
-import { showPick } from "./pick.js";
+import { showPick, swapPick } from "./pick.js";
 import { posterPaths } from "./pictures.js";
 import { Deck, dealBeneath, dealPair, setFor } from "./quips.js";
 import { lightFuse } from "./fuse.js";
 import { typeLine } from "./type.js";
 import { Wall } from "./wall.js";
 import { viewerTag } from "./viewer.js";
+import { isOpen as profileOpen, openProfile, profileLayer, refreshFilms } from "./profile.js";
+import { keptWalk, openOverlay } from "./overlay.js";
+import { answerOf } from "./ratings.js";
+import { settingsPart } from "./settings.js";
+import { ALL_SET, WELCOME, WHATS_NEW, tailorSteps } from "./tailor.js";
+import { hiddenPart, hiddenUntil, ratedPart } from "./cases.js";
+import { shownPart } from "./shelves.js";
 import { learnOffers, offers } from "./offers.js";
 
 const stage = document.getElementById("stage");
@@ -43,6 +51,7 @@ const visit = {
   pool: [],
   trees: [],
   run: [], // the films this run has shown on screen, oldest first (run.js)
+  runKey: null, // the key the server keeps this run's history under, new at every run's start
 };
 
 const CHECKING = "Let me check this one against your list.";
@@ -50,6 +59,14 @@ const CHECKING = "Let me check this one against your list.";
 // The films still in the running, beside "Just pick one!", with thousands separators.
 function countText(n) {
   return `${n.toLocaleString("en")} ${n === 1 ? "film" : "films"} to choose from`;
+}
+
+// The source question's count, which covers the library's films only, and says when the viewer's settings or
+// hidden films have already cut them.
+function ourCountText(n, narrowed) {
+  const ours = `${n.toLocaleString("en")} of our films`; // "1 of our films" reads right too
+  if (narrowed) return `${ours} ${n === 1 ? "fits" : "fit"} your settings`;
+  return `${ours} to choose from`;
 }
 
 // The pick's lines, fetched once per page, once the device is admitted; null until they arrive, or when they
@@ -116,20 +133,74 @@ function topbar(...rest) {
 // The viewer at the right of the top bar: their mark and name, which open the profile menu.
 function nameTag() {
   if (!visit.name) return null;
-  const leave = (opts) => leaveTo(() => boot(opts));
+  return viewerTag(
+    { name: visit.name, avatar: visit.avatar },
+    { myProfile: (opener) => myProfile(opener), switchProfiles: () => leaveTo(() => boot({})) },
+  );
+}
+
+async function saveAvatar(id, avatar) {
+  const res = await put(`/api/profiles/${id}/avatar`, { avatar });
+  if (res.ok) visit.avatar = res.data.avatar;
+  return res;
+}
+
+// The top bar's viewer, drawn again with the name and avatar the viewer now has.
+function redrawTag() {
+  const old = stage.querySelector(".topbar .viewer");
+  if (old) old.replaceWith(nameTag());
+}
+
+// My profile, over the theatre as it stands; `at` opens it at one of its parts, and `then` runs as it closes.
+function myProfile(opener = null, at = null, then = null) {
   const id = visit.viewer.profile_id;
-  return viewerTag({ name: visit.name, avatar: visit.avatar }, avatarsOffered, {
-    editList: offers.dtdd ? () => leave({ screen: "list", profileId: id }) : null,
-    switchProfiles: () => leave({}),
-    deleteProfile: async () => {
-      const res = await del(`/api/profiles/${id}`);
-      if (res.ok) leave({ said: [`${res.data.name}'s seat is empty.`, "Who's watching?"] });
-      return res;
+  const viewer = { id, name: visit.name, avatar: visit.avatar };
+  const openFilm = (from, film, did, walk) =>
+    openOverlay({ layer: profileLayer(), film, did, walk, opener: from, viewer, poster: (tmdb, size) => wall.posterUrl(tmdb, size), trees: () => visit.trees, changed: refreshFilms });
+  return openProfile({
+    viewer,
+    avatars: avatarsOffered,
+    opener,
+    at,
+    then,
+    parts: {
+      tailor: (body) => settingsPart(body, { id, dtdd: offers.dtdd, credit: dtddSetting }),
+      rated: (body, mine) =>
+        ratedPart(body, mine.ratings, {
+          poster: (tmdb) => wall.posterUrl(tmdb, "m"),
+          phone: isPhone(),
+          onOpen: (r, opener) => openFilm(opener, r, `You rated it: ${answerOf(r.score)}`, keptWalk(r.tmdb, mine.runs)),
+        }),
+      shown: (body, mine) =>
+        shownPart(body, mine.runs, mine.ratings, {
+          poster: (tmdb, size) => wall.posterUrl(tmdb, size),
+          phone: isPhone(),
+          onOpen: (f, did, opener) => openFilm(opener, f, did, f.walk),
+        }),
+      hidden: (body, mine, { recount }) =>
+        hiddenPart(body, mine.hidden, {
+          id,
+          poster: (tmdb) => wall.posterUrl(tmdb, "m"),
+          recount,
+          onOpen: (f, opener) => openFilm(opener, f, hiddenUntil(f.until), keptWalk(f.tmdb, mine.runs)),
+        }),
     },
-    saveAvatar: async (avatar) => {
-      const res = await put(`/api/profiles/${id}/avatar`, { avatar });
-      if (res.ok) visit.avatar = res.data.avatar;
-      return res;
+    actions: {
+      saveAvatar: async (avatar) => {
+        const res = await saveAvatar(id, avatar);
+        if (res.ok) redrawTag();
+        return res;
+      },
+      renamed: (seat) => {
+        visit.name = seat.name;
+        redrawTag();
+      },
+      switchProfiles: () => leaveTo(() => boot({})),
+      deleteProfile: async ({ leaving }) => {
+        const res = await del(`/api/profiles/${id}`);
+        if (res.ok) leaving(() => leaveTo(() => boot({ said: [`${res.data.name}'s seat is empty.`, "Who's watching?"] })));
+        return res;
+      },
     },
   });
 }
@@ -318,7 +389,7 @@ async function askPictures() {
   picturesKnown = true;
 }
 
-// The box office. `opts.screen` opens it on a new profile ("new") or the viewer's list ("list").
+// The box office. `opts.screen` "new" opens it on a new profile.
 // When a door word is set and this device has not given it, the locked door stands in its place, and
 // nothing about the films is asked for until the word is right.
 async function boot(opts = {}) {
@@ -371,11 +442,12 @@ function lockedDoor(greeting) {
 // Going in: the start is asked for at once, while the door's name flies to the wordmark's place, and the
 // first question types once it has landed.
 async function enter({ viewer, name, avatar, profileTopics, door }) {
-  Object.assign(visit, { viewer, name, avatar, profileTopics, run: [] });
+  Object.assign(visit, { viewer, name, avatar, profileTopics, run: [], runKey: runKey() });
   const request = post("/api/first", { viewer });
   landing = door;
   await door.leave([nameTag()].filter(Boolean));
   await start({ request, keep: true });
+  await welcomeIfNew();
 }
 
 // Where a walk stands before any answer, from the start the server gave.
@@ -399,7 +471,7 @@ function freshWalk(first) {
 
 // "Start over" and the wordmark: a new run, which forgets the films shown, from the walk's first screen.
 function startOver() {
-  visit.run = [];
+  Object.assign(visit, { run: [], runKey: runKey() });
   return start();
 }
 
@@ -416,7 +488,8 @@ async function start({ request = null, keep = false } = {}) {
   if (!res.data.source) return doors(res, ack);
   showFirst(res);
   const options = res.data.source.options.map((o) => ({ say: o.say, go: () => chooseSource(o) }));
-  await ask({ ack, question: res.data.source.ask, options, count: countText(visit.pool.length) });
+  const count = ourCountText(visit.pool.length, res.data.narrowed);
+  await ask({ ack, question: res.data.source.ask, options, count });
 }
 
 // The wall and the doors' films behind a walk's first screens.
@@ -439,9 +512,104 @@ async function doors(res = null, ack = visit.sourceReply) {
   const got = res ?? (await post("/api/first", { viewer: visit.viewer, source: visit.source }));
   if (!got.ok) return problem(got.data, start);
   showFirst(got);
+  if (got.data.unsettled) return nothingLeft(got.data.unsettled);
   visit.doorAsk = got.data.lines[1];
   const options = got.data.options.map((o) => ({ say: o.say, go: () => chooseTree(o) }));
   await ask({ ack, question: got.data.lines[1], options, count: countText(visit.pool.length), many: true });
+}
+
+// A tailoring step in the theatre: the line, its explanation, the answers, then the actions; a step's credit stands in
+// the foot band beside "About Matinee". A `plain` screen, with no answers, keeps the theatre's own centred column.
+async function tailorScreen({ ack, ask, detail, answers, actions, credit = null, plain = false }) {
+  const line = h("h1", { class: "line", "aria-live": "polite" });
+  const later = [
+    detail ? h("p", { class: "note tailor-detail", hidden: true }, detail) : null,
+    h("div", { class: "tailor-answers", hidden: true }, answers),
+    h("div", { class: "door-actions tailor-actions", hidden: true }, actions),
+  ].filter(Boolean);
+  const talk = h("section", { class: plain ? "talk tailor-talk plain" : "talk tailor-talk" }, line, later);
+  clear(stage).append(topbar(nameTag()), talk, h("footer", { class: "bottombar" }, aboutLink(), credit ? h("p", { class: "credits" }, credit) : null));
+  await typeLine(line, ack, ask);
+  for (const node of later) node.hidden = false;
+  stage.querySelector(".tailor-talk :is(input, button)")?.focus({ preventScroll: true });
+}
+
+// After the welcome's last step: "You're all set up.", then My profile, with the theatre at its first screen beneath,
+// or the theatre's first screen.
+function allSet() {
+  const profile = h("button", { class: "action cream", type: "button" }, ALL_SET.profile);
+  const watch = h("button", { class: "action gold", type: "button", onclick: () => start() }, ALL_SET.watch);
+  profile.addEventListener("click", async () => {
+    await start();
+    myProfile(null, "tailor");
+  });
+  return tailorScreen({ ack: ALL_SET.ack, ask: ALL_SET.ask, answers: [], actions: [watch, profile], plain: true });
+}
+
+// "Show me": what is new, in Matinee's own voice on a wider screen (a phone takes it as a quieter paragraph), then the
+// tailoring steps from the profile's settings as they stand, then "You're all set up."
+function whatsNew() {
+  const id = visit.viewer.profile_id;
+  const steps = () => tailorSteps({ id, dtdd: offers.dtdd, credit: dtddSetting, show: tailorScreen, done: allSet });
+  const go = h("button", { class: "action gold", type: "button", onclick: steps }, "Let's go");
+  const [ack, said] = WHATS_NEW;
+  const spoken = isPhone() ? { ask: "", detail: said } : { ask: said };
+  return tailorScreen({ ack, ...spoken, answers: [], actions: [go], plain: true });
+}
+
+// The first time a profile made before My profile enters the theatre: the page dims but for the profile button, and
+// a line beside it names what is new, with "Show me" and "Not now". Either marks the profile, so it shows once.
+// Found once the profile's settings have arrived, on the page as it then stands; not over My profile or an open
+// menu, and not after the viewer has gone on, so the welcome waits for the next visit.
+async function welcomeIfNew() {
+  const id = visit.viewer.profile_id;
+  if (!id) return;
+  const res = await get(`/api/profiles/${id}/settings`);
+  if (!res.ok || res.data.welcomed || visit.viewer.profile_id !== id) return;
+  const button = stage.querySelector(".topbar .viewer-button");
+  const busy = profileOpen() || stage.querySelector(".viewer-menu:not([hidden])") || !stage.querySelector(".answers");
+  if (!button || busy) return;
+  const scrim = h("div", { class: "welcome-scrim" });
+  const show = h("button", { class: "action gold", type: "button" }, "Show me");
+  const later = h("button", { class: "action cream", type: "button" }, "Not now");
+  const box = h("div", { class: "welcome", role: "dialog", "aria-modal": "true", "aria-labelledby": "welcome-line" }, h("p", { class: "welcome-line", id: "welcome-line" }, WELCOME), h("div", { class: "welcome-actions" }, show, later));
+  // Everything but the line's box is out of reach while it stands; the top bar stands above the dimming, all but the
+  // viewer's button faded, and the box hangs from the button.
+  const lit = button.closest(".viewer");
+  const bar = button.closest(".topbar");
+  const away = [...[...stage.children].filter((n) => n !== bar), ...[...bar.children].filter((n) => n !== lit), button];
+  for (const node of away) node.inert = true;
+  bar.classList.add("lit");
+  stage.append(scrim);
+  lit.append(box);
+  show.focus({ preventScroll: true });
+  const finish = (then) => {
+    for (const b of [show, later]) b.disabled = true;
+    post(`/api/profiles/${id}/welcomed`).then((marked) => {
+      if (!marked.ok) console.warn("the welcome could not be marked as seen; it may show again", marked.data);
+    });
+    scrim.remove();
+    box.remove();
+    bar.classList.remove("lit");
+    for (const node of away) node.inert = false;
+    then();
+  };
+  show.addEventListener("click", () => finish(whatsNew));
+  later.addEventListener("click", () => finish(() => button.focus({ preventScroll: true })));
+  box.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") later.click(); // Escape is "Not now"
+  });
+}
+
+// The viewer's settings and hidden films leave no door: say how many films there would have been without them,
+// and open My profile at the settings. Closing it asks for the doors afresh.
+function nothingLeft(n) {
+  const line = h("h1", { class: "line", "aria-live": "polite" });
+  line.append(h("span", { class: "ack" }, `Your settings leave me nothing to pick. Without them, I'd have had ${n.toLocaleString("en")} ${n === 1 ? "film" : "films"} to choose from.`));
+  const change = h("button", { class: "action gold", type: "button" }, "Change my settings");
+  change.addEventListener("click", () => myProfile(change, "tailor", () => start()));
+  clear(stage).append(topbar(nameTag()), h("section", { class: "talk" }, line, change), h("footer", { class: "bottombar" }, aboutLink()));
+  change.focus({ preventScroll: true });
 }
 
 function chooseTree(option) {
@@ -526,10 +694,12 @@ const PANEL_ENTRY = { matinee: "panel" };
 let pickShowing = null; // the frame of the last pick screen drawn
 let ownBacks = 0; // backs the page takes itself, to drop its own entries
 
-// A new pick screen holds the pick's entry: pushed after an answer, kept through "Not that one", and stepped down to
-// from a panel's entry when a film is brought back from the panel.
+// A new pick screen holds the pick's entry: pushed after an answer, kept through "Show me another", and stepped down to
+// from a panel's entry when a film is brought back from the panel. A panel closed by the tap that drew this pick has
+// already asked for that step, which the browser has yet to take, so it is not asked for twice.
 function holdPickEntry() {
   if (history.state?.matinee === PANEL_ENTRY.matinee) {
+    if (ownBacks > 0) return;
     ownBacks++;
     history.back();
   } else if (history.state?.matinee !== PICK_ENTRY.matinee) {
@@ -605,11 +775,11 @@ async function fadeTalk() {
   await wait(TALK_FADE_MS);
 }
 
-// The lines for a pick, from the set of the category the first answer led to. After "Not that one" a
+// The lines for a pick, from the set of the category the first answer led to. After "Show me another" a
 // nope line and a reveal line are dealt together under the combined cap; otherwise a reveal line alone.
 // `beneath(fixed)` redeals only the reveal line to fit beneath `fixed`, the check's explanation.
 // The pick's lines. `gold` is the line that stays through the hunt, with the reveal line dealt to fit
-// beneath it: the nope line after "Not that one", else `held`, the reply to the last answer.
+// beneath it: the nope line after "Show me another", else `held`, the reply to the last answer.
 function pickLines(again, held = "") {
   if (!quips) return { nope: null, gold: held || null, reveal: "", beneath: () => "" };
   const revealSet = setFor(quips, visit.tree, "reveal");
@@ -629,10 +799,10 @@ function rushLine() {
   return quips ? deck.deal(setFor(quips, visit.tree, "rush")) : "";
 }
 
-// What the screen gives up as a pick begins: a question's words fade out, or, on "Not that one", the
+// What the screen gives up as a pick begins: a question's words fade out, or, on "Show me another", the
 // resting poster goes back to its cell on the wall.
 async function clearForPick(posterBack) {
-  if (posterBack) wall.putBack(stage.querySelector(".slot-poster"));
+  if (posterBack) wall.putBack(stage.querySelector(".poster-link img")); // a rated film's leaves its case
   else await fadeTalk();
 }
 
@@ -642,7 +812,7 @@ function requestPick() {
   return post("/api/pick", { tree: visit.tree, answers: visit.answers, viewer: visit.viewer, seen, source: visit.source });
 }
 
-// Opens the pick screen and types a line in gold: after "Not that one" the nope line, which stays
+// Opens the pick screen and types a line in gold: after "Show me another" the nope line, which stays
 // through the wait and the hunt, or else `opening`, the reply to the last answer. Resolves to the frame
 // and the time until which a reply should stay whole before the hunt fades it (0 when none fades).
 async function openPick(opening, nope) {
@@ -654,7 +824,7 @@ async function openPick(opening, nope) {
   return { frame, readUntil: nope ? 0 : performance.now() + READ_MS };
 }
 
-// Every film the pick showed or the check turned away is seen, so "Not that one" never draws it again.
+// Every film the pick showed or the check turned away is seen, so "Show me another" never draws it again.
 function markSeen(data) {
   if (data.film) visit.seen.push(data.film.tmdb);
   visit.seen.push(...data.turned_away);
@@ -667,16 +837,16 @@ function fuseOn(frame, reply, destruct, round) {
   return lightFuse(frame.line, destruct, () => frame.showing.isConnected && wall.round === round);
 }
 
-// Whether the check's line types: on a pick that is not "Not that one", with no fuse lit.
+// Whether the check's line types: on a pick that is not "Show me another", with no fuse lit.
 function checksAloud(posterBack, fuse) {
   return hasTopics() && !posterBack && !fuse;
 }
 
-// `again` is "Not that one" or "Roll again": a nope line types in gold. `posterBack` is "Not that one":
+// `again` is "Show me another" or "Roll again": a nope line types in gold. `posterBack` is "Show me another":
 // the resting poster goes back to the wall while the next film is fetched, and the check's line does not type.
 // `destruct` (seconds) lights a fuse on the reply: it counts down and burns away on its own clock, and the
 // check's line does not type over it.
-async function pickNow(opening = "", again = false, destruct = null, posterBack = again) {
+async function pickNow(opening = "", again = false, destruct = null, posterBack = again, undo = null) {
   const round = wall.round;
   // The pick is asked for first, so the check and the fetch run while the words fade and the line types.
   const request = requestPick();
@@ -684,8 +854,9 @@ async function pickNow(opening = "", again = false, destruct = null, posterBack 
   const lines = pickLines(again, destruct ? "" : opening);
   await clearForPick(posterBack);
   const { frame, readUntil } = await openPick(opening, lines.nope);
+  standUndo(frame, undo);
   const fuse = fuseOn(frame, opening, destruct, round);
-  // The check's line types only on a checked pick that is not "Not that one", and never over a fuse.
+  // The check's line types only on a checked pick that is not "Show me another", and never over a fuse.
   const res = await checkedPick(request, frame, lines, checksAloud(posterBack, fuse));
   // The viewer took a way back out while the pick was fetched.
   if (!frame.showing.isConnected || wall.round !== round) return undefined;
@@ -706,7 +877,7 @@ async function pickNow(opening = "", again = false, destruct = null, posterBack 
   });
 }
 
-// One answer in the Back panel: its question in quiet text, the answer beneath. A tap asks that question again.
+// One answer in the Back panel: its question, the answer beneath in quiet text. A tap asks that question again.
 function answerRow(row) {
   const go = () => wayTo(row, { source: start, doors: () => doors(), reask });
   return h(
@@ -744,6 +915,70 @@ function backPanel() {
   return [rows.length ? h("p", { class: "panel-section" }, "Change an answer") : null, rows, shown, h("div", { class: "panel-foot" }, again)];
 }
 
+// Keeps a film shown on screen in the profile's history, under the run its walk names. A failure costs only the
+// history line, so it is logged and the pick goes on.
+function keepShown(shown) {
+  const run = shown.walk.run;
+  const body = shownBody(shown);
+  if (!run || !body) return;
+  post(`/api/profiles/${shown.walk.profileId}/runs/${run}/films`, body).then((res) => {
+    if (!res.ok) console.warn("a film shown could not be kept in the history", res.data);
+  });
+}
+
+// The household's shared ratings of a film, the viewer's own rating of it, and the viewer, for the pick's line and
+// reading panel. A failure costs only the line: none is shown.
+async function household(tmdb) {
+  const id = visit.viewer.profile_id;
+  const [shared, mine] = await Promise.all([get(`/api/profiles/${id}/shared/${tmdb}`), get(`/api/profiles/${id}/ratings`)]);
+  if (!shared.ok || !mine.ok) console.warn("the household's ratings could not be read; the pick shows none", shared.data, mine.data);
+  return {
+    shared: shared.ok ? shared.data : [],
+    mine: mine.ok ? (mine.data.find((r) => r.tmdb === tmdb) ?? null) : null,
+    viewer: { name: visit.name, avatar: visit.avatar },
+  };
+}
+
+// A hide's "Undo", in the foot while the next pick hunts: in the foot bar's left on a desktop, in the foot on a phone.
+// A refusal stands in the foot bar's right end on a desktop, which the landing pick keeps. None when no hide asked.
+function standUndo(frame, undo) {
+  if (!undo) return;
+  const phone = isPhone();
+  const home = phone ? stage.querySelector(".bottombar") : frame.bar.firstElementChild;
+  frame.undo = undoLink(undo, phone ? home : frame.bar.lastElementChild);
+  home.append(frame.undo.node);
+  frame.undo.node.focus({ preventScroll: true }); // the length chosen has gone with its panel; the way back takes the focus
+}
+
+// "Hide film": hides the film from this profile's picks for `length`, marks it in its run, and rolls again as "Show
+// me another" does, with "Undo" in the foot while the next pick hunts. Resolves to the server's answer, which the
+// panel shows when it is a refusal.
+async function hideAndRoll(film, length) {
+  const id = visit.viewer.profile_id;
+  const shown = visit.run.find((s) => s.film.tmdb === film.tmdb);
+  const run = shown?.walk.run ?? visit.runKey;
+  const res = await put(`/api/profiles/${id}/hidden/${film.tmdb}`, { length, run });
+  if (!res.ok) return res;
+  pickShowing?.panel.closedByBack(); // the pick's own entry takes the panel's place, so no step of history is taken
+  lockStage();
+  pickNow("", true, null, true, () => undoHide(film, shown, run));
+  return res;
+}
+
+// "Undo" of a hide: the film comes back to this profile's picks, gets back the mark its run held before, and shows
+// again as the pick, as it was first shown. Resolves to whether the server brought it back.
+async function undoHide(film, shown, run) {
+  const res = await del(`/api/profiles/${visit.viewer.profile_id}/hidden/${film.tmdb}?run=${encodeURIComponent(run)}`);
+  if (!res.ok) {
+    console.warn("the hide could not be undone; the film stays hidden until brought back from My profile", res.data);
+    return false;
+  }
+  if (!shown) return true;
+  wall.endPick(); // the roll stops where it is; the film comes back on the pick's own history entry
+  bringBack(shown);
+  return true;
+}
+
 // What the pick screen's controls do.
 function pickActions() {
   return {
@@ -763,8 +998,11 @@ function pickActions() {
     backPanel,
     remember: (shown) => {
       visit.run = remember(visit.run, shown);
+      keepShown(shown);
     },
     failed: (data) => problem(data, start),
+    household,
+    hide: hideAndRoll,
     noteLink: (film, panel, walk) => noteLink({ walk, film, trees: visit.trees, panel }),
   };
 }
@@ -779,21 +1017,19 @@ async function showPicked(held) {
   const lines = { nope: null, gold, reveal: trip, beneath: () => trip };
   const { frame, readUntil } = await openPick(gold, null);
   if (!frame.showing.isConnected || wall.round !== round) return undefined;
-  const result = { ...held, film: held.last.film, swapped: null, tired: null, turned_away: [] };
+  const result = { ...held, film: held.last.film, heard: held.last.heard, swapped: null, tired: null, turned_away: [] };
   return showPick({ stage, wall, result, frame, readUntil, lines, fuse: null, actions: pickActions(), door: visit.tree, walk: walkOf(visit) });
 }
 
-// A film this run has shown, brought back from the Back panel as the pick: no new pick is asked for. It shows as it
-// was first shown, with its line, its content note and the door and walk it was drawn under; its details, rank,
-// tags and pictures load as on any pick, and nothing of DoesTheDogDie is asked for.
+// A film this run has shown, brought back from the Back panel as the pick: no new pick is asked for and nothing
+// moves on the wall; the page swaps to the film at rest (pick.js `swapPick`). It shows as it was first shown, with its
+// line, its content note and the door and walk it was drawn under; its details, rank, tags and pictures load as on
+// any pick, and nothing of DoesTheDogDie is asked for.
 async function bringBack(shown) {
   lockStage();
-  await clearForPick(Boolean(stage.querySelector(".slot-poster")));
-  const round = wall.round;
   const { result, lines, door, walk } = asPick(shown);
-  const { frame, readUntil } = await openPick(lines.gold, null);
-  if (!frame.showing.isConnected || wall.round !== round) return undefined;
-  return showPick({ stage, wall, result, frame, readUntil, lines, fuse: null, actions: pickActions(), door, walk });
+  const openFrame = async () => (await openPick("", null)).frame;
+  return swapPick({ stage, wall, result, lines, actions: pickActions(), door, walk, openFrame });
 }
 
 boot();

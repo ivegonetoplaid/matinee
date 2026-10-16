@@ -26,12 +26,11 @@ from fastapi.testclient import TestClient
 
 from matinee import ranks
 from matinee.dtdd import Dtdd
-from matinee.engine import load_catalog
+from matinee.engine import VOTE_FLOOR, load_catalog
 from matinee.library import Image, LibraryError, LibraryFilm, LibraryRefused
 from matinee.library.choice import MediaServer
 from matinee.library.jellyfin import JellyfinReader
 from matinee.outage import RETRY_S
-from matinee.ranks import VOTE_FLOOR
 from matinee.store import Store
 from matinee.table import FilmTable, write_table
 from matinee.tags import Tags, load_tags
@@ -71,8 +70,8 @@ class FakeLibrary:
     no_synopsis: bool = False
     calls: list[tuple[str, Any]] = field(default_factory=list)
 
-    def films(self) -> list[LibraryFilm]:
-        self.calls.append(("films", None))
+    def films(self, audio: bool = False) -> list[LibraryFilm]:
+        self.calls.append(("films", audio))
         if self.down:
             raise LibraryError(f"Jellyfin could not be reached at {SECRET_URL}")
         if self.refused:
@@ -199,8 +198,8 @@ def test_film_card_reads_the_synopsis_live(world: Any) -> None:
         "link": "https://seerr.invalid/movie/5",
         "link_to": "seerr",
         "backdrop_path": None,  # the media server is the image source
-        "rank": None,  # the film has no TMDB score
-        "standing": None,
+        "rank": "Too little-known for clear ratings",  # a 1975 film with no TMDB score
+        "standing": "No votes on TMDB yet",
         "tags": ["lone hero", "small town"],
     }
     assert ("synopsis", "f" * 32) in library.calls
@@ -219,7 +218,7 @@ def test_unreadable_tags_leave_picks_without_them_and_say_so_in_the_setup_note(
     assert faults and "film tags" in faults[0] and "Update or reinstall Matinee" in faults[0]
 
 
-def test_the_film_card_ranks_among_the_door_it_names_and_overall_without_one(
+def test_the_film_card_ranks_among_the_door_it_names_and_without_one_in_its_best_door(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setitem(ranks.DOOR_WORDS, "west", "westerns")
@@ -227,9 +226,9 @@ def test_the_film_card_ranks_among_the_door_it_names_and_overall_without_one(
     # Film 5 is the fifth best of the rated westerns.
     card = client.get("/api/film/5?door=west").json()
     assert (card["rank"], card["standing"]) == ("Well liked in westerns", "Top 25% by TMDB audience rating")
-    assert client.get("/api/film/5").json()["rank"] == "Well liked overall"
-    unranked = client.get("/api/film/6?door=west").json()  # no TMDB score: no rank
-    assert (unranked["rank"], unranked["standing"]) == (None, None)
+    assert client.get("/api/film/5").json()["rank"] == "Well liked in westerns"
+    unranked = client.get("/api/film/6?door=west").json()  # no TMDB score: no clear rank
+    assert unranked["rank"].endswith("for clear ratings") and unranked["standing"] == "No votes on TMDB yet"
 
 
 def test_a_film_new_to_the_library_is_offered_by_its_tags(world: Any) -> None:
@@ -282,7 +281,7 @@ def test_the_film_list_is_reread_only_after_its_time(world: Any) -> None:
     client, library, clock, _ = world
     client.get("/api/film/5")
     client.get("/api/film/6")
-    assert [c for c in library.calls if c[0] == "films"] == [("films", None)]
+    assert [c for c in library.calls if c[0] == "films"] == [("films", False)]  # the live read never asks for audio
     clock.now += LIVE_TTL + 1
     client.get("/api/film/5")
     assert len([c for c in library.calls if c[0] == "films"]) == 2

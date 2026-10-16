@@ -6,7 +6,7 @@ from typing import Literal
 
 from fastapi import Request, Response
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from matinee.store import Profile
 
@@ -18,6 +18,7 @@ ErrorCode = Literal[
     "topics_unavailable",
     "not_admitted",
     "wrong_word",
+    "walk_gone",
 ]
 TOKENS_COOKIE = "matinee_tokens"
 MAX_TOKENS = 8
@@ -32,6 +33,13 @@ PROFILE_LINES = {
     "not_held": "I can't find that one any more.",
     "wrong_pin": "That PIN isn't right.",
     "locked": "Too many wrong PINs. That profile is locked for {minutes} minutes.",
+    "bad_score": "I only know five answers, from Loved it! down to Hated it.",
+    "bad_review": "Short and sweet, please. About 15 words.",
+    "not_rated": "Rate it first, then tell me why.",
+    "bad_length": "Pick how long: 3 months, 6 months, 1 year or for good.",
+    "bad_run": "I lost track of this run. Start over and I'll keep up.",
+    "bad_setting": "That isn't one of the choices.",
+    "bad_language": "I don't have any films in that language.",
 }
 
 
@@ -76,6 +84,11 @@ class NewProfile(BaseModel):
     topics: list[int] = Field(default=[], max_length=400)
 
 
+class NameChoice(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    name: str = Field(max_length=80)
+
+
 class AvatarChoice(BaseModel):
     """An avatar to show, or None for the profile's initials."""
 
@@ -103,9 +116,10 @@ def device_tokens(request: Request) -> list[str]:
 
 def over_https(request: Request) -> bool:
     """Whether the browser reached Matinee over HTTPS, directly or through a proxy whose forwarded scheme uvicorn
-    trusts. A browser discards a `Secure` cookie set over plain HTTP, so a LAN installation on `http://` marks its
-    cookies `Secure` only when they can be kept."""
-    return request.url.scheme == "https"
+    trusts, or from a page its `Origin` says was served over HTTPS (a proxy that sends no forwarded scheme). A browser
+    discards a `Secure` cookie set over plain HTTP, so a LAN installation on `http://` marks its cookies `Secure` only
+    when they can be kept. A client steers only its own cookie this way."""
+    return request.url.scheme == "https" or request.headers.get("origin", "").startswith("https://")
 
 
 def set_tokens(request: Request, response: Response, tokens: list[str]) -> None:

@@ -20,6 +20,8 @@ ACCENTS = {"gold", "rose", "petrol", "cream"}
 # (its drawing, the phone's lit strip and the name in flight), the locked door's scene, the wall's tiles and
 # the scorch.
 ARTWORK = {
+    "plate",  # a film case's title plate, lettered in the case's own metal
+    "thumb-inner",  # a setting's picture of its open panel: letterboxes as spans, no control inside
     "tile",
     "marquee",
     "mq-strip",
@@ -47,18 +49,33 @@ PERMITTED = {
     ("a", "credits.js", "dtddBeside", frozenset()),
     ("a", "credits.js", "dtddFoot", frozenset()),
     ("a", "main.js", "wordmark", frozenset({"wordmark"})),
+    ("button", "about.js", "openAbout", frozenset({"wordmark", "about-wordmark"})),
     ("button", "credits.js", "aboutLink", frozenset({"inline-link", "about-link"})),
     ("button", "door.js", "tile", frozenset({"seat"})),
     ("button", "door.js", "newTile", frozenset({"seat", "new"})),
     ("button", "main.js", "answerButton", frozenset({"pail"})),
     ("button", "mark.js", "avatarChoices", frozenset({"avatar-choice"})),
     ("button", "viewer.js", "viewerTag", frozenset({"viewer-button"})),
-    ("button", "viewer.js", "item", frozenset({"viewer-item", "danger"})),
+    ("button", "viewer.js", "item", frozenset({"viewer-item"})),
     ("button", "locked.js", "show", frozenset({"peek"})),
     ("button", "panel.js", "open", frozenset({"panel-close"})),
     ("button", "main.js", "answerRow", frozenset({"panel-row", "answer-row"})),
     ("a", "pick.js", "posterLink", frozenset({"poster-link"})),
     ("button", "main.js", "filmRow", frozenset({"panel-row", "film-row"})),
+    ("button", "household.js", "nameButton", frozenset({"household-name"})),
+    ("button", "household.js", "householdLine", frozenset({"household-more"})),
+    ("button", "household.js", "personRow", frozenset({"panel-row", "person-row"})),
+    ("button", "hide.js", "undoLink", frozenset({"undo-link"})),
+    ("button", "profile.js", "jump", frozenset({"jump"})),
+    ("button", "profile.js", "avatarEditor", frozenset({"avatar-button"})),
+    ("button", "profile.js", "showName", frozenset({"name-button"})),
+    ("a", "credits.js", "dtddSetting", frozenset({"set-credit"})),
+    # My profile: a film's case, a picture that opens the film; a day's row, which opens and folds it; the overlay's
+    # "More on" link and ×, as the pick's poster link and the panel's ×.
+    ("button", "cases.js", "filmCase", frozenset()),
+    ("button", "shelves.js", "dayShelf", frozenset({"day-head"})),
+    ("a", "overlay.js", "posterSide", frozenset({"overlay-link"})),
+    ("button", "overlay.js", "openOverlay", frozenset({"overlay-close"})),
 }
 
 # Every CSS named colour.
@@ -293,11 +310,21 @@ FUNCTION = re.compile(
 )
 
 
+def past_parameters(source: str, start: int) -> int:
+    """Where a function declared at `start` has closed its parameters, which may hold braces of their own."""
+    depth = 0
+    for i in range(source.index("(", start), len(source)):
+        depth += {"(": 1, ")": -1}.get(source[i], 0)
+        if depth == 0:
+            return i
+    raise ValueError("unbalanced parentheses")
+
+
 def enclosing(source: str, at: int) -> str:
     """The innermost function, method or arrow function whose body holds `at`; "" at the top level."""
     name = ""
     for m in FUNCTION.finditer(source, 0, at):
-        body = source.find("{", m.end() - 1)
+        body = source.find("{", past_parameters(source, m.start()) if m.group(1) else m.end() - 1)
         if body != -1 and body < at < body + len(balanced(source, body)):
             name = m.group(1) or m.group(2) or m.group(3)
     return name
@@ -347,7 +374,7 @@ def test_links_and_buttons_are_built_only_through_h_and_carry_no_inline_style() 
 
 
 def test_every_colour_on_a_control_text_band_or_scrim_reads_from_a_token() -> None:
-    checked = [d for d in DECLS if ":root" not in d.selectors and not d.prop.endswith("mask-image")]
+    checked = [d for d in DECLS if ":root" not in d.selectors and not d.prop.endswith(("mask", "mask-image"))]
     assert len(checked) > 400
     stray = [
         f"{', '.join(d.selectors)} {{ {d.prop}: {d.value} }}"
@@ -428,8 +455,35 @@ def test_letterboxes_and_actions_have_the_standards_sizes_and_no_override() -> N
     assert all(is_artwork(d) for d in DECLS if d.prop == "zoom")  # zoom shrinks every control it holds
 
 
+def test_the_profile_menu_holds_my_profile_switch_profiles_and_about_in_that_order() -> None:
+    assert re.findall(r'\bitem\("([^"]+)"', SCRIPTS["viewer.js"]) == ["My profile", "Switch profiles", "About Matinee"]
+
+
+def test_a_settings_rows_picture_holds_no_control() -> None:
+    # The picture is zoomed to three tenths and hidden from screen readers, so a control inside it would be a
+    # focus stop no one can see or hear; the row's "Change" is the way in.
+    source = SCRIPTS["settings.js"]
+    pictures = []
+    for m in re.finditer(r"picture(?::|\s*=)\s*\(\)\s*=>", source):
+        ends = [at for at in (source.find("panel:", m.end()), source.find("const self = row", m.end())) if at > 0]
+        pictures.append(source[m.end() : min(ends)])
+    assert len(pictures) == 3
+    assert all("chooser(" not in p and "topicButton(" not in p and '"button"' not in p for p in pictures), pictures
+    shown = source[source.index("function shown(") :]
+    shown = shown[: shown.index("\n}\n")]
+    assert 'h("span"' in shown and "button" not in shown
+
+
 def test_the_wordmark_link_carries_the_corner_mark_named_matinee() -> None:
     main = SCRIPTS["main.js"]
     body = main[main.index("function wordmark()") :]
     body = body[: body.index("\n}\n")]
     assert 'h("a", { class: "wordmark", href: "/", onclick: go }, cornerMark("Matinee"))' in body
+
+
+def test_the_poster_link_clips_only_once_landed_so_the_flight_shows() -> None:
+    """The landed poster flies inside its link; a link that clips before it lands hides the flight from the wall."""
+    flying = re.search(r"^\.poster-link \{(.*?)^\}", CSS, re.M | re.S)
+    landed = re.search(r"^\.poster-link\.landed \{(.*?)^\}", CSS, re.M | re.S)
+    assert flying and landed
+    assert "overflow" not in flying.group(1) and "overflow: hidden" in landed.group(1)

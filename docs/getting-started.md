@@ -19,7 +19,7 @@ This is the installation and operations guide. For an introduction and an intera
 | **Jellyfin** or **Plex** | Reads your library without changing it; lets you choose films you own, don't own, or both | Jellyfin URL and API key (**Dashboard → API Keys**), **or** Plex URL and [token](https://support.plex.tv/articles/204059436-finding-an-authentication-token-x-plex-token/) — **not both** |
 | **Seerr** (including Overseerr/Jellyseerr) | Opens a picked film's request page; without it, Matinee links to TMDB | Seerr URL |
 | **DoesTheDogDie** | Lets viewers avoid chosen content topics; checks each pick before displaying it | Your own API key from your [DoesTheDogDie profile](https://www.doesthedogdie.com/profile) |
-| **Door word** | Gives internet-facing installations a simple admission gate | `DOOR_WORD` (and HTTPS; see below) |
+| **Door word** | Gives internet-facing installations a simple admission gate | `DOOR_WORD` (and HTTPS on the internet; see below) |
 
 The optional content-topic checks are **best-effort**, not guarantees. A film with no community votes may not have enough data to check. No DoesTheDogDie key means no topic list or check.
 
@@ -69,7 +69,7 @@ While Matinee is starting, or if a service is unavailable, its **setup note** ex
 
 ## Internet access and HTTPS
 
-If Matinee faces the internet, put it behind a reverse proxy serving **HTTPS** and set `DOOR_WORD`. The admission cookie is only sent over HTTPS. On your own network plain `http://` works: the profile cookie is marked secure only when the browser arrives over HTTPS, directly or through a proxy that says so with `X-Forwarded-Proto`, which the shipped image trusts. The door word is a lightweight household gate, not a replacement for the protections you'd use on a security-sensitive public service.
+If Matinee faces the internet, put it behind a reverse proxy serving **HTTPS** and set `DOOR_WORD`. On your own network plain `http://` works, door word included: the admission and profile cookies are marked secure only when the browser arrives over HTTPS, directly or through a proxy that says so with `X-Forwarded-Proto`, which the shipped image trusts. The door word is a lightweight household gate, not a replacement for the protections you'd use on a security-sensitive public service.
 
 Keep API tokens in `.env`, not in a public URL or a repository. As shipped, Compose publishes port 8000 and the image trusts forwarded headers from any address. Restrict direct access to the backend to trusted proxy clients when using a reverse proxy; configure your network and proxy exposure intentionally.
 

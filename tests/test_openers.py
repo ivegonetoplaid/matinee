@@ -34,6 +34,9 @@ KEPT = {
     "okay, who's on the couch?": "the kids' door talks the way a parent does",
     "comedies, camp and the gloriously awful. let's find you one.": "a list, not an interjection",
     "paws, claws and whiskers, coming up.": "a list, not an interjection",
+    "Saved. Add a short review if you like.": "the rating's confirmation, word for word from the approved board",
+    "New: you can now rate films, hide films, and see what I've picked for you.": "the welcome, word for word (§14)",
+    "Welcome back.": "what's new for a returning viewer, word for word (§14)",
 }
 
 # A lone word set off by a comma, full stop, colon or exclamation mark, or one of the stock phrases.
@@ -47,8 +50,8 @@ STOCK = re.compile(
 # Literals in the page and server source that take the form but are not Matinee speaking.
 NOT_SPOKEN = {
     "button, input",  # CSS selectors and media queries
-    "input, button",
     "(pointer: coarse)",
+    "(hover: hover)",
     "private, max-age={}",  # a response header
     "set, checked at each pick",  # the server's log
     "Matinee: a private screening",  # a heading only a screen reader hears
@@ -56,13 +59,12 @@ NOT_SPOKEN = {
     "No, someone else",
     "No PIN",
     "PIN, four digits",
-    "Yes, let me pick from a list",
-    "No, show me everything",
     "Search, like spiders or needles",  # a field's placeholder
     "Yes, delete it",
     "No, keep it",
-    "Never mind, show me everything",
-    "Never mind, keep my list",
+    "None, keep them coming",
+    "Yes, let's do it",
+    "No, just show me movies",
 }
 
 

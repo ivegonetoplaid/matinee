@@ -31,6 +31,7 @@ from matinee.pick import DeviceCap, Picker
 from matinee.progress import read_status
 from matinee.quips import Quips, QuipsError, load_quips
 from matinee.ranks import rank
+from matinee.records import Records
 from matinee.store import AVATARS, Locked, Store, StoreError
 from matinee.table import TableError
 from matinee.tags import Tags, TagsError, load_tags
@@ -43,12 +44,14 @@ from matinee.web.common import (
     AvatarChoice,
     Deleted,
     Door,
+    NameChoice,
     NewProfile,
     PinEntry,
     Seat,
     Tile,
     device_tokens,
     optional_int,
+    over_https,
     problem,
     seat,
     set_tokens,
@@ -56,6 +59,7 @@ from matinee.web.common import (
 )
 from matinee.web.config import Config, ImageSource
 from matinee.web.logbook import SERVER_NAMES, Quiet, StateLog
+from matinee.web.mine import add_hide_routes, add_rating_routes, add_run_routes, add_settings_routes
 from matinee.web.seerr import SeerrCheck
 from matinee.web.setup import BROKEN, SEERR_AWAY, SetupNote, library_away, note, rebuild_lines
 from matinee.web.theatre import UNUSABLE, NothingToShow, Theatre
@@ -92,8 +96,8 @@ class FilmCard(BaseModel):
     link: str  # the film's page on the configured Seerr, or on TMDB without one
     link_to: Literal["seerr", "tmdb"]
     backdrop_path: str | None  # TMDB's path for the backdrop, given only when TMDB is the image source
-    rank: str | None  # how well audiences regard the film among the door's films, in words; None under the vote floor
-    standing: str | None  # the rank's band as a share of the door's films and what it is measured by; None with no rank
+    rank: str | None  # how well audiences regard the film among the door's films, in words; why not, under the floor
+    standing: str | None  # the band's share of the door's films and its measure; under the floor, its few votes
     tags: list[str]  # its strongest genome words less the skip list and words alike to one shown; none when not covered
 
 
@@ -371,6 +375,13 @@ def add_avatar_route(app: FastAPI, store: Store) -> None:
         return seat(store.set_avatar(profile_id, body.avatar, device_tokens(request)))
 
 
+def add_rename_route(app: FastAPI, store: Store) -> None:
+    @app.put("/api/profiles/{profile_id}/name")
+    def rename(profile_id: int, body: NameChoice, request: Request) -> Seat:
+        """A device holding the profile renames it, under the rules a new profile's name follows."""
+        return seat(store.rename(profile_id, body.name, device_tokens(request)))
+
+
 def add_delete_route(app: FastAPI, store: Store) -> None:
     @app.delete("/api/profiles/{profile_id}")
     def delete_profile(profile_id: int, request: Request, response: Response) -> Deleted:
@@ -439,7 +450,7 @@ def add_admission(app: FastAPI, admission: Admission, greeting: str, clock: Call
                     admission.issue(clock()),
                     max_age=ADMISSION_LIFE_S,
                     path="/",
-                    secure=True,
+                    secure=over_https(request),
                     httponly=True,
                     samesite="lax",
                 )
@@ -600,6 +611,7 @@ def create_app(
     add_door_routes(app, theatre, store, clock, dtdd is not None, config.images)
     add_delete_route(app, store)
     add_avatar_route(app, store)
+    add_rename_route(app, store)
     topics_on = dtdd is not None
     picker = picker or Picker(dtdd, DeviceCap())
     if (picker.dtdd is None) != (dtdd is None):
@@ -609,9 +621,14 @@ def create_app(
     server = None
     if config.server is not None:
         server = SERVER_NAMES[config.server.kind]
-    add_viewing_routes(app, theatre, store, topics_on, server, seerr)
-    add_pick_routes(app, theatre, store, picker, topics_on, server, seerr)
-    add_note_routes(app, theatre, store)
+    records = Records(store)
+    add_viewing_routes(app, theatre, store, records, topics_on, server, seerr)
+    add_pick_routes(app, theatre, store, records, picker, topics_on, server, seerr)
+    add_note_routes(app, theatre, store, records)
     add_quip_routes(app, lines)
+    add_rating_routes(app, theatre, records)
+    add_hide_routes(app, theatre, records)
+    add_run_routes(app, theatre, records)
+    add_settings_routes(app, theatre, store)
     app.state.config = config
     return app

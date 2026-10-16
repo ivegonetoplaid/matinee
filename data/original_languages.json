@@ -1,0 +1,18 @@
+{
+  "note": "Films whose TMDB original language is not the language they were made in: TMDB gives the production country's language for some films shot in English. Matinee reads the language given here in TMDB's place wherever it reads a film's original language. Each entry is the film's TMDB id, the two-letter code of the language it was made in, and its title for the reader.",
+  "films": [
+    { "tmdb": 18, "language": "en", "title": "The Fifth Element (1997)" },
+    { "tmdb": 101, "language": "en", "title": "Léon: The Professional (1994)" },
+    { "tmdb": 335, "language": "en", "title": "Once Upon a Time in the West (1968)" },
+    { "tmdb": 391, "language": "en", "title": "A Fistful of Dollars (1964)" },
+    { "tmdb": 429, "language": "en", "title": "The Good, the Bad and the Ugly (1966)" },
+    { "tmdb": 938, "language": "en", "title": "For a Few Dollars More (1965)" },
+    { "tmdb": 9453, "language": "en", "title": "Caligula (1979)" },
+    { "tmdb": 22611, "language": "en", "title": "Little Nemo: Adventures in Slumberland (1989)" },
+    { "tmdb": 34584, "language": "en", "title": "The NeverEnding Story (1984)" },
+    { "tmdb": 110415, "language": "en", "title": "Snowpiercer (2013)" },
+    { "tmdb": 314405, "language": "en", "title": "Tale of Tales (2015)" },
+    { "tmdb": 840326, "language": "en", "title": "Sisu (2022)" },
+    { "tmdb": 1246049, "language": "en", "title": "Dracula (2025)" }
+  ]
+}

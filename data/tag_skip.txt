@@ -37,6 +37,10 @@ war movie
 western
 chick flick
 girlie movie
+# A genre's plain adjective says no more than its name.
+funny
+humor
+humorous
 
 # Generic praise and generic judgement: they say nothing about this film.
 beautiful scenery
@@ -63,6 +67,7 @@ stunning
 stupidity
 suprisingly clever
 unintentionally funny
+unfunny
 unlikeable characters
 very funny
 visually appealing

@@ -12,6 +12,11 @@ row also keeps the film's TMDB facts in their own columns, so a film can change
 sides between rebuilds: the server reads which films the library holds from the
 media server's live list (`with_live`), never from the table.
 
+A library film keeps the languages its copies' audio tracks are tagged with
+(`audio`, two-letter codes over every file of the film), read at the rebuild; a
+film with no copy, or whose tracks are all untagged, keeps none. A table written
+before that column existed is read with no audio languages.
+
 A film the genome does not cover carries no genome scores (NaN), never zeros.
 A film whose TMDB record is missing or older than six months carries no TMDB
 facts (`tmdb_known` is False, keywords None rather than empty); a film the library
@@ -19,6 +24,10 @@ does not hold needs those facts to be offered at all. A table whose oldest TMDB
 fact is six months old or more is still read and served, flagged (`is_stale`):
 TMDB's terms cap caching there, and the server warns on every screen until a
 rebuild refreshes it.
+
+A film's original language is TMDB's, except where `data/original_languages.json` gives the language the film was
+made in: TMDB gives the production country's language for some films shot in English. The table is read with the
+shipped language in TMDB's place, so an update corrects a film at once rather than at the next rebuild.
 """
 
 from __future__ import annotations
@@ -36,9 +45,11 @@ import pandas as pd
 
 from matinee.genome import Matrix, Scores
 from matinee.library import LibraryFilm
+from matinee.reference import DATA
 from matinee.tmdb import MAX_AGE, TmdbFilm
 
 FORMAT = 2
+LANGUAGE_FIXES = DATA / "original_languages.json"
 SHOWN = ("name", "year", "genres", "certificate", "runtime_min", "rating")  # the facts the trees and the page read
 TMDB_COLUMNS = (
     "tmdb_known",
@@ -56,8 +67,14 @@ TMDB_COLUMNS = (
     "synopsis",
     "vote_count",
 )
-COLUMNS = ("item_id", *SHOWN, *TMDB_COLUMNS)
-SET_COLUMNS = ("genres", "keywords", "tmdb_genres")  # stored as JSON lists, read as frozensets (None stays None)
+COLUMNS = ("item_id", *SHOWN, *TMDB_COLUMNS, "audio")
+SET_COLUMNS = (
+    "genres",
+    "keywords",
+    "tmdb_genres",
+    "audio",
+)  # stored as JSON lists, read as frozensets; None stays None
+LATER_COLUMNS = frozenset({"audio"})  # a table written before these were added is read with them empty
 
 
 class TableError(RuntimeError):
@@ -107,12 +124,14 @@ class BuildReport:
     tmdb_missing: list[str] = field(default_factory=list)
     tmdb_too_old: list[str] = field(default_factory=list)
     with_genome: int = 0
+    with_audio: int = 0  # library films whose audio tracks name at least one language
     not_held: int = 0  # films the labels name that the library did not hold, each with a usable TMDB record
     listed_without_record: int = 0  # films the labels name that the library did not hold, left out for want of one
 
     def lines(self) -> list[str]:
         out = [
-            f"{self.library_items} library items; {self.with_genome} films with genome scores",
+            f"{self.library_items} library items; {self.with_genome} films with genome scores;"
+            f" {self.with_audio} with audio track languages",
             f"{len(self.no_tmdb_id)} items with no TMDB id (not in the table)",
             f"{len(self.path_mismatches)} files whose {{tmdb-N}} folder tag differs from the server's TMDB id",
             f"{len(self.tmdb_missing)} films with no TMDB record; {len(self.tmdb_too_old)} over six months old",
@@ -167,6 +186,7 @@ def _from_tmdb(tmdb: dict[str, object]) -> dict[str, object]:
         "certificate": tmdb["tmdb_certificate"] or "",
         "runtime_min": tmdb["tmdb_runtime"],
         "rating": tmdb["tmdb_rating"],
+        "audio": None,
     }
 
 
@@ -189,7 +209,14 @@ def _from_library(f: LibraryFilm, tmdb: Mapping[str, object]) -> dict[str, objec
         "certificate": certificate,
         "runtime_min": f.runtime_min,
         "rating": f.rating,
+        "audio": f.audio,
     }
+
+
+def _either(kept: object, more: frozenset[str] | None) -> frozenset[str] | None:
+    """The languages of two copies of one film together; None when neither names any."""
+    together = (kept if isinstance(kept, frozenset) else frozenset()) | (more or frozenset())
+    return together or None
 
 
 def _record(tmdb: Mapping[int, TmdbFilm], t: int, now: datetime) -> tuple[TmdbFilm | None, bool]:
@@ -209,6 +236,7 @@ def _library_rows(
         if f.path_tmdb is not None and f.path_tmdb != f.tmdb:
             report.path_mismatches.append(f"{_label(f)}: folder says {f.path_tmdb}, server says {f.tmdb}")
         if f.tmdb in seen:
+            seen[f.tmdb]["audio"] = _either(seen[f.tmdb]["audio"], f.audio)  # every copy's languages count
             continue
         rec, usable = _record(tmdb, f.tmdb, now)
         if rec is None:
@@ -265,6 +293,7 @@ def build_table(
         if row is not None:
             matrix[i] = genome.relevance[row]
     report.with_genome = int((~np.isnan(matrix).any(axis=1)).sum())
+    report.with_audio = int(frame.audio.map(lambda a: isinstance(a, frozenset)).sum())
     report.not_held = int(frame.item_id.isna().sum())
     known = [tmdb[int(t)].fetched for t in frame.index[frame.tmdb_known]]
     table = FilmTable(frame, genome.tags, matrix, now, min(known) if known else None, genome.release)
@@ -278,13 +307,13 @@ CREATE TABLE films (
     genres TEXT NOT NULL, certificate TEXT NOT NULL, runtime_min REAL, rating REAL,
     tmdb_known INTEGER NOT NULL, language TEXT, collection_id INTEGER, keywords TEXT,
     poster_path TEXT, backdrop_path TEXT, tmdb_title TEXT, tmdb_year INTEGER, tmdb_genres TEXT,
-    tmdb_certificate TEXT, tmdb_runtime REAL, tmdb_rating REAL, synopsis TEXT, vote_count INTEGER
+    tmdb_certificate TEXT, tmdb_runtime REAL, tmdb_rating REAL, synopsis TEXT, vote_count INTEGER, audio TEXT
 );
 CREATE TABLE genome (tmdb INTEGER PRIMARY KEY REFERENCES films(tmdb), relevance BLOB NOT NULL);
 """
 INSERT_FILM = (
     "INSERT INTO films VALUES ("
-    "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?"
+    "?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?"
     ")"
 )  # one placeholder per column of SCHEMA's films table, tmdb first
 
@@ -321,7 +350,7 @@ def _offered(tmdb_id: int, r: pd.Series, live: Mapping[int, LibraryFilm], names:
     fields = {c: r[c] for c in TMDB_COLUMNS}
     if tmdb_id in live and pd.notna(r.item_id):
         shown = {c: r[c] for c in SHOWN}  # the media server's facts as the rebuild read them
-        return {"item_id": live[tmdb_id].item_id, **shown, **fields, "held": True}
+        return {"item_id": live[tmdb_id].item_id, **shown, **fields, "audio": r["audio"], "held": True}
     if tmdb_id in live:  # the library has taken it in since the rebuild, which read TMDB's facts
         return {**_from_library(live[tmdb_id], fields), **fields, "held": True}
     if tmdb_id in names and fields["tmdb_known"] and _text(fields["tmdb_title"]):
@@ -433,15 +462,32 @@ def _read(path: Path) -> tuple[dict[str, str], list[str], list[tuple[object, ...
     return meta, names, rows, blobs
 
 
+def language_fixes(path: Path = LANGUAGE_FIXES) -> dict[int, str]:
+    """The shipped original-language corrections: each film's TMDB id with the two-letter code of the language it was
+    made in. Raises TableError when an entry is not one."""
+    fixes: dict[int, str] = {}
+    for entry in json.loads(path.read_text(encoding="utf-8"))["films"]:
+        code = entry.get("language")
+        if not isinstance(entry.get("tmdb"), int) or not (isinstance(code, str) and len(code) == 2 and code.islower()):
+            raise TableError(f"{path.name}: {entry!r} is not a TMDB id with a two-letter language code")
+        fixes[entry["tmdb"]] = code
+    return fixes
+
+
+def _fix_languages(frame: pd.DataFrame) -> None:
+    fixed = {t: code for t, code in language_fixes().items() if t in frame.index}
+    frame.loc[list(fixed), "language"] = list(fixed.values())
+
+
 def load_table(path: Path) -> FilmTable:
-    """Read the table; raises TableError when it is absent or in another format. A table too old for TMDB's terms
-    is still read (`is_stale`)."""
+    """Read the table, with the shipped original-language corrections in TMDB's place; raises TableError when it is
+    absent or in another format. A table too old for TMDB's terms is still read (`is_stale`)."""
     if not path.exists():
         raise TableError(f"no film table at {path}; run tools/rebuild_table.py")
     meta, names, rows, blobs = _read(path)
     if meta.get("format") != str(FORMAT):
         raise TableError(f"the film table at {path} is format {meta.get('format')}; this Matinee reads {FORMAT}")
-    lacking = set(COLUMNS) - set(names)
+    lacking = set(COLUMNS) - set(names) - LATER_COLUMNS
     if lacking:
         raise TableError(f"the film table at {path} has no {', '.join(sorted(lacking))} column")
     oldest = datetime.fromisoformat(meta["oldest_tmdb"]) if meta["oldest_tmdb"] else None
@@ -451,6 +497,7 @@ def load_table(path: Path) -> FilmTable:
     for column in SET_COLUMNS:
         frame[column] = frame[column].map(lambda v: frozenset(json.loads(v)) if isinstance(v, str) else None)
     frame["genres"] = frame.genres.map(lambda g: g if g is not None else frozenset())
+    _fix_languages(frame)
     matrix = np.full((len(frame), len(tags)), np.nan, dtype=np.float32)
     for i, t in enumerate(frame.index):
         blob = blobs.get(int(t))
