@@ -582,7 +582,8 @@ why a film was picked: the labels alone place films (section 2.6).
   waiting room put behind the door the pick came through: the door's whole
   pool over the film table (section 3.1), whatever source the viewer chose. A
   ranked film is always counted with them, behind the door or not. A pick made before any door
-  counts among every film behind any door.
+  counts among the films of the door it ranks best in (below), or among every
+  film behind any door when no door ranks it.
 - **The place.** The film's place is (the counted door films scoring higher
   than it, plus one) divided by (the counted door films other than it, plus
   one): its position from the top, as a share of the counted films and itself.
@@ -606,8 +607,13 @@ why a film was picked: the labels alone place films (section 2.6).
   adventure", drama "drama", thriller "thrillers", crime "crime", horror
   "horror", scifi "sci-fi", fantasy "fantasy", romance "romance", animation
   "animation", western "westerns", war "war films", kids "kids' films",
-  nonfiction "documentaries" (`DOOR_WORDS`). Before any door, "overall" stands
-  in for "in horror": "Well liked overall". A tree with no word has no rank; a
+  nonfiction "documentaries" (`DOOR_WORDS`). Before any door (a pick with no
+  questions asked, or a card with no door), the film ranks behind the door it
+  ranks best in, which is the door a rating floor let it in by
+  (`best_door`): Dog Soldiers, behind horror, thrillers and action, reads "Well
+  liked in horror", never "Middle of the pack" among every film. A film no door
+  ranks counts among every door's films, and "overall" stands in for "in
+  horror": "Well liked overall". A tree with no word has no rank; a
   test holds every door the first question offers to having one.
 - The page sets the standing beneath the rank in small quiet text
   (section 12).
@@ -1795,7 +1801,7 @@ would hand one device's profiles to another.
 | GET | `/static/…` | scripts, styles, self-hosted fonts, icons, pails, avatars, the locked door's art, My profile's curtains and film cases, manifest (`Cache-Control: no-cache`, so a deploy is never seen half-applied) |
 | GET | `/img/{kind}/{tmdb}/{size}` | a poster or backdrop: from the media server for a film the library holds, else from TMDB's image server through Matinee |
 | GET | `/api/pictures` | the image source, and under `tmdb` the TMDB poster path of every live film that has one (section 11.5) |
-| GET | `/api/film/{tmdb}?door=` | one film's card (`src/matinee/web/app.py::FilmCard`): `tmdb`, `title`, `year`, `runtime_min`, `synopsis`, the pick's link (`link`, and `link_to`: `seerr` or `tmdb`), under the `tmdb` image source its TMDB backdrop path (`backdrop_path`, else null), `rank` (the film's rank line among the films behind `door`, the tree its pick came through, or overall without `door`; under the vote floor or without a TMDB score, why its rank is not clear; null for a tree with no rank word; section 2.8), `standing` (the rank's band share and basis, such as "Middle 20% by TMDB audience rating", or under the floor where its few votes place it; null whenever `rank` is) and `tags` (up to four, strongest first; empty for a film the genome does not cover). A `door` that names no tree is refused (400 `refused`) |
+| GET | `/api/film/{tmdb}?door=` | one film's card (`src/matinee/web/app.py::FilmCard`): `tmdb`, `title`, `year`, `runtime_min`, `synopsis`, the pick's link (`link`, and `link_to`: `seerr` or `tmdb`), under the `tmdb` image source its TMDB backdrop path (`backdrop_path`, else null), `rank` (the film's rank line among the films behind `door`, the tree its pick came through, or without `door` behind the door the film ranks best in (overall when no door ranks it); under the vote floor or without a TMDB score, why its rank is not clear; null for a tree with no rank word; section 2.8), `standing` (the rank's band share and basis, such as "Middle 20% by TMDB audience rating", or under the floor where its few votes place it; null whenever `rank` is) and `tags` (up to four, strongest first; empty for a film the genome does not cover). A `door` that names no tree is refused (400 `refused`) |
 | GET | `/api/door` | the film count, every profile (marking those this device holds), the avatars offered, whether a DoesTheDogDie key is set, and `posters_from` (`server` or `tmdb`) |
 | POST | `/api/profiles` | create a profile and issue this device a token |
 | POST | `/api/profiles/{id}/open` | open a profile by PIN, or at once when held or PIN-less |
@@ -2563,7 +2569,8 @@ the film information area on both desktop and phone.
   height, never more than two fifths of its width, with the pick's "More on
   Seerr ↗" or "More on TMDB ↗" beneath. Its right side holds the title and
   year, the rank in plain body type (among the films behind the door of the
-  film's kept walk, or overall without one, or when that door has gone), the
+  film's kept walk, or the door it ranks best in without one, or when that
+  door has gone), the
   household's line (below), the synopsis, "How you found it:" with the kept
   walk's words or "From what I showed you" for a film no kept run showed, and
   "What you did:" with what its part says of it. At its foot stand "Rate it",
@@ -3445,6 +3452,8 @@ describing it wrongly, never by naming something gone.
 - `src/matinee/ranks.py::DOOR_WORDS` (each door's word, by tree)
 - `src/matinee/ranks.py::BANDS` / `BASIS` / `Rank` / `band` (a place to its words and standing; an edge reads as the higher band)
 - `src/matinee/ranks.py::door_films` (the door's pool, or every door's before one)
+- `src/matinee/ranks.py::best_door` (before a door, the door a film ranks best in: the one a floor lets it in by)
+- `tests/test_ranks.py::test_before_a_door_a_film_a_floor_lets_in_never_reads_below_that_floor`
 - `src/matinee/ranks.py::rank_among` / `rank` (None under the floor or without a score, where `rank` gives `thin_rank`'s line; None for a tree with no word)
 - `src/matinee/ranks.py::thin_rank` / `NEW_YEARS` (a film under the floor: too new or too little-known, and where its few votes place it)
 - `tests/test_ranks.py::test_a_film_under_the_vote_floor_says_why_and_where_its_few_votes_place_it`
@@ -3464,7 +3473,7 @@ describing it wrongly, never by naming something gone.
 - `tests/test_tags.py::test_no_film_shows_two_words_that_say_nearly_the_same_thing`
 - `tests/test_tags.py::test_every_skip_list_entry_is_a_genome_word_so_none_is_a_silent_typo`
 - `tests/test_tags.py::test_written_tags_pair_word_forms_and_words_that_move_together_and_the_pick_shows_one_of_each`
-- `tests/test_web_library.py::test_the_film_card_ranks_among_the_door_it_names_and_overall_without_one`
+- `tests/test_web_library.py::test_the_film_card_ranks_among_the_door_it_names_and_without_one_in_its_best_door`
 - `tests/test_web_library.py::test_unreadable_tags_leave_picks_without_them_and_say_so_in_the_setup_note`
 - `tests/test_setup.py::test_the_server_hands_the_shipped_tags_to_the_app_with_the_setup_notes_faults`
 

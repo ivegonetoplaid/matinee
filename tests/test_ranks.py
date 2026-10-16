@@ -11,8 +11,8 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from matinee.engine import VOTE_FLOOR, Catalog, FirstOption
-from matinee.ranks import DOOR_WORDS, Rank, rank, rank_among, thin_rank
+from matinee.engine import VOTE_FLOOR, Catalog, FirstOption, places
+from matinee.ranks import BANDS, DOOR_WORDS, Rank, rank, rank_among, thin_rank
 from matinee.reference import DATA
 
 
@@ -118,10 +118,12 @@ def test_every_door_the_first_question_offers_has_its_rank_word() -> None:
     assert doors == set(DOOR_WORDS)
 
 
-def test_a_door_ranks_among_its_own_pool_and_before_a_door_among_every_doors_pool() -> None:
+def two_doors() -> Catalog:
+    """HUNDRED behind two doors: horror holds films 1 to 10 and 95, war films 91 to 100."""
     horror, war = np.zeros(100, dtype=bool), np.zeros(100, dtype=bool)
     horror[:10], war[90:] = True, True
-    cat = cast(
+    horror[94] = True  # film 95 is behind both doors
+    return cast(
         Catalog,
         SimpleNamespace(
             table=SimpleNamespace(films=HUNDRED),
@@ -130,7 +132,24 @@ def test_a_door_ranks_among_its_own_pool_and_before_a_door_among_every_doors_poo
             first_options=(FirstOption("Horror", "horror", "Horror"), FirstOption("War", "war", "War")),
         ),
     )
+
+
+def test_a_door_ranks_among_its_own_pool_and_before_a_door_in_the_door_that_ranks_it_best() -> None:
+    cat = two_doors()
     assert said(rank(cat, 95, "war")) == "Middle of the pack in war films"  # 5th of the door's 10
     assert said(rank(cat, 95, "horror")) == "Bringing up the rear in horror"  # behind all ten of horror's
-    assert said(rank(cat, 95, None)) == "A tougher sell overall"  # 15th of the 20 behind either door
+    # Before a door, war's place, which is the one a floor let it in by, never "A tougher sell overall" (16th of 21)
+    assert said(rank(cat, 95, None)) == "Middle of the pack in war films"
+    assert said(rank(cat, 50, None)) == "Middle of the pack overall"  # behind no door: among every door's films
     assert rank(cat, 95, "west") is None  # a door with no word has no rank
+
+
+def test_before_a_door_a_film_a_floor_lets_in_never_reads_below_that_floor() -> None:
+    cat = two_doors()
+    door_places = [places(HUNDRED, cat.pools[d]) for d in ("horror", "war")]
+    for edge, words, _ in BANDS:
+        let_in = [int(t) for i, t in enumerate(HUNDRED.index) if any(p[i] <= edge for p in door_places)]
+        worse = {w for e, w, _ in BANDS if e > edge}
+        for tmdb in let_in:
+            line = str(said(rank(cat, tmdb, None)))
+            assert not any(line.startswith(w) for w in worse), (words, tmdb, line)

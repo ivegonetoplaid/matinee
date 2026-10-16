@@ -218,7 +218,7 @@ def test_unreadable_tags_leave_picks_without_them_and_say_so_in_the_setup_note(
     assert faults and "film tags" in faults[0] and "Update or reinstall Matinee" in faults[0]
 
 
-def test_the_film_card_ranks_among_the_door_it_names_and_overall_without_one(
+def test_the_film_card_ranks_among_the_door_it_names_and_without_one_in_its_best_door(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     monkeypatch.setitem(ranks.DOOR_WORDS, "west", "westerns")
@@ -226,7 +226,7 @@ def test_the_film_card_ranks_among_the_door_it_names_and_overall_without_one(
     # Film 5 is the fifth best of the rated westerns.
     card = client.get("/api/film/5?door=west").json()
     assert (card["rank"], card["standing"]) == ("Well liked in westerns", "Top 25% by TMDB audience rating")
-    assert client.get("/api/film/5").json()["rank"] == "Well liked overall"
+    assert client.get("/api/film/5").json()["rank"] == "Well liked in westerns"
     unranked = client.get("/api/film/6?door=west").json()  # no TMDB score: no clear rank
     assert unranked["rank"].endswith("for clear ratings") and unranked["standing"] == "No votes on TMDB yet"
 
