@@ -136,6 +136,7 @@ class FirstOut(BaseModel):
     # When a profile's settings and hidden films leave no door: the films the first question would hold with none of
     # them (no settings, no topics, nothing hidden), which the page says. None whenever a door is offered.
     unsettled: int | None = None
+    narrowed: bool = False  # this viewer's settings or hidden films leave fewer films than `pool` would hold without
 
 
 class TopicOut(BaseModel):
@@ -451,15 +452,17 @@ def add_viewing_routes(
                 ask=cat.source_ask,
                 options=[SourceOptionOut(say=o.say, source=o.source, reply=o.reply) for o in cat.source_options],
             )
+        pool = everything(cat, viewer)
         return FirstOut(
             lines=list(cat.first_lines),
             name=profile.name if profile else None,
             options=options,
-            pool=everything(cat, viewer),
+            pool=pool,
             checked=bool(viewer.topics),
             source=question,
             fallback=walk_notice(body.source, showing, server, seerr),
             unsettled=None if options or profile is None else unsettled(cat, viewer),
+            narrowed=profile is not None and len(pool) < len(everything(cat, Viewer(source=viewer.source))),
         )
 
     @app.post("/api/walk")

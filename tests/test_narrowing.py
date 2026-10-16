@@ -348,3 +348,18 @@ def test_after_a_hide_the_pick_draws_from_the_answers_given_and_the_rest_of_the_
     assert len(kept.pool) == 15 and 21 not in kept.pool  # a pool to pick from, not an empty one
     body = PickIn(tree="west", answers=[AnswerIn(question=a.question, option=a.option) for a in answers])
     assert pick_pool(cat, viewer, body)[0] == list(kept.pool)  # the pick route draws from it
+
+
+def test_the_first_screen_says_whether_settings_or_hidden_films_cut_the_pool(world: Any) -> None:
+    client, _ = world
+    pid = client.post("/api/profiles", json={"name": "Ada"}).json()["id"]
+
+    def narrowed() -> bool:
+        first = client.post("/api/first", json={"viewer": {"profile_id": pid}, "source": "all"}).json()
+        return bool(first["narrowed"])
+
+    assert not narrowed()
+    client.put(f"/api/profiles/{pid}/settings", json={"floor": "anything", "languages": []})
+    assert not narrowed()  # settings that cut nothing are not said to
+    client.put(f"/api/profiles/{pid}/hidden/20", json={"length": "good"})
+    assert narrowed()

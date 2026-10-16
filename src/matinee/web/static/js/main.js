@@ -61,6 +61,14 @@ function countText(n) {
   return `${n.toLocaleString("en")} ${n === 1 ? "film" : "films"} to choose from`;
 }
 
+// The source question's count, which covers the library's films only, and says when the viewer's settings or
+// hidden films have already cut them.
+function ourCountText(n, narrowed) {
+  const ours = `${n.toLocaleString("en")} of our films`; // "1 of our films" reads right too
+  if (narrowed) return `${ours} ${n === 1 ? "fits" : "fit"} your settings`;
+  return `${ours} to choose from`;
+}
+
 // The pick's lines, fetched once per page, once the device is admitted; null until they arrive, or when they
 // could not be read.
 let quips = null;
@@ -480,7 +488,8 @@ async function start({ request = null, keep = false } = {}) {
   if (!res.data.source) return doors(res, ack);
   showFirst(res);
   const options = res.data.source.options.map((o) => ({ say: o.say, go: () => chooseSource(o) }));
-  await ask({ ack, question: res.data.source.ask, options, count: countText(visit.pool.length) });
+  const count = ourCountText(visit.pool.length, res.data.narrowed);
+  await ask({ ack, question: res.data.source.ask, options, count });
 }
 
 // The wall and the doors' films behind a walk's first screens.

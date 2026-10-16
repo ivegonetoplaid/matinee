@@ -1819,7 +1819,7 @@ would hand one device's profiles to another.
 | GET | `/api/profiles/{id}/runs` | a held profile's kept runs, newest first |
 | GET | `/api/topics` | DoesTheDogDie's topic list, with its credit; only with a DoesTheDogDie key |
 | GET | `/api/quips` | the pick's lines and their caps (section 2.7) |
-| POST | `/api/first` | the source question while it is asked and no `source` is sent (`source`), the first question for this viewer within the source, the pool behind it, and whether this viewer's picks are checked against DoesTheDogDie (`checked`); `fallback` while a `held` or `new` answer cannot be kept (section 2.0); `unsettled` when a profile's settings leave no door (section 6) |
+| POST | `/api/first` | the source question while it is asked and no `source` is sent (`source`), the first question for this viewer within the source, the pool behind it, and whether this viewer's picks are checked against DoesTheDogDie (`checked`); `fallback` while a `held` or `new` answer cannot be kept (section 2.0); `unsettled` when a profile's settings leave no door (section 6); `narrowed`, whether a profile's settings or hidden films cut the pool |
 | POST | `/api/walk` | the next question and the pool, given a tree and answers; `fallback` as for `/api/first` |
 | POST | `/api/pick` | one checked film from the pool the answers leave; `fallback` as for `/api/first` |
 | POST | `/api/notes` | keep one note on a pick for a held profile; `run` names the pick's run, where the film is marked reported (section 10) |
@@ -2359,7 +2359,10 @@ the film information area on both desktop and phone.
   The walk's first screens are question screens too. The source question
   (section 2.0) types "Right this way, <name>." in gold and its question in
   cream, over its three answers as letterboxes, one beneath another; its count
-  and `Just pick one!` cover the library's films. The doors then type the
+  and `Just pick one!` cover the library's films. So its count says so: "<N> of
+  our films fit your settings" when `narrowed` is true (the viewer's settings or
+  hidden films leave fewer films than none would), else "<N> of our films to
+  choose from"; every later screen keeps the plain count. The doors then type the
   source answer's reply in gold and "What are we in the mood for?" in
   cream, over the door answers as letterboxes running across the screen and
   wrapping; their count and `Just pick one!` cover the source's films. With the
@@ -3657,6 +3660,7 @@ describing it wrongly, never by naming something gone.
 - `src/matinee/engine.py::walk_kept` (a pick's walk after a hide)
 - `src/matinee/web/viewing.py::Seating` / `Seating.allowed` (the narrowing read afresh for each request)
 - `src/matinee/web/viewing.py::unsettled` / `FirstOut.unsettled` (the films the first question would hold without the settings)
+- `src/matinee/web/viewing.py::FirstOut.narrowed` (the settings or hidden films cut the first screen's pool) / `src/matinee/web/static/js/main.js::ourCountText` (the source question's count line)
 - `tests/test_narrowing.py::test_a_viewer_at_every_default_sees_exactly_the_pools_matinee_shows_today`
 - `tests/test_narrowing.py::test_narrowing_one_viewer_never_changes_the_shared_masks`
 - `tests/test_narrowing.py::test_the_floor_keeps_out_films_below_its_edge_and_never_one_with_no_place`
