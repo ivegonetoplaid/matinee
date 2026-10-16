@@ -793,7 +793,7 @@ function rushLine() {
 // What the screen gives up as a pick begins: a question's words fade out, or, on "Show me another", the
 // resting poster goes back to its cell on the wall.
 async function clearForPick(posterBack) {
-  if (posterBack) wall.putBack(stage.querySelector(".slot-poster"));
+  if (posterBack) wall.putBack(stage.querySelector(".poster-link img")); // a rated film's leaves its case
   else await fadeTalk();
 }
 
@@ -940,8 +940,8 @@ function standUndo(frame, undo) {
   frame.undo.node.focus({ preventScroll: true }); // the length chosen has gone with its panel; the way back takes the focus
 }
 
-// "Hide film": hides the film from this profile's picks for `length`, marks it in its run, and rolls again as "Not
-// that one" does, with "Undo" in the foot while the next pick hunts. Resolves to the server's answer, which the
+// "Hide film": hides the film from this profile's picks for `length`, marks it in its run, and rolls again as "Show
+// me another" does, with "Undo" in the foot while the next pick hunts. Resolves to the server's answer, which the
 // panel shows when it is a refusal.
 async function hideAndRoll(film, length) {
   const id = visit.viewer.profile_id;

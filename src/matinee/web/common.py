@@ -116,9 +116,10 @@ def device_tokens(request: Request) -> list[str]:
 
 def over_https(request: Request) -> bool:
     """Whether the browser reached Matinee over HTTPS, directly or through a proxy whose forwarded scheme uvicorn
-    trusts. A browser discards a `Secure` cookie set over plain HTTP, so a LAN installation on `http://` marks its
-    cookies `Secure` only when they can be kept."""
-    return request.url.scheme == "https"
+    trusts, or from a page its `Origin` says was served over HTTPS (a proxy that sends no forwarded scheme). A browser
+    discards a `Secure` cookie set over plain HTTP, so a LAN installation on `http://` marks its cookies `Secure` only
+    when they can be kept. A client steers only its own cookie this way."""
+    return request.url.scheme == "https" or request.headers.get("origin", "").startswith("https://")
 
 
 def set_tokens(request: Request, response: Response, tokens: list[str]) -> None:

@@ -514,7 +514,13 @@ export class Wall {
   // A film brought back from the Back panel takes the landed cell from the film that rested, with `img`'s glow, so
   // its poster returns there when the viewer moves on. Nothing on screen moves: the cell is lifted while it rests.
   swapLanded(id, img) {
-    if (!this.landed) return;
+    if (!this.landed) {
+      // An "Undo" ended the roll first: the drift stops, the cell at the screen's centre takes the film, and the wall
+      // dims as behind any resting page. Nothing moves.
+      this.drifting = false;
+      this.landed = camCell(this.layout, this.cam);
+      this.dim(AWAY_STRENGTH);
+    }
     this.placed = new Map([...this.placed, [`${this.landed.i},${this.landed.j}`, id]]);
     this.glow = glowOf(img);
     this.dirty = true;

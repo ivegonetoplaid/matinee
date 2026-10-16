@@ -55,3 +55,14 @@ test("the short review saves once typing pauses, at once on leaving, and never t
   assert.deepEqual(heard, ["go", "gone", "old"]);
   mock.timers.reset();
 });
+
+test("a short review whose save failed is sent again, not counted as kept", async () => {
+  const sent = [];
+  let up = false;
+  const saver = autosaver(async (text) => (sent.push(text), { ok: up, data: {} }), () => {}, "old");
+  await saver.now("new"); // refused: the server is away
+  up = true;
+  await saver.now("new"); // leaving the field again tries once more
+  await saver.now("new"); // kept now, so not sent a third time
+  assert.deepEqual(sent, ["new", "new"]);
+});

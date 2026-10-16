@@ -113,6 +113,13 @@ def test_the_right_word_over_plain_http_admits_on_the_next_request(tmp_path: Pat
     assert client.get("/api/door").status_code == 200
 
 
+def test_the_word_from_an_https_page_behind_a_proxy_that_sends_no_scheme_is_kept_secure(tmp_path: Path) -> None:
+    """A proxy that ends HTTPS without `X-Forwarded-Proto` hands Matinee plain HTTP; the Origin still says HTTPS."""
+    client = TestClient(make_app(tmp_path), base_url="http://testserver")
+    resp = client.post("/api/admission", json={"word": WORD}, headers={"Origin": "https://films.example"})
+    assert "Secure" in resp.headers["set-cookie"]
+
+
 def test_an_admission_ends_after_400_days(tmp_path: Path) -> None:
     clock = Clock()
     client = client_of(make_app(tmp_path, clock=clock))

@@ -1210,7 +1210,7 @@ picks nothing until it opens or makes a profile.
 | PIN storage | salted scrypt digest (N 2^14, r 8, p 1, 32 bytes, 16-byte salt); never stored as typed |
 | Lockout | **5** wrong PINs lock that profile against PIN entry for **15 minutes**; keyed on the profile, never on a client address |
 | Device token | 32 random bytes, URL-safe; stored only as a SHA-256 digest, so a copy of the store cannot be replayed as a cookie |
-| Token cookie | `matinee_tokens`: `HttpOnly`, `SameSite=Lax`, path `/`, 400 days, and `Secure` whenever the browser reached Matinee over HTTPS (directly, or through a proxy whose forwarded scheme uvicorn trusts); over plain `http://` it is not `Secure`, because a browser discards a `Secure` cookie set there and every walk under a profile would be refused; holds at most **8** tokens, a ninth pushing out the oldest, and never a name or PIN |
+| Token cookie | `matinee_tokens`: `HttpOnly`, `SameSite=Lax`, path `/`, 400 days, and `Secure` whenever the browser reached Matinee over HTTPS (directly, or through a proxy whose forwarded scheme uvicorn trusts, or from a page whose `Origin` is `https://`, for a proxy that sends no forwarded scheme); over plain `http://` it is not `Secure`, because a browser discards a `Secure` cookie set there and every walk under a profile would be refused; holds at most **8** tokens, a ninth pushing out the oldest, and never a name or PIN |
 | Token pruning | tokens older than 400 days are deleted whenever a new token is issued |
 
 - **A device holding a valid token for a profile is never asked its PIN** and
@@ -2795,7 +2795,7 @@ the film information area on both desktop and phone.
   gold and the rest in cream.
 
   `Show me another` asks for the next film at the tap and carries the resting
-  poster back from where it rests to its cell on the wall, at the wall's size
+  poster back from where it rests (a rated film's out of its case) to its cell on the wall, at the wall's size
   and strength, over 0.45 s while the wall's dimming lifts (at once under
   reduced motion; with no poster at rest the dimming alone lifts over 0.45 s).
   The wall then drifts, and the returned poster rests in its cell, until the
@@ -2960,7 +2960,9 @@ the film information area on both desktop and phone.
   fades as the hunt comes to rest, just before the next pick fills the foot.
   "Undo" brings the film
   back, gives it back the mark its run held before, ends the roll and shows the
-  film again as the pick, as the Back panel brings one back. An "Undo" that
+  film again as the pick, as the Back panel brings one back: the drift stops
+  where it is, the cell at the screen's centre takes the film, and the wall
+  dims as behind any resting page, with nothing moving. An "Undo" that
   fails is logged, and the film stays hidden until brought back from My
   profile (known gap 19).
 - **The reading panel.** A name on the household's line opens the panel
