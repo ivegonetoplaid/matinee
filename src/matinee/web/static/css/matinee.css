@@ -977,7 +977,7 @@ a.wordmark:focus-visible {
 
 .household-name,
 .household-more {
-  padding: 8px 0;
+  padding: 11px 0; /* 22.4 px of text: a 44 px tap target (DESIGN_STANDARDS 5.3) */
   border: 0;
   background: none;
   font: inherit;
@@ -1004,11 +1004,6 @@ a.wordmark:focus-visible {
 
   .household-part > [aria-hidden="true"] {
     display: none;
-  }
-
-  .household-name,
-  .household-more {
-    padding-block: 6px;
   }
 }
 
@@ -1464,6 +1459,19 @@ a.wordmark:focus-visible {
 .undo-link.leaving {
   opacity: 0;
   transition: opacity 0.4s ease;
+}
+
+/* A refused "Undo": its line in the Undo's place, in body type. */
+.undo-refused {
+  max-width: 34ch;
+  margin: 0;
+  padding: 0 8px;
+  color: var(--text);
+  font: 400 16px/1.4 var(--body);
+}
+
+.bar-right .undo-refused {
+  text-align: end;
 }
 
 /* "Rate it": the five answers stacked best first, the saved line, then a three-line box for a short review. */

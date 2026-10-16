@@ -2972,9 +2972,11 @@ the film information area on both desktop and phone.
   back, gives it back the mark its run held before, ends the roll and shows the
   film again as the pick, as the Back panel brings one back: the drift stops
   where it is, the cell at the screen's centre takes the film, and the wall
-  dims as behind any resting page, with nothing moving. An "Undo" that
-  fails is logged, and the film stays hidden until brought back from My
-  profile (known gap 19).
+  dims as behind any resting page, with nothing moving. An "Undo" that the
+  server refuses gives way to "That didn't go through. The film is still
+  hidden; bring it back from My profile.", in the foot on a phone and at the
+  foot bar's right end on a desktop, which stays eight seconds whatever the
+  hunt does, and the roll goes on.
 - **The reading panel.** A name on the household's line opens the panel
   headed "Household reviews" on that profile's rating, and "+ N more" on the
   first one listed. A card shows the profile's picture, name, its rating as a
@@ -3327,10 +3329,7 @@ and on 2026-10-14 for My profile (gaps 18 to 20).
     opens on any admitted device in one tap, which may then read its ratings,
     hidden films, history and settings, and no PIN can be added once a profile
     is made (setting one on My profile is out of scope). (`src/matinee/web/app.py::add_door_routes`)
-19. **An "Undo" that fails says nothing to the viewer.** The page logs it, the
-    roll goes on, and the film stays hidden until brought back from My profile.
-    (`src/matinee/web/static/js/main.js::undoHide`)
-20. **A welcome whose mark fails to save can show again.** "Show me" and "Not
+19. **A welcome whose mark fails to save can show again.** "Show me" and "Not
     now" mark the profile without waiting; a failed mark is only logged, so the
     next visit shows the welcome once more. (`src/matinee/web/static/js/main.js::welcomeIfNew`)
 ---

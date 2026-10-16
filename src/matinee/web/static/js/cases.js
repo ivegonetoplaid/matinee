@@ -83,7 +83,7 @@ export function tiers(ratings) {
   return ANSWERS.map((a) => ({ ...a, films: ratings.filter((r) => r.score === a.score) })).filter((t) => t.films.length);
 }
 
-const filmsCount = (n) => `${n} ${n === 1 ? "film" : "films"}`;
+export const filmsCount = (n) => `${n} ${n === 1 ? "film" : "films"}`;
 
 // "Films you've rated": a row per rating, its words and count beside (above, on a phone) its films in their cases,
 // each with the viewer's short review beneath on a wider screen. `poster(id)` gives a film's poster address.

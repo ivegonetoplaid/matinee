@@ -940,11 +940,12 @@ async function household(tmdb) {
 }
 
 // A hide's "Undo", in the foot while the next pick hunts: in the foot bar's left on a desktop, in the foot on a phone.
-// None when no hide asked for it.
+// A refusal stands in the foot bar's right end on a desktop, which the landing pick keeps. None when no hide asked.
 function standUndo(frame, undo) {
   if (!undo) return;
-  frame.undo = undoLink(undo);
-  const home = isPhone() ? stage.querySelector(".bottombar") : frame.bar.firstElementChild;
+  const phone = isPhone();
+  const home = phone ? stage.querySelector(".bottombar") : frame.bar.firstElementChild;
+  frame.undo = undoLink(undo, phone ? home : frame.bar.lastElementChild);
   home.append(frame.undo.node);
   frame.undo.node.focus({ preventScroll: true }); // the length chosen has gone with its panel; the way back takes the focus
 }
@@ -965,16 +966,17 @@ async function hideAndRoll(film, length) {
 }
 
 // "Undo" of a hide: the film comes back to this profile's picks, gets back the mark its run held before, and shows
-// again as the pick, as it was first shown.
+// again as the pick, as it was first shown. Resolves to whether the server brought it back.
 async function undoHide(film, shown, run) {
   const res = await del(`/api/profiles/${visit.viewer.profile_id}/hidden/${film.tmdb}?run=${encodeURIComponent(run)}`);
   if (!res.ok) {
     console.warn("the hide could not be undone; the film stays hidden until brought back from My profile", res.data);
-    return;
+    return false;
   }
-  if (!shown) return;
+  if (!shown) return true;
   wall.endPick(); // the roll stops where it is; the film comes back on the pick's own history entry
   bringBack(shown);
+  return true;
 }
 
 // What the pick screen's controls do.
