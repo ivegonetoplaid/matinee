@@ -4,7 +4,9 @@
 # mounted at /state; settings and keys arrive as environment.
 # Docker's official python image, from its ECR Public copy: Docker Hub turns away
 # anonymous pulls from shared CI addresses with 429, failing builds at random.
-FROM public.ecr.aws/docker/library/python:3.13-slim
+# ECR Public can too, so CI passes BASE to build from Google's mirror of the same image.
+ARG BASE=public.ecr.aws/docker/library/python:3.13-slim
+FROM ${BASE}
 
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 DATA_DIR=/state
 

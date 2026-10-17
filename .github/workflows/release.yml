@@ -3,7 +3,8 @@
 # does the same, then each machine pushes the image it tested
 # and the publish job joins the two under one name. Nothing is published unless every check passed and
 # the image answered on both. No step downloads from Docker Hub: its anonymous limit and outages failed
-# CI at random, so builds use Docker's built-in builder and the base image comes from ECR Public.
+# CI at random, so builds use Docker's built-in builder and the base image comes from ECR Public, with
+# Google's mirror of it as the fallback when ECR Public turns the runner away too.
 name: Checks and release
 
 on:
@@ -54,7 +55,12 @@ jobs:
           [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "release tag $GITHUB_REF_NAME is not vX.Y.Z"; exit 1; }
           sed -i "s/^version = \"0\.0\.0\"$/version = \"$version\"/" pyproject.toml
           grep -qx "version = \"$version\"" pyproject.toml || { echo "pyproject.toml has no version = \"0.0.0\" line"; exit 1; }
-      - run: docker build --label "org.opencontainers.image.source=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" -t matinee:smoke .
+      # Either registry can turn away a shared CI address (429), so a failed build tries Google's mirror of
+      # the same python image once before failing.
+      - name: Build the image
+        run: |
+          build() { docker build --label "org.opencontainers.image.source=$GITHUB_SERVER_URL/$GITHUB_REPOSITORY" -t matinee:smoke "$@" .; }
+          build || build --build-arg BASE=mirror.gcr.io/library/python:3.13-slim
       - name: Start the image and fetch its page
         run: |
           mkdir state && sudo chown 1000:1000 state
