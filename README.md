@@ -1,6 +1,6 @@
 # Matinee
 
-![Matinee's illuminated theatre marquee](https://raw.githubusercontent.com/ivegonetoplaid/ivegonetoplaid.github.io/main/static/marquee/marquee-wide.svg)
+![Matinee's illuminated theatre marquee](docs/images/marquee.svg)
 
 **Name the mood. We'll find the picture.**
 
