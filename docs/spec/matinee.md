@@ -3082,8 +3082,11 @@ the film information area on both desktop and phone.
   double every limit. The server's one rebuild process runs beside it
   (section 5.1).
 - **The image** (`Dockerfile`) runs on Docker's official `python:3.13-slim`,
-  pulled from its ECR Public copy (`public.ecr.aws/docker/library`), which does
-  not turn away CI builds as Docker Hub's anonymous limit does. It installs the
+  pulled from its ECR Public copy (`public.ecr.aws/docker/library`) rather
+  than Docker Hub, whose anonymous limit turns CI builds away. ECR Public can
+  turn a shared CI address away too, so the base image is the build argument
+  `BASE`, and CI builds once more from Google's mirror of the same image
+  (`mirror.gcr.io/library/python:3.13-slim`) when the first build fails. It installs the
   package editable, so it finds `data/` beside `src/` as a checkout does. It
   runs as an unprivileged user (uid 1000), with `uvicorn --factory
   matinee.web.main:build --workers 1` on port 8000, no server header and no access log, so no visitor's address is logged. It
