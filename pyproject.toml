@@ -15,10 +15,10 @@ dependencies = [
 # Pinned so a new release of a checker cannot fail an unrelated pull request; Dependabot
 # proposes each upgrade as its own pull request (.github/dependabot.yml).
 dev = [
-    "ruff==0.17.1",
+    "ruff==0.17.2",
     "mypy==2.4.0",
     "pytest==9.1.1",
-    "complexipy==8.1.0",
+    "complexipy==8.2.0",
     "pre-commit==4.7.0",
     "pandas-stubs==3.0.5.260914",
     "httpx==0.28.1",
