@@ -11,6 +11,8 @@ from pydantic import BaseModel, ConfigDict, Field
 from matinee.store import Profile
 
 ErrorCode = Literal[
+    "unauthorized",
+    "library_unavailable",
     "not_ready",
     "not_found",
     "refused",

@@ -72,9 +72,12 @@ contract is listed under [Known gaps](#known-gaps).
    each profile's tailoring settings and welcome mark, its ratings and short
    reviews, its hidden films and its history, and viewers' notes live in
    Matinee's store. None of it reaches a media server.
-5. **No public API and no viewer CLI.** The HTTP routes serve Matinee's own page
-   only. The command-line tools are for whoever runs the installation: the
-   nightly rebuild, the tree checker and the notes tool. The reference builder
+5. **Authenticated clients and no viewer CLI.** The website keeps its own HTTP
+   routes. The [client API](../client-api.md) exposes choices and one pick through
+   the same engine to authorized clients. It requires a profile token and normal
+   door admission, defaults to held films, and never silently widens that source.
+   The API adds no playback or conversation state. The command-line tools serve
+   the installation operator: the nightly rebuild, tree checker and notes tool. The reference builder
    and the genome builder are for whoever maintains Matinee.
 6. **The engine is a plain module.** The tree walk imports no web framework and
    reads no request state. The web page and the tree checker call the same

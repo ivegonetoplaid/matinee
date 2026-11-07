@@ -1,4 +1,4 @@
-"""The web server's routes. Only Matinee's own page calls them; they are not a public API.
+"""The website routes and the separately authenticated client API.
 
 The browser names a film only by a TMDB id that is in the current film list, and
 an image only by one of a fixed set of kinds and sizes. Anything else is refused
@@ -39,6 +39,7 @@ from matinee.tmdb import TmdbImageError, fetch_picture, picture_type, read_shelf
 from matinee.web.admission import COOKIE as ADMISSION_COOKIE
 from matinee.web.admission import LIFE_S as ADMISSION_LIFE_S
 from matinee.web.admission import Admission, load_secret
+from matinee.web.client import ClientService, add_client_routes
 from matinee.web.common import (
     PROFILE_LINES,
     AvatarChoice,
@@ -622,6 +623,7 @@ def create_app(
     if config.server is not None:
         server = SERVER_NAMES[config.server.kind]
     records = Records(store)
+    add_client_routes(app, ClientService(theatre, store, records, picker, topics_on))
     add_viewing_routes(app, theatre, store, records, topics_on, server, seerr)
     add_pick_routes(app, theatre, store, records, picker, topics_on, server, seerr)
     add_note_routes(app, theatre, store, records)
