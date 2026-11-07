@@ -11,7 +11,6 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 import numpy as np
-import pandas as pd
 import pytest
 
 from matinee.genome import Genome, Scores
@@ -93,7 +92,7 @@ def test_build_keeps_missing_scores_missing_and_reports() -> None:
     assert table.films.loc[22, "keywords"] is None
     assert table.films.loc[11, "keywords"] == frozenset({"gore"})
     assert table.films.loc[11, "language"] == "en"
-    assert pd.isna(table.films.loc[33, "language"])
+    assert table.films["language"].isna().loc[33]
     assert table.oldest_tmdb == CACHE[33].fetched
 
 
@@ -105,7 +104,7 @@ def test_write_then_load_round_trips(tmp_path: Path) -> None:
     assert list(back.films.index) == [11, 22, 33]
     assert back.films.loc[11, "genres"] == frozenset({"Horror"})
     assert back.films.loc[11, "collection_id"] == 900
-    assert pd.isna(back.films.loc[33, "collection_id"])
+    assert back.films["collection_id"].isna().loc[33]
     assert back.tag("scary")[22] == 1.0
     assert np.isnan(back.tag("scary")[33])
     assert back.release == "test release"
@@ -339,12 +338,12 @@ def test_fetch_film_keeps_picture_paths_shaped_like_tmdb_paths(monkeypatch: pyte
 def test_picture_paths_follow_the_six_month_rule_through_the_table(tmp_path: Path) -> None:
     table, _ = build_table(LIBRARY, genome(), CACHE, NOW)
     assert table.films.loc[11, "poster_path"] == "/p11.jpg" and table.films.loc[11, "backdrop_path"] == "/b11.jpg"
-    assert pd.isna(table.films.loc[22, "poster_path"])  # its record is too old to serve
-    assert pd.isna(table.films.loc[33, "poster_path"])  # TMDB has no picture for it
+    assert table.films["poster_path"].isna().loc[22]  # its record is too old to serve
+    assert table.films["poster_path"].isna().loc[33]  # TMDB has no picture for it
     write_table(table, tmp_path / "films.sqlite")
     back = load_table(tmp_path / "films.sqlite")
     assert back.films.loc[11, "poster_path"] == "/p11.jpg" and back.films.loc[11, "backdrop_path"] == "/b11.jpg"
-    assert pd.isna(back.films.loc[22, "poster_path"]) and pd.isna(back.films.loc[33, "backdrop_path"])
+    assert back.films["poster_path"].isna().loc[22] and back.films["backdrop_path"].isna().loc[33]
 
 
 def test_a_table_missing_a_column_is_refused(tmp_path: Path) -> None:
@@ -390,7 +389,7 @@ def test_a_loaded_table_can_be_written_again(tmp_path: Path) -> None:
     again = load_table(tmp_path / "a.sqlite")
     write_table(again, tmp_path / "b.sqlite")
     back = load_table(tmp_path / "b.sqlite")
-    assert pd.isna(back.films.loc[33, "collection_id"]) and back.films.loc[11, "collection_id"] == 900
+    assert back.films["collection_id"].isna().loc[33] and back.films.loc[11, "collection_id"] == 900
     assert back.films.loc[22, "keywords"] is None
 
 

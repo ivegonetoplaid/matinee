@@ -251,7 +251,7 @@ def test_the_rebuild_writes_labelled_films_the_library_lacks_beside_the_library(
     rebuild_table.rebuild(MediaServer("jellyfin", "http://jf.invalid", "k"), tmp_path, "t")
     films = load_table(tmp_path / "films.sqlite").films
     assert films.loc[owned, "item_id"] == "c" * 32 and films.loc[owned, "name"] == "Owned"
-    assert films.loc[world, "item_id"] != films.loc[world, "item_id"]  # NaN: no media-server item
+    assert films["item_id"].isna().loc[world]  # no media-server item
     assert films.loc[world, "name"] == f"Film {world}"
 
 
