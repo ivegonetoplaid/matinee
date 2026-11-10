@@ -1,6 +1,6 @@
 ---
 purpose: Index of Matinee's behaviour specifications — what each spec covers, how much to trust it against the code, and the policy that keeps the two reconciled.
-updated: 2026-10-14
+updated: 2026-11-09
 ---
 
 # Matinee Specs
@@ -47,11 +47,13 @@ governs, one command lists what to read:
 git log --oneline --since=<updated> -- <governs>
 ```
 
-Nothing checks the contract against the code. The rule earns its keep by
-being worth following. One thing is checked: `./check.sh` fails when a map
-entry names a file that does not exist or a symbol the file does not define
-(`tests/test_spec_map.py`), so a rename or a removal cannot leave the map
-pointing at nothing.
+Nothing checks the contract against the code; a person reviews the prose. The
+rule earns its keep by being worth following. Two narrower things are checked.
+`./check.sh` fails when a map entry names a file that does not exist or a
+symbol the file does not define (`tests/test_spec_map.py`), so a rename or a
+removal cannot leave the map pointing at nothing. And a pull request that
+declares a spec update turns its `Spec declaration` check red, as a notice,
+until it changes the declared files; `AGENTS.md` states the declaration form.
 
 The policy has one hard edge: a spec nobody is prepared to keep reconciled is
 deleted rather than left standing. Git history holds it.

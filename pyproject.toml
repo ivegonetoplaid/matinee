@@ -39,6 +39,11 @@ src = ["src", "tests", "tools", "scripts"]
 [tool.ruff.lint]
 select = ["E", "F", "I", "B", "BLE", "UP", "SIM", "C4", "C90"]
 
+# The spec declaration helper and its test are byte-identical copies of shared CI
+# files formatted at line length 88. At 120 the formatter would rewrap them.
+[tool.ruff.format]
+exclude = ["scripts/check_spec_declaration.py", "tests/test_spec_declaration_gate.py"]
+
 [tool.ruff.lint.mccabe]
 max-complexity = 10
 
