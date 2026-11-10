@@ -1,0 +1,35 @@
+name: Spec declaration
+
+# A red result means "do not merge; the declared spec update is still due". It
+# is a notice to the reviewer, not a merge gate. Separate from CI so a PR body
+# edit reruns only this check; the `edited` type is what makes it rerun then.
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+
+# Pull request code is untrusted. Do not grant write permissions or secrets.
+permissions:
+  contents: read
+
+concurrency:
+  group: spec-declaration-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  spec-declaration:
+    name: Declared spec files changed
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      # Full history so the PR head and its merge base with the base branch exist.
+      - name: Check out PR history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      # The script reads the PR body from the event file itself; no event text
+      # is interpolated into this command. --spec-path is this repository's
+      # setting: one flag per place a declared spec may live.
+      - name: Compare the PR body's spec declaration with the PR diff
+        run: python3 -I scripts/check_spec_declaration.py --spec-path 'docs/spec/**/*.md'

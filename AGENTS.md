@@ -54,6 +54,47 @@ data integrations. All of these contracts bind; raise conflicts explicitly.
 - Keep working notes, build reports, review rounds and scratch files out of the
   repository. Put the change summary and validation evidence in the PR.
 
+## Spec declaration
+
+Every pull request body carries the spec-impact decision from the approved
+handoff, each line on its own and without formatting:
+
+    Spec impact: none
+
+or:
+
+    Spec impact: required
+    Spec files: docs/spec/matinee.md
+
+The `Spec declaration` workflow (`.github/workflows/spec-declaration.yml`) runs
+`scripts/check_spec_declaration.py` on every push to the pull request and on
+every edit of its body. A red result is a notice to the reviewer: "Do not merge;
+the declared spec update is still due." It does not block merging and is not a
+branch-protection rule.
+
+- No declaration, or an unclear one with no `required` in it, warns and passes.
+- `Spec impact: none` passes, with or without a blank `Spec files:` line. The
+  reviewer confirms the scope.
+- `Spec impact: required` stays red until every listed path is a regular tracked
+  file at the pull request head whose content the pull request changed, compared
+  with the merge base. A deletion, a pure rename or a pure copy is not an
+  update.
+- A `required` declaration the check cannot read is also red: a missing or
+  second `Spec files` line, a second `Spec impact` line, a path outside the
+  allowed locations, or a declaration line with formatting or invisible
+  characters.
+- Editing the body reruns the check; a fixed declaration needs no new commit.
+- The check reads only this repository's pull request. A spec that lives in
+  another repository cannot be declared here; its update is declared in that
+  repository's own pull request.
+
+The allowed locations are the workflow's `--spec-path` globs; here that is
+`docs/spec/**/*.md`. The script and `tests/test_spec_declaration_gate.py` are
+byte-identical copies of the canonical files in the scrutable-runtime
+repository. Change them there first; configure this repository only through
+`--spec-path`. The check does not read the prose. The reviewer still checks that
+the specs and the code agree.
+
 ## Matinee invariants
 
 - **Build for any library.** Design doors, kinds, wording and thresholds against
